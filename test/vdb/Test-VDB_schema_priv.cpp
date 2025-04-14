@@ -123,13 +123,13 @@ static void OnTbl(void *item, void *data) {
 TEST_CASE(TestSchemaPriv) {
     const VDBManager *m(NULL);
     REQUIRE_RC(VDBManagerMakeRead(&m, NULL));
-  
+
     const VDatabase *db(NULL);
     REQUIRE_RC(VDBManagerOpenDBRead(m, &db, NULL, "db/VDB-3418.sra"));
-    
+
     const VSchema *schema(NULL);
     REQUIRE_RC(VDatabaseOpenSchema(db, &schema));
-   
+
     // VSchemaGetDb
     const Vector *v(NULL);
     REQUIRE_RC(VSchemaGetDb(schema, &v));
@@ -150,13 +150,13 @@ TEST_CASE(TestSchemaPriv) {
     REQUIRE_RC(VSchemaGetTbl(schema, &v));
     REQUIRE_NOT_NULL(v);
     VectorForEach(v, false, OnTbl, &rc);
- 
+
     REQUIRE_RC(rc);
-   
+
     REQUIRE_RC(VSchemaRelease(schema));
-   
+
     REQUIRE_RC(VDatabaseRelease(db));
-   
+
     REQUIRE_RC(VDBManagerRelease(m));
 }
 
@@ -165,8 +165,4 @@ extern "C" {
         KConfigDisableUserSettings();
         return SchemaPrivSuite(argc, argv);
     }
-    ver_t CC KAppVersion(void) { return 0; }
-    const char UsageDefaultName[]("Test_VDB_schema_priv");
-    rc_t CC Usage(const Args *args) { return 0; }
-    rc_t CC UsageSummary(const char *progname) { return 0; }
 }

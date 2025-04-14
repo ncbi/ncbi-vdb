@@ -330,7 +330,7 @@ static rc_t ReportDepend(const ReportFuncs *f,
     else {
         uint32_t count = 0;
         rc = VDBDependenciesCount(dep, &count);
-        if (rc != 0) { 
+        if (rc != 0) {
             reportError(indent + 1, rc, "VDBDependenciesCount");
         }
         else {
@@ -346,7 +346,7 @@ static rc_t ReportDepend(const ReportFuncs *f,
             else {
                 reportOpen(indent + 1, tag, 1, "count", 'd', count);
             }
-            
+
             rc = VDBDependenciesReportDepend1(dep, f,
                 count, indent + 2, true, &missing);
             reportClose(indent + 1, tag);
@@ -383,7 +383,7 @@ static rc_t CC visitor(const KDirectory* dir,
             ++total->files;
             break;
         }
-        case kptDir: 
+        case kptDir:
             rc = KDirectoryVisit(dir, false, visitor, total, "%s", name);
             break;
         default:
@@ -527,9 +527,9 @@ static rc_t CC ReportObj(const ReportFuncs *f, uint32_t indent,
     if (object || type != kptNotFound) {
         const char* path
             = fullpath ? fullpath : object ? object : "not set";
-        const char* stype = type == kptTable ? "table" : 
+        const char* stype = type == kptTable ? "table" :
             type == kptDatabase ? "database" : "unknown";
-        const char* sfile_type = file_type == kptFile ? "archive" : 
+        const char* sfile_type = file_type == kptFile ? "archive" :
             file_type == kptDir ? "dir" : "unexpected";
 
         if (fullpath && !size_unknown) {

@@ -30,11 +30,11 @@
 #include <ktst/unit_test.hpp> // TEST_CASE
 #include <vfs/path.h>
 #include <vfs/manager.h>
-#include <klib/text.h> 
-#include <klib/out.h> 
-#include <klib/printf.h> 
-#include <kfs/directory.h> 
-#include <kfg/config.h> 
+#include <klib/text.h>
+#include <klib/out.h>
+#include <klib/printf.h>
+#include <kfs/directory.h>
+#include <kfg/config.h>
 
 #include <sysalloc.h>
 #include <cstdlib>
@@ -93,7 +93,7 @@ struct Cursor {
         uint32_t count = 0;
         uint32_t boff = 0;
         uint32_t elem_bits = 0;
-            
+
         if (VCursorCellDataDirect(curs, row, column[col].first, &elem_bits, &base, &boff, &count)) throw std::runtime_error("VCursorCellDataDirect");
         if (sizeof(T) * 8 != elem_bits) throw std::logic_error("element size");
         if (boff) throw std::logic_error("bit aligned data");
@@ -165,13 +165,6 @@ TEST_CASE( CheckSEQUENCE )
 //////////////////////////////////////////// Main
 extern "C"
 {
-#include <kapp/args.h>
-
-    ver_t CC KAppVersion ( void ) { return 0x1000000; }
-    rc_t CC UsageSummary ( const char * progname ) { return 0; }
-    rc_t CC Usage ( const Args * args ) { return 0; }
-    const char UsageDefaultName[] = "test-VDB-3418";
-
     rc_t CC KMain(int argc, char *argv[])
     {
         return VDB_3418(argc, argv);

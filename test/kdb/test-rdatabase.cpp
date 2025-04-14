@@ -249,9 +249,9 @@ FIXTURE_TEST_CASE(KDBRManager_PathContents_dir, KDatabase_Fixture)
     REQUIRE_RC(KDBRManagerPathContents(m_mgr, &contents, 0, "%s", name.c_str()));
     REQUIRE_NOT_NULL(contents);
     REQUIRE_EQ(name, string(contents->name));
-    
+
     // REQUIRE_EQ((int)(contents->fstype | kptAlias), (int)(kptDir | kptAlias));
-    
+
     REQUIRE_EQ((int)contents->dbtype, (int)kptDatabase);
     REQUIRE_EQ((int)(contents->attributes & cca_HasErrors), (int)cca_HasErrors);
 
@@ -305,9 +305,9 @@ FIXTURE_TEST_CASE(KDBRManager_PathContents_kar, KDatabase_Fixture)
     REQUIRE_RC(KDBRManagerPathContents(m_mgr, &contents, 0, "%s", name.c_str()));
     REQUIRE_NOT_NULL(contents);
     REQUIRE_EQ(name, string(contents->name));
-    
+
     REQUIRE_EQ((int)(contents->fstype | kptAlias), (int)(kptFile | kptAlias));
-    
+
     REQUIRE_EQ((int)contents->dbtype, (int)kptDatabase);
     REQUIRE_EQ((int)(contents->attributes & cca_HasErrors), (int)cca_HasErrors);
 
@@ -358,15 +358,15 @@ FIXTURE_TEST_CASE(KDBRManager_PathContents_kar_shallow, KDatabase_Fixture)
 {
     auto const name = std::string("testdb.kar");
     KDBContents const *contents = NULL;
-    
+
     // Set levelOfDetail to shallow
     REQUIRE_RC(KDBRManagerPathContents(m_mgr, &contents, 1, "%s", name.c_str()));
     REQUIRE_NOT_NULL(contents);
     REQUIRE_EQ(name, string(contents->name));
-    
+
     REQUIRE_EQ((int)(contents->fstype | kptAlias), (int)(kptFile | kptAlias));
     REQUIRE_EQ(contents->levelOfDetail, 1);
-    
+
     REQUIRE_EQ((int)contents->dbtype, (int)kptDatabase);
     // shallow does not check for errors
     REQUIRE_EQ((int)(contents->attributes & cca_HasErrors), 0);
@@ -419,9 +419,9 @@ FIXTURE_TEST_CASE(KDBRManager_PathContents_SRR, KDatabase_Fixture)
     KDBContents const *contents = NULL;
     REQUIRE_RC(KDBRManagerPathContents(m_mgr, &contents, "SRR000001"));
     REQUIRE_NOT_NULL(contents);
-    
+
     REQUIRE_EQ((int)(contents->fstype), 0); ///< fstype is unknown
-    
+
     REQUIRE_EQ((int)contents->dbtype, (int)kptTable); ///< SRR000001 is a table
     REQUIRE_EQ((int)(contents->attributes & cca_HasMetadata), (int)cca_HasMetadata);
     REQUIRE_EQ((int)(contents->attributes & cca_HasMD5_File), (int)cca_HasMD5_File);
@@ -446,24 +446,7 @@ FIXTURE_TEST_CASE(KDBRManager_PathContents_SRR, KDatabase_Fixture)
 extern "C"
 {
 
-#include <kapp/args.h>
 #include <kfg/config.h>
-
-ver_t CC KAppVersion ( void )
-{
-    return 0x1000000;
-}
-rc_t CC UsageSummary (const char * progname)
-{
-    return 0;
-}
-
-rc_t CC Usage ( const Args * args )
-{
-    return 0;
-}
-
-const char UsageDefaultName[] = "Test_KDB_KRDatabase";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {

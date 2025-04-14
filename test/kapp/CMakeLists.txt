@@ -30,4 +30,23 @@ endif()
 
 add_compile_definitions( __mod__="test/kapp" )
 
-AddExecutableTest( Test_KAPP_args "kapp-test" "${COMMON_LIBS_WRITE};${ADDITIONAL_LIBS}" )
+AddExecutableTest( Test_KAPP_args "kapp-test" "kapp;${COMMON_LIBS_WRITE};${ADDITIONAL_LIBS}" )
+
+AddExecutableTest( Test_VDBAPP "vdbapp-test" "${COMMON_LIBS_READ};${ADDITIONAL_LIBS}" )
+
+if ( NOT WIN32 )
+
+    BuildExecutableForTest( sig-core-kapp "sig-core-kapp.c" "kapp;${COMMON_LIBS_READ}" )
+    BuildExecutableForTest( sig-core-vdbapp "sig-core-vdbapp.c" "${COMMON_LIBS_READ}" )
+
+    if ( "${CMAKE_BUILD_TYPE}" STREQUAL "Debug" )
+        set( BLD dbg)
+    else()
+        set( BLD rel)
+    endif()
+
+    add_test( NAME CoreGenerationKapp COMMAND run-sig-core.sh ${CMAKE_TEST_OUTPUT_DIRECTORY}/sig-core-kapp ${OS} ${BLD} WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
+
+    add_test( NAME CoreGenerationVdbapp COMMAND run-sig-core.sh ${CMAKE_TEST_OUTPUT_DIRECTORY}/sig-core-vdbapp ${OS} ${BLD} WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
+
+endif()

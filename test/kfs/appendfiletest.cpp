@@ -69,7 +69,7 @@ checkWriteFile ( KFile * File, size_t Pos, size_t Size )
         }
 
         RCt =  KFileWrite (
-                            File, 
+                            File,
                             Offset + Pos,
                             StringOne,
                             ToWr,
@@ -109,7 +109,7 @@ checkReadFile ( KFile * File, size_t Pos, size_t Size )
     }
 
     RCt =  KFileReadAll (
-                        File, 
+                        File,
                         Pos,
                         Buf,
                         Size,
@@ -146,7 +146,7 @@ checkMakeFile ( const char * Name, size_t Size )
 
     RCt = KDirectoryNativeDir ( & Dir );
     if ( RCt == 0 ) {
-        RCt = KDirectoryCreateFile ( 
+        RCt = KDirectoryCreateFile (
                                     Dir,
                                     & File,
                                     true,
@@ -365,23 +365,6 @@ TEST_CASE(KAppendFile_set_size)
 
 extern "C"
 {
-
-ver_t CC KAppVersion ( void )
-{
-    return 0x1000000;
-}
-
-rc_t CC UsageSummary (const char * prog_name)
-{
-    return 0;
-}
-
-rc_t CC Usage ( const Args * args)
-{
-    return 0;
-}
-
-const char UsageDefaultName[] = "test-appendfile";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {

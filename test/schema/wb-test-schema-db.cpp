@@ -327,23 +327,6 @@ FIXTURE_TEST_CASE(DB_ViewOnAliasMemberOnAnotherViewAliasMember, AST_Db_Fixture)
 extern "C"
 {
 
-ver_t CC KAppVersion ( void )
-{
-    return 0x1000000;
-}
-
-const char UsageDefaultName[] = "wb-test-schema-db";
-
-rc_t CC UsageSummary (const char * progname)
-{
-    return KOutMsg ( "Usage:\n" "\t%s [options] -o path\n\n", progname );
-}
-
-rc_t CC Usage( const Args* args )
-{
-    return 0;
-}
-
 rc_t CC KMain ( int argc, char *argv [] )
 {
     return SchemaDbTestSuite(argc, argv);

@@ -190,12 +190,12 @@ rc_t makePDK ( const char * path, const char * pdk_base64 )
                         ;
                 }
 #endif
-                
+
                 KFileRelease ( pdk_file );
             }
             KDirectoryRelease ( wd );
         }
-        
+
         KDataBufferWhack ( & decoded );
     }
 
@@ -219,14 +219,14 @@ void whackPDK ( const char * path )
         KDirectoryRelease ( wd );
     }
 }
-    
+
 
 TEST_SUITE ( KRsaAesHmacTestSuite );
 
 TEST_CASE ( KEncryptDecryptRoundTrip )
 {
     // prepare the parameters
-    
+
     // parameter 1 - the output buffer
     // documentation says:
     //   pointer to a ZEROED KDataBuffer that will receive encrypted result.
@@ -283,7 +283,7 @@ TEST_CASE ( KEncryptDecryptRoundTrip )
     //   to decrypt the file designated by "zpdk". "zpwd_size" should be
     //   the total size of the BUFFER, not the size of the password itself.
     //   The buffer will be wiped after first use regardless of success or failure.
-    //   
+    //
     // constant PDK_password is given above.
     char zpwd [ 256 ];
     :: strcpy ( zpwd, PDK_password );
@@ -308,7 +308,7 @@ TEST_CASE ( KEncryptDecryptRoundTrip )
 TEST_CASE ( KEncryptOneWayForNCBI )
 {
     // prepare the parameters
-    
+
     // parameter 1 - the output buffer
     // documentation says:
     //   pointer to a ZEROED KDataBuffer that will receive encrypted result.
@@ -394,7 +394,7 @@ TEST_CASE ( KEncryptAlteredPubKeyDecryptRoundTrip )
         size_t min_size = ( size_t ) pt_prime . elem_count;
         if ( min_size > pt_size )
             min_size = pt_size;
-        
+
         REQUIRE_NE ( :: memcmp ( ( const void * ) pt_orig,
             pt_prime . base, min_size ), 0 );
     }
@@ -408,7 +408,7 @@ TEST_CASE ( KEncryptAlteredPubKeyDecryptRoundTrip )
 TEST_CASE ( KEncryptAlteredPrivKeyDecryptRoundTrip )
 {
     // prepare the parameters
-    
+
     KDataBuffer ct;
     :: memset ( & ct, 0, sizeof ct );
 
@@ -454,7 +454,7 @@ TEST_CASE ( KEncryptAlteredPrivKeyDecryptRoundTrip )
         old = '+';
     }
     pdk_base64 [ 250 ] = old;
-    
+
     const char zpdk [] = "./test-rsa-aes-hmac.pdk";
     REQUIRE_RC ( makePDK ( zpdk, pdk_base64 ) );
 
@@ -475,7 +475,7 @@ TEST_CASE ( KEncryptAlteredPrivKeyDecryptRoundTrip )
         size_t min_size = ( size_t ) pt_prime . elem_count;
         if ( min_size > pt_size )
             min_size = pt_size;
-        
+
         REQUIRE_NE ( :: memcmp ( ( const void * ) pt_orig,
             pt_prime . base, min_size ), 0 );
     }
@@ -489,7 +489,7 @@ TEST_CASE ( KEncryptAlteredPrivKeyDecryptRoundTrip )
 TEST_CASE ( KEncryptAlteredAESKeyDecryptRoundTrip )
 {
     // prepare the parameters
-    
+
     KDataBuffer ct;
     :: memset ( & ct, 0, sizeof ct );
 
@@ -526,7 +526,7 @@ TEST_CASE ( KEncryptAlteredAESKeyDecryptRoundTrip )
 
     KDataBuffer pt_prime;
     :: memset ( & pt_prime, 0, sizeof pt_prime );
-    
+
     const char zpdk [] = "./test-rsa-aes-hmac.pdk";
     REQUIRE_RC ( makePDK ( zpdk ) );
 
@@ -547,7 +547,7 @@ TEST_CASE ( KEncryptAlteredAESKeyDecryptRoundTrip )
         size_t min_size = ( size_t ) pt_prime . elem_count;
         if ( min_size > pt_size )
             min_size = pt_size;
-        
+
         REQUIRE_NE ( :: memcmp ( ( const void * ) pt_orig,
             pt_prime . base, min_size ), 0 );
     }
@@ -561,7 +561,7 @@ TEST_CASE ( KEncryptAlteredAESKeyDecryptRoundTrip )
 TEST_CASE ( KEncryptAlteredIVDecryptRoundTrip )
 {
     // prepare the parameters
-    
+
     KDataBuffer ct;
     :: memset ( & ct, 0, sizeof ct );
 
@@ -599,7 +599,7 @@ TEST_CASE ( KEncryptAlteredIVDecryptRoundTrip )
 
     KDataBuffer pt_prime;
     :: memset ( & pt_prime, 0, sizeof pt_prime );
-    
+
     const char zpdk [] = "./test-rsa-aes-hmac.pdk";
     REQUIRE_RC ( makePDK ( zpdk ) );
 
@@ -620,7 +620,7 @@ TEST_CASE ( KEncryptAlteredIVDecryptRoundTrip )
         size_t min_size = ( size_t ) pt_prime . elem_count;
         if ( min_size > pt_size )
             min_size = pt_size;
-        
+
         REQUIRE_NE ( :: memcmp ( ( const void * ) pt_orig,
             pt_prime . base, min_size ), 0 );
     }
@@ -634,7 +634,7 @@ TEST_CASE ( KEncryptAlteredIVDecryptRoundTrip )
 TEST_CASE ( KEncryptAlteredHMACDecryptRoundTrip )
 {
     // prepare the parameters
-    
+
     KDataBuffer ct;
     :: memset ( & ct, 0, sizeof ct );
 
@@ -671,7 +671,7 @@ TEST_CASE ( KEncryptAlteredHMACDecryptRoundTrip )
 
     KDataBuffer pt_prime;
     :: memset ( & pt_prime, 0, sizeof pt_prime );
-    
+
     const char zpdk [] = "./test-rsa-aes-hmac.pdk";
     REQUIRE_RC ( makePDK ( zpdk ) );
 
@@ -692,7 +692,7 @@ TEST_CASE ( KEncryptAlteredHMACDecryptRoundTrip )
         size_t min_size = ( size_t ) pt_prime . elem_count;
         if ( min_size > pt_size )
             min_size = pt_size;
-        
+
         REQUIRE_NE ( :: memcmp ( ( const void * ) pt_orig,
             pt_prime . base, min_size ), 0 );
     }
@@ -706,7 +706,7 @@ TEST_CASE ( KEncryptAlteredHMACDecryptRoundTrip )
 TEST_CASE ( KEncryptAlteredCTDecryptRoundTrip )
 {
     // prepare the parameters
-    
+
     KDataBuffer ct;
     :: memset ( & ct, 0, sizeof ct );
 
@@ -737,7 +737,7 @@ TEST_CASE ( KEncryptAlteredCTDecryptRoundTrip )
         // limit offset into the ct
         size_t offset = rsa_aes_size + iv_size;
         offset = min ( offset, ct_size );
-        
+
         // isolate desired block within ct
         size_t block_size = ct_size - offset;
 
@@ -749,7 +749,7 @@ TEST_CASE ( KEncryptAlteredCTDecryptRoundTrip )
 
     KDataBuffer pt_prime;
     :: memset ( & pt_prime, 0, sizeof pt_prime );
-    
+
     const char zpdk [] = "./test-rsa-aes-hmac.pdk";
     REQUIRE_RC ( makePDK ( zpdk ) );
 
@@ -770,7 +770,7 @@ TEST_CASE ( KEncryptAlteredCTDecryptRoundTrip )
         size_t min_size = ( size_t ) pt_prime . elem_count;
         if ( min_size > pt_size )
             min_size = pt_size;
-        
+
         REQUIRE_NE ( :: memcmp ( ( const void * ) pt_orig,
             pt_prime . base, min_size ), 0 );
     }
@@ -784,7 +784,7 @@ TEST_CASE ( KEncryptAlteredCTDecryptRoundTrip )
 TEST_CASE ( KEncryptTruncatedResultDecryptRoundTrip )
 {
     // prepare the parameters
-    
+
     KDataBuffer ct;
     :: memset ( & ct, 0, sizeof ct );
 
@@ -808,7 +808,7 @@ TEST_CASE ( KEncryptTruncatedResultDecryptRoundTrip )
 
     KDataBuffer pt_prime;
     :: memset ( & pt_prime, 0, sizeof pt_prime );
-    
+
     const char zpdk [] = "./test-rsa-aes-hmac.pdk";
     REQUIRE_RC ( makePDK ( zpdk ) );
 
@@ -829,7 +829,7 @@ TEST_CASE ( KEncryptTruncatedResultDecryptRoundTrip )
         size_t min_size = ( size_t ) pt_prime . elem_count;
         if ( min_size > pt_size )
             min_size = pt_size;
-        
+
         REQUIRE_NE ( :: memcmp ( ( const void * ) pt_orig,
             pt_prime . base, min_size ), 0 );
     }
@@ -843,7 +843,7 @@ TEST_CASE ( KEncryptTruncatedResultDecryptRoundTrip )
 TEST_CASE ( KEncryptExtendedResultDecryptRoundTrip )
 {
     // prepare the parameters
-    
+
     KDataBuffer ct;
     :: memset ( & ct, 0, sizeof ct );
 
@@ -867,7 +867,7 @@ TEST_CASE ( KEncryptExtendedResultDecryptRoundTrip )
 
     KDataBuffer pt_prime;
     :: memset ( & pt_prime, 0, sizeof pt_prime );
-    
+
     const char zpdk [] = "./test-rsa-aes-hmac.pdk";
     REQUIRE_RC ( makePDK ( zpdk ) );
 
@@ -888,7 +888,7 @@ TEST_CASE ( KEncryptExtendedResultDecryptRoundTrip )
         size_t min_size = ( size_t ) pt_prime . elem_count;
         if ( min_size > pt_size )
             min_size = pt_size;
-        
+
         REQUIRE_NE ( :: memcmp ( ( const void * ) pt_orig,
             pt_prime . base, min_size ), 0 );
     }
@@ -903,28 +903,11 @@ TEST_CASE ( KEncryptExtendedResultDecryptRoundTrip )
 
 extern "C"
 {
-    
-    ver_t CC KAppVersion ( void )
-    {
-        return 0x1000000;
-    }
-    
-    rc_t CC UsageSummary (const char * prog_name)
-    {
-        return 0;
-    }
-    
-    rc_t CC Usage ( const Args * args)
-    {
-        return 0;
-    }
-    
-    const char UsageDefaultName[] = "test-rsa-aes-hmac";
-    
+
     rc_t CC KMain ( int argc, char *argv [] )
     {
         KConfigDisableUserSettings ();
         return KRsaAesHmacTestSuite ( argc, argv );
     }
-    
+
 }

@@ -66,7 +66,7 @@ rc_t run()
         uint32_t ix;
 
         OUTMSG (("KCSPRng with no seed\n"));
-        
+
         for (ix = 0; ix < 10; ++ix)
         {
             uint8_t buff [8];
@@ -103,7 +103,7 @@ rc_t run()
             else
             {
                 OUTMSG (("KCSPRng with seed\n"));
-        
+
                 for (ix = 0; ix < 10; ++ix)
                 {
                     uint8_t buff [8];
@@ -156,9 +156,9 @@ rc_t run()
                                           buff[4], buff[5], buff[6], buff[7]));
                             }
                         }
-                    }        
+                    }
                 }
-            }        
+            }
             KRngRelease (rng);
         }
     }
@@ -201,15 +201,13 @@ rc_t CC Usage (const Args * args)
     return rc;
 }
 
-
-ver_t CC KAppVersion (void)
-{
-    return 0;
-}
 rc_t CC KMain ( int argc, char *argv [] )
 {
     Args * args;
     rc_t rc;
+
+    SetUsageSummary( UsageSummary );
+    SetUsage( Usage );
 
     rc = ArgsMakeAndHandle (&args, argc, argv, 0);
     if (rc == 0)

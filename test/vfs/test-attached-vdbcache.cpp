@@ -289,10 +289,6 @@ TEST_CASE(MultipleVdbcache) {
 #endif
 
 extern "C" {
-    const char UsageDefaultName[] = "test-resolve";
-    rc_t CC UsageSummary(const char * progname) { return 0; }
-    rc_t CC Usage(const struct Args * args) { return 0; }
-    ver_t CC KAppVersion ( void ) { return 0; }
     rc_t CC KMain ( int argc, char * argv [] ) {
 #if 0
         KDbgSetString ( "VFS" );

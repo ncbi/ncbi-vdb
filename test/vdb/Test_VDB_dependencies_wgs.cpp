@@ -54,7 +54,7 @@ TEST_CASE(Test_VDB_dependencies_wgs) {
     REQUIRE_RC(VDBManagerOpenDBRead(m, &b, NULL, "ERR3091357"));
 
     const VDBDependencies *d = NULL;
-    /* The following has to make a single SDL call for 
+    /* The following has to make a single SDL call for
      multiple WGS refseqs that are resolved to the same URL */
     REQUIRE_RC(VDatabaseListDependencies(b, &d, false));
     REQUIRE_RC(VDBDependenciesRelease(d));
@@ -66,11 +66,6 @@ TEST_CASE(Test_VDB_dependencies_wgs) {
 #endif
 
 extern "C" {
-    ver_t CC KAppVersion(void) { return 0x1000000; }
-    rc_t CC Usage(const Args *args) { return 0; }
-    const char UsageDefaultName[]("Test_VDB_dependencies_wgs");
-    rc_t CC UsageSummary(const char *progname) { return 0; }
-
     rc_t CC KMain(int argc, char *argv[]) {
         KConfigDisableUserSettings();
         return Test_VDB_dependencies_wgsSuite(argc, argv);

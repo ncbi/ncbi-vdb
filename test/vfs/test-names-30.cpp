@@ -510,10 +510,6 @@ if ( 1 )
 }
 
 extern "C" {
-    const char UsageDefaultName[] = "test-names-30";
-    rc_t CC UsageSummary ( const char     * progname) { return 0; }
-    rc_t CC Usage        ( const struct Args * args ) { return 0; }
-    ver_t CC KAppVersion ( void ) { return 0; }
     rc_t CC KMain ( int argc, char * argv [] ) {
         if (
 0 ) assert ( ! KDbgSetString ( "VFS" ) );

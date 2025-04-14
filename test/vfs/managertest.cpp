@@ -76,25 +76,25 @@ protected:
         , num_writ ( 0 )
     {
         if (KDirectoryNativeDir ( &wd ) != 0)
-           throw logic_error("MgrFixture: KDirectoryNativeDir failed");   
-    
+           throw logic_error("MgrFixture: KDirectoryNativeDir failed");
+
         if (VFSManagerMake(&mgr) != 0 || mgr == 0)
-           throw logic_error("MgrFixture: VFSManagerMake failed");    
-        
-        // stick a reference to our pwfile into the VFSManager's configuration 
+           throw logic_error("MgrFixture: VFSManagerMake failed");
+
+        // stick a reference to our pwfile into the VFSManager's configuration
         // (no easy way to do that through putenv that would work on Windows dynamic since
         // vfs.dll would have its own copy of environment)
         const KConfig* kfg = VFSManagerGetConfig(mgr);
         if (!kfg)
-           throw logic_error("MgrFixture: VFSManagerGetConfig failed");    
+           throw logic_error("MgrFixture: VFSManagerGetConfig failed");
         KConfigNode* node;
         if (KConfigOpenNodeUpdate((KConfig*)kfg, &node, KFG_KRYPTO_PWFILE) != 0)
-           throw logic_error("MgrFixture: KConfigOpenNodeUpdate failed");    
-           
+           throw logic_error("MgrFixture: KConfigOpenNodeUpdate failed");
+
         if (KConfigNodeWrite(node, pwFileName, strlen(pwFileName)) != 0)
-           throw logic_error("MgrFixture: KConfigNodeWrite failed");   
+           throw logic_error("MgrFixture: KConfigNodeWrite failed");
         if (KConfigNodeRelease(node) != 0)
-           throw logic_error("MgrFixture: KConfigNodeRelease failed");   
+           throw logic_error("MgrFixture: KConfigNodeRelease failed");
 
         // make sure pwfile contains the correct password (some tests might update it)
         CreateFile(pwFileName, password);
@@ -110,23 +110,23 @@ protected:
         if (KDirectoryRelease(wd) != 0)
            cerr << "~MgrFixture: KDirectoryRelease failed" << endl;
     }
-    
+
     void CreateFile(const string& name, const string& content)
     {
         KFile* f;
         if (KDirectoryCreateFile(wd, &f, false, 0660, kcmInit, name.c_str()) != 0)
-           throw logic_error("CreateFile: KDirectoryCreateFile failed");   
+           throw logic_error("CreateFile: KDirectoryCreateFile failed");
         if (KFileWrite(f, 0, content.c_str(), content.size(), &num_writ) != 0 || num_writ != content.size())
-           throw logic_error("CreateFile: KDirectoryOpenFileWrite failed");   
+           throw logic_error("CreateFile: KDirectoryOpenFileWrite failed");
         if (KFileWrite(f, content.size(), "\n", 1, &num_writ) != 0 || num_writ != 1)
-           throw logic_error("CreateFile: KDirectoryOpenFileWrite failed");   
+           throw logic_error("CreateFile: KDirectoryOpenFileWrite failed");
         if (KFileRelease(f) != 0)
-           throw logic_error("CreateFile: KFileRelease failed");   
+           throw logic_error("CreateFile: KFileRelease failed");
     }
     string ReadContent(const KFile* file)
     {
         if (KFileReadAll ( file, 0, buf, BufSize, &num_read ) != 0)
-           throw logic_error("ReadContent: KFileReadAll failed");   
+           throw logic_error("ReadContent: KFileReadAll failed");
         return string(buf, num_read);
     }
 
@@ -176,11 +176,11 @@ string protectedFileContent = "contents of a single-file object";
 FIXTURE_TEST_CASE(OpenFileRead_Decrypt, MgrFixture)
 {
     REQUIRE_RC(VFSManagerMakePath ( mgr, &vpath, "./ncbi/protected1/SRR999997.ncbi_enc")); // an encrypted copy of ./ncbi/protected1/SRR999997
-    
+
     // read contents of an encrypted file
     const KFile *f;
-    REQUIRE_RC(VFSManagerOpenFileReadDecrypt (mgr, &f, vpath));    
-    
+    REQUIRE_RC(VFSManagerOpenFileReadDecrypt (mgr, &f, vpath));
+
     REQUIRE_EQ(protectedFileContent, ReadContent(f));
 
     REQUIRE_RC(KFileRelease(f));
@@ -188,24 +188,24 @@ FIXTURE_TEST_CASE(OpenFileRead_Decrypt, MgrFixture)
 FIXTURE_TEST_CASE(OpenDirRead_Decrypt, MgrFixture)
 {
     REQUIRE_RC(VFSManagerMakePath ( mgr, &vpath, "./ncbi_enc")); // this is an encrypted kar archive of directory ./ncbi
-    
+
     const KDirectory *dir;
-    REQUIRE_RC(VFSManagerOpenDirectoryReadDirectoryRelativeDecrypt (mgr, wd, &dir, vpath));    
-    
+    REQUIRE_RC(VFSManagerOpenDirectoryReadDirectoryRelativeDecrypt (mgr, wd, &dir, vpath));
+
     // read contents of a file inside an encrypted archive
     const KFile *f;
     KDirectoryOpenFileRead(dir, &f, "protected1/SRR999997");
     REQUIRE_EQ(protectedFileContent, ReadContent(f));
     REQUIRE_RC(KFileRelease(f));
-    
+
     REQUIRE_RC(KDirectoryRelease(dir));
 }
 
 FIXTURE_TEST_CASE(CreateFile_Encrypt, MgrFixture)
 {
     string uri = string("ncbi-file:") + GetName() + "?enc&pwfile=pwfile";
-    REQUIRE_RC(VFSManagerMakePath ( mgr, &vpath, uri.c_str())); 
-    
+    REQUIRE_RC(VFSManagerMakePath ( mgr, &vpath, uri.c_str()));
+
     // create with encryption
     KFile* f;
     REQUIRE_RC(VFSManagerCreateFile(mgr, &f, false, 0660, kcmInit, vpath));
@@ -213,17 +213,17 @@ FIXTURE_TEST_CASE(CreateFile_Encrypt, MgrFixture)
     REQUIRE_RC(KFileWrite(f, 0, content.c_str(), content.size(), &num_writ));
     REQUIRE_EQ(content.size(), num_writ);
     REQUIRE_RC(KFileRelease(f));
-    
+
     // open as unencrypted - should fail
     KDirectoryOpenFileRead(wd, (const KFile**)&f, GetName());
     REQUIRE_NE(content, ReadContent(f));
     REQUIRE_RC(KFileRelease(f));
-    
+
     // open as encrypted
-    REQUIRE_RC(VFSManagerOpenFileReadDecrypt (mgr, (const KFile**)&f, vpath));    
+    REQUIRE_RC(VFSManagerOpenFileReadDecrypt (mgr, (const KFile**)&f, vpath));
     REQUIRE_EQ(content, ReadContent(f));
     REQUIRE_RC(KFileRelease(f));
-    
+
     REQUIRE_RC(KDirectoryRemove(wd, true, GetName()));
 }
 
@@ -233,14 +233,14 @@ FIXTURE_TEST_CASE(OpenFileWriteFile_Encrypt_NotEncrypted, MgrFixture)
     CreateFile(GetName(), "garbage");
 
     string uri = string("ncbi-file:") + GetName() + "?enc&pwfile=pwfile";
-    REQUIRE_RC(VFSManagerMakePath ( mgr, &vpath, uri.c_str())); 
+    REQUIRE_RC(VFSManagerMakePath ( mgr, &vpath, uri.c_str()));
 
     // open as encrypted - fail
     KFile* f;
     // this will output an error message from KEncFileMakeIntValidSize:
     LOG(ncbi::NK::LogLevel::e_error,
         "Expecting an err. message from KEncFileMakeIntValidSize...\n");
-    REQUIRE_RC_FAIL(VFSManagerOpenFileWrite(mgr, &f, false, vpath)); 
+    REQUIRE_RC_FAIL(VFSManagerOpenFileWrite(mgr, &f, false, vpath));
     REQUIRE_RC(KFileRelease(f));
 
     REQUIRE_RC(KDirectoryRemove(wd, true, GetName()));
@@ -249,7 +249,7 @@ FIXTURE_TEST_CASE(OpenFileWriteFile_Encrypt_NotEncrypted, MgrFixture)
 FIXTURE_TEST_CASE(OpenFileWriteFile_Encrypt, MgrFixture)
 {   // open an encrypted file for encypted writing
     string uri = string("ncbi-file:") + GetName() + "?enc&pwfile=pwfile";
-    REQUIRE_RC(VFSManagerMakePath ( mgr, &vpath, uri.c_str())); 
+    REQUIRE_RC(VFSManagerMakePath ( mgr, &vpath, uri.c_str()));
 
     // create encrypted
     KFile* f;
@@ -265,14 +265,14 @@ FIXTURE_TEST_CASE(OpenFileWriteFile_Encrypt, MgrFixture)
     REQUIRE_RC(KFileWrite(f, 0, content.c_str(), content.size(), &num_writ));
     REQUIRE_EQ(content.size(), num_writ);
     REQUIRE_RC(KFileRelease(f));
-    
+
     // open as unencrypted - fail
     KDirectoryOpenFileRead(wd, (const KFile**)&f, GetName());
     REQUIRE_NE(content, ReadContent(f));
     REQUIRE_RC(KFileRelease(f));
-    
+
     // open as encrypted
-    REQUIRE_RC(VFSManagerOpenFileReadDecrypt (mgr, (const KFile**)&f, vpath));    
+    REQUIRE_RC(VFSManagerOpenFileReadDecrypt (mgr, (const KFile**)&f, vpath));
     REQUIRE_EQ(content, ReadContent(f));
     REQUIRE_RC(KFileRelease(f));
 
@@ -308,12 +308,12 @@ FIXTURE_TEST_CASE(UpdateKryptoPassword_NoOutput, MgrFixture)
 {
     string newPwd("new_pwd1");
     rc_t rc = VFSManagerUpdateKryptoPassword(mgr, newPwd.c_str(), newPwd.size(), 0, 0);
-// directory permissions are not looked at on Windows    
-#if !WINDOWS    
+// directory permissions are not looked at on Windows
+#if !WINDOWS
     REQUIRE_EQ(rc, RC(rcVFS, rcEncryptionKey, rcUpdating, rcDirectory, rcExcessive));
 #else
     REQUIRE_EQ(rc, (rc_t)0);
-#endif    
+#endif
 
     REQUIRE_RC(VFSManagerGetKryptoPassword(mgr, buf, BufSize, &num_read));
     REQUIRE_EQ(newPwd, string(buf, num_read));
@@ -324,14 +324,14 @@ FIXTURE_TEST_CASE(UpdateKryptoPassword_Output, MgrFixture)
     // VFSManagerUpdateKryptoPassword returns the directory containing the password file,
     // to help instruct user to chmod if permissions are too lax
     rc_t rc = VFSManagerUpdateKryptoPassword(mgr, newPwd.c_str(), newPwd.size(), buf, BufSize);
-// directory permissions are not looked at on Windows    
-#if !WINDOWS    
+// directory permissions are not looked at on Windows
+#if !WINDOWS
     REQUIRE_EQ(rc, RC(rcVFS, rcEncryptionKey, rcUpdating, rcDirectory, rcExcessive));
 #else
     REQUIRE_EQ(rc, (rc_t)0);
-#endif    
+#endif
     REQUIRE_EQ(string("."), string(buf));
-    
+
     REQUIRE_RC(VFSManagerGetKryptoPassword(mgr, buf, BufSize, &num_read));
     REQUIRE_EQ(newPwd, string(buf, num_read));
 }
@@ -342,11 +342,11 @@ FIXTURE_TEST_CASE(UpdateKryptoPassword_Output, MgrFixture)
 //  Object Id / Object name bindings
 //
 
-class ObjIdBindingFixture : public MgrFixture 
+class ObjIdBindingFixture : public MgrFixture
 {
 public:
     static char bindings[1024];
-    
+
     ObjIdBindingFixture()
     {
     }
@@ -361,7 +361,7 @@ public:
     {
         string bFile = string("./") + bindingsFileName;
         if (string_copy(bindings, sizeof(bindings), bFile.c_str(), bFile.length()) != bFile.length())
-           throw logic_error("ObjIdBindingFixture::SetUp: string_copy failed");   
+           throw logic_error("ObjIdBindingFixture::SetUp: string_copy failed");
         VFSManagerSetBindingsFile(mgr, bindings);
         KDirectoryRemove(wd, true, bindings);
     }
@@ -369,7 +369,7 @@ public:
     {
         rc_t rc = VFSManagerRegisterObject(mgr, id, p);
         if (VPathRelease(p) != 0)
-           throw logic_error("ObjIdBindingFixture::Register: VPathRelease failed");   
+           throw logic_error("ObjIdBindingFixture::Register: VPathRelease failed");
         return rc;
     }
     rc_t Register(uint32_t id, const char* uri)
@@ -386,17 +386,17 @@ public:
         if (rc == 0)
         {
             if (vp == 0)
-                throw logic_error("ObjIdBindingFixture::GetById: VFSManagerGetObject returned NULL");   
-                
+                throw logic_error("ObjIdBindingFixture::GetById: VFSManagerGetObject returned NULL");
+
             const String* p;
             if (VPathMakeString(vp, &p) != 0 || p == 0)
-                throw logic_error("ObjIdBindingFixture::GetById: VPathMakeString failed");   
-                
+                throw logic_error("ObjIdBindingFixture::GetById: VPathMakeString failed");
+
             uri = string(p->addr, p->size);
-            
+
             free((void*)p);
             if (VPathRelease(vp) != 0)
-                throw logic_error("ObjIdBindingFixture::GetById: VPathRelease failed");   
+                throw logic_error("ObjIdBindingFixture::GetById: VPathRelease failed");
         }
         return rc;
     }
@@ -404,10 +404,10 @@ public:
     {
         VPath* p;
         if (VFSManagerMakePath(mgr, &p, uri.c_str()) != 0)
-            throw logic_error("ObjIdBindingFixture::GetByUri: VFSManagerMakePath failed"); 
+            throw logic_error("ObjIdBindingFixture::GetByUri: VFSManagerMakePath failed");
         rc_t rc = VFSManagerGetObjectId(mgr, p, &id);
         if (VPathRelease(p) != 0)
-            throw logic_error("ObjIdBindingFixture::GetById: VPathRelease failed");   
+            throw logic_error("ObjIdBindingFixture::GetById: VPathRelease failed");
         return rc;
     }
 };
@@ -417,7 +417,7 @@ char ObjIdBindingFixture::bindings[];
 FIXTURE_TEST_CASE(ObjIdRegister, ObjIdBindingFixture)
 {
     SetUp(GetName());
-    
+
 //  REQUIRE_RC(Register(1, "ncbi-acc:acc1"));
     REQUIRE_RC(Register(1, "ncbi-acc:acc1?tic=1"));
     REQUIRE_RC(Register(2, "ncbi-file:acc2?tic=22"));
@@ -425,7 +425,7 @@ FIXTURE_TEST_CASE(ObjIdRegister, ObjIdBindingFixture)
 FIXTURE_TEST_CASE(ObjIdRegister_Found_Same, ObjIdBindingFixture)
 {
     SetUp(GetName());
-    
+
     REQUIRE_RC(Register(1, "ncbi-acc:acc1?tic=1"));
     REQUIRE_RC(Register(2, "ncbi-file:acc2?tic=22"));
     REQUIRE_RC(Register(1, "ncbi-acc:acc1?tic=1")); // same name, no problem
@@ -433,7 +433,7 @@ FIXTURE_TEST_CASE(ObjIdRegister_Found_Same, ObjIdBindingFixture)
 FIXTURE_TEST_CASE(ObjIdRegister_Found_Different, ObjIdBindingFixture)
 {
     SetUp(GetName());
-    
+
     REQUIRE_RC(Register(1, "ncbi-acc:acc1?tic=1"));
     REQUIRE_RC(Register(2, "ncbi-file:acc2?tic=22"));
     REQUIRE_RC_FAIL(Register(1, "ncbi-acc:acc11?tic=1")); // name differs
@@ -441,31 +441,31 @@ FIXTURE_TEST_CASE(ObjIdRegister_Found_Different, ObjIdBindingFixture)
 FIXTURE_TEST_CASE(ObjIdById_Found, ObjIdBindingFixture)
 {
     SetUp(GetName());
-    
+
     REQUIRE_RC(Register(123, "ncbi-file:acc123?tic=3"));
     REQUIRE_RC(Register(12, "ncbi-acc:acc12?tic=2"));
     REQUIRE_RC(Register(1, "ncbi-acc:acc1?tic=1"));
-    
+
     string uri;
-    
+
     REQUIRE_RC(GetById(123, uri));
     REQUIRE_EQ(uri, string("ncbi-file:acc123?tic=3"));
-    
+
     REQUIRE_RC(GetById(12, uri));
     REQUIRE_EQ(uri, string("ncbi-acc:acc12?tic=2"));
-    
+
     REQUIRE_RC(GetById(1, uri));
     REQUIRE_EQ(uri, string("ncbi-acc:acc1?tic=1"));
 }
 FIXTURE_TEST_CASE(ObjIdById_NotFound, ObjIdBindingFixture)
 {
     SetUp(GetName());
-    
+
     REQUIRE_RC(Register(100, "ncbi-acc:acc1?tic=1"));
     REQUIRE_RC(Register(200, "ncbi-file:acc2?tic=1"));
-    
+
     string uri;
-    
+
     REQUIRE_RC_FAIL(GetById(100200, uri));
 }
 FIXTURE_TEST_CASE(ObjId_DefaultLocation, ObjIdBindingFixture)
@@ -474,41 +474,41 @@ FIXTURE_TEST_CASE(ObjId_DefaultLocation, ObjIdBindingFixture)
     REQUIRE_RC_FAIL(VFSManagerGetObject(mgr, 1, &vpath)); // this will fail but set VFSManagerBindings to default
     const char* bindings = VFSManagerGetBindingsFile(mgr);
     REQUIRE_NOT_NULL(bindings);
-    
+
     // verify default location
     String* home;
     REQUIRE_RC(KConfigReadString(VFSManagerGetConfig(mgr), "NCBI_HOME", &home));
     REQUIRE_NOT_NULL(home);
-    REQUIRE_EQ(string(bindings), string(home->addr, home->size) + "/objid.mapping"); 
+    REQUIRE_EQ(string(bindings), string(home->addr, home->size) + "/objid.mapping");
     StringWhack(home);
 }
 
 FIXTURE_TEST_CASE(ObjIdByName_Found, ObjIdBindingFixture)
 {
     SetUp(GetName());
-    
+
     REQUIRE_RC(Register(11, "ncbi-acc:acc11?tic=3"));
     REQUIRE_RC(Register(21, "ncbi-file:acc21?tic=22"));
     REQUIRE_RC(Register(1, "ncbi-acc:acc1?tic=1"));
-    
+
     uint32_t id;
-    
+
     REQUIRE_RC(GetByUri(string("ncbi-acc:acc11?tic=3"), id));
     REQUIRE_EQ((uint32_t)11, id);
 
     REQUIRE_RC(GetByUri(string("ncbi-file:acc21?tic=22"), id));
     REQUIRE_EQ((uint32_t)21, id);
-    
+
     REQUIRE_RC(GetByUri(string("ncbi-acc:acc1?tic=1"), id));
     REQUIRE_EQ((uint32_t)1, id);
 }
 FIXTURE_TEST_CASE(ObjIdByName_NotFound, ObjIdBindingFixture)
 {
     SetUp(GetName());
-    
+
     REQUIRE_RC(Register(1, "ncbi-acc:acc1?tic=1"));
     REQUIRE_RC(Register(2, "ncbi-file:acc2?tic=2"));
-    
+
     uint32_t id;
     REQUIRE_RC_FAIL(GetByUri(string("ncbi-acc:acc2?tic=1"), id));
 }
@@ -627,23 +627,6 @@ FIXTURE_TEST_CASE(TestVFSManagerCheckAd, MgrFixture) {
 //////////////////////////////////////////// Main
 extern "C"
 {
-
-#include <kapp/args.h>
-
-ver_t CC KAppVersion ( void )
-{
-    return 0x1000000;
-}
-rc_t CC UsageSummary (const char * progname)
-{
-    return 0;
-}
-
-rc_t CC Usage ( const Args * args )
-{
-    return 0;
-}
-const char UsageDefaultName[] = "test-manager";
 
 rc_t CC KMain ( int argc, char *argv [] )
 {

@@ -252,7 +252,8 @@ enum
 {
     vrUseConfig = 0,            /* take enable/disable state from KConfig */
     vrAlwaysEnable = 1,         /* always enable, regardless of KConfig   */
-    vrAlwaysDisable = 2         /* always disable, regardless of KConfig  */
+    vrAlwaysDisable = 2,        /* always disable, regardless of KConfig  */
+    vrUninitialized = 3,
 };
 
 
