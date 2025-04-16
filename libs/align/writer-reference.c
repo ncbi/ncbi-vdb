@@ -818,7 +818,12 @@ rc_t ImportFasta(ReferenceSeq *const obj, KDataBuffer const *const buf)
         ++dst;
     }
     MD5StateFinish(&mds, obj->md5);
-    rc = KDataBufferSub(buf, &obj->u.local.buf, start, dst - start);
+    if (dst > start)
+        rc = KDataBufferSub(buf, &obj->u.local.buf, start, dst - start);
+    else {
+        rc = RC(rcAlign, rcFile, rcReading, rcData, rcEmpty);
+        (void)PLOGERR(klogWarn, (klogWarn, rc, "Reference sequence '$(defline)' is empty!", "defline=%s", fastaSeqId));
+    }
     if (rc == 0) {
         obj->fastaSeqId = fastaSeqId;
         obj->type = rst_local;
@@ -2428,10 +2433,17 @@ LIB_EXPORT rc_t CC ReferenceMgr_FastaPath(const ReferenceMgr* cself, const char*
 
 LIB_EXPORT rc_t CC ReferenceMgr_FastaFile(const ReferenceMgr* cself, const KFile* file)
 {
-    if(cself == NULL || file == NULL) {
+    rc_t rc = 0;
+    size_t const before = cself->refSeqs.elem_count;
+    
+    if (cself == NULL || file == NULL)
         return RC(rcAlign, rcFile, rcConstructing, rcParam, rcNull);
-    }
-    return ImportFastaFile((ReferenceMgr *)cself, file, NULL);
+
+    rc = ImportFastaFile((ReferenceMgr *)cself, file, NULL);
+    if (rc == 0 && before >= cself->refSeqs.elem_count)
+        rc = RC(rcAlign, rcFile, rcReading, rcData, rcEmpty);
+
+    return rc;
 }
 
 typedef struct {
