@@ -49,6 +49,18 @@ if (NOT WIN32)
 			--config db/VDB-3698.config
 			--ref-list db/VDB-3698.references
 			--ref-file db/VDB-3698.fasta
-	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-)
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+
+	add_test( NAME Test_Align_Config_Empty_Sequence
+	COMMAND
+		Test_Align_Config_Tool
+			--config db/VDB-5931.config
+			--ref-list db/VDB-5931.references
+			--ref-file db/VDB-5931.fasta
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+    set_property(TEST Test_Align_Config_Empty_Sequence PROPERTY
+        PASS_REGULAR_EXPRESSION "data empty while reading file within alignment module"
+    )
 endif()
