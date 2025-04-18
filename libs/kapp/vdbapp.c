@@ -38,6 +38,7 @@
 #include <klib/debug.h>
 #include <klib/rc.h>
 #include <klib/report.h>
+#include <klib/status.h> /* KStsLibHandlerSetStdOut */
 #include <klib/text.h>
 #include <klib/sra-release-version.h>
 
