@@ -1207,7 +1207,7 @@ rc_t CC UsageSummary  (const char * progname)
                     progname);
 }
 
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     Args * args;
     rc_t rc;
@@ -1231,7 +1231,7 @@ rc_t CC KMain ( int argc, char *argv [] )
     else
         STSMSG (klogLevelMax, ("Exiting okay\n"));
 
-    return rc;
+    return (int)rc;
 }
 
 

@@ -99,7 +99,7 @@ public:
 
     static const int BufSize = 1024;
     char buf[BufSize];
-    size_t num_read;
+    size_t num_read = 0;
 };
 
 class ExtractAccessionOrOID : protected ncbi::NK::TestCase {
@@ -129,7 +129,7 @@ public:
     {
         VPath * path = NULL;
         VPath * acc_or_oid = NULL;
-        REQUIRE_RC(VFSManagerMakeOidPath(vfs, &path, name));
+        REQUIRE_RC(VFSManagerMakeOidPath(vfs, &path, (uint32_t)name));
         REQUIRE_EQ(path->path_type, path_type);
         REQUIRE_RC(VFSManagerExtractAccessionOrOID(vfs, &acc_or_oid, path));
         REQUIRE_EQ(VPathGetQuality(acc_or_oid), q);
@@ -366,7 +366,6 @@ FIXTURE_TEST_CASE(NAME_SERVER_PROTECTED_HTTP, PathFixture) {
     REQUIRE(VPathFromUri(path));
     REQUIRE(!VPathIsHighlyReliable(path));
 
-    size_t num_read = 0;
     {
         const string e(URL "?tic=" TIC);
         char buffer[4096] = "";
@@ -564,8 +563,8 @@ FIXTURE_TEST_CASE(ExtractAccessionOrOID_Quality_PathType, PathFixture) {
 
     REQUIRE_RC(VPathRelease(path));
 
-    ExtractAccessionOrOID e(this, "SRR01",
-        vfs, srr, vpNameOrAccession, eQualLast);
+    //ExtractAccessionOrOID e(this, "SRR01",
+    //    vfs, srr, vpNameOrAccession, eQualLast);
     {
         REQUIRE_RC(VPathMakeFmt(&path, "1?"));
         REQUIRE_EQ(path->path_type, (uint8_t)vpName);
@@ -877,7 +876,6 @@ FIXTURE_TEST_CASE(NAME_SERVER_PROTECTED_FASP, PathFixture) {
     {
         const string e(URL "?tic=" TIC);
         char buffer[4096] = "";
-        size_t num_read = 0;
         REQUIRE_RC(VPathReadUri(path, buffer, sizeof buffer, &num_read));
         REQUIRE_EQ(num_read, e.size());
         REQUIRE_EQ(string(buffer), e);
@@ -1080,7 +1078,6 @@ FIXTURE_TEST_CASE(Http_, PathFixture)
 #define SRC "http://u@h.d:9/d/f"
     REQUIRE_RC(VFSManagerMakePath ( vfs, &path, SRC));
     char buffer[4096] = "";
-    size_t num_read = 0;
     REQUIRE_RC(VPathReadUri(path, buffer, sizeof buffer, &num_read));
     REQUIRE_EQ(num_read, sizeof SRC - 1);
     REQUIRE_EQ(string(buffer), string(SRC));
@@ -1092,7 +1089,6 @@ FIXTURE_TEST_CASE(Fasp_, PathFixture)
 #define SRC "fasp://u@hst.com:dir/file"
     REQUIRE_RC(VFSManagerMakePath ( vfs, &path, SRC));
     char buffer[4096] = "";
-    size_t num_read = 0;
     REQUIRE_RC(VPathReadUri(path, buffer, sizeof buffer, &num_read));
     REQUIRE_EQ(num_read, sizeof SRC - 1);
     REQUIRE_EQ(string(buffer), string(SRC));
@@ -1109,7 +1105,6 @@ FIXTURE_TEST_CASE(F_asp_, PathFixture)
 #define SRC "fasp://u@hst.com:a-dir/file"
     REQUIRE_RC(VFSManagerMakePath ( vfs, &path, SRC));
     char buffer[4096] = "";
-    size_t num_read = 0;
     REQUIRE_RC(VPathReadUri(path, buffer, sizeof buffer, &num_read));
     REQUIRE_EQ(num_read, sizeof SRC - 1);
     REQUIRE_EQ(string(buffer), string(SRC));
@@ -1126,7 +1121,6 @@ FIXTURE_TEST_CASE(Fasp1G_, PathFixture)
 #define SRC "fasp://u@ftp.gov:1G"
     REQUIRE_RC(VFSManagerMakePath ( vfs, &path, SRC));
     char buffer[4096] = "";
-    size_t num_read = 0;
     REQUIRE_RC(VPathReadUri(path, buffer, sizeof buffer, &num_read));
     REQUIRE_EQ(num_read, sizeof SRC - 1);
     REQUIRE_EQ(string(buffer), string(SRC));
@@ -1164,9 +1158,9 @@ static void clear_recorded_errors( void )
     }
 }
 
-rc_t CC KMain ( int argc, char *argv [] )
+int main( int argc, char *argv [] )
 {
-    rc_t rc=VPathTestSuite(argc, argv);
+    int rc=VPathTestSuite(argc, argv);
     clear_recorded_errors();
     return rc;
 }

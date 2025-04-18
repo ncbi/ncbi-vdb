@@ -108,11 +108,7 @@ TEST_CASE(WCharConversion_BadArgs)
 
 #endif
 
-#if WINDOWS && UNICODE
-int wmain(int argc, wchar_t* argv[])
-#else
 int main(int argc, char* argv[])
-#endif
 {
     VDB::Application app( argc, argv, AppVersion );
     return VDBAppTestSuite(argc, app.GetArgV());

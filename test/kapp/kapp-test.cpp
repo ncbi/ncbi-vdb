@@ -329,8 +329,7 @@ extern "C"
 rc_t CC KMain ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
-    rc_t rc=KAppTestSuite(argc, argv);
-    return rc;
+    return (rc_t)KAppTestSuite(argc, argv);
 }
 
 }

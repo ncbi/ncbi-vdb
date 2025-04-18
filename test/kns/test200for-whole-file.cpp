@@ -119,22 +119,21 @@ TEST_CASE ( Test_200 ) {
     REQUIRE_RC ( KNSManagerRelease ( mgr ) );
 }
 
-extern "C" {
-    rc_t CC KMain ( int argc, char * argv [] ) { if (
+extern "C" 
+int main( int argc, char * argv [] ) { if (
 0 ) assert ( ! KDbgSetString ( "KNS-HTTP" ) );
-        KConfigDisableUserSettings ();
+    KConfigDisableUserSettings ();
 
-        KConfig * kfg = NULL;
-        rc_t rc = KConfigMakeEmpty ( & kfg );
-     // turn off certificate validation to download from storage.googleapis.com
-        if ( rc == 0 )
-            rc = KConfigWriteString ( kfg, "/tls/allow-all-certs", "true" );
+    KConfig * kfg = NULL;
+    rc_t rc = KConfigMakeEmpty ( & kfg );
+    // turn off certificate validation to download from storage.googleapis.com
+    if ( rc == 0 )
+        rc = KConfigWriteString ( kfg, "/tls/allow-all-certs", "true" );
 
-        if ( rc == 0 )
-            rc = T200FOR_WHOLE_FILE ( argc, argv );
+    if ( rc == 0 )
+        rc = (rc_t)T200FOR_WHOLE_FILE ( argc, argv );
 
-        RELEASE ( KConfig, kfg );
+    RELEASE ( KConfig, kfg );
 
-        return rc;
-    }
+    return (int)rc;
 }

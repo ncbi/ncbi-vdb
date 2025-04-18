@@ -429,17 +429,14 @@ TEST_CASE(expiredNsg) {
 }
 #endif
 
-TEST_SUITE ( TestResolverSdl )
-
-extern "C" {
-    rc_t CC KMain ( int argc, char * argv [] ) {
-        if (
+extern "C"
+int main( int argc, char * argv [] ) {
+    if (
 0 )
-            assert ( ! KDbgSetString ( "VFS" ) );
-        if (
+        assert ( ! KDbgSetString ( "VFS" ) );
+    if (
 0 )
-            assert ( ! KDbgSetString ( "VFS-JSON" ) );
+        assert ( ! KDbgSetString ( "VFS-JSON" ) );
     KConfigDisableUserSettings();
     return TestSdlResolver( argc, argv );
-    }
 }

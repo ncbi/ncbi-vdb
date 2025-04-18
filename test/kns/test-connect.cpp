@@ -194,7 +194,7 @@ extern "C"
 #include <kfg/config.h>
 #include <klib/debug.h>
 
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
 
@@ -203,8 +203,7 @@ rc_t CC KMain ( int argc, char *argv [] )
     KDbgSetModConds ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), DBG_FLAG ( DBG_KNS_SOCKET ) );
 #endif
 
-    rc_t rc=KnsTestSuite(argc, argv);
-    return rc;
+    return KnsTestSuite(argc, argv);
 }
 
 }

@@ -292,7 +292,7 @@ public:
             LOG(LogLevel::e_message, "worker "  << (void*)self << " after KStreamRead(" << string(localBuf, num) << ")" << endl);
 
             for (size_t i = 0 ; i < num; ++i)
-                localBuf[i] = toupper(localBuf[i]);
+                localBuf[i] = (char)toupper(localBuf[i]);
 
             THROW_ON_RC ( KStreamWrite(stream, localBuf, num, &num) );
             LOG(LogLevel::e_message, "worker "  << (void*)self << " after KStreamWrite" << endl);
@@ -325,8 +325,8 @@ public:
         {
             // signal to server to shut down the connection
             string done("done");
-            size_t num;
-            THROW_ON_RC ( KStreamTimedWrite(p_stream, done.c_str(), done.length(), &num, nullptr) );
+            size_t nm;
+            THROW_ON_RC ( KStreamTimedWrite(p_stream, done.c_str(), done.length(), &nm, nullptr) );
             THROW_ON_RC ( KStreamRelease(p_stream) );
         }
     }
@@ -334,7 +334,7 @@ public:
     KStream* MakeStream( int32_t p_retryTimeout )
     {
         timeout_t tm;
-        TimeoutInit ( & tm, p_retryTimeout );
+        TimeoutInit ( & tm, (uint32_t)p_retryTimeout );
 
         KSocket* socket;
         THROW_ON_RC ( KNSManagerMakeRetryConnection(m_mgr, &socket, &tm, nullptr, &ep) );
@@ -491,7 +491,7 @@ public:
             LOG(LogLevel::e_message, "worker "  << (void*)self << " after KStreamRead(" << string(localBuf, localNumRead) << ")" << endl);
 
             for (size_t i = 0 ; i < localNumRead; ++i)
-                localBuf[i] = toupper(localBuf[i]);
+                localBuf[i] = (char)toupper(localBuf[i]);
 
             // send outgoing message after a pause for SERVER_WRITE_DELAY_MS
             LOG(LogLevel::e_message, "worker "  << (void*)self << " sleeping for " << SERVER_WRITE_DELAY_MS << " ms" << endl);
@@ -617,11 +617,11 @@ public:
 
     KStream* MakeStreamTimed( int32_t p_retryTimeout, int32_t p_readMillis, int32_t p_writeMillis  )
     {
-        timeout_t tm;
-        TimeoutInit ( & tm, p_retryTimeout );
+        timeout_t t;
+        TimeoutInit ( & t, (uint32_t)p_retryTimeout );
 
         KSocket* socket;
-        THROW_ON_RC ( KNSManagerMakeRetryTimedConnection(m_mgr, &socket, &tm, p_readMillis, p_writeMillis, nullptr, &ep) );
+        THROW_ON_RC ( KNSManagerMakeRetryTimedConnection(m_mgr, &socket, &t, p_readMillis, p_writeMillis, nullptr, &ep) );
         if (socket == 0)
            throw logic_error ( "MakeStreamTimed: KStreamRelease failed" );
 
@@ -845,7 +845,7 @@ public:
 		char localBuf[MaxMessageSize];
 		size_t num;
         timeout_t tm;
-        tm.mS = p_timeoutMs;
+        tm.mS = (uint32_t)p_timeoutMs;
 		THROW_ON_RC ( KStreamTimedRead(p_stream, localBuf, size == 0 ? sizeof(localBuf) : size, &num, p_timeoutMs == -1 ? nullptr : &tm) );
 
 		return string(localBuf, num);
@@ -862,7 +862,7 @@ public:
 	{
 		size_t num;
         timeout_t tm;
-        tm.mS = p_timeoutMs;
+        tm.mS = (uint32_t)p_timeoutMs;
         LOG(LogLevel::e_message, "WriteMessage, timeout=" << p_timeoutMs << "ms" << endl);
 		return KStreamTimedWrite(p_stream, p_msg.c_str(), p_msg.size(), &num, p_timeoutMs == -1 ? nullptr : &tm);
 	}
@@ -957,21 +957,21 @@ public:
         LOG(LogLevel::e_message, "flooding" << endl);
 		char localBuf[MaxMessageSize];
         memset(localBuf, 0xab, sizeof(localBuf)); // to keep valgrind happy
-		size_t num;
+		size_t nm;
         struct timeout_t tm;
         tm.mS = 0; /* do not wait */
 		while (true)
 		{
 			LOG(LogLevel::e_message, "writing " << MaxMessageSize << " bytes\n");
-			rc_t rc = KStreamTimedWrite(m_data, localBuf, sizeof(localBuf), &num, &tm);
+			rc_t rc = KStreamTimedWrite(m_data, localBuf, sizeof(localBuf), &nm, &tm);
 			if (rc != 0)
 			{
 				LOG(LogLevel::e_message, "KStreamWrite failed - flooding complete\n");
 				break;
 			}
-			if (num != sizeof(localBuf))
+			if (nm != sizeof(localBuf))
 			{
-				LOG(LogLevel::e_message, "written " << num << " bytes, expected " << sizeof(localBuf) << endl);
+				LOG(LogLevel::e_message, "written " << nm << " bytes, expected " << sizeof(localBuf) << endl);
 				break;
 			}
 		}
@@ -1038,7 +1038,7 @@ extern "C"
 #include <kfg/config.h>
 #include <klib/debug.h>
 
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
 
@@ -1057,8 +1057,7 @@ rc_t CC KMain ( int argc, char *argv [] )
         KDirectoryCreateDir(dir, 0700, 0, "%s/.ncbi", getenv ( "HOME" ));
     KDirectoryRelease(dir);
 
-    rc_t rc=KnsIpcTestSuite(argc, argv);
-    return rc;
+    return KnsIpcTestSuite(argc, argv);
 }
 
 }

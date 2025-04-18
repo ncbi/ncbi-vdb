@@ -235,7 +235,7 @@ TEST_CASE(KEncDecBigFile)
         REQUIRE_RC ( rc );
     }
 
-    uint64_t size_data_actual;
+    uint64_t size_data_actual = 0;
     if ( !space_exhausted )
     {
         REQUIRE_RC ( KFileSize ( enc_file, &size_data_actual ) );
@@ -329,7 +329,7 @@ TEST_CASE(KEncDec4GbMarginsFiles)
             REQUIRE_RC ( rc );
         }
 
-        uint64_t size_data_actual;
+        uint64_t size_data_actual = 0;
         if ( !space_exhausted )
         {
             REQUIRE_RC ( KFileSize ( enc_file, &size_data_actual ) );
@@ -388,12 +388,9 @@ TEST_CASE(KEncDec4GbMarginsFiles)
 //////////////////////////////////////////// Main
 
 extern "C"
+int main ( int argc, char *argv [] )
 {
-    rc_t CC KMain ( int argc, char *argv [] )
-    {
-        KConfigDisableUserSettings();
-        ncbi::NK::TestEnv::SetVerbosity(ncbi::NK::LogLevel::e_all);
-        rc_t rc=KKryptoSlowTestSuite(argc, argv);
-        return rc;
-    }
+    KConfigDisableUserSettings();
+    ncbi::NK::TestEnv::SetVerbosity(ncbi::NK::LogLevel::e_all);
+    return KKryptoSlowTestSuite(argc, argv);
 }

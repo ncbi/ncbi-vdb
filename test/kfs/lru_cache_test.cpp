@@ -41,7 +41,7 @@
 static size_t rand_32( size_t min, size_t max )
 {
        double scaled = ( ( double )rand() / RAND_MAX );
-       return ( (double)( max - min + 1 ) * scaled ) + min;
+       return (size_t)( (double)( max - min + 1 ) * scaled ) + min;
 }
 
 static rc_t fill_file_with_random_data( KFile * file, size_t file_size )
@@ -57,7 +57,7 @@ static rc_t fill_file_with_random_data( KFile * file, size_t file_size )
             uint32_t i;
             size_t to_write, num_writ;
 
-            for ( i = 0; i < 512; ++i ) data[ i ] = rand_32( 0, 0xFFFFFFFF - 1 );
+            for ( i = 0; i < 512; ++i ) data[ i ] = (uint32_t)rand_32( 0, 0xFFFFFFFF - 1 );
             to_write = ( file_size - total );
             if ( to_write > sizeof data ) to_write = sizeof data;
             rc = KFileWriteAll ( file, pos, data, to_write, &num_writ );
@@ -131,7 +131,7 @@ static rc_t compare_file_content( const KFile * file1, const KFile * file2, uint
 void seed_random_number_generator( void )
 {
     KTime_t t = KTimeStamp ();  /* klib/time.h */
-    srand( t );
+    srand( (unsigned int)t );
 }
 
 TEST_SUITE( LRU_Cache_Test );
@@ -330,7 +330,7 @@ TEST_CASE( LRU_Cache_Test_Random_Reading )
     //print_events( &events );
     REQUIRE( events . requests >= loops );
     REQUIRE( events . found >= loops );
-    REQUIRE( events . enter = page_count );
+    REQUIRE( events . enter == page_count );
     REQUIRE( events . failed == 0 );
 #endif
 
@@ -346,9 +346,9 @@ extern "C"
 
 #include <kfg/config.h>
 
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
-    rc_t rc;
+    int rc;
     seed_random_number_generator();
     rc = LRU_Cache_Test( argc, argv );
     KOutMsg( "lru-cache-test : %R\n", rc );

@@ -254,7 +254,7 @@ FIXTURE_TEST_CASE(KMetadata_GetSequence_SeqNull, KTextMetadata_ApiFixture)
 FIXTURE_TEST_CASE(KMetadata_GetSequence_ValNull, KTextMetadata_ApiFixture)
 {
     Setup(R"({"name":"md","revision":1})");
-    const char * seq;
+    const char * seq = nullptr;
     REQUIRE_RC_FAIL( KMetadataGetSequence( m_md, seq, nullptr ) );
 }
 
@@ -315,11 +315,10 @@ extern "C"
 
 #include <kfg/config.h>
 
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
-    rc_t rc=KDBTextMetadataTestSuite(argc, argv);
-    return rc;
+    return KDBTextMetadataTestSuite(argc, argv);
 }
 
 }

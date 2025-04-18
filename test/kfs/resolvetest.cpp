@@ -168,12 +168,7 @@ FIXTURE_TEST_CASE( ResolveTest_Relative, ResolveFixture )
 //////////////////////////////////////////// Main
 
 extern "C"
+int main( int argc, char *argv [] )
 {
-
-rc_t CC KMain ( int argc, char *argv [] )
-{
-    rc_t rc = ResolveSuite( argc, argv );
-    return rc;
-}
-
+    return ResolveSuite( argc, argv );
 }

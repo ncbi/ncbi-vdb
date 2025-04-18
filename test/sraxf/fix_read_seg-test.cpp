@@ -123,5 +123,5 @@ TEST_CASE(total_lt_spotlen_read_2) {
     CHECK_EQ(dst[3], (uint32_t)8);
 }
 
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 { return FixReadSegTestSuite(argc, argv); }

@@ -1011,21 +1011,19 @@ static rc_t argsHandler(int argc, char * argv[]) {
 #include <klib/debug.h>
 #include <klib/log.h> /* KLogLevelSet */
 
-extern "C" {
-    rc_t CC KMain ( int argc, char *argv [] )
-    {
-        setenv("HOME", ".", 1);
+extern "C" 
+int main( int argc, char *argv [] )
+{
+    setenv("HOME", ".", 1);
 
-        KConfigDisableUserSettings();
+    KConfigDisableUserSettings();
 
-     // assert(!KDbgSetString("CLOUD"));
-     // KLogLevelSet( klogInfo );
+    // assert(!KDbgSetString("CLOUD"));
+    // KLogLevelSet( klogInfo );
 
-     // this makes messages from the test code appear
-     // (same as running the executable with "-l=message")
-     // TestEnv::verbosity = LogLevel::e_message;
+    // this makes messages from the test code appear
+    // (same as running the executable with "-l=message")
+    // TestEnv::verbosity = LogLevel::e_message;
 
-        rc_t rc=CloudTestSuite(argc, argv);
-        return rc;
-    }
+    return CloudTestSuite(argc, argv);
 }

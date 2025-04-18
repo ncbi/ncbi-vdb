@@ -83,7 +83,7 @@ TEST_CASE(Tar_Parse)
     REQUIRE_RC(KDirectoryNativeDir(&dir));
 
     const KDirectory *tarDir;
-    REQUIRE_RC(KDirectoryOpenTarArchiveRead(dir, &tarDir, false, "test.tar"));
+    REQUIRE_EQ(0, KDirectoryOpenTarArchiveRead(dir, &tarDir, false, "test.tar"));
 
     struct KNamelist *list;
     REQUIRE_RC(KDirectoryList(tarDir, &list, NULL, NULL, NULL));
@@ -109,11 +109,10 @@ extern "C"
 
 #include <kfg/config.h>
 
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
-    rc_t rc=KfsTestSuite(argc, argv);
-    return rc;
+    return KfsTestSuite(argc, argv);
 }
 
 }

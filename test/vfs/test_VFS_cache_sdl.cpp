@@ -38,7 +38,7 @@
 
 #include <kproc/thread.h> // KThread
 
-#include <ktst/unit_test.hpp> /* KMain */
+#include <ktst/unit_test.hpp>
 
 #include <vfs/path-priv.h> /* VPathGetDirectory */
 #include <vfs/manager.h> /* VFSManager */
@@ -130,10 +130,10 @@ protected:
     }
 
     rc_t RemoteEquals(const char * path_str) const {
-        char path[4096]("");
-        rc_t rc(VPathReadUri(remote, path, sizeof path, NULL));
+        char p[4096]("");
+        rc_t rc(VPathReadUri(remote, p, sizeof p, NULL));
         if (rc == 0)
-            if (strcmp(path, path_str) != 0)
+            if (strcmp(p, path_str) != 0)
                 rc = 115;
 
         return rc;
@@ -383,7 +383,7 @@ FIXTURE_TEST_CASE(WgsCaching, CachingFixture) {
     REQUIRE(VFSManagerSdlCacheCount(mgr, NULL) == 1);
 }
 
-static rc_t DefaultWorkerThreadFn(const KThread * self, void * data) {
+static rc_t DefaultWorkerThreadFn(const KThread * self, void * data) noexcept {
     CachingFixture * f((CachingFixture*)data);
     assert(f);
 
@@ -468,10 +468,9 @@ FIXTURE_TEST_CASE(ThreadsNotCaching, NotCachingFixture) {
 }
 #endif
 
-extern "C" {
-    rc_t CC KMain(int argc, char * argv[]) {
+extern "C" 
+int main(int argc, char * argv[]) {
 if(0) { KDbgSetString("VFS"); }
-        KConfigDisableUserSettings();
-        return Test_VFS_cache_sdlSuite(argc, argv);
-    }
+    KConfigDisableUserSettings();
+    return Test_VFS_cache_sdlSuite(argc, argv);
 }

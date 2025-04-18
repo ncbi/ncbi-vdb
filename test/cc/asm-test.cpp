@@ -507,14 +507,9 @@ TEST_CASE(uint32__ror)
 
 //////////////////////////////////////////// Main
 extern "C"
+int main ( int argc, char *argv [] )
 {
-
-rc_t CC KMain ( int argc, char *argv [] )
-{
-    rc_t rc=AsmTestSuite(argc, argv);
-    return rc;
-}
-
+    return AsmTestSuite(argc, argv);
 }
 
 

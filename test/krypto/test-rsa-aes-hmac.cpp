@@ -902,12 +902,8 @@ TEST_CASE ( KEncryptExtendedResultDecryptRoundTrip )
 //////////////////////////////////////////// Main
 
 extern "C"
+int main( int argc, char *argv [] )
 {
-
-    rc_t CC KMain ( int argc, char *argv [] )
-    {
-        KConfigDisableUserSettings ();
-        return KRsaAesHmacTestSuite ( argc, argv );
-    }
-
+    KConfigDisableUserSettings ();
+    return KRsaAesHmacTestSuite ( argc, argv );
 }

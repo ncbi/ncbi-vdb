@@ -123,15 +123,12 @@ KOutMsg ( "##[3] OK : Conf (false ) + SetAllow ( false ) = false\n" );
     RELEASE ( KConfig, kfg );
 }
 
-extern "C" {
-    rc_t CC KMain ( int argc, char * argv [] ) { if (
+extern "C" 
+int main( int argc, char * argv [] ) { if (
 0 ) assert ( ! KDbgSetString ( "KNS-HTTP" ) );
-        KConfigDisableUserSettings ();
+    KConfigDisableUserSettings ();
 
-     // turn off certificate validation to download from storage.googleapis.com
+    // turn off certificate validation to download from storage.googleapis.com
 
-     rc_t rc = ALLOW_ALL_CERTS ( argc, argv );
-
-     return rc;
-    }
+    return ALLOW_ALL_CERTS ( argc, argv );
 }

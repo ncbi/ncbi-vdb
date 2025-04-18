@@ -95,9 +95,7 @@ rc_t run ( const char *progname )
     return rc;
 }
 
-/* KMain
- */
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     Args *args;
     rc_t rc = ArgsMakeAndHandle ( & args, argc, argv, 0 );

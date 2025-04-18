@@ -475,9 +475,9 @@ static rc_t argsHandler(int argc, char* argv[]) {
     return rc;
 }
 
-extern "C" {
-    rc_t CC KMain(int argc, char *argv[]) {
-        KConfigDisableUserSettings();
+extern "C"
+int main(int argc, char *argv[]) {
+    KConfigDisableUserSettings();
 
 if (
 0)      assert(!KDbgSetString("KFS-FILE"));
@@ -485,6 +485,5 @@ if (
 if(
 0)      assert(!KDbgSetString("VFS"));
 
-        return rc_t(TestDependenciesSuite(argc, argv));
-    }
+    return TestDependenciesSuite(argc, argv);
 }

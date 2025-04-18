@@ -1048,13 +1048,12 @@ FIXTURE_TEST_CASE(TestVDBManagerPathType, Fixture) {
 }
 #endif
 
-extern "C" {
-    rc_t CC KMain(int argc, char * argv[]) {
+extern "C" 
+int main(int argc, char * argv[]) {
 #if 0
-        KDbgSetString("VFS");
+    KDbgSetString("VFS");
 #endif
-        return TestVpathOpenSuite(argc, argv);
-    }
+    return TestVpathOpenSuite(argc, argv);
 }
 
 /*

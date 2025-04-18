@@ -175,13 +175,12 @@ extern "C"
 #include <kfg/config.h>
 #include <klib/debug.h> // KDbgSetString
 
-rc_t CC KMain ( int argc, char *argv [] )
+int main( int argc, char *argv [] )
 {
     //assert(!KDbgSetString("KFG"));
     //assert(!KDbgSetString("VFS"));
     KConfigDisableUserSettings();
-    rc_t rc=KdbTestSuite(argc, argv);
-    return rc;
+    return KdbTestSuite(argc, argv);
 }
 
 }

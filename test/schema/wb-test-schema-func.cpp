@@ -944,17 +944,8 @@ FIXTURE_TEST_CASE(Func_Physical_SchemaParams, AST_Function_Fixture)
 }
 
 //////////////////////////////////////////// Main
-#include <kapp/args.h>
-#include <kfg/config.h>
-#include <klib/out.h>
-
 extern "C"
-{
-
-rc_t CC KMain ( int argc, char *argv [] )
+int main( int argc, char *argv [] )
 {
     return SchemaFuncTestSuite(argc, argv);
 }
-
-}
-
