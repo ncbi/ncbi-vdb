@@ -32,7 +32,7 @@
 
 add_compile_definitions( __mod__="test/kdbtext" )
 
-set( LIBS kapp;${COMMON_LIBS_READ};kdbtext )
+set( LIBS kdbtext;${COMMON_LIBS_READ} )
 AddExecutableTest( Test_KDBText_Path        "test-path"     "${LIBS}" )
 AddExecutableTest( Test_KDBText_Metadata    "test-metadata" "${LIBS}" )
 AddExecutableTest( Test_KDBText_Index       "test-index"    "${LIBS}" )

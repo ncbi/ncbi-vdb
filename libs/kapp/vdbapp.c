@@ -158,7 +158,7 @@ VdbInitialize( int argc, char *argv [], ver_t vers )
     {
         char * path;
 
-        rc = ArgsConvFilepath(NULL, 0, argv[0], string_size(argv[0]), &path, NULL);
+        rc = ArgsConvFilepath(NULL, 0, argv[0], string_size(argv[0]), (void**)&path, NULL);
 
         size_t tool_size = string_size (path);
         const char* tool = path;

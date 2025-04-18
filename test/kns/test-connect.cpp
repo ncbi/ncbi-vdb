@@ -104,7 +104,7 @@ FIXTURE_TEST_CASE(Connect_OK, ConnectFixture)
 
     LogLevel::E l(LogLevel::e_error);
     l = LogLevel::e_warning;
-    for (auto i = 0; i < sizeof hh / sizeof hh[0]; ++i) {
+    for (auto i = 0; i < (int) ( sizeof hh / sizeof hh[0] ); ++i) {
         string& h(hh[i]);
         return_val = 1; /* epoll_wait: success */
         LOG(l, "Trying " << h << "...\n");

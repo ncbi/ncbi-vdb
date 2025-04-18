@@ -31,7 +31,9 @@ endif()
 add_compile_definitions( __mod__="test/kapp" )
 
 AddExecutableTest( Test_KAPP_args "kapp-test" "kapp;${COMMON_LIBS_WRITE};${ADDITIONAL_LIBS}" )
-target_link_options( Test_KAPP_args PRIVATE "/ENTRY:wmainCRTStartup" )
+if( WIN32 )
+    target_link_options( Test_KAPP_args PRIVATE "/ENTRY:wmainCRTStartup" )
+endif()
 
 AddExecutableTest( Test_VDBAPP "vdbapp-test" "${COMMON_LIBS_READ};${ADDITIONAL_LIBS}" )
 
