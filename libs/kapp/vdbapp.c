@@ -32,6 +32,7 @@
 #include <kfc/ctx.h>
 #endif
 
+#include "vdbapp-priv.h"
 #include <kapp/vdbapp.h>
 #include <kapp/args-conv.h>
 
