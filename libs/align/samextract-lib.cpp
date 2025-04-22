@@ -35,7 +35,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <kapp/args.h>
-#include <kapp/main.h>
+//#include <kapp/main.h>
 #include <kfs/file.h>
 #include <klib/defs.h>
 #include <klib/rc.h>

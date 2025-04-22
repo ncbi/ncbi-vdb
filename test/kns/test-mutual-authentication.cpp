@@ -24,7 +24,6 @@
 
 #include <cmath>
 
-#include <kapp/main.h> 
 #include <kapp/vdbapp.h>
 
 #include <kfs/directory.h> /* KDirectoryRelease */

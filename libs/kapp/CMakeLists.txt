@@ -53,18 +53,6 @@ set( APP_CMN
     vdbapp.cpp
 )
 
-set( KAPP_SRC
-    main.c
-    ${SYSMAIN}
-    ${APP_CMN}
-    ${OS_SPECIFIC_SRC}
-)
-
-GenerateStaticLibs( kapp "${KAPP_SRC}" )
-ExportStatic( kapp true )
-
-GenerateStaticLibsWithDefs( kapp-norsrc "${KAPP_SRC}" "NO_KRSRC=1" )
-
 GenerateStaticLibs( vdbapp "${APP_CMN};${OS_SPECIFIC_SRC}" )
 ExportStatic( vdbapp true )
 

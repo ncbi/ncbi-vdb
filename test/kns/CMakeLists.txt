@@ -24,7 +24,7 @@
 
 add_compile_definitions( __mod__="test/kns" )
 
-set( LIBS kapp "${COMMON_LIBS_READ}")
+set( LIBS "${COMMON_LIBS_READ}")
 
 AddExecutableTest( Test_KNS_allow_all_certificates "test_allow_all_certificates" "${LIBS}" )
 AddExecutableTest( Test_KNS_dis_allow_all_certificates "test_dis_allow_all_certificates" "${LIBS}" )

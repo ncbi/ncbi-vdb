@@ -35,7 +35,7 @@
  */
 #define COMPARE_EQ_INV_CIPHER 1
 
-#include <kapp/main.h>
+#include <kapp/vdbapp.h>
 #include <kapp/args.h>
 
 #include <krypto/ciphermgr.h>

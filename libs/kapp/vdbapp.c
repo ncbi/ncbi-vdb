@@ -48,8 +48,6 @@
 #include <atomic32.h>
 #include <strtol.h>
 
-#include "main-priv.h"
-
 static atomic32_t hangup;
 static atomic32_t quitting;
 
@@ -187,14 +185,6 @@ VdbInitialize( int argc, char *argv [], ver_t vers )
     if ( rc == 0 )
         rc = KStsLibHandlerSetStdOut ();
 
-#if KFG_COMMON_CREATION
-    if ( rc == 0 )
-    {
-        KConfig *kfg;
-        rc = KConfigMake ( & kfg );
-    }
-#endif
-
     return rc;
 }
 
@@ -212,10 +202,6 @@ VdbTerminate( rc_t rc )
             rc = r2;
         kns = NULL;
     }
-
-#if KFG_COMMON_CREATION
-    KConfigRelease ( kfg );
-#endif
 
     /* finalize error reporting */
     ReportSilence ();

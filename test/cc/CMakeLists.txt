@@ -24,7 +24,7 @@
 
 add_compile_definitions( __mod__="test/cc" )
 
-set( LIBS kapp "${COMMON_LIBS_READ}")
+set( LIBS "${COMMON_LIBS_READ}")
 
 AddExecutableTest( Test_CC_Asm "asm-test" "${LIBS}" )
 AddExecutableTest( Test_CC_Int128 "test-int128" "${LIBS}" )

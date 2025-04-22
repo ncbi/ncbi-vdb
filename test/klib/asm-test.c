@@ -24,7 +24,6 @@
 *
 */
 
-#include <kapp/main.h>
 #include <kapp/args.h>
 #include <klib/log.h>
 #include <klib/out.h>

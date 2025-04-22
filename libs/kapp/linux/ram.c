@@ -24,8 +24,6 @@
 *
 */
 
-#include "../main-priv.h"
-#include <kapp/main.h>
 #include <klib/log.h>
 #include <klib/rc.h>
 
@@ -55,7 +53,7 @@ rc_t KAppGetTotalRam ( uint64_t * totalRam )
         PLOGERR ( klogFatal, ( klogFatal, rc,
 					"failed to retrieve number of RAM pages. error code: $(status) - $(msg)"
                     , "status=%d,msg=%!"
-                    , status, status 
+                    , status, status
                         ));
         return rc;
     }

@@ -24,7 +24,6 @@
  *
  */
 
-#include <kapp/main.h>
 #include <kapp/args.h>
 
 #include <krypto/ciphermgr.h>
