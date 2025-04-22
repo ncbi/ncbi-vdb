@@ -37,7 +37,7 @@
 #include <vfs/manager.h> /* VFSManagerRelease */
 #include <vfs/path-priv.h> /* VPathGetDirectory */
 #include <vfs/resolver.h> /* VRevolverRelease */
-#include <ktst/unit_test.hpp> /* KMain */
+#include <ktst/unit_test.hpp>
 #include "../../libs/vfs/path-priv.h" /* VPathSetDirectory */
 #include <limits.h> /* PATH_MAX */
 #ifndef PATH_MAX
@@ -1048,7 +1048,7 @@ FIXTURE_TEST_CASE(TestVDBManagerPathType, Fixture) {
 }
 #endif
 
-extern "C" 
+extern "C"
 int main(int argc, char * argv[]) {
 #if 0
     KDbgSetString("VFS");

@@ -277,11 +277,10 @@ TEST_CASE ( TEST_PROXY_ENV_withTrailingSlash ) { // VDB-3329
     TestRunner ( this, "env-with-trailing-slash" );
 }
 
-extern "C" {
-    rc_t CC KMain ( int argc, char * argv [] )  {
-        KConfigDisableUserSettings ();
-        return ProxyTestSuite ( argc, argv );
-    }
+extern "C"
+int main ( int argc, char * argv [] )  {
+    KConfigDisableUserSettings ();
+    return ProxyTestSuite ( argc, argv );
 }
 
 ////////////////////////////////////////////////////////////////////////////////

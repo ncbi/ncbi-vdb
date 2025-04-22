@@ -404,9 +404,7 @@ TEST_CASE ( VerifyConfig )
 #include <kfg/config.h>
 
 extern "C"
-{
-
-rc_t CC KMain ( int argc, char *argv [] )
+int main( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
     {
@@ -415,6 +413,3 @@ rc_t CC KMain ( int argc, char *argv [] )
         return LoaderTestSuite(argc, argv);
     }
 }
-
-}
-

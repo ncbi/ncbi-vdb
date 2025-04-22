@@ -1475,7 +1475,7 @@ static const char *dummy_usage[] = {"dummy argument", NULL};
 OptDef TestOptions[]
     = {{OPTION_DUMMY, ALIAS_DUMMY, NULL, dummy_usage, 1, false, false}};
 
-rc_t CC KMain ( int argc, char *argv[] )
+int main ( int argc, char *argv[] )
 {
     Args *args;
 
