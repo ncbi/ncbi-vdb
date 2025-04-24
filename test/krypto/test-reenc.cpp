@@ -254,7 +254,8 @@ TEST_CASE(KReencryptZeroContentSizeEncFile)
     REQUIRE_RC ( KDirectoryNativeDir ( &current_dir ) );
 
     // just in case if it still there
-    KDirectoryRemove ( current_dir, true, TMP_FOLDER );
+    KDirectoryRemove ( current_dir, true, enc_file_path );
+    KDirectoryRemove ( current_dir, true, reenc_file_path );
 
     // create file
     REQUIRE_RC ( TCreateEncFile( current_dir, enc_file_path, TFileOpenMode_Write, &key_enc, &enc_file ) );
@@ -308,7 +309,8 @@ TEST_CASE(KReencryptZeroContentSizePtFile)
     REQUIRE_RC ( KDirectoryNativeDir ( &current_dir ) );
 
     // just in case if it still there
-    KDirectoryRemove ( current_dir, true, TMP_FOLDER );
+    KDirectoryRemove ( current_dir, true, pt_file_path );
+    KDirectoryRemove ( current_dir, true, reenc_file_path );
 
     // create file
     REQUIRE_RC ( TCreatePtFile( current_dir, pt_file_path, TFileOpenMode_Write, &pt_file ) );
