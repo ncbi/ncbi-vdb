@@ -26,10 +26,10 @@
 
 #include <klib/rc.h>
 #include <kapp/args-conv.h>
+#include <kapp/win/main-priv-win.h>
 
 #include <os-native.h>
 
-#include "main-priv-win.h"
 
 static
 char* convert_arg_utf8(const wchar_t* arg)
