@@ -106,7 +106,7 @@ FIXTURE_TEST_CASE(KNSManagerGetUserAgent_Default, SessionIdFixture)
 {
     const char * ua = nullptr;
     KNSManagerGetUserAgent(&ua);
-    const string ua_contains = "sra-toolkit Test_KNS_dflt.0.0.0 (phid=noc";
+    const string ua_contains = "sra-toolkit Test_KNS_dflt.0.0.12 (phid=noc";
     //fprintf(stderr,"Got: '%s', expected '%s'\n", ua, ua_contains.data());
     REQUIRE_NE( string::npos, string(ua).find(ua_contains) );
     // VDB-4896: no double quotes inside UA
@@ -176,14 +176,14 @@ FIXTURE_TEST_CASE(KNSManagerSetUserAgentSuffix_Get, SessionIdFixture)
     REQUIRE_RC(KNSManagerGetUserAgentSuffix( & s ));
     REQUIRE_EQ( suffix, string( s ) );
     REQUIRE( UserAgent_Contains(
-        "sra-toolkit Test_KNS_dflt.0.0.0suffix (phid=noc" ) );
+        "sra-toolkit Test_KNS_dflt.0.0.12suffix (phid=noc" ) );
 }
 
 FIXTURE_TEST_CASE(KNSManagerSetUserAgentSuffix_Restore, SessionIdFixture)
 {
     REQUIRE_RC(KNSManagerSetUserAgentSuffix("suffix1"));
     REQUIRE( UserAgent_Contains(
-        "sra-toolkit Test_KNS_dflt.0.0.0suffix1 (phid=noc" ) );
+        "sra-toolkit Test_KNS_dflt.0.0.12suffix1 (phid=noc" ) );
 
     REQUIRE_RC(KNSManagerSetUserAgentSuffix(""));
     const char * ua = nullptr;
@@ -346,7 +346,7 @@ extern "C"
     int main(int argc, char* argv[])
 #endif
 {
-    VDB::Application app( argc, argv );
+    VDB::Application app( argc, argv, 12 ); // we need custom version for some tests
     if (!app)
     {
         return 1;

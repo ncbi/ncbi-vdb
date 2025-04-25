@@ -127,6 +127,11 @@ VdbInitialize( int argc, char *argv [], ver_t vers )
         memset(&v, 0, sizeof v);
         SraReleaseVersionGet( &v );
         SetKAppVersion( v . version );
+        vers = v . version;
+    }
+    else
+    {
+        SetKAppVersion( vers );
     }
 
     /* initialize error reporting */
