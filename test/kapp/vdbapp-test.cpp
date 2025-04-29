@@ -81,6 +81,13 @@ TEST_CASE(KnsQuittingInitialized)
     REQUIRE_NOT_NULL( (void*)KNSManagerGetQuitting( nullptr ) );
 }
 
+TEST_CASE(ReportsInitialized)
+{
+    ver_t version = 0;
+    REQUIRE_RC( ReportGetVersion( & version ) );
+    REQUIRE_EQ( GetKAppVersion(), version );
+}
+
 #if WIN32
 TEST_CASE(SignalHup_ignored)
 {

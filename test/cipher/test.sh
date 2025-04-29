@@ -23,7 +23,7 @@ ${VIRTUALENV} -p ${PYTHON} $tmp_py_env
 # the following creates "build dist .eggs" in $CIPHER_DIR
 tmp_cur_dir=$(pwd)
 cd $CIPHER_DIR
-python setup.py install
+python -m pip install .
 cd $tmp_cur_dir
 unset tmp_cur_dir
 
