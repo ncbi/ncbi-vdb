@@ -94,11 +94,10 @@ TEST_CASE ( AwsProxyTest ) {
     REQUIRE_RC ( KNSManagerRelease ( mgr ) );
 }
 
-extern "C" {
-    rc_t CC KMain ( int argc, char * argv [] ) {
-        if (
+extern "C" 
+int main( int argc, char * argv [] ) {
+    if (
 0 ) assert ( ! KDbgSetString ( "KNS" ) );
-        KConfigDisableUserSettings ();
-        return AwsProxyTestSuite(argc, argv);
-    }
+    KConfigDisableUserSettings ();
+    return AwsProxyTestSuite(argc, argv);
 }

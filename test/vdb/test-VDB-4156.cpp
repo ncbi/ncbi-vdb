@@ -93,14 +93,7 @@ FIXTURE_TEST_CASE ( DumpToKMDataNode, WVDB_Fixture)
 
 //////////////////////////////////////////// Main
 extern "C"
+int main ( int argc, char *argv [] )
 {
-
-#include <kfg/config.h>
-
-rc_t CC KMain ( int argc, char *argv [] )
-{
-    rc_t rc=KDBVDBTestSuite(argc, argv);
-    return rc;
-}
-
+    return KDBVDBTestSuite(argc, argv);
 }

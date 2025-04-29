@@ -83,12 +83,12 @@ public:
         if (KConfigRelease(kfg) != 0)
            cerr << "~KeyStoreFixture: KConfigRelease failed" << endl;
     }
-    void KfgUpdateNode(const char* key, const char* value)
+    void KfgUpdateNode(const char* p_key, const char* p_value)
     {
         KConfigNode *node;
-        if (KConfigOpenNodeUpdate(kfg, &node, key) != 0)
+        if (KConfigOpenNodeUpdate(kfg, &node, p_key) != 0)
             throw logic_error("KfgUpdateNode: KConfigOpenNodeUpdate failed");
-        if (KConfigNodeWrite(node, value, string_measure(value, NULL)) != 0)
+        if (KConfigNodeWrite(node, p_value, string_measure(p_value, NULL)) != 0)
             throw logic_error("KfgUpdateNode: KConfigNodeWrite failed");
         if (KConfigNodeRelease(node) != 0)
             throw logic_error("KfgUpdateNode: KConfigNodeRelease failed");
@@ -403,11 +403,10 @@ extern "C"
 
 #include <kfg/config.h>
 
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
-    rc_t rc=KeyStoreTestSuite(argc, argv);
-    return rc;
+    return KeyStoreTestSuite(argc, argv);
 }
 
 }

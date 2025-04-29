@@ -248,14 +248,7 @@ FIXTURE_TEST_CASE( VdbMgr_Read_I8, TextVdbReadFixture )
 
 //////////////////////////////////////////// Main
 extern "C"
+int main( int argc, char *argv [] )
 {
-
-#include <kapp/args.h>
-
-rc_t CC KMain ( int argc, char *argv [] )
-{
-    rc_t rc=VdbTextSuite(argc, argv);
-    return rc;
-}
-
+    return VdbTextSuite(argc, argv);
 }

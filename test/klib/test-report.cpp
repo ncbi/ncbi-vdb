@@ -45,14 +45,7 @@ TEST_CASE(Report_InitFini)
 
 //////////////////////////////////////////////////// Main
 extern "C"
-{
-#ifdef WINDOWS
-#define main wmain
-#endif
 int main ( int argc, char *argv [] )
 {
-    rc_t rc=KReportTestSuite(argc, argv);
-    return rc;
-}
-
+    return KReportTestSuite(argc, argv);
 }

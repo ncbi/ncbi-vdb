@@ -1126,16 +1126,9 @@ TEST_CASE(KnowIfTheFunctionExistsAtCompileTime) {
 #endif
 
 //////////////////////////////////////////////////// Main
-extern "C" {
-
-#if WINDOWS && UNICODE
-    int wmain(int argc, wchar_t* argv[])
-#else
-    int main(int argc, char* argv[])
-#endif
-    {
-        VDB::Application app(argc, argv);
-        return KlibTestSuite(argc, app.GetArgV());
-    }
-
+extern "C" 
+int main(int argc, char* argv[])
+{
+    VDB::Application app(argc, argv);
+    return KlibTestSuite(argc, app.GetArgV());
 }

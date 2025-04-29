@@ -290,16 +290,15 @@ static rc_t argsHandler ( int argc, char * argv [] ) {
     return rc;
 }
 
-extern "C" {
-    rc_t KMain ( int argc, char * argv [] ) {
+extern "C"
+int main ( int argc, char * argv [] ) {
 ncbi::NK::TestEnv::SetVerbosity(ncbi::NK::LogLevel::e_all);
-        rc_t rc = DuSuite ( argc, argv );
+    int rc = DuSuite ( argc, argv );
 
-        s_path = NULL;
+    s_path = NULL;
 
-        ArgsWhack ( args );
-        args = NULL;
+    ArgsWhack ( args );
+    args = NULL;
 
-        return rc;
-    }
+    return rc;
 }

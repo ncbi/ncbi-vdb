@@ -58,7 +58,7 @@ rc_t write_some_data( VTable * t, bool full ) {
         const uint32_t data32[ 5 ] = { 10, 20, 30, 40, 50 };
         for ( uint32_t i = 0; 0 == rc && i < 10; ++i ) {
             rc = VCursorOpenRow( c );
-            uint32_t n = full ? 5 : 4;
+            uint32_t n = full ? 5u : 4u;
             if ( 0 == rc ) { rc = VCursorWrite( c, col_ids_1[ 0 ], 8, data8, 0, n ); }
             if ( 0 == rc ) { rc = VCursorWrite( c, col_ids_1[ 1 ], 32, data32, 0, n ); }
             if ( 0 == rc ) { rc = VCursorCommitRow( c ); }
@@ -458,6 +458,8 @@ FIXTURE_TEST_CASE( Copy_DB_Meta, Test_Meta_Fixture ) {
 }
 
 //////////////////////////////////////////// Main
-extern "C" {
-    rc_t CC KMain( int argc, char *argv [] ) { return VDB_META_CMP_COPY_Suite( argc, argv ); }
+extern "C" 
+int main( int argc, char *argv [] ) 
+{
+    return VDB_META_CMP_COPY_Suite( argc, argv ); 
 }

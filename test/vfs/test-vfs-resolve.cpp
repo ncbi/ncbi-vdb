@@ -27,7 +27,7 @@
 #include <kapp/args.h> /* ArgsMakeAndHandle */
 #include <kfg/config.h> /* KConfigDisableUserSettings */
 #include <klib/debug.h> /* KDbgSetString */
-#include <ktst/unit_test.hpp> /* KMain */
+#include <ktst/unit_test.hpp> 
 
 #include <vfs/manager.h> /* VFSManagerRelease */
 #include <vfs/path.h> /* VPathRelease */
@@ -440,13 +440,12 @@ FIXTURE_TEST_CASE(ResolveTestLocalPath, Fixture) {
     REQUIRE_RC(VPathRelease(p));
 }
 
-extern "C" {
-    rc_t CC KMain(int argc, char * argv[]) {
-        putenv((char*)"NCBI_VDB_NO_CACHE_SDL_RESPONSE=1");
+extern "C" 
+int main(int argc, char * argv[]) {
+    putenv((char*)"NCBI_VDB_NO_CACHE_SDL_RESPONSE=1");
 #if 0
-        KDbgSetString("VFS");
+    KDbgSetString("VFS");
 #endif
-        KConfigDisableUserSettings();
-        return TestResolveSuite(argc, argv);
-    }
+    KConfigDisableUserSettings();
+    return TestResolveSuite(argc, argv);
 }

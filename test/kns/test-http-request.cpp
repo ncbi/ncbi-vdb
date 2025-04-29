@@ -565,7 +565,7 @@ extern "C"
 #include <kfg/config.h>
 #include <klib/debug.h>
 
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     KConfig * kfg = NULL;
     rc_t rc = KConfigMake(&kfg, NULL);
@@ -583,13 +583,13 @@ rc_t CC KMain ( int argc, char *argv [] )
 	// TestEnv::verbosity = LogLevel::e_message;
 
     if (rc == 0)
-        rc = HttpRequestVerifyURLSuite(argc, argv);
+        rc = (rc_t)HttpRequestVerifyURLSuite(argc, argv);
 
     rc_t r2 = KConfigRelease(kfg);
     if (rc == 0 && r2 != 0)
         rc = r2;
 
-    return rc;
+    return (int)rc;
 }
 
 }

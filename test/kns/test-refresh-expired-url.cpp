@@ -541,27 +541,26 @@ static rc_t argsHandler ( int argc, char * argv [] ) {
     return rc;
 }
 
-extern "C" {
-    rc_t CC KMain ( int argc, char * argv [] )
-    {
-        //if ( 1 ) assert ( ! KDbgSetString ( "KNS-HTTP" ) );
-        KConfigDisableUserSettings ();
+extern "C" 
+int main( int argc, char * argv [] )
+{
+    //if ( 1 ) assert ( ! KDbgSetString ( "KNS-HTTP" ) );
+    KConfigDisableUserSettings ();
 
-        rc_t rc = KConfigMakeEmpty ( & kfg );
-        // turn off certificate validation to download from storage.googleapis.com
-        if ( rc == 0 )
-            rc = KConfigWriteString ( kfg, "/tls/allow-all-certs", "true" );
+    rc_t rc = KConfigMakeEmpty ( & kfg );
+    // turn off certificate validation to download from storage.googleapis.com
+    if ( rc == 0 )
+        rc = KConfigWriteString ( kfg, "/tls/allow-all-certs", "true" );
 
-        // in order to run in a cloud, give permission to submit computing environment
-        if (rc == 0)
-            rc = KConfigWriteString(kfg, "/libs/cloud/report_instance_identity", "true");
+    // in order to run in a cloud, give permission to submit computing environment
+    if (rc == 0)
+        rc = KConfigWriteString(kfg, "/libs/cloud/report_instance_identity", "true");
 
-        if ( rc == 0 )
-            rc = HttpRefreshTestSuite ( argc, argv );
+    if ( rc == 0 )
+        rc = (rc_t)HttpRefreshTestSuite ( argc, argv );
 
-        RELEASE ( KConfig, kfg );
+    RELEASE ( KConfig, kfg );
 
-        return rc;
-    }
+    return (int)rc;
 }
 

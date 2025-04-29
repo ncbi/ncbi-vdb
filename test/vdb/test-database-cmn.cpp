@@ -149,9 +149,8 @@ FIXTURE_TEST_CASE(BAD_NUM_GAP_FULL, Fixture) {
 }
 #endif
 
-extern "C" {
-    rc_t CC KMain(int argc, char * argv[]) {
-        KConfigDisableUserSettings();
-        return DatabaseCmnTestSuite(argc, argv);
-    }
+extern "C" 
+int main(int argc, char * argv[]) {
+    KConfigDisableUserSettings();
+    return DatabaseCmnTestSuite(argc, argv);
 }

@@ -67,7 +67,7 @@ TEST_CASE( TwoRead_Fail ) {
     REQUIRE(UnitTest_2Read_Fail() == 0);
 }
 
-rc_t CC KMain ( int argc, char *argv [] )
+int main( int argc, char *argv [] )
 {
     return SynQualityTestSuite( argc, argv );
 }

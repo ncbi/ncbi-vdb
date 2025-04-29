@@ -762,15 +762,8 @@ FIXTURE_TEST_CASE ( KRowSetUnionNormalTest, RowSetFixture )
 
 //////////////////////////////////////////// Main
 extern "C"
-{
-
-#include <kapp/main.h>
-
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     srand ( time(NULL) );
     return KRowSetTestSuite(argc, argv);
 }
-
-}
-

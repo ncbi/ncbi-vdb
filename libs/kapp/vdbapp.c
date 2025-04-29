@@ -33,6 +33,7 @@
 #endif
 
 #include <kapp/vdbapp.h>
+#include <kapp/args-conv.h>
 
 #include <klib/log.h>
 #include <klib/debug.h>
@@ -161,8 +162,12 @@ VdbInitialize( int argc, char *argv [], ver_t vers )
 
     /* initialize the default User-Agent in the kns-manager to default value - using "vers" and argv[0] above strrchr '/' */
     {
-        const char * tool = argv[ 0 ];
-        size_t tool_size = string_size ( tool );
+        char * path;
+
+        rc = ArgsConvFilepath(NULL, 0, argv[0], string_size(argv[0]), (void**)&path, NULL);
+
+        size_t tool_size = string_size (path);
+        const char* tool = path;
 
         const char * sep = string_rchr ( tool, tool_size, '/' );
         if ( sep ++ == NULL )
@@ -175,6 +180,8 @@ VdbInitialize( int argc, char *argv [], ver_t vers )
             tool_size = sep - tool;
 
         KNSManagerSetUserAgent ( kns, PKGNAMESTR " sra-toolkit %.*s.%.3V", ( uint32_t ) tool_size, tool, vers );
+
+        free(path);
     }
 
     KNSManagerSetQuitting ( kns, Quitting );

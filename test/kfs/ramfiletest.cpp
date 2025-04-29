@@ -170,13 +170,8 @@ TEST_CASE(KRamFileWrite_shift_right)
 //////////////////////////////////////////// Main
 
 extern "C"
-{
-
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
-    rc_t rc=RamFileTestSuite(argc, argv);
-    return rc;
-}
-
+    return RamFileTestSuite(argc, argv);
 }

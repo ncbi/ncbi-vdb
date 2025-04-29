@@ -270,8 +270,8 @@ bool CipherExample (KCipher * cipher)
 {
     uint8_t cipher_text [16];
     rc_t rc;
-    bool passed_key;
-    bool passed_block;
+    bool passed_key = false;
+    bool passed_block = false;
 
     memset (cipher_text, 0, sizeof cipher_text);
 
@@ -513,10 +513,10 @@ bool ExampleVector (KCipher * cipher, const example_vectors * ev)
     uint8_t plain_text [16];
     uint32_t Nk;
     rc_t rc;
-    bool passed_enckey;
-    bool passed_deckey;
-    bool passed_enc;
-    bool passed_dec;
+    bool passed_enckey = false;
+    bool passed_deckey = false;
+    bool passed_enc = false;
+    bool passed_dec = false;
 
     switch (ev->key_enc.rounds)
     {
@@ -749,7 +749,7 @@ rc_t CC Usage (const Args * args)
                     UsageDefaultName);
 }
 
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     Args * args;
     rc_t rc;
@@ -771,5 +771,5 @@ rc_t CC KMain ( int argc, char *argv [] )
         STSMSG (0, ("Passed %d tests out of 28 possible\n", test_count));
     if (rc)
         LOGERR (klogErr, rc, "Exiting with a failure status");
-    exit (error_count);
+    return error_count;
 }

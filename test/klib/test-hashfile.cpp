@@ -84,7 +84,7 @@ static __inline uint64_t fastrng(uint64_t* state0)
     const uint64_t rot = s0 >> 60;
     *state0 *= 12898287266413564321ULL;
     uint64_t xs = uint64_ror(s0, 18) + s0;
-    xs = uint64_ror(xs, rot);
+    xs = uint64_ror(xs, (uint8_t)rot);
     return xs;
 }
 
@@ -231,9 +231,9 @@ TEST_CASE(Klib_hashfiledups)
     rc = KHashFileMake(&hmap, BACKING);
     REQUIRE_RC(rc);
 
-    uint64_t key1 = random();
+    uint64_t key1 = (uint64_t)random();
     uint64_t hash1 = KHash((const char*)&key1, sizeof(uint64_t));
-    uint64_t key2 = random();
+    uint64_t key2 = (uint64_t)random();
     uint64_t hash2 = hash1;
     for (size_t i = 0; i != 100000; ++i) {
         rc = KHashFileAdd(hmap, (const char*)&key1, 8, hash1,
@@ -254,7 +254,7 @@ TEST_CASE(Klib_hashfileMapDeletes)
 {
     rc_t rc;
 
-    uint64_t state = random();
+    uint64_t state = (uint64_t)random();
 
     KHashFile* hmap;
     rc = KHashFileMake(&hmap, BACKING);
@@ -316,7 +316,7 @@ TEST_CASE(Klib_hashfileMapDeletes)
 static rc_t inserter(const KThread* thread, void* data) noexcept
 {
     rc_t rc;
-    uint64_t state = random();
+    uint64_t state = (uint64_t)random();
     while (KEEPRUNNING) {
         size_t idx = fastrng(&state) % RANDS_SIZE;
         uint64_t key = RANDS[idx];
@@ -337,7 +337,7 @@ static rc_t inserter(const KThread* thread, void* data) noexcept
 
 static rc_t deleter(const KThread* thread, void* data) noexcept
 {
-    uint64_t state = random();
+    uint64_t state = (uint64_t)random();
     while (KEEPRUNNING) {
         size_t idx = fastrng(&state) % RANDS_SIZE;
         uint64_t key = RANDS[idx];
@@ -350,7 +350,7 @@ static rc_t deleter(const KThread* thread, void* data) noexcept
 
 static rc_t finder(const KThread* thread, void* data) noexcept
 {
-    uint64_t state = random();
+    uint64_t state = (uint64_t)random();
     while (KEEPRUNNING) {
         size_t idx = fastrng(&state) % RANDS_SIZE;
         uint64_t key = RANDS[idx];
@@ -380,7 +380,7 @@ static rc_t finder(const KThread* thread, void* data) noexcept
 
 static rc_t notfinder(const KThread* thread, void* data) noexcept
 {
-    uint64_t state = random();
+    uint64_t state = (uint64_t)random();
     while (KEEPRUNNING) {
         uint64_t key = fastrng(&state);
         uint64_t val = 9;
@@ -623,8 +623,8 @@ TEST_CASE(Klib_hashfilethreads)
     KEEPRUNNING = false;
     KSleepMs(1000);
 
-    for (long i = 0; i != VectorLength(&threads); ++i) {
-        KThread* thrd = (KThread*)VectorGet(&threads, i);
+    for (long i = 0; i != (long)VectorLength(&threads); ++i) {
+        KThread* thrd = (KThread*)VectorGet(&threads, (uint32_t)i);
         KThreadRelease(thrd);
     }
     VectorWhack(&threads, NULL, NULL);
@@ -645,7 +645,7 @@ TEST_CASE(Klib_HashFileIterator)
     std::unordered_map<uint32_t, uint32_t> map;
     for (int iter = 0; iter != 2; ++iter) {
         for (int i = 0; i != loops; ++i) {
-            key = random() % loops;
+            key = (uint32_t) ( random() % loops );
             value = key + 1;
 
             auto pair = std::make_pair(key, value);
@@ -662,7 +662,7 @@ TEST_CASE(Klib_HashFileIterator)
         }
 
         for (int i = 0; i != loops; ++i) {
-            key = random() % loops;
+            key = (uint32_t) ( random() % loops );
 
             map.erase(key);
 
@@ -678,7 +678,7 @@ TEST_CASE(Klib_HashFileIterator)
         }
 
         for (int i = 0; i != loops; ++i) {
-            key = random() % loops;
+            key = (uint32_t) ( random() % loops );
             value = (uint32_t)random();
 
             auto pair = std::make_pair(key, value);
@@ -743,37 +743,37 @@ extern "C" {
 
 #include <kfg/config.h>
 
-rc_t CC KMain(int argc, char* argv[])
+int main(int argc, char* argv[])
 {
     rc_t rc;
-    srandom(time(NULL));
-    uint64_t state = random();
+    srandom( (unsigned int) time(NULL));
+    uint64_t state = (uint64_t)random();
 
     for (size_t i = 0; i != RANDS_SIZE; ++i) {
         RANDS[i] = fastrng(&state);
     }
 
     rc = KDirectoryNativeDir(&DIR);
-    if (rc) return rc;
+    if (rc) return (int)rc;
 
     const char* fname = "test-hashfile.data";
     rc = KDirectoryCreateFile(DIR, &BACKING, true, 0600, kcmInit, fname);
-    if (rc) return rc;
+    if (rc) return (int)rc;
 
     KConfigDisableUserSettings();
 
-    rc = KHashFileTestSuite(argc, argv);
-    if (rc) return rc;
+    rc = (rc_t)KHashFileTestSuite(argc, argv);
+    if (rc) return (int)rc;
 
     rc = KDirectoryRemove(DIR, true, "%s", fname);
 #ifndef WINDOWS
-    if (rc) return rc;
+    if (rc) return (int)rc;
 #endif
 
     rc = KFileRelease(BACKING);
-    if (rc) return rc;
+    if (rc) return (int)rc;
     rc = KDirectoryRelease(DIR);
-    if (rc) return rc;
+    if (rc) return (int)rc;
 
     return 0;
 }

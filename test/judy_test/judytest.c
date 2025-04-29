@@ -1811,7 +1811,7 @@ rc_t perform_test( const uint32_t count )
     return rc;
 }
 
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     Args * args;
     SetUsage( Usage );

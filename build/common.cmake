@@ -198,9 +198,13 @@ endfunction()
 
 function( BuildExecutableForTest exe_name sources libraries )
 	add_executable( ${exe_name} ${sources} )
-        if(NOT _NCBIVDB_CFG_PACKAGING)
+    if( WIN32 )
+        target_link_options( ${exe_name} PRIVATE "/ENTRY:mainCRTStartup" )
+    endif()
+
+    if(NOT _NCBIVDB_CFG_PACKAGING)
 	    MSVS_StaticRuntime( ${exe_name} )
-        endif()
+    endif()
 	target_link_libraries( ${exe_name} ${libraries} )
 endfunction()
 

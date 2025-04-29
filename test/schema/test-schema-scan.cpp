@@ -81,7 +81,7 @@ MatchStrings ( const string& p_source, const string p_print )
     return true;
 }
 
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     int failed = 0;
     if ( argc < 2 )

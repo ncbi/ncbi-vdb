@@ -147,7 +147,7 @@ static int64_t fat_start_id = 0;
 static uint64_t fat_id_count = 0;
 static
 rc_t CC
-findAllTextCallback (int64_t p_startId, uint64_t p_count, void*)
+findAllTextCallback (int64_t p_startId, uint64_t p_count, void*) noexcept
 {
     ++ fat_called;
     fat_start_id = p_startId;
@@ -182,7 +182,7 @@ FIXTURE_TEST_CASE(KWIndex_ProjectAllText, KIndex_Fixture)
 {
     Open( "testdb", "index" );
 
-    auto f = [] (int64_t p_startId, uint64_t p_count, const char *key, void*) -> rc_t { return 0; };
+    auto f = [] (int64_t p_startId, uint64_t p_count, const char *key, void*) noexcept -> rc_t { return 0; };
 
     rc_t rc = SILENT_RC(rcDB, rcIndex, rcProjecting, rcFunction, rcInvalid);
     REQUIRE_EQ( rc, KIndexProjectAllText ( m_idx, 1, f, nullptr ) );
@@ -205,7 +205,7 @@ FIXTURE_TEST_CASE(KWIndex_FindAllU64, KIndex_Fixture)
 {
     Open( "testdb", "index" );
 
-    auto f = [] ( uint64_t key, uint64_t key_size, int64_t start_id, uint64_t id_count, void *data ) -> rc_t { return 0; };
+    auto f = [] ( uint64_t key, uint64_t key_size, int64_t start_id, uint64_t id_count, void *data ) noexcept -> rc_t { return 0; };
 
     rc_t rc = SILENT_RC(rcDB, rcIndex, rcSelecting, rcType, rcUnsupported);
     REQUIRE_EQ( rc, KIndexFindAllU64 ( m_idx, 0, f, nullptr ) );
@@ -225,11 +225,10 @@ extern "C"
 
 #include <kfg/config.h>
 
-rc_t CC KMain ( int argc, char *argv [] )
+int main( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
-    rc_t rc=KDBRIndexTestSuite(argc, argv);
-    return rc;
+    return KDBRIndexTestSuite(argc, argv);
 }
 
 }

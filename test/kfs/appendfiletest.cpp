@@ -35,6 +35,7 @@
 
 #include <klib/out.h>
 #include <kapp/args.h>
+#include <kapp/vdbapp.h>
 #include <kfg/config.h>
 
 using namespace std;
@@ -183,7 +184,7 @@ checkOpenFile ( KFile ** File, const char * Name, bool Write )
     RCt = KDirectoryNativeDir ( & Dir );
     if ( RCt == 0 ) {
         RCt = Write
-                    ? KDirectoryOpenFileWrite ( Dir, File, "%s", Name )
+                    ? KDirectoryOpenFileWrite ( Dir, File, true, "%s", Name )
                     : KDirectoryOpenFileRead ( Dir, ( const KFile ** ) File, "%s", Name )
                     ;
         KDirectoryRelease ( Dir );
@@ -363,13 +364,9 @@ TEST_CASE(KAppendFile_set_size)
 
 //////////////////////////////////////////// Main
 
-extern "C"
+extern "C" int 
+main ( int argc, char *argv [] )
 {
-
-rc_t CC KMain ( int argc, char *argv [] )
-{
-    rc_t rc=AppendFileTestSuite(argc, argv);
-    return rc;
-}
-
+    VDB::Application app(argc, argv);
+    return AppendFileTestSuite(argc, argv);
 }

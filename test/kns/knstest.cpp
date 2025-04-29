@@ -338,13 +338,7 @@ static rc_t argsHandler(int argc, char * argv[]) {
 }
 
 extern "C"
-{
-
-#if WINDOWS && UNICODE
-    int wmain(int argc, wchar_t* argv[])
-#else
-    int main(int argc, char* argv[])
-#endif
+int main(int argc, char* argv[])
 {
     VDB::Application app( argc, argv, 12 ); // we need custom version for some tests
     if (!app)
@@ -360,6 +354,4 @@ extern "C"
     KConfigDisableUserSettings();
 
     return KnsTestSuite(argc, app.GetArgV());
-}
-
 }

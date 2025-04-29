@@ -68,7 +68,7 @@ public:
     static const int BufSize = 1024;
 
 protected:
-    BaseMgrFixture(const char* password)
+    BaseMgrFixture(const char* p_password)
         : wd ( 0 )
         , mgr ( 0 )
         , vpath(0)
@@ -97,7 +97,7 @@ protected:
            throw logic_error("MgrFixture: KConfigNodeRelease failed");
 
         // make sure pwfile contains the correct password (some tests might update it)
-        CreateFile(pwFileName, password);
+        CreateFile(pwFileName, p_password);
     }
     ~BaseMgrFixture()
     {
@@ -472,14 +472,14 @@ FIXTURE_TEST_CASE(ObjId_DefaultLocation, ObjIdBindingFixture)
 {
     VFSManagerSetBindingsFile(mgr, NULL);
     REQUIRE_RC_FAIL(VFSManagerGetObject(mgr, 1, &vpath)); // this will fail but set VFSManagerBindings to default
-    const char* bindings = VFSManagerGetBindingsFile(mgr);
-    REQUIRE_NOT_NULL(bindings);
+    const char* binds = VFSManagerGetBindingsFile(mgr);
+    REQUIRE_NOT_NULL(binds);
 
     // verify default location
     String* home;
     REQUIRE_RC(KConfigReadString(VFSManagerGetConfig(mgr), "NCBI_HOME", &home));
     REQUIRE_NOT_NULL(home);
-    REQUIRE_EQ(string(bindings), string(home->addr, home->size) + "/objid.mapping");
+    REQUIRE_EQ(string(binds), string(home->addr, home->size) + "/objid.mapping");
     StringWhack(home);
 }
 
@@ -625,14 +625,10 @@ FIXTURE_TEST_CASE(TestVFSManagerCheckAd, MgrFixture) {
 #endif
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-rc_t CC KMain ( int argc, char *argv [] )
+extern "C"   
+int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
-    rc_t rc=VManagerTestSuite(argc, argv);
-    return rc;
+    return VManagerTestSuite(argc, argv);
 }
 
-}

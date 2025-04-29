@@ -24,7 +24,7 @@
 
 #include <cmath>
 
-#include <kapp/main.h> // KMain
+#include <kapp/main.h> 
 #include <kapp/vdbapp.h>
 
 #include <kfs/directory.h> /* KDirectoryRelease */
@@ -66,9 +66,11 @@ static rc_t KDirectory_Load(const KDirectory * cSelf,
     if (rc == 0)
         rc = KFileRead(file, 0, *buffer, s + 1, &num_read);
 
-    rc_t r2 = KFileRelease(file);
-    if (rc == 0 && r2 != 0)
-        rc = r2;
+    {
+        rc_t r2 = KFileRelease(file);
+        if (rc == 0 && r2 != 0)
+            rc = r2;
+    }
 
     if (cSelf == NULL) {
         rc_t r2 = KDirectoryRelease(self);
@@ -182,7 +184,10 @@ rc_t CC Usage(const struct Args * args) {
 rc_t MutualConnection(const char * own_cert, const char * pk_key,
     const char * url, const char * host, uint32_t port);
 
-rc_t CC KMain(int argc, char *argv[]) {
+int main(int argc, char *argv[]) {
+
+    VDB::Application app(argc, argv);
+
     bool singleton = true;
     bool post = false;
 
@@ -190,7 +195,7 @@ rc_t CC KMain(int argc, char *argv[]) {
     rc_t rc = ArgsMakeAndHandle(
         &args, argc, argv, 1, Options, sizeof Options / sizeof Options[0]);
     if (rc != 0)
-        return rc;
+        return (int)rc;
 
     uint32_t pcount = 0;
     uint32_t count = 0;
@@ -242,7 +247,7 @@ rc_t CC KMain(int argc, char *argv[]) {
             if (rc == 0)
                 rc = ArgsParamValue(args, 2, (const void **)&v3);
             if (rc == 0)
-                rc = MutualConnection(own_cert, pk_key, v, v2, atoi(v3));
+                rc = MutualConnection(own_cert, pk_key, v, v2, (uint32_t)atoi(v3));
         }
 
         free(own_cert);
@@ -308,5 +313,5 @@ rc_t CC KMain(int argc, char *argv[]) {
     if (r2 != 0 && rc == 0)
         rc = r2;
 
-    return rc;
+    return (int)rc;
 }

@@ -347,13 +347,8 @@ TEST_CASE(KReencryptZeroContentSizePtFile)
 //////////////////////////////////////////// Main
 
 extern "C"
+int main( int argc, char *argv [] )
 {
-
-    rc_t CC KMain ( int argc, char *argv [] )
-    {
-        KConfigDisableUserSettings();
-        rc_t rc=KReencTestSuite(argc, argv);
-        return rc;
-    }
-
+    KConfigDisableUserSettings();
+    return KReencTestSuite(argc, argv);
 }
