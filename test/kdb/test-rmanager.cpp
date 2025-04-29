@@ -152,7 +152,7 @@ FIXTURE_TEST_CASE(KDBManagerVPathType, KDBManager_Fixture)
         REQUIRE_RC(VFSManagerRelease(vfsmgr));
     }
 
-cout << path << endl;
+//cout << path << endl;
     REQUIRE_EQ((int)kptTable, KDBManagerPathType(m_mgr, path.c_str()));
 }
 
