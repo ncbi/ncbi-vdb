@@ -26,7 +26,7 @@
 
 add_compile_definitions( __mod__="test/kfg" )
 
-set( LIBS kapp "${COMMON_LIBS_READ}")
+set( LIBS "${COMMON_LIBS_READ}")
 
 #AddExecutableTest( Test_KFG_NCBI_Env "ncbi-home-from-env" "${LIBS}" )
 AddExecutableTest( Test_KFG_Wb_test_kfg "wb-test-kfg" "${LIBS}" )

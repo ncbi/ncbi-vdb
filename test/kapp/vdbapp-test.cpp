@@ -28,8 +28,6 @@
 
 #include <ktst/unit_test.hpp>
 
-#include <kapp/main.h>
-
 #include <kproc/procmgr.h>
 #include <klib/klib-priv.h>
 #include <kns/manager.h>

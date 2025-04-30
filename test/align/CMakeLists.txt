@@ -26,7 +26,7 @@ add_compile_definitions( __mod__="test/align" )
 
 if (NOT WIN32)
 	add_executable( Test_Align_Config_Tool test-config.cpp )
-	target_link_libraries( Test_Align_Config_Tool kapp ${COMMON_LIBS_WRITE} )
+	target_link_libraries( Test_Align_Config_Tool ${COMMON_LIBS_WRITE} )
 
 	add_test( NAME Test_Align_Config
 		COMMAND

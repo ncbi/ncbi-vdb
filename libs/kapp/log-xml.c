@@ -24,7 +24,6 @@
 *
 */
 #include <kapp/extern.h>
-#include <kapp/main.h>
 #include <klib/debug.h>
 #include <klib/log.h>
 #include <klib/out.h>

@@ -38,7 +38,6 @@
 
 #include <kfg/config.h>
 #include <kapp/args.h>
-#include <kapp/main.h>
 
 static
 const char *VPathGetAccTypeStr ( const VPath * self )

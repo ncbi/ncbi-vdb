@@ -32,8 +32,8 @@ else()
 	set( TMPDIR /tmp )
 endif()
 
-set( LIBS_READ kapp "${COMMON_LIBS_READ}")
-set( LIBS_WRITE kapp "${COMMON_LIBS_WRITE}" "${ADDITIONAL_LIBS}")
+set( LIBS_READ "${COMMON_LIBS_READ}")
+set( LIBS_WRITE "${COMMON_LIBS_WRITE}" "${ADDITIONAL_LIBS}")
 
 # TODO: make sure runs are not cached in the user repository when running tests
 

@@ -30,8 +30,8 @@ else()
     set( ADDITIONAL_LIBS "" )
 endif()
 
-set( LIBS_READ kapp "${COMMON_LIBS_READ}")
-set( LIBS_WRITE kapp "${COMMON_LIBS_WRITE}" "${ADDITIONAL_LIBS}")
+set( LIBS_READ "${COMMON_LIBS_READ}")
+set( LIBS_WRITE "${COMMON_LIBS_WRITE}" "${ADDITIONAL_LIBS}")
 
 AddExecutableTest( SlowTest_VDB_vdb "test-vdb" "${LIBS_READ}" )
 

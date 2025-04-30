@@ -26,7 +26,6 @@
 
 #include <ktst/unit_test.hpp> /* TEST_SUITE */
 #include <kapp/vdbapp.h> /* KAppVersion */
-#include <kapp/main.h>
 
 #include <kfs/directory.h>
 #include <vdb/manager.h>
