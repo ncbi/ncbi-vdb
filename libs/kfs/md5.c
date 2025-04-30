@@ -1,4 +1,4 @@
-/*=======================================================================================
+/*==============================================================================
 *
 *                            PUBLIC DOMAIN NOTICE
 *               National Center for Biotechnology Information
@@ -30,12 +30,15 @@ struct KMD5File;
 #include <kfs/extern.h>
 #include <kfs/md5.h>
 #include <kfs/impl.h>
+
 #include <klib/checksum.h>
 #include <klib/container.h>
-#include <klib/text.h>
 #include <klib/debug.h>
 #include <klib/log.h>
+#include <klib/printf.h> /* string_printf */
 #include <klib/rc.h>
+#include <klib/text.h>
+
 #include <os-native.h>
 #include <sysalloc.h>
 
@@ -1917,4 +1920,178 @@ LIB_EXPORT rc_t CC KFileMakeNewMD5Read ( const KFile **fp,
 }
 
 
-/* end of file */
+/*
+ * Observer to calculate md5 checksum when KFile is read
+ */
+struct KFileMD5ReadObserver {
+    KRefcount refcount;
+    bool completed; /* entire file was read */
+    bool finished;  /* digest is ready */
+    uint8_t digest[16];
+    uint64_t size; /* file size, 0 if unknown */
+    uint64_t pos; /* last processed position in file */
+    MD5State md5;
+};
+
+LIB_EXPORT rc_t CC KFileMD5ReadObserverAddRef(
+    const KFileMD5ReadObserver *self)
+{
+    if (self != NULL) {
+        switch (KRefcountAdd(&self->refcount, "KFileMD5ReadObserver"))
+        {
+        case krefLimit:
+            return RC(rcFS, rcFile, rcAttaching, rcRange, rcExcessive);
+        case krefNegative:
+            return RC(rcFS, rcFile, rcAttaching, rcSelf, rcInvalid);
+        default:
+            break;
+        }
+    }
+
+    return 0;
+}
+
+LIB_EXPORT rc_t CC KFileMD5ReadObserverRelease(
+    const KFileMD5ReadObserver *self)
+{
+    if (self != NULL) {
+        switch (KRefcountDrop(&self->refcount, "KFileMD5ReadObserver")) {
+        case krefWhack:
+            memset((void*)self, 0, sizeof *self);
+            free((void*)self);
+            return 0;
+        case krefNegative:
+            return RC(rcNS, rcMgr, rcAttaching, rcRefcount, rcInvalid);
+        }
+    }
+
+    return 0;
+}
+
+LIB_EXPORT rc_t CC KFileMD5ReadObserverGetDigest(
+    const KFileMD5ReadObserver *cself, uint8_t digest[16],
+    const char **error)
+{
+    KFileMD5ReadObserver *self = (KFileMD5ReadObserver*)cself;
+
+    if (error != NULL)
+        *error = NULL;
+
+    if (self == NULL)
+        return RC(rcFS, rcFile, rcReading, rcSelf, rcNull);
+
+    if (!self->completed) {
+        if (error != NULL) {
+            size_t num_writ = 0;
+            string_printf(NULL, 0, &num_writ,
+                "The file was not read to the end; it was read to byte %lu "
+                "of %lu.", self->pos, self->size);
+            if (num_writ > 0) {
+                rc_t rc = 0;
+                char *e = malloc(num_writ + 1);
+                if (e == NULL)
+                    return RC(rcFS, rcFile, rcUpdating, rcMemory, rcExhausted);
+                if (self->size > 0)
+                    rc = string_printf(e, num_writ + 1, &num_writ,
+                        "The file was not read to the end; it was read "
+                        "to byte %lu of %lu.", self->pos, self->size);
+                else
+                    rc = string_printf(e, num_writ + 1, &num_writ,
+                        "The file was not read to the end; it was read "
+                        "to byte %lu.", self->pos);
+                if (rc != 0) {
+                    free(e);
+                    e = NULL;
+                }
+                *error = e;
+            }
+        }
+
+        return RC(rcFS, rcFile, rcReading, rcFile, rcIncomplete);
+    }
+
+    if (!self->finished) {
+        MD5StateFinish(&self->md5, self->digest);
+        self->finished = true;
+    }
+
+    memcpy(digest, self->digest, sizeof self->digest);
+    return 0;
+}
+
+static void CC read_observer_update(
+    void *self, rc_t rc, uint64_t pos, void *buffer, size_t num_read)
+{
+    KFileMD5ReadObserver * observer = (KFileMD5ReadObserver*)self;
+
+    if (rc != 0 || observer == NULL)
+        return;
+
+    if (observer->completed)
+        return;
+
+    if (pos > observer->pos) /* a part of sile was skipped */
+        return;
+
+    if (pos < observer->pos) {
+        uint64_t diff = 0;
+        if (pos + num_read <= observer->pos) /* this part was read before */
+            return;
+        diff = observer->pos - pos;
+        buffer += diff;
+        num_read -= diff;
+    }
+
+    if (num_read == 0) {
+        observer->completed = true;
+        return;
+    }
+
+    MD5StateAppend(&observer->md5, buffer, num_read);
+    observer->pos += num_read;
+
+    if (observer->size > 0 && observer->pos >= observer->size)
+        observer->completed = true;
+}
+
+static rc_t CC read_observer_destroy(void *self )
+{   return KFileMD5ReadObserverRelease(self); }
+
+LIB_EXPORT rc_t CC KFileMakeMD5ReadObserver(const KFile *self,
+    const KFileMD5ReadObserver **observer)
+{
+    rc_t rc = 0;
+    KFileMD5ReadObserver * obj = NULL;
+
+    if (observer == NULL)
+        return RC(rcFS, rcFile, rcUpdating, rcParam, rcNull);
+    *observer = NULL;
+
+    if (self == NULL)
+        return RC(rcFS, rcFile, rcUpdating, rcSelf, rcNull);
+
+    obj = calloc(1, sizeof * obj);
+    if (obj == NULL)
+        return RC(rcFS, rcFile, rcUpdating, rcMemory, rcExhausted);
+
+    rc = KFileSize(self, &obj->size);
+    if (rc != 0)
+        obj->size = 0;
+
+    KRefcountInit(&obj->refcount, 1, "KFileMD5ReadObserver", "make", "file");
+
+    MD5StateInit(&obj->md5);
+
+    rc = KFileSetReadObserver(
+        (KFile*)self, read_observer_update, read_observer_destroy, obj);
+
+    if (rc == 0)
+        rc = KFileMD5ReadObserverAddRef(obj);
+
+    if (rc == 0)
+        *observer = obj;
+
+    return rc;
+}
+
+/******************************************************************************/

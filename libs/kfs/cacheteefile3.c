@@ -1061,6 +1061,8 @@ rc_t CC KCacheTeeFileTimedReadImpl ( const KCacheTeeFile_v3 *cself,
 
     uint64_t cur_thread_id = CUR_THREAD_ID ();
 
+    assert ( num_read );
+
     /* 1. limit request to file dimensions */
     if ( pos >= self -> source_size || bsize == 0 )
     {
@@ -1183,6 +1185,10 @@ rc_t CC KCacheTeeFileTimedReadImpl ( const KCacheTeeFile_v3 *cself,
             assert ( self -> cache_file != NULL );
             rc = KCacheTeeFileReadFromFile ( self, pos, buffer, bsize, num_read, initial_page_idx );
         }
+
+        if ( self -> dad . read_observer_update != NULL )
+            ( * self -> dad . read_observer_update )
+                ( self -> dad . read_observer, rc, pos, buffer, *num_read );
 
         /* 9. release lock */
         STATUS ( STAT_PRG, "%lu: %s - releasing cache mutex\n", cur_thread_id, __func__ );

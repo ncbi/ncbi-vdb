@@ -49,8 +49,17 @@ LIB_EXPORT rc_t CC KFileDestroy_v1 ( KFile_v1 *self )
 
     switch ( self -> vt -> v1 . maj )
     {
-    case 1:
-        return ( * self -> vt -> v1 . destroy ) ( self );
+    case 1: {
+        rc_t rc = 0, r2 = 0;
+        if ( self -> read_observer_destroy != NULL )
+            rc = ( * self -> read_observer_destroy ) ( self -> read_observer );
+        self -> read_observer = NULL;
+
+        r2 = ( * self -> vt -> v1 . destroy ) ( self );
+        if ( rc == 0 && r2 != 0 )
+            rc = r2;
+        return rc;
+      }
     }
 
     return RC ( rcFS, rcFile, rcDestroying, rcInterface, rcBadVersion );
@@ -241,8 +250,14 @@ LIB_EXPORT rc_t CC KFileRead_v1 ( const KFile_v1 *self, uint64_t pos,
 
     switch ( self -> vt -> v1 . maj )
     {
-    case 1:
-        return ( * self -> vt -> v1 . read ) ( self, pos, buffer, bsize, num_read );
+    case 1: {
+        rc_t rc = ( * self -> vt -> v1 . read )
+            ( self, pos, buffer, bsize, num_read );
+        if ( self->read_observer_update != NULL )
+            ( * self -> read_observer_update )
+                ( self -> read_observer, rc, pos, buffer, *num_read );
+        return rc;
+      }
     }
 
     return RC ( rcFS, rcFile, rcReading, rcInterface, rcBadVersion );
@@ -269,12 +284,22 @@ LIB_EXPORT rc_t CC KFileTimedRead_v1 ( const KFile_v1 *self, uint64_t pos,
 
     switch ( self -> vt -> v1 . maj )
     {
-    case 1:
+    case 1: {
+        rc_t rc = ~0;
         if ( self -> vt -> v1 . min >= 2 )
-            return ( * self -> vt -> v1 . timed_read ) ( self, pos, buffer, bsize, num_read, tm );
-        if ( tm == NULL )
-            return ( * self -> vt -> v1 . read ) ( self, pos, buffer, bsize, num_read );
+            rc = ( * self -> vt -> v1 . timed_read )
+                ( self, pos, buffer, bsize, num_read, tm );
+        else if ( tm == NULL )
+            rc = ( * self -> vt -> v1 . read )
+                ( self, pos, buffer, bsize, num_read );
+        if ( rc != ~0 ) {
+            if ( self->read_observer_update != NULL )
+                ( * self -> read_observer_update )
+                    ( self -> read_observer, rc, pos, buffer, *num_read );
+            return rc;
+        }
         break;
+      }
     }
 
     return RC ( rcFS, rcFile, rcReading, rcInterface, rcBadVersion );
@@ -322,6 +347,9 @@ LIB_EXPORT rc_t CC KFileReadAll_v1 ( const KFile_v1 *self, uint64_t pos,
     case 1:
         count = 0;
         rc = ( * self -> vt -> v1 . read ) ( self, pos, buffer, bsize, & count );
+        if ( self -> read_observer_update != NULL )
+            ( * self -> read_observer_update )
+                ( self -> read_observer, rc, pos, buffer, count );
         total = count;
 
         STATUS ( STAT_GEEK, "%s initial read rc = %R, count = %zu\n", __func__, rc, count );
@@ -339,6 +367,10 @@ LIB_EXPORT rc_t CC KFileReadAll_v1 ( const KFile_v1 *self, uint64_t pos,
                 {
                     count = 0;
                     rc = ( * self -> vt -> v1 . timed_read ) ( self, pos + total, b + total, bsize - total, & count, & no_block );
+                    if ( self->read_observer_update != NULL )
+                        ( * self -> read_observer_update )
+                           ( self -> read_observer, rc, pos + total,
+                               b + total, count );
                     STATUS ( STAT_GEEK, "%s ( %p, %lu, %p, %zu, [ %zu ] )\n", __func__, self, pos + total, b + total, bsize - total, count );
                     if ( rc != 0 )
                     {
@@ -360,6 +392,10 @@ LIB_EXPORT rc_t CC KFileReadAll_v1 ( const KFile_v1 *self, uint64_t pos,
                 {
                     count = 0;
                     rc = ( * self -> vt -> v1 . read ) ( self, pos + total, b + total, bsize - total, & count );
+                    if ( self->read_observer_update != NULL )
+                        ( * self -> read_observer_update )
+                           ( self -> read_observer, rc, pos + total,
+                               b + total, count );
                     STATUS ( STAT_GEEK, "%s ( %p, %lu, %p, %zu, [ %zu ] )\n", __func__, self, pos + total, b + total, bsize - total, count );
                     if ( rc != 0 )
                     {
@@ -418,6 +454,9 @@ LIB_EXPORT rc_t CC KFileTimedReadAll_v1 ( const KFile_v1 *self, uint64_t pos,
         {
             count = 0;
             rc = ( * self -> vt -> v1 . timed_read ) ( self, pos, buffer, bsize, & count, tm );
+            if ( self->read_observer_update != NULL )
+                ( * self -> read_observer_update )
+                    ( self -> read_observer, rc, pos, buffer, count );
             total = count;
 
             if ( rc == 0 && count != 0 && count < bsize )
@@ -429,6 +468,10 @@ LIB_EXPORT rc_t CC KFileTimedReadAll_v1 ( const KFile_v1 *self, uint64_t pos,
                 {
                     count = 0;
                     rc = ( * self -> vt -> v1 . timed_read ) ( self, pos + total, b + total, bsize - total, & count, & no_block );
+                    if ( self->read_observer_update != NULL )
+                        ( * self -> read_observer_update )
+                           ( self -> read_observer, rc, pos + total,
+                               b + total, count );
                     if ( rc != 0 )
                         break;
                     if ( count == 0 )
@@ -446,6 +489,10 @@ LIB_EXPORT rc_t CC KFileTimedReadAll_v1 ( const KFile_v1 *self, uint64_t pos,
             {
                 count = 0;
                 rc = ( * self -> vt -> v1 . read ) ( self, pos + total, b + total, bsize - total, & count );
+                if ( self->read_observer_update != NULL )
+                    ( * self -> read_observer_update )
+                        ( self -> read_observer, rc, pos + total,
+                            b + total, count );
                 if ( rc != 0 )
                     break;
                 if ( count == 0 )
@@ -511,6 +558,10 @@ LIB_EXPORT rc_t CC KFileReadExactly_v1 ( const KFile_v1 *self,
         {
             count = 0;
             rc = ( * self -> vt -> v1 . read ) ( self, pos + total, b + total, bytes - total, & count );
+            if ( self->read_observer_update != NULL )
+                ( * self -> read_observer_update )
+                    ( self -> read_observer, rc, pos + total,
+                        b + total, count );
             if ( rc != 0 )
             {
                 if ( GetRCObject ( rc ) != ( enum RCObject ) rcTimeout || GetRCState ( rc ) != rcExhausted )
@@ -557,6 +608,10 @@ LIB_EXPORT rc_t CC KFileTimedReadExactly_v1 ( const KFile_v1 *self,
             {
                 count = 0;
                 rc = ( * self -> vt -> v1 . timed_read ) ( self, pos + total, b + total, bytes - total, & count, tm );
+                if ( self->read_observer_update != NULL )
+                    ( * self -> read_observer_update )
+                        ( self -> read_observer, rc, pos + total,
+                            b + total, count );
                 if ( rc != 0 )
                 {
                     if ( tm != NULL )
@@ -579,6 +634,10 @@ LIB_EXPORT rc_t CC KFileTimedReadExactly_v1 ( const KFile_v1 *self,
             {
                 count = 0;
                 rc = ( * self -> vt -> v1 . read ) ( self, pos + total, b + total, bytes - total, & count );
+                if ( self -> read_observer_update != NULL )
+                    ( * self -> read_observer_update )
+                        ( self->read_observer, rc, pos + total,
+                            b + total, count );
                 if ( rc != 0 )
                 {
                     if ( GetRCObject ( rc ) != ( enum RCObject ) rcTimeout || GetRCState ( rc ) != rcExhausted )
@@ -1083,6 +1142,10 @@ LIB_EXPORT rc_t CC KFileInit ( KFile_v1 *self, const KFile_vt *vt,
     self -> read_enabled = ( uint8_t ) ( read_enabled != 0 );
     self -> write_enabled = ( uint8_t ) ( write_enabled != 0 );
 
+    self -> read_observer = NULL;
+    self -> read_observer_destroy = NULL;
+    self -> read_observer_update = NULL;
+
     return 0;
 }
 
@@ -1224,4 +1287,22 @@ LIB_EXPORT rc_t CC KFileMakeStdOut ( KFile_v1 **std_out )
 LIB_EXPORT rc_t CC KFileMakeStdErr ( KFile_v1 **std_err )
 {
     return KFileMakeStdErr_v1 ( std_err );
+}
+
+
+LIB_EXPORT rc_t CC KFileSetReadObserver(
+    KFile * self,
+    void (CC * read_observer_update)
+        (void *self, rc_t rc, uint64_t pos, void *buffer, size_t num_read),
+    rc_t (CC * read_observer_destroy) (void *self),
+    void *read_observer)
+{
+    if (self == NULL)
+        return RC(rcFS, rcFile, rcUpdating, rcSelf, rcNull);
+
+    self->read_observer_update = read_observer_update;
+    self->read_observer_destroy = read_observer_destroy;
+    self->read_observer = read_observer;
+
+    return 0;
 }
