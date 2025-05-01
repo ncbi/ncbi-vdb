@@ -2020,9 +2020,10 @@ LIB_EXPORT rc_t CC KFileMD5ReadObserverGetDigest(
 }
 
 static void CC read_observer_update(
-    void *self, rc_t rc, uint64_t pos, void *buffer, size_t num_read)
+    void *self, rc_t rc, uint64_t pos, void *vbuffer, size_t num_read)
 {
     KFileMD5ReadObserver * observer = (KFileMD5ReadObserver*)self;
+    unsigned char *buffer = (unsigned char*)vbuffer;
 
     if (rc != 0 || observer == NULL)
         return;
@@ -2038,7 +2039,7 @@ static void CC read_observer_update(
         if (pos + num_read <= observer->pos) /* this part was read before */
             return;
         diff = observer->pos - pos;
-        (unsigned char*)buffer += diff;
+        buffer += diff;
         num_read -= diff;
     }
 
