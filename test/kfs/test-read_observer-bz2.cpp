@@ -221,7 +221,7 @@ TEST_CASE(ReadAllExactly) {
     size_t num_read(0);
     // request exactly all file; EOF cannot be detected by file size
     REQUIRE_RC(KFileReadAll(t.file, 0, t.buf, t.size, &num_read));
-    REQUIRE_EQ(num_read, t.size);
+    REQUIRE(num_read == t.size);
     if (t.sizeUnknown) {
         // EOF was not detected by file size
         REQUIRE_RC_FAIL(
@@ -368,9 +368,7 @@ TEST_CASE(TimedRead) {
     Test t(this, "TimedRead");
     t.Start(true);
     size_t num_read(1);
-    uint64_t pos(0);
-    for (pos = 0; num_read > 0; pos += num_read)
-        REQUIRE_RC_FAIL(KFileTimedRead(t.file, 0, t.buf, 99, &num_read, &t.tm));
+    REQUIRE_RC_FAIL(KFileTimedRead(t.file, 0, t.buf, 99, &num_read, &t.tm));
     t.Finish(ERR_HEAD "0.", true);
 }
 
