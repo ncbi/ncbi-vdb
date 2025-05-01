@@ -519,8 +519,9 @@ TEST_CASE(TimedReadExactlyTwicePartially) {
 }
 
 extern "C" {
-    rc_t CC KMain(int argc, char *argv[]) {
+    int main(int argc, char *argv[]) {
         KConfigDisableUserSettings();
+
         return ReadObserverTestSuite(argc, argv);
     }
 }

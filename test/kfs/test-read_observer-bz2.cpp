@@ -497,7 +497,7 @@ TEST_CASE(TimedReadExactlyTwicePartially) {
 #endif
 
 extern "C" {
-    rc_t CC KMain(int argc, char *argv[]) {
+    int main(int argc, char *argv[]) {
         KConfigDisableUserSettings();
 
         rc_t rc(Test::Begin());
@@ -509,7 +509,7 @@ extern "C" {
         if (rc == 0 && r2 != 0)
             rc = r2;
 
-        return rc;
+        return (rc == 0) ? 0 : IF_EXITCODE(rc, 3);
     }
 }
 
