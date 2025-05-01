@@ -2038,7 +2038,7 @@ static void CC read_observer_update(
         if (pos + num_read <= observer->pos) /* this part was read before */
             return;
         diff = observer->pos - pos;
-        buffer += diff;
+        (unsigned char*)buffer += diff;
         num_read -= diff;
     }
 
