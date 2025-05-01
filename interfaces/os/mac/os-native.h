@@ -69,6 +69,7 @@ char *strndup ( const char *str, size_t n )
 /*--------------------------------------------------------------------------
  * strchrnul - implemented inline here
  */
+#if !defined(__MAC_15_4) || (__MAC_OS_X_VERSION_MIN_REQUIRED > __MAC_15_4)
 static __inline__
 char *strchrnul ( const char *str, int c )
 {
@@ -77,6 +78,7 @@ char *strchrnul ( const char *str, int c )
         ( void ) 0;
     return & ( ( char* ) str ) [ i ];
 }
+#endif
 
 /*--------------------------------------------------------------------------
  * memchr - implemented inline here
