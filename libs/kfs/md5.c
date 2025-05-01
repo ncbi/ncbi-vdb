@@ -2015,7 +2015,7 @@ LIB_EXPORT rc_t CC KFileMD5ReadObserverGetDigest(
         self->finished = true;
     }
 
-    memcpy(digest, self->digest, sizeof self->digest);
+    memmove(digest, self->digest, sizeof self->digest);
     return 0;
 }
 
