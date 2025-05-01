@@ -29,7 +29,7 @@
 #include <kfg/config.h> /* KConfigDisableUserSettings */
 #include <klib/debug.h> /* KDbgSetString */
 #include <klib/text.h> /* CONST_STRING */
-#include <ktst/unit_test.hpp> /* KMain */
+#include <ktst/unit_test.hpp> 
 #include <vfs/manager.h> /* VFSManagerRelease */
 #include <vfs/manager-priv.h> /* VFSManagerMakeFromKfg */
 #include <vfs/path.h> /* VPathRelease */
@@ -190,34 +190,33 @@ FIXTURE_TEST_CASE ( ZZZZ99, Fixture ) {
     free ( const_cast < String * > ( uri ) );
 }
 
-extern "C" {
-    rc_t CC KMain ( int argc, char * argv [] ) {
+extern "C"
+int main( int argc, char * argv [] ) {
 #if _DEBUGGING
-        KDbgSetString ( "VFS" );
+    KDbgSetString ( "VFS" );
 #endif
 
-        KConfigDisableUserSettings ();
+    KConfigDisableUserSettings ();
 
-        rc_t rc = KConfigMake ( & KFG, NULL );
-        if ( rc == 0 )
-            rc = KConfigWriteString ( KFG,
-                "repository/remote/main/SDL.2/resolver-cgi", SDL_CGI );
-        if ( rc == 0 )
-            rc = KConfigWriteString ( KFG,
-                "repository/user/main/public/root", "/TMP" );
-        if ( rc == 0 )
-            rc = KConfigWriteString ( KFG,
-                "repository/user/main/public/apps/wgs/volumes/wgsFlat", "wgs" );
+    rc_t rc = KConfigMake ( & KFG, NULL );
+    if ( rc == 0 )
+        rc = KConfigWriteString ( KFG,
+            "repository/remote/main/SDL.2/resolver-cgi", SDL_CGI );
+    if ( rc == 0 )
+        rc = KConfigWriteString ( KFG,
+            "repository/user/main/public/root", "/TMP" );
+    if ( rc == 0 )
+        rc = KConfigWriteString ( KFG,
+            "repository/user/main/public/apps/wgs/volumes/wgsFlat", "wgs" );
 
-        std::cerr << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n\n";
+    std::cerr << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n\n";
 
-        putenv((char*)"NCBI_VDB_NO_CACHE_SDL_RESPONSE=1");
+    putenv((char*)"NCBI_VDB_NO_CACHE_SDL_RESPONSE=1");
 
-        if ( rc == 0 )
-            rc = VResolverWithLogTestSuite ( argc, argv );
+    if ( rc == 0 )
+        rc = (rc_t)VResolverWithLogTestSuite ( argc, argv );
 
-        RELEASE ( KConfig, KFG );
+    RELEASE ( KConfig, KFG );
 
-        return rc;
-    }
+    return (int)rc;
 }

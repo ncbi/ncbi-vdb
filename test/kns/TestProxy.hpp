@@ -133,7 +133,7 @@ public:
         }
 
         while ( c ) {
-            rc_t rc = KConfigWriteString
+            rc = KConfigWriteString
                 ( _self, c -> path . c_str (), c -> value . c_str () );
             if ( rc != 0 ) {
                 throw rc;
@@ -227,7 +227,7 @@ class TestProxy : private ncbi::NK::TestCase {
             ( mgr, & aHost, aPort, & cnt );
         REQUIRE ( i );
         const String * hostname = NULL;
-        uint16_t port = ~ 0;
+        uint16_t port = (uint16_t)~0;
         bool proxy_default_port = true;
         bool proxy_ep = false;
         E * first = e;
@@ -238,7 +238,7 @@ class TestProxy : private ncbi::NK::TestCase {
             E * prev = first;
             String host;
             StringInit ( & host,
-                e -> path. c_str (), e -> path. size (), e -> path. size () );
+                e -> path. c_str (), e -> path. size (), (uint32_t)e -> path. size () );
             REQUIRE ( KEndPointArgsIterator_Next ( i, & hostname, & port,
                 & proxy_default_port, & proxy_ep,
                 & crnt_proxy_idx, & last_proxy ) );
@@ -252,7 +252,7 @@ class TestProxy : private ncbi::NK::TestCase {
                     break;
                 }
                 StringInit ( & host, e -> path. c_str (),
-                             e -> path. size (), e -> path. size () );
+                             e -> path. size (), (uint32_t)e -> path. size () );
             }
             if ( e == NULL )
                 REQUIRE_EQ ( std::string ( hostname -> addr ),
@@ -265,7 +265,7 @@ class TestProxy : private ncbi::NK::TestCase {
                 REQUIRE_EQ ( static_cast < int> ( port ), 3128 );
                 REQUIRE ( proxy_default_port );
 
-                uint16_t port3 = ~ 0;
+                uint16_t port3 = (uint16_t)~ 0;
                 REQUIRE ( KEndPointArgsIterator_Next ( i, & hostname, & port3,
                     & proxy_default_port, & proxy_ep,
                     & crnt_proxy_idx, & last_proxy ) );
@@ -297,7 +297,7 @@ class TestProxy : private ncbi::NK::TestCase {
             e = prev = first;
             if ( e )
                 StringInit ( & host, e -> path. c_str (),
-                    e -> path. size (), e -> path. size () );
+                    e -> path. size (), (uint32_t)e -> path. size () );
             if ( firstI ) {
                 size_t cnt2 = 0;
                 struct KEndPointArgsIterator * i2 =
@@ -305,7 +305,7 @@ class TestProxy : private ncbi::NK::TestCase {
                         & aHost, aPort, & cnt2 );
                 REQUIRE_EQ ( cnt            , cnt2 );
                 const String * hostname2 = NULL;
-                uint16_t port2 = ~ 0;
+                uint16_t port2 = (uint16_t)~ 0;
                 bool proxy_default_port2 = true;
                 bool proxy_ep2 = false;
                 REQUIRE ( KEndPointArgsIterator_Next ( i2, & hostname2, & port2,
@@ -332,7 +332,7 @@ class TestProxy : private ncbi::NK::TestCase {
                             break;
                         }
                         StringInit ( & host, e -> path. c_str (),
-                                     e -> path. size (), e -> path. size () );
+                                     e -> path. size (), (uint32_t)e -> path. size () );
                     }
                     if ( e == NULL )
                         REQUIRE_EQ ( std::string ( hostname2 -> addr ),

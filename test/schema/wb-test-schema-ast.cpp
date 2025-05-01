@@ -1122,17 +1122,8 @@ FIXTURE_TEST_CASE(CondExpr, AST_Fixture)
 //TODO: eCondExpr
 
 //////////////////////////////////////////// Main
-#include <kapp/args.h>
-#include <kfg/config.h>
-#include <klib/out.h>
-
 extern "C"
-{
-
-rc_t CC KMain ( int argc, char *argv [] )
+int main( int argc, char *argv [] )
 {
     return SchemaASTTestSuite(argc, argv);
 }
-
-}
-

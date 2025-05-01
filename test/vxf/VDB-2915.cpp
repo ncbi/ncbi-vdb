@@ -271,7 +271,7 @@ FIXTURE_TEST_CASE ( LOAD_RANDOM_DATA, WVDB_Fixture )
 
         {
             uint8_t b[ 1024 ];
-            for ( j = 0; j < 1024; ++j ) b[ j ] = rand() & 0xFF;
+            for ( j = 0; j < 1024; ++j ) b[ j ] = (uint8_t) ( rand() & 0xFF );
             REQUIRE_RC ( VCursorWrite ( m_cursor, cu1, 8, b, 0, 1024 ) );
             REQUIRE_RC ( VCursorWrite ( m_cursor, ru1, 8, b, 0, 1024 ) );
         }
@@ -285,7 +285,7 @@ FIXTURE_TEST_CASE ( LOAD_RANDOM_DATA, WVDB_Fixture )
 
         {
             uint16_t b[ 1024 ];
-            for ( j = 0; j < 1024; ++j ) b[ j ] = rand() & 0xFFFF;
+            for ( j = 0; j < 1024; ++j ) b[ j ] = (uint16_t)( rand() & 0xFFFF );
             REQUIRE_RC ( VCursorWrite ( m_cursor, cu2, 16, b, 0, 1024 ) );
             REQUIRE_RC ( VCursorWrite ( m_cursor, ru2, 16, b, 0, 1024 ) );
         }
@@ -299,7 +299,7 @@ FIXTURE_TEST_CASE ( LOAD_RANDOM_DATA, WVDB_Fixture )
 
         {
             uint32_t b[ 1024 ];
-            for ( j = 0; j < 1024; ++j ) b[ j ] = rand();
+            for ( j = 0; j < 1024; ++j ) b[ j ] = (uint32_t) rand();
             REQUIRE_RC ( VCursorWrite ( m_cursor, cu3, 32, b, 0, 1024 ) );
             REQUIRE_RC ( VCursorWrite ( m_cursor, ru3, 32, b, 0, 1024 ) );
         }
@@ -491,11 +491,10 @@ extern "C"
 
 #include <kfg/config.h>
 
-rc_t CC KMain ( int argc, char *argv [] )
+int main( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
-    rc_t rc = VDB_2915_TEST_SUITE( argc, argv );
-    return rc;
+    return VDB_2915_TEST_SUITE( argc, argv );
 }
 
 }

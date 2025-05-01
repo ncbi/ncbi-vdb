@@ -24,7 +24,7 @@
 
 add_compile_definitions( __mod__="test/krypto" )
 
-set( LIBS kapp "${COMMON_LIBS_READ}")
+set( LIBS "${COMMON_LIBS_READ}")
 
 BuildExecutableForTest( SlowTest_KRYPTO_cipher_speed "test-cipher-speed" "kryptotest;${LIBS}" )
 add_test( NAME SlowTest_KRYPTO_cipher_speed COMMAND SlowTest_KRYPTO_cipher_speed -t 10 WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )

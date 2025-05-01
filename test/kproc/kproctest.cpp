@@ -204,7 +204,7 @@ protected:
 
     rc_t StartThread(size_t timeout)
     {
-        rc_t rc = TimeoutInit( &tm, timeout );
+        rc_t rc = TimeoutInit( &tm, (uint32_t)timeout );
         if ( rc == 0)
         {
             atomic32_set ( & threadWaiting, 0 );
@@ -385,7 +385,7 @@ protected:
     }
     rc_t StartThread(bool writer, size_t timeout)
     {
-        rc_t rc = TimeoutInit( &tm, timeout );
+        rc_t rc = TimeoutInit( &tm, (uint32_t)timeout );
         if ( rc == 0)
         {
             threadRc = 0;
@@ -683,29 +683,29 @@ TEST_CASE(KQueueSimpleTest) {
 
     {   // pushed 3 > capacity (failure) - popped 2 (ok)
         for (uint64_t i = 1; i < 3; ++i) {
-            void *item = (void*)i;
-            REQUIRE_RC(KQueuePush(queue, item, & tm));
+            void *it = (void*)i;
+            REQUIRE_RC(KQueuePush(queue, it, & tm));
         }
         REQUIRE_RC_FAIL(KQueuePush(queue, item, & tm));
         for (uint64_t i = 1; i < 3; ++i) {
             uint64_t j = 0;
-            void *item = 0;
-            REQUIRE_RC(KQueuePop(queue, &item, & tm));
-            j = (uint64_t)item;
+            void *it = 0;
+            REQUIRE_RC(KQueuePop(queue, &it, & tm));
+            j = (uint64_t)it;
             REQUIRE_EQ(i, j);
         }
     }
 
     {   // pushed 2 = capacity (ok) - popped 3 >capacity (failure)
         for (uint64_t i = 1; i < 3; ++i) {
-            void *item = (void*)i;
-            REQUIRE_RC(KQueuePush(queue, item, & tm));
+            void *it = (void*)i;
+            REQUIRE_RC(KQueuePush(queue, it, & tm));
         }
         for (uint64_t i = 1; i < 3; ++i) {
             uint64_t j = 0;
-            void *item = 0;
-            REQUIRE_RC(KQueuePop(queue, &item, & tm));
-            j = (uint64_t)item;
+            void *it = 0;
+            REQUIRE_RC(KQueuePop(queue, &it, & tm));
+            j = (uint64_t)it;
             REQUIRE_EQ(i, j);
         }
         REQUIRE_RC_FAIL(KQueuePop(queue, &item, & tm));
@@ -734,7 +734,7 @@ public:
         threadRcs = (rc_t*)calloc(nThreads, sizeof(*threadRcs));
         if (threadRcs == NULL)
             throw logic_error("KQueueFixture: threadRcs calloc failed");
-        if (KQueueMake(&queue, nThreads) != 0)
+        if (KQueueMake(&queue, (uint32_t)nThreads) != 0)
             throw logic_error("KQueueFixture: KQueueMake failed");
     }
     ~KQueueFixture()
@@ -843,7 +843,7 @@ protected:
             throw logic_error("StartThread: cannot start new thread, fixture is already sealed");
 
         rc_t rc;
-        int tid = nStartedThreads++;
+        int tid = (int) (nStartedThreads++);
         ThreadData* td;
 
         td = &threadsData[tid];
@@ -993,14 +993,13 @@ static rc_t argsHandler(int argc, char* argv[]) {
     return rc;
 }
 
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
 	// this makes messages from the test code appear
 	// (same as running the executable with "-l=message")
 	//TestEnv::verbosity = LogLevel::e_message;
 
-    rc_t rc = KProcTestSuite( argc, argv );
-    return rc;
+    return KProcTestSuite( argc, argv );
 }
 
 }

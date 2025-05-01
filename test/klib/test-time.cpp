@@ -80,7 +80,8 @@ TEST_CASE ( test ) {
 
 }
 
-extern "C" {
-    rc_t CC KMain ( int argc, char * argv [] )
-    {   return TestTimeSuite ( argc, argv ); }
+extern "C" 
+int main( int argc, char * argv [] )
+{   
+    return TestTimeSuite ( argc, argv ); 
 }

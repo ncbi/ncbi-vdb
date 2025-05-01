@@ -69,7 +69,7 @@ TEST_CASE(VDB_2877) {
     REQUIRE(!rc);
 }
 
-extern "C" {
-    rc_t CC KMain ( int argc, char *argv [] )
-    {    return KNSManagerSingletonTestSuite(argc, argv); }
+extern "C" int main( int argc, char *argv [] )
+{    
+    return KNSManagerSingletonTestSuite(argc, argv); 
 }

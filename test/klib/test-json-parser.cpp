@@ -41,9 +41,7 @@
 using namespace std;
 
 extern "C"
-{
-
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     int failed = 0;
     if ( argc < 2 )
@@ -105,6 +103,3 @@ rc_t CC KMain ( int argc, char *argv [] )
     }
     return failed == 0 ? 0 : 4;
 }
-
-}
-

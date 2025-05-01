@@ -30,6 +30,7 @@
 
 #include <ktst/unit_test.hpp>
 
+#include <kapp/vdbapp.h>
 #include "kfg-fixture.hpp"
 
 #include <kfg/properties.h>
@@ -435,11 +436,11 @@ extern "C"
 
 #include <kfg/config.h>
 
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
+    VDB::Application app(argc, argv);
     KConfigDisableUserSettings();
-    rc_t rc=PropertiesTestSuite(argc, argv);
-    return rc;
+    return PropertiesTestSuite(argc, argv);
 }
 
 }

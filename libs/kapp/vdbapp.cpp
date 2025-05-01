@@ -35,7 +35,7 @@ Application::Application(int argc, char* argv[], ver_t vers)
 }
 
 #if WINDOWS && UNICODE
-#include "win/main-priv-win.h"
+#include <kapp/win/main-priv-win.h>
 Application::Application(int argc, wchar_t* argv[], ver_t vers)
     : m_argc( argc ), m_argvOwned ( false )
 {

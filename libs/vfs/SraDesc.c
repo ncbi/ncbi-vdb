@@ -115,7 +115,7 @@ static rc_t SraDescLoadBin(SraDesc * self,
         return RC(rcExe, rcFile, rcReading, rcData, rcInvalid);
     }
 
-    q = in[8];
+    q = (uint8_t)in[8];
     q &= 3;
     if (q < 1 || q > 3)
         return RC(rcExe, rcFile, rcReading, rcData, rcInvalid);
@@ -136,7 +136,7 @@ static rc_t SraDescLoadBin(SraDesc * self,
         int i = 0;
 
         for (i = 0, n.u = 0; i < 8 && from < size; ++i, ++from)
-            n.b[i] = in[from];
+            n.b[i] = (uint8_t)in[from];
     }
 
     self->_size = n.u;

@@ -26,7 +26,6 @@
 
 #include <ktst/unit_test.hpp> /* TEST_SUITE */
 #include <kapp/vdbapp.h> /* KAppVersion */
-#include <kapp/main.h>
 
 #include <kfs/directory.h>
 #include <vdb/manager.h>
@@ -67,7 +66,7 @@ TEST_CASE( TwoRead_Fail ) {
     REQUIRE(UnitTest_2Read_Fail() == 0);
 }
 
-rc_t CC KMain ( int argc, char *argv [] )
+int main( int argc, char *argv [] )
 {
     return SynQualityTestSuite( argc, argv );
 }

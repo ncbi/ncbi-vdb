@@ -374,9 +374,8 @@ TEST_CASE ( TestTimeouts ) {
     REQUIRE_RC(KConfigRelease(kfg));
 }
 
-extern "C" {
-    rc_t CC KMain ( int argc, char * argv [] ) {
-        KConfigDisableUserSettings ();
-        return TEST_TIMEOUTS( argc, argv );
-    }
+extern "C" 
+int main( int argc, char * argv [] ) {
+    KConfigDisableUserSettings ();
+    return TEST_TIMEOUTS( argc, argv );
 }

@@ -246,7 +246,7 @@ static rc_t prepare_test( KConfig **cfg, const char * sub )
         rc = string_printf ( new_home_buffer, sizeof new_home_buffer, &num_writ, "USERPROFILE=%s", new_home );
 #endif
     if ( rc == 0 )
-        rc = putenv( new_home_buffer );
+        rc = (rc_t)putenv( new_home_buffer );
     if ( rc == 0 )
         rc = create_test_config( cfg, new_home );
     return rc;
@@ -271,18 +271,14 @@ void finish_test( const char * sub )
 
 //////////////////////////////////////////// Main
 extern "C"
-{
-
-rc_t CC KMain ( int argc, char *argv [] )
+int main( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
     KConfig *cfg;
     rc_t rc = prepare_test( &cfg, HomeSub );
     if ( rc == 0 )
-        rc = VDB_3061( argc, argv );
+        rc = (rc_t)VDB_3061( argc, argv );
     finish_test( HomeSub );
     KConfigRelease ( cfg );
-    return rc;
-}
-
+    return (int)rc;
 }

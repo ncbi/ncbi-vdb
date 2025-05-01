@@ -215,7 +215,7 @@ TEST_CASE(Get_IMDS_version)
         REQUIRE_RC( CloudMgrGetCurrentCloud ( mgr, & cloud ) );
         AWS * aws = nullptr;
         REQUIRE_RC( CloudToAWS ( cloud, & aws ) );
-#ifdef TO_SHOW_RESULTS
+#if TO_SHOW_RESULTS
         std::cout << "***IMDSv=" << (unsigned int)aws -> IMDS_version << endl;
 #endif
         REQUIRE( aws -> IMDS_version == 1 || aws -> IMDS_version == 2);
@@ -241,7 +241,7 @@ TEST_CASE(Get_Pkcs7)
         uint32_t len = string_measure(pkcs7, nullptr);
         REQUIRE_LT( 1000u, len);
         REQUIRE_GT( 3000u, len);
-#ifdef TO_SHOW_RESULTS
+#if TO_SHOW_RESULTS
         std::cout << "***Pkcs7=" << string( pkcs7, len ) << endl;
 #endif
 
@@ -293,7 +293,7 @@ TEST_CASE(PrintInstance_Allowed) {
         const String * ce_token = nullptr;
         REQUIRE_RC( CloudMakeComputeEnvironmentToken(cloud, &ce_token) );
         REQUIRE_NOT_NULL(ce_token);
-    #ifdef TO_SHOW_RESULTS
+    #if TO_SHOW_RESULTS
             std::cout << "***ce_token=" << ce_token->addr << endl;
     #endif
         StringWhack(ce_token);
@@ -356,7 +356,7 @@ TEST_CASE(GetLocation) {
         else
         {
             REQUIRE_NOT_NULL( location );
-#ifdef TO_SHOW_RESULTS
+#if TO_SHOW_RESULTS
             cout << "***location=" << string( location -> addr, location -> size ) << endl;
 #endif
         }
@@ -376,9 +376,7 @@ static rc_t argsHandler(int argc, char * argv[]) {
 }
 
 extern "C"
-{
-
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
 
@@ -388,13 +386,13 @@ rc_t CC KMain ( int argc, char *argv [] )
     // (same as running the executable with "-l=message")
     //TestEnv::verbosity = LogLevel::e_message;
 
-#ifdef TO_SHOW_RESULTS
+#if TO_SHOW_RESULTS
     assert(!KDbgSetString("KNS"));
 #endif
 KDbgSetString ( "KNS-PROXY" );
 
     if (rc == 0)
-        rc = AwsTestSuite(argc, argv);
+        rc = (rc_t)AwsTestSuite(argc, argv);
 
     {
         rc_t r = KConfigRelease(KFG);
@@ -402,7 +400,5 @@ KDbgSetString ( "KNS-PROXY" );
             rc = r;
     }
 
-    return rc;
-}
-
+    return (int)rc;
 }

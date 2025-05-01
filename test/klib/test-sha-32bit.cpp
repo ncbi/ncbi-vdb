@@ -45,7 +45,7 @@ static std::string convertDigest(uint8_t const *digest, size_t size)
         char buf[16];
         static char const *fmt = "%02X";
         int n = snprintf(buf, 16, fmt, (int)digest[i]);
-        result.append(buf, n);
+        result.append(buf, (size_t) n);
     }
     return result;
 }
@@ -95,14 +95,7 @@ TEST_CASE(SHA256_abc_NIST)
 
 //////////////////////////////////////////////////// Main
 extern "C"
-{
-#ifdef WINDOWS
-#define main wmain
-#endif
 int main ( int argc, char *argv [] )
 {
-    rc_t rc=SHATestSuite(argc, argv);
-    return rc;
-}
-
+    return SHATestSuite(argc, argv);
 }

@@ -24,7 +24,7 @@
 *
 */
 
-#include "../main-priv.h"
+#include "../vdbapp-priv.h"
 
 #include <klib/report.h>
 #include <klib/rc.h>

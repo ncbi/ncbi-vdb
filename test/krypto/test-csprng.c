@@ -201,7 +201,7 @@ rc_t CC Usage (const Args * args)
     return rc;
 }
 
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     Args * args;
     rc_t rc;
@@ -224,5 +224,5 @@ rc_t CC KMain ( int argc, char *argv [] )
         LOGERR (klogErr, rc, "Exiting status");
     else
         STSMSG (0, ("Exiting status (%R)\n", rc));
-    return rc;
+    return (int)rc;
 }

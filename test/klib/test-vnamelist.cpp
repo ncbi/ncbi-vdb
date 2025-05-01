@@ -63,7 +63,7 @@ static rc_t CC on_part( const String * part, void * data ) noexcept
     struct on_part_ctx * ctx = ( struct on_part_ctx * ) data;
     std::string p = std::string( part->addr, part->size );
     std::string c = std::string( ctx->v[ ctx->idx ] );
-    if ( p != c ) rc = -1;
+    if ( p != c ) rc = (rc_t) - 1;
     ctx->idx++;
     return rc;
 }
@@ -78,7 +78,7 @@ rc_t test_String( const char * to_test, const char ** v, int count )
 
     StringInitCString( &s, to_test );
     rc_t rc = foreach_String_part( &s, ':', on_part, &ctx );
-    if ( rc == 0 && ctx.idx != count ) rc = -1;
+    if ( rc == 0 && ctx.idx != count ) rc = (rc_t)-1;
     return rc;
 }
 
@@ -90,7 +90,7 @@ rc_t test_pchar( const char * to_test, const char ** v, int count )
     ctx.idx = 0;
 
     rc_t rc = foreach_Str_part( to_test, ':', on_part, &ctx );
-    if ( rc == 0 && ctx.idx != count ) rc = -1;
+    if ( rc == 0 && ctx.idx != count ) rc = (rc_t)-1;
     return rc;
 }
 
@@ -182,14 +182,14 @@ rc_t check_list( const VNamelist * list, const char ** v, uint32_t count )
             std::string s_item = std::string( item );
             std::string s_cmp  = std::string( v[ idx ] );
             if ( s_item.compare( s_cmp ) != 0 )
-                rc = -1;
+                rc = (rc_t)-1;
         }
         if ( rc == 0 )
         {
             uint32_t lc;
             rc = VNameListCount ( list, &lc );
             if ( rc == 0 && lc != count )
-                rc = -1;
+                rc = (rc_t)-1;
         }
     }
     return rc;
@@ -311,7 +311,7 @@ rc_t split_join_and_check( const char * to_test )
             String S2;
             StringInitCString( &S2, to_test );
             if ( !StringEqual( joined, &S2 ) )
-                rc = -1;
+                rc = (rc_t)-1;
             StringWhack ( joined );
         }
         VNamelistRelease ( list );
@@ -346,14 +346,7 @@ TEST_CASE( VNamelistJoining )
 
 //////////////////////////////////////////// Main
 extern "C"
+int main( int argc, char *argv [] )
 {
-
-#include <kapp/args.h>
-
-rc_t CC KMain ( int argc, char *argv [] )
-{
-    rc_t rc = T_VNamelist( argc, argv );
-    return rc;
-}
-
+    return T_VNamelist( argc, argv );
 }

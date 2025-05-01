@@ -30,7 +30,7 @@ extern "C"
 #include <kfg/config.h>
 #include <kdb/manager.h>
 
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
     KDBManager *p;

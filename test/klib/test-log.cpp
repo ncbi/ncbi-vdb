@@ -340,14 +340,7 @@ TEST_CASE ( rcBufferrcInsufficientInprep_v_argsstring_vprintf ) {
 
 //////////////////////////////////////////////////// Main
 extern "C"
-{
-#ifdef WINDOWS
-#define main wmain
-#endif
 int main ( int argc, char *argv [] )
 {
-    rc_t rc=KLogTestSuite(argc, argv);
-    return rc;
-}
-
+    return KLogTestSuite(argc, argv);
 }

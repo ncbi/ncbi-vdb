@@ -41,7 +41,7 @@ static rc_t argsHandler(int argc, char *argv[]) {
 }
 TEST_SUITE_WITH_ARGS_HANDLER(SchemaPrivSuite, argsHandler)
 
-static void OnDb(void *item, void *data) {
+static void OnDb(void *item, void *data) noexcept {
     assert(item && data);
     const struct SDatabase *self(static_cast<const struct SDatabase*>(item));
     rc_t *aRc = static_cast<rc_t*>(data);
@@ -90,7 +90,7 @@ static void OnDb(void *item, void *data) {
         *aRc = rc;
 }
 
-static void OnTbl(void *item, void *data) {
+static void OnTbl(void *item, void *data) noexcept {
     assert(item && data);
     const struct STable *self(static_cast<const struct STable*>(item));
     rc_t *aRc = static_cast<rc_t*>(data);
@@ -160,9 +160,8 @@ TEST_CASE(TestSchemaPriv) {
     REQUIRE_RC(VDBManagerRelease(m));
 }
 
-extern "C" {
-    rc_t CC KMain(int argc, char *argv[]) {
-        KConfigDisableUserSettings();
-        return SchemaPrivSuite(argc, argv);
-    }
+extern "C" 
+int main(int argc, char *argv[]) {
+    KConfigDisableUserSettings();
+    return SchemaPrivSuite(argc, argv);
 }

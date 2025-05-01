@@ -23,7 +23,7 @@
 * ===========================================================================
 *
 */
-#include <kapp/main.h>
+#include <kapp/vdbapp.h>
 #include <kapp/args.h>
 #include <klib/out.h>
 #include <klib/rc.h>
@@ -77,7 +77,7 @@ rc_t CC Usage ( const Args * args )
     HelpOptionLine ( ALIAS_COUNT, OPTION_COUNT, "count", count_usage );
 
     HelpOptionsStandard ();
-    HelpVersion ( fullpath, KAppVersion() );
+    HelpVersion ( fullpath, GetKAppVersion() );
     return rc;
 }
 
@@ -1811,7 +1811,7 @@ rc_t perform_test( const uint32_t count )
     return rc;
 }
 
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     Args * args;
     SetUsage( Usage );

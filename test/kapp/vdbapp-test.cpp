@@ -28,8 +28,6 @@
 
 #include <ktst/unit_test.hpp>
 
-#include <kapp/main.h>
-
 #include <kproc/procmgr.h>
 #include <klib/klib-priv.h>
 #include <kns/manager.h>
@@ -83,6 +81,13 @@ TEST_CASE(KnsQuittingInitialized)
     REQUIRE_NOT_NULL( (void*)KNSManagerGetQuitting( nullptr ) );
 }
 
+TEST_CASE(ReportsInitialized)
+{
+    ver_t version = 0;
+    REQUIRE_RC( ReportGetVersion( & version ) );
+    REQUIRE_EQ( GetKAppVersion(), version );
+}
+
 #if WIN32
 TEST_CASE(SignalHup_ignored)
 {
@@ -108,11 +113,7 @@ TEST_CASE(WCharConversion_BadArgs)
 
 #endif
 
-#if WINDOWS && UNICODE
-int wmain(int argc, wchar_t* argv[])
-#else
 int main(int argc, char* argv[])
-#endif
 {
     VDB::Application app( argc, argv, AppVersion );
     return VDBAppTestSuite(argc, app.GetArgV());

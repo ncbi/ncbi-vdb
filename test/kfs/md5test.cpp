@@ -167,11 +167,10 @@ extern "C"
 
 #include <kfg/config.h>
 
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
-    rc_t rc=KMD5FileTestSuite(argc, argv);
-    return rc;
+    return KMD5FileTestSuite(argc, argv);
 }
 
 }

@@ -28,7 +28,7 @@
 #include <klib/printf.h>
 #include <klib/text.h>
 #include <kdb/meta.h>
-#include <kapp/main.h>
+//#include <kapp/main.h>
 #include <vdb/table.h>
 #include <vdb/cursor.h>
 #include <vdb/schema.h>
@@ -290,7 +290,7 @@ rc_t CC TableWriter_Whack(const TableWriter* cself, bool commit, uint64_t* rows)
     if( cself != NULL ) {
         TableWriter* self = (TableWriter*)cself;
         uint32_t i, j;
-        
+
         for(i = 0; i < TW_MAX_CURSORS; i++) {
             if( self->cursors[i].col_qty > 0 ) {
                 self->curr = &self->cursors[i];
@@ -417,7 +417,7 @@ rc_t CC TableWriter_CloseCursor(const TableWriter* cself, uint8_t cursor_id, uin
 rc_t CC TableWriter_Flush(const TableWriter *cself, const uint8_t cursor_id)
 {
     rc_t rc = 0;
-    
+
     if( cself == NULL || cursor_id >= TW_MAX_CURSORS || cself->cursors[cursor_id].col_qty == 0 ) {
         rc = RC(rcAlign, rcType, rcOpening, rcParam, rcInvalid);
         ALIGN_DBGERR(rc);
@@ -460,7 +460,7 @@ rc_t CC TableWriter_OpenRow(const TableWriter* cself, int64_t* rowid, const uint
 rc_t CC TableWriter_OpenRowId(const TableWriter* cself, const int64_t rowid, const uint8_t cursor_id)
 {
     rc_t rc = 0;
-    
+
     if( cself == NULL || cursor_id >= TW_MAX_CURSORS || cself->cursors[cursor_id].col_qty == 0 ) {
         rc = RC(rcAlign, rcType, rcOpening, rcParam, rcInvalid);
         ALIGN_DBGERR(rc);
@@ -497,7 +497,7 @@ rc_t CC TableWriter_OpenRowId(const TableWriter* cself, const int64_t rowid, con
 rc_t CC TableWriter_GetNextRowId(const TableWriter* cself, int64_t* rowid, const uint8_t cursor_id)
 {
     rc_t rc = 0;
-    
+
     if( cself == NULL || cursor_id >= TW_MAX_CURSORS || cself->cursors[cursor_id].col_qty == 0 ) {
         rc = RC(rcAlign, rcType, rcOpening, rcParam, rcInvalid);
         ALIGN_DBGERR(rc);

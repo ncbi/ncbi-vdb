@@ -320,17 +320,8 @@ FIXTURE_TEST_CASE(DB_ViewOnAliasMemberOnAnotherViewAliasMember, AST_Db_Fixture)
 //TODO: SViewAliasMemberDump
 
 //////////////////////////////////////////// Main
-#include <kapp/args.h>
-#include <kfg/config.h>
-#include <klib/out.h>
-
 extern "C"
-{
-
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     return SchemaDbTestSuite(argc, argv);
 }
-
-}
-

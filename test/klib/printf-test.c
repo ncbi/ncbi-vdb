@@ -24,7 +24,6 @@
 *
 */
 
-#include <kapp/main.h>
 #include <kapp/args.h>
 #include <klib/printf.h>
 #include <klib/symbol.h>
@@ -414,7 +413,7 @@ rc_t run ( const char *progname )
     char c [ ] = { "aA!@0{;>" };
 
     int32_t ext_value [ ] = { -1, -2 };
-    int32_t randValue, randValue_2, randValue_3;
+    int32_t randValue = 0, randValue_2 = 0, randValue_3 = 0;
     double randValue_f;
 
 
@@ -619,7 +618,7 @@ rc_t run ( const char *progname )
     {
         /* float */
 
-        float f [ ] = { -2.1474836, -45.287957, -10000.1, 0.45, 0, 1.06 };
+        float f [ ] = { -2.1474836f, -45.287957f, -10000.1f, 0.45f, 0.0f, 1.06f };
         double lf [ ] = { -9223372036854775808.0, -28.37640198 };
 
         /* 32 bit */
@@ -752,7 +751,7 @@ rc_t run ( const char *progname )
 	    if ( rc == 0 )
 	    {
     	    pLogErr ( klogErr, rc, "string_vprintf returned zero rc with insufficient buffer", "");
-            rc = -1;
+            rc = (rc_t) - 1;
 	    }
         else
         {
@@ -769,9 +768,7 @@ rc_t run ( const char *progname )
 
 }
 
-/* KMain
- */
-rc_t CC KMain ( int argc, char *argv [] )
+int main( int argc, char *argv [] )
 {
     Args *args;
     rc_t rc = ArgsMakeAndHandle ( & args, argc, argv, 0 );
@@ -782,5 +779,5 @@ rc_t CC KMain ( int argc, char *argv [] )
         ArgsWhack ( args );
     }
 
-    return rc;
+    return (int)rc;
 }

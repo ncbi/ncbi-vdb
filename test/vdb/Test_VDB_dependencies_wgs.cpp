@@ -65,9 +65,8 @@ TEST_CASE(Test_VDB_dependencies_wgs) {
 }
 #endif
 
-extern "C" {
-    rc_t CC KMain(int argc, char *argv[]) {
-        KConfigDisableUserSettings();
-        return Test_VDB_dependencies_wgsSuite(argc, argv);
-    }
+extern "C" 
+int main(int argc, char *argv[]) {
+    KConfigDisableUserSettings();
+    return Test_VDB_dependencies_wgsSuite(argc, argv);
 }

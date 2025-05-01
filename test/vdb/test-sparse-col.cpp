@@ -191,7 +191,7 @@ public:
                                               "%s",
                                               m_databaseName . c_str () ) );
             }
-            catch (std::logic_error & e)
+            catch (std::logic_error &)
             {
                 VDBManagerRelease ( mgr );
                 throw;
@@ -346,11 +346,10 @@ extern "C"
 
 #include <kfg/config.h>
 
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
-    rc_t rc=SparseColTestSuite(argc, argv);
-    return rc;
+    return SparseColTestSuite(argc, argv);
 }
 
 }

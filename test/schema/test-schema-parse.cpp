@@ -92,9 +92,7 @@ MatchStrings ( const string& p_source, const string p_print )
 }
 
 extern "C"
-{
-
-rc_t CC KMain ( int argc, char *argv [] )
+int main( int argc, char *argv [] )
 {
     HYBRID_FUNC_ENTRY( rcSRA, rcSchema, rcParsing );
     int failed = 0;
@@ -143,7 +141,5 @@ rc_t CC KMain ( int argc, char *argv [] )
         return 3;
     }
     return failed == 0 ? 0 : 4;
-}
-
 }
 

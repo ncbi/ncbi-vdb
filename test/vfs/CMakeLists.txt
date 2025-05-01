@@ -24,7 +24,7 @@
 
 add_compile_definitions( __mod__="test/vfs" )
 
-set( LIBS kapp "${COMMON_LIBS_READ}")
+set( LIBS "${COMMON_LIBS_READ}")
 
 AddExecutableTest( Test_VFS_attached-vdbcache "test-attached-vdbcache" "${LIBS}" )
 AddExecutableTest( Test_VFS_log-names-error "test-log-names-error" "${LIBS}" )
@@ -52,10 +52,10 @@ AddExecutableTest(
  Test_VFS_VPATH_open-read-update test-vpath-open-read-update "${LIBS}"
 )
 AddExecutableTest(
- Test_VFS_VPATH_open-update-read test-vpath-open-update-read "kapp;${COMMON_LIBS_WRITE}"
+ Test_VFS_VPATH_open-update-read test-vpath-open-update-read "${COMMON_LIBS_WRITE}"
 )
 AddExecutableTest(
- Test_VFS_VPATH_open-update-update test-vpath-open-update-update "kapp;${COMMON_LIBS_WRITE}"
+ Test_VFS_VPATH_open-update-update test-vpath-open-update-update "${COMMON_LIBS_WRITE}"
 )
 
 AddExecutableTest( Test_VFS_vfsmanager "managertest" "${LIBS}" )

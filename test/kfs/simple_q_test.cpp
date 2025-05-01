@@ -230,7 +230,7 @@ OptDef TestOptions[] =
     { OPTION_DUMMY, ALIAS_DUMMY, NULL, dummy_usage, 1, false,  false }
 };
 
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     Args * args;
     rc_t rc = ArgsMakeAndHandle( &args, argc, argv,

@@ -72,13 +72,8 @@ static rc_t argsHandler ( int argc, char * argv [] ) {
 }
 
 extern "C"
-{
-
-rc_t CC KMain ( int argc, char *argv [] )
+int main( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
-    rc_t rc=VdbSlowTestSuite(argc, argv);
-    return rc;
-}
-
+    return VdbSlowTestSuite(argc, argv);
 }

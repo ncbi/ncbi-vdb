@@ -24,7 +24,7 @@
 
 add_compile_definitions( __mod__="test/kfs" )
 
-set( LIBS kapp "${COMMON_LIBS_READ}")
+set( LIBS "${COMMON_LIBS_READ}")
 
 if( NOT WIN32 )
     AddExecutableTest( Test_KFS_kdf "kdf" "${LIBS}" )
