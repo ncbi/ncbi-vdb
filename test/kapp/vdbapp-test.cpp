@@ -109,5 +109,5 @@ TEST_CASE(WCharConversion_BadArgs)
 int main(int argc, char* argv[])
 {
     VDB::Application app( argc, argv, AppVersion );
-    return VDBAppTestSuite(argc, app.GetArgV());
+    return VDBAppTestSuite(argc, app.getArgV());
 }

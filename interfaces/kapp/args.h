@@ -199,7 +199,7 @@ rc_t CC ArgsAddStandardOptions ( Args * self );
 /* Parse
  *  parse the argc/argv as presented to main() using the Args structure as built up
  */
-rc_t CC ArgsParse ( Args * self, int argc, char *argv[] );
+rc_t CC ArgsParse ( Args * self, int argc, const char *argv[] );
 
 
 /* tokenizes a file into an user supplied argv array ( not the one from main() ! )

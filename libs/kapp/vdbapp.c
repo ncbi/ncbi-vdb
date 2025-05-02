@@ -190,7 +190,7 @@ VdbInitialize( int argc, char *argv [], ver_t vers )
 }
 
 LIB_EXPORT
-void
+int
 VdbTerminate( rc_t rc )
 {
     {
@@ -213,6 +213,7 @@ VdbTerminate( rc_t rc )
 #endif
 
     VdbTerminateSystem();
+    return rc ? 3 : 0;
 }
 
 
