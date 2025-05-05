@@ -44,8 +44,6 @@
 #include <kfs/directory.h>
 #include <kfs/file.h>
 #include <kfs/cacheteefile.h>
-//#include <kfs/cachetee2file.h>
-//#include <kfs/recorder.h>
 
 using namespace std;
 
@@ -62,7 +60,7 @@ TEST_SUITE( CacheTeeTests );
 static uint32_t rand_32( uint32_t min, uint32_t max )
 {
        double scaled = ( ( double )rand() / RAND_MAX );
-       return ( ( max - min + 1 ) * scaled ) + min;
+       return (uint32_t) ( ( ( max - min + 1 ) * scaled ) + min );
 }
 
 static rc_t fill_file_with_random_data( KFile * file, size_t file_size )
@@ -393,7 +391,7 @@ static rc_t cache_access( int tid, int num_threads, const KFile * origfile, cons
     std::random_shuffle( &chunk_pos[ 0 ], &chunk_pos[ num_chunks ] );
     for ( i = 0; i < num_chunks; ++i )
     {
-        rc = compare_file_content( origfile, cacheteefile, chunk_pos[ i ], chunk_size );
+        rc = compare_file_content( origfile, cacheteefile, (uint64_t) chunk_pos[ i ], (size_t) chunk_size );
         if ( rc != 0 )
             break;
     }
@@ -658,20 +656,23 @@ extern "C"
 {
 
 #include <kfg/config.h>
+#include <kapp/vdbapp.h>
 
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
-    srand( time( NULL ) );
+    VDB::Application app(argc, argv);
+
+    srand( (unsigned int) time( NULL ) );
     KConfigDisableUserSettings();
 
 	rc_t rc = prepare_cachetee_tests();
 	if ( rc == 0 )
 	{
-		rc = CacheTeeTests( argc, argv );
+		rc = (rc_t) CacheTeeTests( argc, argv );
 		finish_cachetee_tests();
 	}
     KOutMsg( "and the result is: %R\n", rc );
-    return rc;
+    return (int) rc;
 }
 
 }

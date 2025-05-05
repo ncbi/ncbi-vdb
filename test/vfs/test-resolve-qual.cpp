@@ -35,7 +35,7 @@
 #include <kns/kns-mgr-priv.h> /* KNSManagerSetAdCaching */
 #include <kns/manager.h> /* KNSManagerMake */
 
-#include <ktst/unit_test.hpp> /* KMain */
+#include <ktst/unit_test.hpp> 
 
 #include <vdb/vdb-priv.h> /* VDBManagerGetQuality */
 
@@ -220,54 +220,54 @@ public:
             REQUIRE_NULL(run);
     }
 
-    void PathEquals(const VPath * path, const std::string & e) {
+    void PathEquals(const VPath * p_path, const std::string & e) {
         String expPath;
         StringInitCString(&expPath, e.c_str());
 
         const String * str = NULL;
-        REQUIRE_RC(VPathMakeString(path, &str));
+        REQUIRE_RC(VPathMakeString(p_path, &str));
 
         REQUIRE(StringEqual(str, &expPath));
 
         free(const_cast <String *> (str));
     }
 
-    void PathNOT_Equals(const VPath * path, const std::string & e) {
+    void PathNOT_Equals(const VPath * p_path, const std::string & e) {
         String expPath;
         StringInitCString(&expPath, e.c_str());
 
         const String * str = NULL;
-        REQUIRE_RC(VPathMakeString(path, &str));
+        REQUIRE_RC(VPathMakeString(p_path, &str));
 
         REQUIRE(!StringEqual(str, &expPath));
 
         free(const_cast <String *> (str));
     }
 
-    void VdbcacheNotChecked(const VPath * path = NULL) {
-        if (path == NULL)
-            path = this->path;
+    void VdbcacheNotChecked(const VPath * p_path = NULL) {
+        if (p_path == NULL)
+            p_path = this->path;
 
         const VPath * vdbcache = NULL;
         bool vdbcacheChecked = false;
-        REQUIRE_RC(VPathGetVdbcache(path, &vdbcache, &vdbcacheChecked));
+        REQUIRE_RC(VPathGetVdbcache(p_path, &vdbcache, &vdbcacheChecked));
 
         REQUIRE(!vdbcacheChecked);
         REQUIRE_NULL(vdbcache);
     }
 
     void VdbcacheEquals(const std::string & e = "",
-        const VPath * path = NULL)
+        const VPath * p_path = NULL)
     {
-        if (path == NULL)
-            path = this->path;
+        if (p_path == NULL)
+            p_path = this->path;
 
-        if (path == NULL)
+        if (p_path == NULL)
             return;
 
         const VPath * vdbcache = NULL;
         bool vdbcacheChecked = false;
-        REQUIRE_RC(VPathGetVdbcache(path, &vdbcache, &vdbcacheChecked));
+        REQUIRE_RC(VPathGetVdbcache(p_path, &vdbcache, &vdbcacheChecked));
 
         REQUIRE(vdbcacheChecked);
 
@@ -322,23 +322,22 @@ public:
 #include "test-resolve-qual-1.hpp"
 #include "test-resolve-qual-2.hpp"
 #endif
-extern "C" {
-    rc_t CC KMain ( int argc, char * argv [] ) {
-        rc_t rc = 0;
-        if (
+extern "C" 
+int main( int argc, char * argv [] ) {
+    rc_t rc = 0;
+    if (
 1)          VFSManagerLogNamesServiceErrors(0, false);
-        if (
+    if (
 0)
-            rc = KDbgSetString("VFS");
-        KConfigDisableUserSettings();
+        rc = KDbgSetString("VFS");
+    KConfigDisableUserSettings();
 #ifndef USE_SERVICES_CACHE
-        return rc;
+    return (int)rc;
 #else
-        if ( rc == 0 )
-            rc = TestResolveQualSuite(argc, argv);
-        return rc;
+    if ( rc == 0 )
+        rc = (rc_t)TestResolveQualSuite(argc, argv);
+    return (int)rc;
 #endif
-    }
 }
 
 /* TODO: check the case when run is found locally in several places;

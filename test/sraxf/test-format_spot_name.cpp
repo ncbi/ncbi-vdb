@@ -74,15 +74,12 @@ TEST_CASE(TestFormatSpotName) { // VDB-4097
     REQUIRE_RC(VDBManagerRelease(mgr));
 }
 
-extern "C" {
+extern "C" 
 
-    int KMain(int argc, char *argv[]) {
-        KConfigDisableUserSettings(); // ignore ~/.ncbi/user-settings.mkfg
+int main(int argc, char *argv[]) {
+    KConfigDisableUserSettings(); // ignore ~/.ncbi/user-settings.mkfg
 
-        rc_t rc = FormatSpotNameSuite(argc, argv);
-        return rc;
-    }
-
+    return FormatSpotNameSuite(argc, argv);
 }
 
 /******************************************************************************/

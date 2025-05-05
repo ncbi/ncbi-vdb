@@ -32,12 +32,15 @@
 #include <kfc/ctx.h>
 #endif
 
+#include "vdbapp-priv.h"
 #include <kapp/vdbapp.h>
+#include <kapp/args-conv.h>
 
 #include <klib/log.h>
 #include <klib/debug.h>
 #include <klib/rc.h>
 #include <klib/report.h>
+#include <klib/status.h> /* KStsLibHandlerSetStdOut */
 #include <klib/text.h>
 #include <klib/sra-release-version.h>
 
@@ -46,8 +49,6 @@
 
 #include <atomic32.h>
 #include <strtol.h>
-
-#include "main-priv.h"
 
 static atomic32_t hangup;
 static atomic32_t quitting;
@@ -126,6 +127,11 @@ VdbInitialize( int argc, char *argv [], ver_t vers )
         memset(&v, 0, sizeof v);
         SraReleaseVersionGet( &v );
         SetKAppVersion( v . version );
+        vers = v . version;
+    }
+    else
+    {
+        SetKAppVersion( vers );
     }
 
     /* initialize error reporting */
@@ -155,8 +161,12 @@ VdbInitialize( int argc, char *argv [], ver_t vers )
 
     /* initialize the default User-Agent in the kns-manager to default value - using "vers" and argv[0] above strrchr '/' */
     {
-        const char * tool = argv[ 0 ];
-        size_t tool_size = string_size ( tool );
+        char * path;
+
+        rc = ArgsConvFilepath(NULL, 0, argv[0], string_size(argv[0]), (void**)&path, NULL);
+
+        size_t tool_size = string_size (path);
+        const char* tool = path;
 
         const char * sep = string_rchr ( tool, tool_size, '/' );
         if ( sep ++ == NULL )
@@ -169,6 +179,8 @@ VdbInitialize( int argc, char *argv [], ver_t vers )
             tool_size = sep - tool;
 
         KNSManagerSetUserAgent ( kns, PKGNAMESTR " sra-toolkit %.*s.%.3V", ( uint32_t ) tool_size, tool, vers );
+
+        free(path);
     }
 
     KNSManagerSetQuitting ( kns, Quitting );
@@ -179,14 +191,6 @@ VdbInitialize( int argc, char *argv [], ver_t vers )
         rc = KLogLibHandlerSetStdErr ();
     if ( rc == 0 )
         rc = KStsLibHandlerSetStdOut ();
-
-#if KFG_COMMON_CREATION
-    if ( rc == 0 )
-    {
-        KConfig *kfg;
-        rc = KConfigMake ( & kfg );
-    }
-#endif
 
     return rc;
 }
@@ -205,10 +209,6 @@ VdbTerminate( rc_t rc )
             rc = r2;
         kns = NULL;
     }
-
-#if KFG_COMMON_CREATION
-    KConfigRelease ( kfg );
-#endif
 
     /* finalize error reporting */
     ReportSilence ();

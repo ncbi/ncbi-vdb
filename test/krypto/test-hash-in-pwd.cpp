@@ -98,15 +98,10 @@ TEST_CASE(TestFile) {
     REQUIRE_RC(KConfigRelease(kfg));
 }
 
-extern "C" {
+int main(int argc, char *argv[]) {
+    KConfigDisableUserSettings(); // ignore ~/.ncbi/user-settings.mkfg
 
-    int KMain(int argc, char *argv[]) {
-        KConfigDisableUserSettings(); // ignore ~/.ncbi/user-settings.mkfg
-
-        rc_t rc = TestHashInPwd(argc, argv);
-        return rc;
-    }
-
+    return TestHashInPwd(argc, argv);
 }
 
 /******************************************************************************/

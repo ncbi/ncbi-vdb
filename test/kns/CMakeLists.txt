@@ -24,7 +24,7 @@
 
 add_compile_definitions( __mod__="test/kns" )
 
-set( LIBS kapp "${COMMON_LIBS_READ}")
+set( LIBS "${COMMON_LIBS_READ}")
 
 AddExecutableTest( Test_KNS_allow_all_certificates "test_allow_all_certificates" "${LIBS}" )
 AddExecutableTest( Test_KNS_dis_allow_all_certificates "test_dis_allow_all_certificates" "${LIBS}" )
@@ -41,14 +41,6 @@ AddExecutableTest( Test_KNS_connect "HttpFixture;test-connect" "${LIBS}" )
 AddExecutableTest( Test_KNS_refresh-expired "HttpFixture;KStableHttpFile;test-refresh-expired-url" "${LIBS}" )
 AddExecutableTest( Test_KNS_timeouts "test-timeouts" "${LIBS}" )
 
-# TODO the following binaries are not unit tests (EXT_TOOLS), they should be started not as ctest
-
-BuildExecutableForTest( test-kns-mutual-authentication "test-mutual-authentication;gosha" "${LIBS}" )
-# add_test( NAME Test_KNS_mutual-authentication COMMAND test-kns-mutual-authentication WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
-
-BuildExecutableForTest( test-kns-proxy-with-env "test-proxy-with-env" "${LIBS}" )
-# add_test( NAME Test_KNS_proxy-with-env COMMAND test-kns-proxy-with-env WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
-
 if( SINGLE_CONFIG )
 
     BuildExecutableForTest( Test_KNS_proxy "test-proxy" "${LIBS}" )
@@ -62,3 +54,11 @@ endif()
 
 AddExecutableTest( Test_KNS_proxy-with-scheme_failure "test-proxy-with-scheme_failure" "${LIBS}" )
 AddExecutableTest( Test_KNS_aws-proxy "test-aws-proxy" "${LIBS}" )
+
+# TODO the following binaries are not unit tests (EXT_TOOLS), they should not be started via ctest
+
+BuildExecutableForTest( test-kns-mutual-authentication "test-mutual-authentication;gosha" "${LIBS}" )
+# add_test( NAME Test_KNS_mutual-authentication COMMAND test-kns-mutual-authentication WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
+
+BuildExecutableForTest( test-kns-proxy-with-env "test-proxy-with-env" "${LIBS}" )
+# add_test( NAME Test_KNS_proxy-with-env COMMAND test-kns-proxy-with-env WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )

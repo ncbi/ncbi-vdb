@@ -361,7 +361,7 @@ FIXTURE_TEST_CASE(KIndex_FindText_Found, KTextIndex_ApiFixture)
     REQUIRE_EQ( (uint64_t)2, m_id_count );
 }
 
-int CC Compare ( const void *item, struct PBSTNode const *n, void *data )
+int CC Compare ( const void *item, struct PBSTNode const *n, void *data ) noexcept
 {
     return 0;
 }
@@ -636,11 +636,10 @@ extern "C"
 
 #include <kfg/config.h>
 
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
-    rc_t rc=KDBTextIndexTestSuite(argc, argv);
-    return rc;
+    return KDBTextIndexTestSuite(argc, argv);
 }
 
 }

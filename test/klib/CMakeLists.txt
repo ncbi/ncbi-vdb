@@ -24,7 +24,7 @@
 
 add_compile_definitions( __mod__="test/klib" )
 
-set( LIBS kapp "${COMMON_LIBS_READ}")
+set( LIBS "${COMMON_LIBS_READ}")
 
 AddExecutableTest( Test_KLIB_asm "asm-test" "${LIBS}" )
 AddExecutableTest( Test_KLIB_printf "printf-test" "${LIBS}" )

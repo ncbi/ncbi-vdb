@@ -73,14 +73,8 @@ TEST_CASE(shl_0)
 
 //////////////////////////////////////////// Main
 extern "C"
+int main ( int argc, char *argv [] )
 {
-
-rc_t CC KMain ( int argc, char *argv [] )
-{
-    rc_t rc=Int128TestSuite(argc, argv);
-    return rc;
+    return Int128TestSuite(argc, argv);
 }
-
-}
-
 

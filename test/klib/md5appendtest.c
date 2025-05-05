@@ -190,7 +190,7 @@ rc_t	runtest (KDirectory * kdir,const char *  filename)
     return rc;
 }
 
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     Args * args;
     rc_t rc;

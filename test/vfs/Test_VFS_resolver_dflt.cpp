@@ -524,7 +524,7 @@ extern "C"
         }
     }
 
-    rc_t CC KMain ( int argc, char *argv [] )
+    int main( int argc, char *argv [] )
     {
         putenv((char*)"NCBI_VDB_NO_CACHE_SDL_RESPONSE=1");
 
@@ -532,7 +532,7 @@ extern "C"
 0) assert(!KDbgSetString("VFS"));
 
         KConfigDisableUserSettings ();
-        rc_t rc = VResolverTestSuite ( argc, argv );
+        int rc = VResolverTestSuite ( argc, argv );
 
         clear_recorded_errors();
 

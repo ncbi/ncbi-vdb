@@ -70,7 +70,7 @@ public:
         THROW_ON_FALSE( (bitsz_t)packed == m_packedBits );
         if ( debug )
         {
-            int i = 0;
+            Buffer::size_type i = 0;
             bitsz_t bits = m_packedBits;
             while ( true )
             {
@@ -114,7 +114,7 @@ public:
 
         if ( debug )
         {
-            int i = 0;
+            Buffer::size_type i = 0;
             bitsz_t bits = m_packedBits;
             while ( true )
             {
@@ -347,10 +347,9 @@ extern "C" {
 
 #include <kfg/config.h>
 
-rc_t CC KMain(int argc, char* argv[])
+int main(int argc, char* argv[])
 {
     KConfigDisableUserSettings();
-    rc_t rc = KlibPackTestSuite(argc, argv);
-    return rc;
+    return KlibPackTestSuite(argc, argv);
 }
 }

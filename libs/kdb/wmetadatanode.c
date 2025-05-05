@@ -1105,7 +1105,7 @@ KWMDataNodeReadAttr ( const KMDataNode *bself, const char *name, char *buffer, s
                 * size = 0;
                 if ( bsize != 0 )
                     buffer [ 0 ] = 0;
-                rc = RC ( rcDB, rcMetadata, rcReading, rcAttr, rcNotFound );
+                rc = SILENT_RC ( rcDB, rcMetadata, rcReading, rcAttr, rcNotFound );
             }
             else
             {
@@ -1117,7 +1117,7 @@ KWMDataNodeReadAttr ( const KMDataNode *bself, const char *name, char *buffer, s
                     return 0;
                 }
 
-                return RC ( rcDB, rcMetadata, rcReading, rcBuffer, rcInsufficient );
+                return SILENT_RC ( rcDB, rcMetadata, rcReading, rcBuffer, rcInsufficient );
             }
         }
 

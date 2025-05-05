@@ -304,8 +304,7 @@ TEST_CASE(SraReleaseVersionTest) {
 }
 
 //////////////////////////////////////////////////// Main
-extern "C" {
-    rc_t CC KMain(int argc, char *argv[]) {
-        return SraReleaseVersionTestSuite(argc, argv);
-    }
+extern "C" 
+int main(int argc, char *argv[]) {
+    return SraReleaseVersionTestSuite(argc, argv);
 }

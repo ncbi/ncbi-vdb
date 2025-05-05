@@ -72,9 +72,7 @@ DumpSchema ( const VSchema * p_schema, ostream & p_out )
 }
 
 extern "C"
-{
-
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
 
@@ -289,7 +287,5 @@ rc_t CC KMain ( int argc, char *argv [] )
         return 3;
     }
     return failed == 0 ? 0 : 4;
-}
-
 }
 

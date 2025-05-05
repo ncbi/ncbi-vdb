@@ -33,7 +33,7 @@
 
 #include <klib/printf.h> /* string_printf */
 
-#include <ktst/unit_test.hpp> /* KMain */
+#include <ktst/unit_test.hpp> 
 
 TEST_SUITE(SraDescTestSuite);
 
@@ -241,9 +241,8 @@ FIXTURE_TEST_CASE(LoalObsoleteQualityTest, SraDescTestFixture) {
 }
 #endif
 
-extern "C" {
-    rc_t CC KMain(int argc, char * argv[]) {
-        KConfigDisableUserSettings();
-        return SraDescTestSuite(argc, argv);
-    }
+extern "C" 
+int main(int argc, char * argv[]) {
+    KConfigDisableUserSettings();
+    return SraDescTestSuite(argc, argv);
 }

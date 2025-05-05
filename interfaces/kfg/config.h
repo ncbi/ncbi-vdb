@@ -41,18 +41,6 @@
 extern "C" {
 #endif
 
-/*
- * This flag has important ramifications to all programs.
- * If set then all programs that use KMain()/KMane() 
- * become dependant on the kfg and kfs libraries.
- *
- * This will also modify the behavior of program tear down.
- * if unset the memory used by the singleton config manager
- * will not be freed.
- */
-#define KFG_COMMON_CREATION 0
-
-
 /*--------------------------------------------------------------------------
  * forwards
  */
@@ -127,7 +115,7 @@ KFG_EXTERN rc_t CC KConfigRead ( const KConfig *self, const char *path,
  */
 KFG_EXTERN rc_t CC KConfigReadBool ( const KConfig* self, const char* path, bool* result );
 KFG_EXTERN rc_t CC KConfigWriteBool( KConfig *self, const char * path, bool value );
-    
+
 /* ReadI64
  *  read an integer node value
  *
@@ -288,7 +276,7 @@ KFG_EXTERN rc_t CC KConfigNodeRead ( const KConfigNode *self,
  */
 KFG_EXTERN rc_t CC KConfigNodeReadBool ( const KConfigNode *self, bool* result );
 
-    
+
 /* ReadI64
  *  read an integer node value
  *

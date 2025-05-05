@@ -619,18 +619,18 @@ extern "C"
 
 #include <kfg/config.h>
 
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     srand( time( NULL ) );
     KConfigDisableUserSettings();
     rc_t rc = prepare_cachetee_tests();
     if ( rc == 0 )
     {
-        rc = CacheTeeTests( argc, argv );
+        rc = (rc_t)CacheTeeTests( argc, argv );
         finish_cachetee_tests();
     }
     KOutMsg( "and the result is: %R\n", rc );
-    return rc;
+    return (int)rc;
 }
 
 }

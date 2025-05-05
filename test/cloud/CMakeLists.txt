@@ -24,7 +24,7 @@
 
 add_compile_definitions( __mod__="test/cloud" )
 
-set( LIBS kapp "${COMMON_LIBS_READ}")
+set( LIBS "${COMMON_LIBS_READ}")
 
 AddExecutableTest( Test_CLOUD_aws "test-aws" "${COMMON_LINK_LIBRARIES};${LIBS}" )
 AddExecutableTest( Test_CLOUD_gcp "test-gcp;TestStream" "${LIBS}" )

@@ -135,8 +135,7 @@ FIXTURE_TEST_CASE(Test_Link, Fixture) {
     REQUIRE_RC(Fini());
 }
 
-extern "C" {
-    rc_t CC KMain(int argc, char *argv[]) {
-        return LinkSuite(argc, argv);
-    }
+extern "C"
+int main(int argc, char *argv[]) {
+    return LinkSuite(argc, argv);
 }

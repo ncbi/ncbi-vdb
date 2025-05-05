@@ -36,6 +36,7 @@
 #include <klib/data-buffer.h>
 
 #include <kapp/args.h> /* ArgsMakeAndHandle */
+#include <kapp/vdbapp.h> /* ArgsMakeAndHandle */
 
 #include <kfg/kfg-priv.h> /* KConfigMakeLocal */
 
@@ -374,9 +375,9 @@ static rc_t argsHandler(int argc, char * argv[]) {
 }
 
 extern "C"
+int main( int argc, char *argv [] )
 {
-rc_t CC KMain ( int argc, char *argv [] )
-{
+    VDB::Application app(argc,argv);
     KConfigDisableUserSettings();
 
     // this makes messages from the test code appear
@@ -387,8 +388,5 @@ rc_t CC KMain ( int argc, char *argv [] )
     assert(!KDbgSetString("KNS"));
 #endif
 
-    rc_t rc = GcpTestSuite(argc, argv);
-    return rc;
-}
-
+    return GcpTestSuite(argc, argv);
 }

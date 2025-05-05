@@ -992,11 +992,11 @@ extern "C" {
 
 #include <kfg/config.h>
 
-rc_t CC KMain(int argc, char* argv[])
+int main(int argc, char* argv[])
 {
     srandom(time(NULL));
     KConfigDisableUserSettings();
-    rc_t rc = KHashTableTestSuite(argc, argv);
-    return rc;
+    return KHashTableTestSuite(argc, argv);
 }
+
 }

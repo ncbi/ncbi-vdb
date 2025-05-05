@@ -493,10 +493,10 @@ FIXTURE_TEST_CASE ( V2ParserError, VDB_Fixture )
     REQUIRE_RC ( VTableRelease ( tbl ) );
 }
 
-rc_t CC FlushSchema(void *fd, const void * buffer, size_t size)
+rc_t CC FlushSchema(void *fd, const void * buffer, size_t size) noexcept
 {
     ostream & out = *static_cast < ostream * > (fd);
-    out.write(static_cast < const char * > (buffer), size);
+    out.write(static_cast < const char * > (buffer), (streamsize)size);
     out.flush();
     return 0;
 }
@@ -566,13 +566,8 @@ TEST_CASE(KDBRManager_MakeReadWithVFSManager)
 
 //////////////////////////////////////////// Main
 extern "C"
-{
-
-rc_t CC KMain ( int argc, char *argv [] )
+int main( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
-    rc_t rc=VdbTestSuite(argc, argv);
-    return rc;
-}
-
+    return VdbTestSuite(argc, argv);
 }
