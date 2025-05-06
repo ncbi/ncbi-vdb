@@ -2031,7 +2031,7 @@ static void CC read_observer_update(
     if (observer->completed)
         return;
 
-    if (pos > observer->pos) /* a part of sile was skipped */
+    if (pos > observer->pos) /* a part of file was skipped */
         return;
 
     if (pos < observer->pos) {
