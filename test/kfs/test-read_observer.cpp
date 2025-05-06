@@ -24,131 +24,19 @@
 * Tests of KFileMD5ReadObserver for file from filesystem
 */
 
+#include "../vfs/observer-test.hpp" // ObserverTest
+
 #include <kfg/config.h> /* KConfigDisableUserSettings */
-#include <kfs/directory.h> /* KDirectoryRelease */
-#include <kfs/file.h> /* KFileRelease */
-#include <kfs/md5.h> /* KFileMakeMD5ReadObserver */
-
-#include <klib/printf.h> // snprintf
-#include <kproc/timeout.h> // TimeoutInit
-#include <ktst/unit_test.hpp> /* TEST_SUITE */
-
-using std::string;
-
-void FREE(const void *ptr) { free((void*)ptr); }
-
-#define RELEASE(type, obj) do { REQUIRE_RC(type##Release(obj)); \
-    obj = NULL; } while (false)
-
-#define ERR_HEAD "The file was not read to the end; it was read to byte "
 
 TEST_SUITE(ReadObserverTestSuite)
 
-class Test : protected ncbi::NK::TestCase {
-    TestCase *_dad;
-    const KFileMD5ReadObserver *_md5;
-public:
-    const KFile *file;
-    uint64_t size;
-    char *buf;
-    struct timeout_t tm;
-
-public:
-    Test(TestCase *dad, const std::string &name)
-        : TestCase(name)
-        , _dad(dad)
-        , _md5(NULL)
-        , file(NULL)
-        , size(0)
-        , buf(NULL)
-    {
-        TimeoutInit (&tm, 300000);
-    }
-
-    ~Test() {
-        free(buf);
-    
-        assert(_dad);
-        _dad->ErrorCounterAdd(GetErrorCounter());
-    }
-
-    void Start(bool failures = false // test how functions react
-    )                                // to invalid invalid arguments
-    {
-        KDirectory * d(NULL);
-        REQUIRE_RC(KDirectoryNativeDir(&d));
-        REQUIRE_RC(KDirectoryOpenFileRead(d, &file, "../vdb/db/VDB-3418.sra"));
-        RELEASE(KDirectory, d);
-
-        if (failures) {
-            REQUIRE_RC_FAIL(KFileMakeMD5ReadObserver(file, NULL));
-            REQUIRE_RC_FAIL(KFileMakeMD5ReadObserver(NULL, &_md5));
-            REQUIRE_NULL(_md5);
-        }
-
-        REQUIRE_RC(KFileMakeMD5ReadObserver(file, &_md5));
-        
-        REQUIRE_RC(KFileSize(file, &size));
-        buf = reinterpret_cast<char*>(malloc(size + 1));
-        REQUIRE(buf);
-    }
-
-    void Finish(const string &aError = "",// if not empty - is an error message,
-                                          // expect failure
-        bool failures = false )   // the same as in Start()
-    {
-        bool success = aError == "";
-
-        RELEASE(KFile, file);
-        
-        uint8_t digest[16];
-        memset(digest, 0, sizeof digest);
-        const char *error(NULL);
-        
-        if (failures) {
-            REQUIRE_RC_FAIL(KFileMD5ReadObserverGetDigest(NULL, digest,
-                &error));
-            REQUIRE_NULL(error);
-            if (success)
-                REQUIRE_RC(KFileMD5ReadObserverGetDigest(_md5, digest, NULL));
-            else
-                REQUIRE_RC_FAIL(
-                    KFileMD5ReadObserverGetDigest(_md5, digest, NULL));
-        }
-
-        if (success) {
-            REQUIRE_RC(KFileMD5ReadObserverGetDigest(_md5, digest, &error));
-            REQUIRE_NULL(error);
-            REQUIRE(digest[0] != '\0');
-        
-            int total = 0;
-            for (int i = 0; i < 16; ++i) {
-                int len
-                    = snprintf(&buf[total], size - total, "%02x", digest[i]);
-                assert(len == 2);
-                total += len;
-            }
-            buf[total] = '\0';
-            REQUIRE_EQ(string(buf), string("7d66f3f346db0f916a8c723d40087b6c"));
-        }
-        else {
-            REQUIRE_RC_FAIL(
-                KFileMD5ReadObserverGetDigest(_md5, digest, &error));
-            REQUIRE_NOT_NULL(error);
-            REQUIRE(digest[0] == '\0');
-            REQUIRE_EQ(string(error), aError);
-            FREE(error);
-        }
-
-        RELEASE(KFileMD5ReadObserver, _md5);
-    }
-};
+using std::string;
 
 ////////////////////////////////////////////////////////////////////////////////
 // KFileReadAll
 
 TEST_CASE(ReadAllExactly) {
-    Test t(this, "ReadAllExactly");
+    ObserverTest t(this, "ReadAllExactly");
     t.Start(true);
     size_t num_read(0);
     // request exactly all file; EOF is detected by file size
@@ -157,7 +45,7 @@ TEST_CASE(ReadAllExactly) {
 }
 
 TEST_CASE(ReadAllExactlyPlus1) {
-    Test t(this, "ReadAllExactlyPlus1");
+    ObserverTest t(this, "ReadAllExactlyPlus1");
     t.Start(true);
     size_t num_read(0);
     // request all file + 1 byte
@@ -168,7 +56,7 @@ TEST_CASE(ReadAllExactlyPlus1) {
 }
 
 TEST_CASE(ReadAllSkip0) {
-    Test t(this, "ReadAllSkip0");
+    ObserverTest t(this, "ReadAllSkip0");
     t.Start(true);
     size_t num_read(0);
     REQUIRE_RC(KFileReadAll(t.file, 1, t.buf, t.size, &num_read));
@@ -177,7 +65,7 @@ TEST_CASE(ReadAllSkip0) {
 }
 
 TEST_CASE(ReadAllSkip1) {
-    Test t(this, "ReadAllSkip1");
+    ObserverTest t(this, "ReadAllSkip1");
     t.Start(true);
     size_t num_read(0);
     REQUIRE_RC(KFileReadAll(t.file, 0, t.buf, 1, &num_read));
@@ -188,7 +76,7 @@ TEST_CASE(ReadAllSkip1) {
 }
 
 TEST_CASE(ReadAllSkipLast) {
-    Test t(this, "ReadAllSkipLast");
+    ObserverTest t(this, "ReadAllSkipLast");
     t.Start(true);
     size_t num_read(0);
     REQUIRE_RC(KFileReadAll(t.file, 0, t.buf, t.size - 1, &num_read));
@@ -199,7 +87,7 @@ TEST_CASE(ReadAllSkipLast) {
 }
 
 TEST_CASE(ReadAllTwice) {
-    Test t(this, "ReadAllTwice");
+    ObserverTest t(this, "ReadAllTwice");
     t.Start(true);
     size_t num_read(0);
     REQUIRE_RC(KFileReadAll(t.file, 0, t.buf, 1234567, &num_read));
@@ -210,7 +98,7 @@ TEST_CASE(ReadAllTwice) {
 }
 
 TEST_CASE(ReadAllTwicePartially) {
-    Test t(this, "ReadAllTwicePartially");
+    ObserverTest t(this, "ReadAllTwicePartially");
     t.Start(true);
     size_t num_read(0);
     REQUIRE_RC(KFileReadAll(t.file, 0, t.buf, 2000000, &num_read));
@@ -223,7 +111,7 @@ TEST_CASE(ReadAllTwicePartially) {
 // KFileRead
 
 TEST_CASE(Read) {
-    Test t(this, "Read");
+    ObserverTest t(this, "Read");
     t.Start(true);
     size_t num_read(1);
     uint64_t pos(0);
@@ -233,7 +121,7 @@ TEST_CASE(Read) {
 }
 
 TEST_CASE(ReadSkip0) {
-    Test t(this, "ReadSkip0");
+    ObserverTest t(this, "ReadSkip0");
     t.Start(true);
     size_t num_read(0);
     uint64_t pos(1);
@@ -243,7 +131,7 @@ TEST_CASE(ReadSkip0) {
 }
 
 TEST_CASE(ReadSkip1) {
-    Test t(this, "ReadSkip1");
+    ObserverTest t(this, "ReadSkip1");
     t.Start(true);
     size_t num_read(0);
     uint64_t pos(0);
@@ -256,7 +144,7 @@ TEST_CASE(ReadSkip1) {
 }
 
 TEST_CASE(ReadTwice) {
-    Test t(this, "ReadTwice");
+    ObserverTest t(this, "ReadTwice");
     t.Start(true);
     size_t num_read(1);
     uint64_t pos(0);
@@ -270,7 +158,7 @@ TEST_CASE(ReadTwice) {
 }
 
 TEST_CASE(ReadTwicePartially) {
-    Test t(this, "ReadTwicePartially");
+    ObserverTest t(this, "ReadTwicePartially");
     t.Start(true);
     size_t num_read(1);
     uint64_t pos(0);
@@ -285,7 +173,7 @@ TEST_CASE(ReadTwicePartially) {
 // KFileTimedRead
 
 TEST_CASE(TimedRead) {
-    Test t(this, "TimedRead");
+    ObserverTest t(this, "TimedRead");
     t.Start(true);
     size_t num_read(1);
     uint64_t pos(0);
@@ -295,7 +183,7 @@ TEST_CASE(TimedRead) {
 }
 
 TEST_CASE(TimedReadSkip0) {
-    Test t(this, "TimedReadSkip0");
+    ObserverTest t(this, "TimedReadSkip0");
     t.Start(true);
     size_t num_read(0);
     uint64_t pos(1);
@@ -305,7 +193,7 @@ TEST_CASE(TimedReadSkip0) {
 }
 
 TEST_CASE(TimedReadSkip1) {
-    Test t(this, "TimedReadSkip1");
+    ObserverTest t(this, "TimedReadSkip1");
     t.Start(true);
     size_t num_read(0);
     uint64_t pos(0);
@@ -318,7 +206,7 @@ TEST_CASE(TimedReadSkip1) {
 }
 
 TEST_CASE(TimedReadTwice) {
-    Test t(this, "TimedReadTwice");
+    ObserverTest t(this, "TimedReadTwice");
     t.Start(true);
     size_t num_read(1);
     uint64_t pos(0);
@@ -332,7 +220,7 @@ TEST_CASE(TimedReadTwice) {
 }
 
 TEST_CASE(TimedReadTwicePartially) {
-    Test t(this, "TimedReadTwicePartially");
+    ObserverTest t(this, "TimedReadTwicePartially");
     t.Start(true);
     size_t num_read(1);
     uint64_t pos(0);
@@ -347,7 +235,7 @@ TEST_CASE(TimedReadTwicePartially) {
 // KFileTimedReadAll
 
 TEST_CASE(TimedReadAllExactly) {
-    Test t(this, "TimedReadAllExactly");
+    ObserverTest t(this, "TimedReadAllExactly");
     t.Start(true);
     size_t num_read(0);
     REQUIRE_RC(KFileTimedReadAll(t.file, 0, t.buf, t.size, &num_read, &t.tm));
@@ -355,7 +243,7 @@ TEST_CASE(TimedReadAllExactly) {
 }
 
 TEST_CASE(TimedReadAllExactlyPlus1) {
-    Test t(this, "TimedReadAllExactlyPlus1");
+    ObserverTest t(this, "TimedReadAllExactlyPlus1");
     t.Start(true);
     size_t num_read(0);
     REQUIRE_RC(KFileTimedReadAll(t.file, 0, t.buf, t.size + 1, &num_read,
@@ -364,7 +252,7 @@ TEST_CASE(TimedReadAllExactlyPlus1) {
 }
 
 TEST_CASE(TimedReadAllSkip0) {
-    Test t(this, "TimedReadAllSkip0");
+    ObserverTest t(this, "TimedReadAllSkip0");
     t.Start(true);
     size_t num_read(0);
     REQUIRE_RC(KFileTimedReadAll(t.file, 1, t.buf, t.size, &num_read, &t.tm));
@@ -372,7 +260,7 @@ TEST_CASE(TimedReadAllSkip0) {
 }
 
 TEST_CASE(TimedReadAllSkip1) {
-    Test t(this, "TimedReadAllSkip1");
+    ObserverTest t(this, "TimedReadAllSkip1");
     t.Start(true);
     size_t num_read(0);
     REQUIRE_RC(KFileTimedReadAll(t.file, 0, t.buf, 1, &num_read, &t.tm));
@@ -382,7 +270,7 @@ TEST_CASE(TimedReadAllSkip1) {
 }
 
 TEST_CASE(TimedReadAllSkipLast) {
-    Test t(this, "TimedReadAllSkipLast");
+    ObserverTest t(this, "TimedReadAllSkipLast");
     t.Start(true);
     size_t num_read(0);
     REQUIRE_RC(KFileTimedReadAll(t.file, 0, t.buf, t.size - 1, &num_read,
@@ -393,7 +281,7 @@ TEST_CASE(TimedReadAllSkipLast) {
 }
 
 TEST_CASE(TimedReadAllTwice) {
-    Test t(this, "TimedReadAllTwice");
+    ObserverTest t(this, "TimedReadAllTwice");
     t.Start(true);
     size_t num_read(0);
     REQUIRE_RC(KFileTimedReadAll(t.file, 0, t.buf, 123, &num_read, &t.tm));
@@ -403,7 +291,7 @@ TEST_CASE(TimedReadAllTwice) {
 }
 
 TEST_CASE(TimedReadAllTwicePartially) {
-    Test t(this, "TimedReadAllTwicePartially");
+    ObserverTest t(this, "TimedReadAllTwicePartially");
     t.Start(true);
     size_t num_read(0);
     REQUIRE_RC(KFileTimedReadAll(t.file, 0, t.buf, 2000000, &num_read, &t.tm));
@@ -415,14 +303,14 @@ TEST_CASE(TimedReadAllTwicePartially) {
 // KFileReadExactly
 
 TEST_CASE(ReadExactly) {
-    Test t(this, "ReadExactly");
+    ObserverTest t(this, "ReadExactly");
     t.Start(true);
     REQUIRE_RC(KFileReadExactly(t.file, 0, t.buf, t.size));
     t.Finish("", true);
 }
 
 TEST_CASE(ReadExactlySkip0) {
-    Test t(this, "ReadExactlySkip0");
+    ObserverTest t(this, "ReadExactlySkip0");
     t.Start(true);
     //REQUIRE_RC(KFileReadExactly(t.file, 0, t.buf, 1));
     REQUIRE_RC(KFileReadExactly(t.file, 1, t.buf, t.size - 1));
@@ -430,7 +318,7 @@ TEST_CASE(ReadExactlySkip0) {
 }
 
 TEST_CASE(ReadExactlySkip1) {
-    Test t(this, "ReadExactlySkip1");
+    ObserverTest t(this, "ReadExactlySkip1");
     t.Start(true);
     REQUIRE_RC(KFileReadExactly(t.file, 0, t.buf, 1));
     //REQUIRE_RC(KFileReadExactly(t.file, 1, t.buf, 1));
@@ -439,7 +327,7 @@ TEST_CASE(ReadExactlySkip1) {
 }
 
 TEST_CASE(ReadExactlySkipLast) {
-    Test t(this, "ReadExactlySkipLast");
+    ObserverTest t(this, "ReadExactlySkipLast");
     t.Start(true);
     REQUIRE_RC(KFileReadExactly(t.file, 0, t.buf, t.size - 1));
     //REQUIRE_RC(KFileReadExactly(t.file, t.size - 1, t.buf, 1));
@@ -448,7 +336,7 @@ TEST_CASE(ReadExactlySkipLast) {
 }
 
 TEST_CASE(ReadExactlyTwice) {
-    Test t(this, "ReadExactlyTwice");
+    ObserverTest t(this, "ReadExactlyTwice");
     t.Start(true);
     REQUIRE_RC(KFileReadExactly(t.file, 0, t.buf, 1234567));
     REQUIRE_RC(KFileReadExactly(t.file, 1, t.buf, 123456));
@@ -457,7 +345,7 @@ TEST_CASE(ReadExactlyTwice) {
 }
 
 TEST_CASE(ReadExactlyTwicePartially) {
-    Test t(this, "ReadExactlyTwicePartially");
+    ObserverTest t(this, "ReadExactlyTwicePartially");
     t.Start(true);
     REQUIRE_RC(KFileReadExactly(t.file, 0, t.buf, 2000000));
     REQUIRE_RC(KFileReadExactly(t.file, 1000000, t.buf, t.size - 1000000));
@@ -468,14 +356,14 @@ TEST_CASE(ReadExactlyTwicePartially) {
 // KFileTimedReadExactly
 
 TEST_CASE(TimedReadExactly) {
-    Test t(this, "TimedReadExactly");
+    ObserverTest t(this, "TimedReadExactly");
     t.Start(true);
     REQUIRE_RC(KFileTimedReadExactly(t.file, 0, t.buf, t.size, &t.tm));
     t.Finish();
 }
 
 TEST_CASE(TimedReadExactlySkip0) {
-    Test t(this, "TimedReadExactlySkip0");
+    ObserverTest t(this, "TimedReadExactlySkip0");
     t.Start(true);
     //REQUIRE_RC(KFileTimedReadExactly(t.file, 0, t.buf, 1, &t.tm));
     REQUIRE_RC(KFileTimedReadExactly(t.file, 1, t.buf, t.size - 1, &t.tm));
@@ -483,7 +371,7 @@ TEST_CASE(TimedReadExactlySkip0) {
 }
 
 TEST_CASE(TimedReadExactlySkip1) {
-    Test t(this, "ReadExactlySkip1");
+    ObserverTest t(this, "ReadExactlySkip1");
     t.Start(true);
     REQUIRE_RC(KFileTimedReadExactly(t.file, 0, t.buf, 1, &t.tm));
     //REQUIRE_RC(KFileTimedReadExactly(t.file, 1, t.buf, 1, &t.tm));
@@ -492,7 +380,7 @@ TEST_CASE(TimedReadExactlySkip1) {
 }
 
 TEST_CASE(TimedReadExactlySkipLast) {
-    Test t(this, "TimedReadExactlySkipLast");
+    ObserverTest t(this, "TimedReadExactlySkipLast");
     t.Start(true);
     REQUIRE_RC(KFileTimedReadExactly(t.file, 0, t.buf, t.size - 1, &t.tm));
     //REQUIRE_RC(KFileTimedReadExactly(t.file, t.size - 1, t.buf, 1, &t.tm));
@@ -501,7 +389,7 @@ TEST_CASE(TimedReadExactlySkipLast) {
 }
 
 TEST_CASE(TimedReadExactlyTwice) {
-    Test t(this, "TimedReadExactlyTwice");
+    ObserverTest t(this, "TimedReadExactlyTwice");
     t.Start(true);
     REQUIRE_RC(KFileTimedReadExactly(t.file, 0, t.buf, 1234567, &t.tm));
     REQUIRE_RC(KFileTimedReadExactly(t.file, 1, t.buf, 123456, &t.tm));
@@ -511,7 +399,7 @@ TEST_CASE(TimedReadExactlyTwice) {
 }
 
 TEST_CASE(TimedReadExactlyTwicePartially) {
-    Test t(this, "TimedReadExactlyTwicePartially");
+    ObserverTest t(this, "TimedReadExactlyTwicePartially");
     t.Start(true);
     REQUIRE_RC(KFileTimedReadExactly(t.file, 0, t.buf, 2000000, &t.tm));
     REQUIRE_RC(KFileTimedReadExactly(t.file, 999, t.buf, t.size - 999, &t.tm));
@@ -522,7 +410,16 @@ extern "C" {
     int main(int argc, char *argv[]) {
         KConfigDisableUserSettings();
 
-        return ReadObserverTestSuite(argc, argv);
+        rc_t rc(ObserverTest::Begin()); 
+        
+        if (rc == 0)
+            rc = ReadObserverTestSuite(argc, argv);
+
+        rc_t r2(ObserverTest::End());
+        if (rc == 0 && r2 != 0)
+            rc = r2;
+
+        return (rc == 0) ? 0 : IF_EXITCODE(rc, 3);
     }
 }
 
