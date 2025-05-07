@@ -177,7 +177,7 @@ rc_t CC NextLogLevelCommon ( const char * level_parameter );
             void setRc( rc_t p_rc ) { m_rc = p_rc; }
 
             // recommended exit code for main() based on reported rc
-            int getExitCode( rc_t rc = 0 ) const { return m_rc == 0 ? 0 : 3; }
+            int getExitCode( rc_t rc = 0 ) const { return m_rc == 0 && rc == 0 ? 0 : 3; }
 
             int getArgC() const { return m_argc; }
             char** getArgV() { return m_argv; }
@@ -187,7 +187,7 @@ rc_t CC NextLogLevelCommon ( const char * level_parameter );
             int m_argc;
             char** m_argv;
             bool m_argvOwned; // true if args have been rewritten
-            rc_t m_rc;
+            rc_t m_rc = 0;
         };
 
     }
