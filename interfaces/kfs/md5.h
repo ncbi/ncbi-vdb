@@ -1,4 +1,4 @@
-/*=======================================================================================
+/*==============================================================================
 *
 *                            PUBLIC DOMAIN NOTICE
 *               National Center for Biotechnology Information
@@ -281,6 +281,44 @@ KFS_EXTERN rc_t CC KMD5FileRevert ( KMD5File *self );
  */
 KFS_EXTERN rc_t CC KMD5FileReset ( KMD5File *self );
 
+
+/*------------------------------------------------------------------------------
+ * MD5 KFile Read Observer
+ */
+
+typedef struct KFileMD5ReadObserver KFileMD5ReadObserver;
+/* Make
+ *  Creates a Read Observer for KFile that calculates
+ *  the md5 checksum of the read data.
+ *  To calculate the md5, the file must be read sequentially
+ *  from start to end.
+ *
+ *  "self" [ IN ] - the input file to which the read observer is attached
+ *  "observer" [ OUT ] - created observer.
+ */
+
+KFS_EXTERN rc_t CC KFileMakeMD5ReadObserver ( const struct KFile * self,
+    const KFileMD5ReadObserver ** observer );
+
+/* Release */
+KFS_EXTERN rc_t CC KFileMD5ReadObserverRelease (
+    const KFileMD5ReadObserver *self );
+
+
+/*------------------------------------------------------------------------------
+ * GetDigest
+ *  a formatter for reading or writing an md5sum-style checksum file.
+ *  Returns a non-zero rc value if md5 cannot be calculated for the entire file.
+ *
+ *  "digest" [ OUT ] - return parameter for the MD5 checksum
+ *
+ *  "error" [ OUT, NULL OKAY ] - optional error message that is returned
+ *  when md5 cannot be calculated because not all file was read sequentially.
+ *  "free(error)" has to be called after you have finished using it.
+ */
+KFS_EXTERN rc_t CC KFileMD5ReadObserverGetDigest (
+    const KFileMD5ReadObserver *self, uint8_t digest [ 16 ],
+    const char ** error);
 
 #ifdef __cplusplus
 }
