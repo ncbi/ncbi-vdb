@@ -675,7 +675,7 @@ LIB_EXPORT rc_t CC AlignAccessAlignmentEnumeratorGetCIGAR(
 #ifdef WINDOWS
         cig1len = sprintf_s(cig1, sizeof(cig1), "%c%u", op, len);
 #else
-        cig1len = sprintf(cig1, "%c%u", op, len);
+        cig1len = snprintf(cig1, sizeof(cig1), "%c%u", op, len);
 #endif
         if (cigbuf + cig1len < endp) {
             if (cigar_buffer != NULL) {

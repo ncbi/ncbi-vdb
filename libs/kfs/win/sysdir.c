@@ -2695,7 +2695,7 @@ rc_t CC KSysDirOpenDirRead ( const KSysDir *self,
 
 #if _DEBUGGING
         char output[4096] = "";
-        sprintf(output, "%ws", dir_name);
+        snprintf(output, sizeof(output), "%ws", dir_name);
         DBGMSG(DBG_KFS, DBG_FLAG(DBG_KFS_FILE), ("'%s' resolved to '%s'\n",
             path, output));
 #endif

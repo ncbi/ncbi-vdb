@@ -1801,7 +1801,7 @@ rc_t KWTrieIndexPersist_v2 ( const KWTrieIndex_v2 *self,
         {
             /* create the name of temporary md5 file */
             char tmpmd5name [ 260 ];
-            sprintf ( tmpmd5name, "%s.md5", tmpname );
+            snprintf ( tmpmd5name, sizeof(tmpmd5name), "%s.md5", tmpname );
 
             /* create the output file under temporary name
                ? why does it need read/write capabilities? */
