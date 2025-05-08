@@ -42,11 +42,9 @@ extern "C" {
 #if DFLT_ATOMIC_BITS == 32
 #define ATOMIC_NAME( suffix ) \
     atomic32_ ## suffix
-typedef int atomic_int;
 #else
 #define ATOMIC_NAME( suffix ) \
     atomic64_ ## suffix
-typedef long int atomic_int;
 #endif
 
 typedef struct ATOMIC_NAME ( t ) atomic_t;
@@ -108,14 +106,16 @@ struct atomic_ptr_t
     
 /* int atomic_read_ptr ( const atomic_ptr_t *v ); */
 #define atomic_read_ptr( v ) \
-    ( ( v ) -> ptr )
+    __atomic_load_n( & ( ( v ) -> ptr ), __ATOMIC_SEQ_CST )
+
+#define atomic_set_ptr( v, s ) \
+    __atomic_store_n( & ( ( v ) -> ptr ), s, __ATOMIC_SEQ_CST )
 
 static __inline__
-void *atomic_test_and_set_ptr ( atomic_ptr_t *v, void *s, void *t )
+void *atomic_test_and_set_ptr ( atomic_ptr_t *const v, void *const s, void *const t )
 {
-    void *rtn = v -> ptr;
-    if ( rtn == t )
-        v -> ptr = s;
+    void *rtn = t;
+    __atomic_compare_exchange_n(&v->ptr, &rtn, s, 0, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
     return rtn;
 }
 
@@ -178,6 +178,70 @@ void *atomic_test_and_set_ptr ( atomic_ptr_t *v, void *s, void *t )
 
 #ifdef __cplusplus
 }
+
+template < typename T >
+class cxx_atomic32_t : private atomic32_t
+{
+    union U {
+        T u;
+        int v;
+    };
+public:
+    T get() const { 
+        U const u{.v = atomic32_read(this)};
+        return u.u;
+    }
+    void set(T const &value) {
+        U const u{.u = value};
+        atomic32_set(this, u.v);
+    }
+
+    cxx_atomic32_t() { atomic32_set(this, 0); }
+    cxx_atomic32_t(T const &value) { set(value); }
+    cxx_atomic32_t(cxx_atomic32_t const &rhs) { set(rhs.get()); }
+
+    operator T() const { return get(); }
+    T operator =(T const &value) { 
+        set(value);
+        return value;
+    }
+};
+
+template <>
+class cxx_atomic32_t<bool> : private atomic32_t
+{
+public:
+    bool get() const { return atomic32_read(this) != 0; }
+    void set(bool value) { atomic32_set(this, value ? ~0 : 0); }
+
+    cxx_atomic32_t() { atomic32_set(this, false); }
+    cxx_atomic32_t(bool value) { set(value); }
+    cxx_atomic32_t(cxx_atomic32_t const &rhs) { set(rhs.get()); }
+
+    operator bool() const { return get(); }
+    bool operator =(bool value) { 
+        set(value);
+        return value;
+    }
+};
+
+template < typename T >
+class cxx_atomic64_t : private atomic64_t
+{
+public:
+    T get() const { return reinterpret_cast<T>(atomic64_read(this)); }
+    void set(T const &value) { atomic64_set(this, reinterpret_cast<long>(value)); }
+
+    cxx_atomic64_t() { atomic64_set(this, 0); }
+    cxx_atomic64_t(T const &value) { set(value); }
+    cxx_atomic64_t(cxx_atomic64_t const &rhs) { set(rhs.get()); }
+
+    operator T() const { return get(); }
+    T operator =(T const &value) { 
+        set(value);
+        return value;
+    }
+};
 #endif
 
 #endif /* _h_atomic_ */
