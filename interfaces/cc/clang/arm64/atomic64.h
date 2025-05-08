@@ -56,7 +56,7 @@ struct atomic64_t
 
 /* if no read is needed, define the least expensive atomic add */
 #define atomic64_add( v, i ) \
-    ((void)atomic32_read_and_add(v, i))
+    ((void)atomic64_read_and_add(v, i))
 
 /* add to v -> counter and return the result */
 static __inline__ long atomic64_add_and_read ( atomic64_t *const v, long const i )
