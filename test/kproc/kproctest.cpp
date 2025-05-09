@@ -45,6 +45,8 @@
 
 #include <stdexcept>
 #include <sstream>
+#include <utility>
+#include <atomic>
 
 #include <cstring> // mamset
 
@@ -53,9 +55,6 @@ using namespace ncbi::NK;
 
 extern "C" { static rc_t argsHandler(int argc, char* argv[]); }
 TEST_SUITE_WITH_ARGS_HANDLER(KProcTestSuite, argsHandler);
-
-using atomic_rc_t = cxx_atomic32_t<rc_t>;
-using atomic_bool_t = cxx_atomic32_t<bool>;
 
 //TODO: KThread
 
@@ -77,10 +76,9 @@ class KLockFixture
 {
 public:
     KLockFixture()
-    : threadRc(rc_t{0})
-    , thread(0)
-    , threadWaiting(false)
+    : thread(0)
     , lock(makeLock())
+    , threadWaiting(false)
     {}
     
     ~KLockFixture()
@@ -92,54 +90,56 @@ public:
     }
 
 protected:
-    class Thread {
-    public:
-        // danger - this should be an extern "C" function
-        // with CC calling convention on Windows
-        static rc_t KLock_ThreadFn ( const KThread *thread, void *data ) noexcept
+    rc_t runThread() {
+        LOG(LogLevel::e_message, "KLockFixture::runThread: acquiring lock, set threadWaiting to true" << endl);
+        threadWaiting = true;
+
+        while (KLockAcquire(lock) != 0)
         {
-            KLockFixture* self = (KLockFixture*)data;
-            auto const lock = self->lock;
-
-            LOG(LogLevel::e_message, "KLock_ThreadFn acquiring lock, set threadWaiting to 1" << endl);
-            self->threadWaiting = true;
-
-            while (KLockAcquire(lock) != 0)
-            {
-                TestEnv::SleepMs(1);
-            }
-            LOG(LogLevel::e_message, "KLock_ThreadFn: lock acquired" << endl);
-
-            self->threadWaiting = false;
-            LOG(LogLevel::e_message, "KLock_ThreadFn: set threadWaiting to 0" << endl);
-
-            self->threadRc = KLockUnlock(lock);
-
-            LOG(LogLevel::e_message, "KLock_Timed_ThreadFn: exiting" << endl);
-            return 0;
+            TestEnv::SleepMs(1);
         }
-    };
+        LOG(LogLevel::e_message, "KLockFixture::runThread: lock acquired" << endl);
+
+        threadWaiting = false;
+        LOG(LogLevel::e_message, "KLockFixture::runThread: set threadWaiting to false" << endl);
+
+        auto const rc = KLockUnlock(lock);
+
+        LOG(LogLevel::e_message, "KLockFixture::runThread: exiting" << endl);
+        return rc;
+    }
+
+    static rc_t ThreadFn ( KThread const *const thread, void *const data ) noexcept {
+        return reinterpret_cast<KLockFixture *>(data)->runThread();
+    }
+    
+    rc_t startThread() {
+        return KThreadMake(&thread, ThreadFn, reinterpret_cast<void *>(this));
+    }
 
     rc_t StartThread()
     {
         threadWaiting = false;
-        LOG(LogLevel::e_message, "StartThread: set threadWaiting to 0" << endl);
+        LOG(LogLevel::e_message, "KLockFixture::StartThread: set threadWaiting to false" << endl);
 
-        threadRc = rc_t{0};
-        rc_t rc = KThreadMake(&thread, Thread::KLock_ThreadFn, this);
-        while (rc == 0 && (rc_t)threadRc == 0 && !threadWaiting)
-        {
-            TestEnv::SleepMs(1);
-        }
-        LOG(LogLevel::e_message, "StartThread: threadWaiting == 1" << endl);
-        return rc;
+        auto const rc = startThread();
+        if (rc) return rc;
+
+        do { TestEnv::SleepMs(1); } while (!threadWaiting);
+        
+        LOG(LogLevel::e_message, "KLockFixture::StartThread: threadWaiting == true" << endl);
+        return 0;
+    }
+    
+    std::pair<rc_t, rc_t> waitThread() const {
+        rc_t threadRc = 0, rc = KThreadWait(thread, &threadRc);
+        return {rc, threadRc};
     }
 
 public:
-    atomic_rc_t threadRc;
     KThread* thread;
-    atomic_bool_t threadWaiting;
     KLock *lock;
+    atomic_bool threadWaiting;
 };
 
 FIXTURE_TEST_CASE(KLock_Acquire, KLockFixture)
@@ -147,16 +147,16 @@ FIXTURE_TEST_CASE(KLock_Acquire, KLockFixture)
     // lock
     REQUIRE_RC(KLockAcquire(lock));
     // start a thread that tries to lock, see it wait for the lock to become available
-    REQUIRE_RC(StartThread()); // makes sure threadWaiting == 1
+    REQUIRE_RC(StartThread());
+    REQUIRE(threadWaiting);
 
     // unlock, see the thread finish
     REQUIRE_RC(KLockUnlock(lock));
-    while (threadWaiting)
-    {
-        TestEnv::SleepMs(1);
-    }
 
-    REQUIRE_RC((rc_t)threadRc);
+    auto const rcs = waitThread();
+    REQUIRE_RC(rcs.first);
+    REQUIRE(!threadWaiting);
+    REQUIRE_RC(rcs.second);
     LOG(LogLevel::e_message, "KLock_Acquire: done" << endl);
 }
 
@@ -179,10 +179,9 @@ class KTimedLockFixture
 {
 public:
     KTimedLockFixture()
-    : threadRc(rc_t{0})
-    , thread(0)
-    , threadWaiting(false)
+    : thread(0)
     , lock(makeTimedLock())
+    , threadWaiting(false)
     {}
     
     ~KTimedLockFixture()
@@ -194,36 +193,43 @@ public:
     }
 
 protected:
-    class Thread {
-    public:
-        // danger - this should be an extern "C" function
-        // with CC calling convention on Windows
-        static rc_t KLock_Timed_ThreadFn ( const KThread *thread, void *data ) noexcept
-        {
-            KTimedLockFixture* self = (KTimedLockFixture*)data;
-            auto tm = self->tm;
+    rc_t acquireLock() const {
+        auto ltm = tm; ///< make a copy
+        return KTimedLockAcquire(lock, &ltm); ///< modify the local copy, no sync needed;
+    }
+    
+    rc_t unlock() const {
+        return KTimedLockUnlock(lock);
+    }
+    
+    rc_t runThread() {
+        LOG(LogLevel::e_message, "KTimedLockFixture::runThread: acquiring lock, set threadWaiting to true, timeout = " << tm.mS << "ms" << endl);
+        threadWaiting = true;
 
-            LOG(LogLevel::e_message, "KLock_Timed_ThreadFn acquiring lock, set threadWaiting to 1, timeout = " << self->tm.mS << "ms" << endl);
-            self->threadWaiting = true;
+        auto rc = acquireLock();
+        if (rc == 0)
+            LOG(LogLevel::e_message, "KTimedLockFixture::runThread: lock acquired" << endl);
+        else
+            LOG(LogLevel::e_message, "KTimedLockFixture::runThread: lock acquire failed" << endl);
 
-            auto rc = KTimedLockAcquire(self->lock, &tm);
-            if (rc == 0)
-                LOG(LogLevel::e_message, "KLock_Timed_ThreadFn: lock acquired" << endl);
-            else
-                LOG(LogLevel::e_message, "KLock_Timed_ThreadFn: lock acquire failed" << endl);
+        LOG(LogLevel::e_message, "KTimedLockFixture::runThread: set threadWaiting to false" << endl);
+        threadWaiting = false;
 
-            LOG(LogLevel::e_message, "KLock_Timed_ThreadFn: set threadWaiting to 0" << endl);
-
-            if (rc == 0)
-                rc = KTimedLockUnlock(self->lock);
-                
-            LOG(LogLevel::e_message, "KLock_Timed_ThreadFn: exiting" << endl);
+        if (rc == 0)
+            rc = unlock();
             
-            self->threadWaiting = false;
-            self->threadRc = rc;
-            return 0;
-        }
-    };
+        LOG(LogLevel::e_message, "KTimedLockFixture::runThread: exiting" << endl);
+        
+        return rc;
+    }
+    
+    static rc_t KLock_Timed_ThreadFn ( const KThread *thread, void *data ) noexcept {
+        return reinterpret_cast<KTimedLockFixture *>(data)->runThread();
+    }
+
+    rc_t startThread() {
+        return KThreadMake(&thread, KLock_Timed_ThreadFn, this);
+    }
 
     rc_t StartThread(size_t timeout)
     {
@@ -231,23 +237,26 @@ protected:
         if (rc) return rc;
         
         threadWaiting = false;
-        LOG(LogLevel::e_message, "StartTimedThread: set threadWaiting to 0" << endl);
+        LOG(LogLevel::e_message, "KTimedLockFixture::StartThread: set threadWaiting to false" << endl);
 
-        threadRc = rc_t{0};
-        rc = KThreadMake(&thread, Thread::KLock_Timed_ThreadFn, this);
-        while (rc == 0 && (rc_t)threadRc == 0 && !threadWaiting)
-        {
-            TestEnv::SleepMs(1);
-        }
-        LOG(LogLevel::e_message, "StartTimedThread: threadWaiting == 1" << endl);
-        return rc;
+        rc = startThread();
+        if (rc) return rc;
+
+        do { TestEnv::SleepMs(1); } while (!threadWaiting);
+        
+        LOG(LogLevel::e_message, "KTimedLockFixture::StartThread: threadWaiting == true" << endl);
+        return 0;
+    }
+    
+    std::pair<rc_t, rc_t> waitThread() const {
+        rc_t threadRc = 0, rc = KThreadWait(thread, &threadRc);
+        return {rc, threadRc};
     }
 
 public:
-    atomic_rc_t threadRc;
     KThread* thread;
-    atomic_bool_t threadWaiting;
     KTimedLock *lock;
+    atomic_bool threadWaiting;
     timeout_t tm;
 };
 
@@ -258,59 +267,43 @@ FIXTURE_TEST_CASE(KTimedLock_Acquire, KTimedLockFixture)
 
     // start a thread that tries to lock
     LOG(LogLevel::e_message, "TEST_KLock_TimedAcquire: starting thread" << endl);
-    REQUIRE_RC(StartThread(1000));// makes sure threadWaiting == 1
+    REQUIRE_RC(StartThread(1000));
+    REQUIRE(threadWaiting);
 
     // unlock, see the thread finish
     LOG(LogLevel::e_message, "TEST_KLock_TimedAcquire: unlocking" << endl);
     REQUIRE_RC(KTimedLockUnlock(lock));
 
-    // wait for the thread to finish
-    while (threadWaiting)
-    {
-        TestEnv::SleepMs(1);
-    }
-    REQUIRE_RC(threadRc.get());
+    auto const rcs = waitThread();
+    REQUIRE_RC(rcs.first);
+    REQUIRE(!threadWaiting);
+    REQUIRE_RC(rcs.second);
 
     LOG(LogLevel::e_message, "TEST_KLock_TimedAcquire: done" << endl);
 }
 
-#ifdef WINDOWS
-FIXTURE_TEST_CASE(KTimedLock_Acquire_Busy, KTimedLockFixture)
-{
-    // lock
-    REQUIRE_RC(KTimedLockAcquire(lock, NULL));
-
-    // start a thread that tries to lock, see it error out
-    REQUIRE_RC(StartThread(100));// makes sure threadWaiting == 1
-
-    // do not unlock, wait for the thread to finish
-    while (atomic32_read (&threadWaiting))
-    {
-        TestEnv::SleepMs(1);
-    }
-    REQUIRE_EQ(threadRc, RC(rcPS, rcLock, rcLocking, rcLock, rcBusy));
-
-    REQUIRE_RC(KTimedLockUnlock(lock));
-}
-#else
 FIXTURE_TEST_CASE(KTimedLock_Acquire_Timeout, KTimedLockFixture)
 {
     // lock
     REQUIRE_RC(KTimedLockAcquire(lock, NULL));
 
     // start a thread that tries to lock, see it time out
-    REQUIRE_RC(StartThread(100));// makes sure threadWaiting == 1
+    REQUIRE_RC(StartThread(100));
+    REQUIRE(threadWaiting);
 
     // do not unlock, wait for the thread to finish
-    while (threadWaiting)
-    {
-        TestEnv::SleepMs(1);
-    }
-    REQUIRE_EQ(threadRc.get(), RC(rcPS, rcLock, rcLocking, rcTimeout, rcExhausted)); // timed out
+    auto const rcs = waitThread();
+    REQUIRE_RC(rcs.first);
+    REQUIRE(!threadWaiting);
+
+#ifdef WINDOWS
+    REQUIRE_EQ(rcs.second, SILENT_RC(rcPS, rcLock, rcLocking, rcLock, rcBusy));
+#else
+    REQUIRE_EQ(rcs.second, SILENT_RC(rcPS, rcLock, rcLocking, rcTimeout, rcExhausted));
+#endif
 
     REQUIRE_RC(KTimedLockUnlock(lock));
 }
-#endif
 
 ///////////////////////// KRWLock
 TEST_CASE( KRWLock_NULL )
@@ -329,10 +322,9 @@ class KRWLockFixture
 {
 public:
     KRWLockFixture()
-    : threadRc(rc_t{0})
-    , thread(0)
-    , threadWaiting(false)
+    : thread(0)
     , lock(makeKRWLock())
+    , threadWaiting(false)
     {}
     
     ~KRWLockFixture()
@@ -344,77 +336,91 @@ public:
     }
 
 protected:
-    class Thread {
-    public:
-        static rc_t KRWLock_Reader_ThreadFn ( const KThread *thread, void *data )
-        {
-            KRWLockFixture* self = (KRWLockFixture*)data;
-            self->threadWaiting = true;
+    rc_t runReaderThread() {
+        threadWaiting = true;
 
-            while (KRWLockAcquireShared(self->lock) != 0)
-            {
-                TestEnv::SleepMs(1);
-            }
-            self->threadRc = KRWLockUnlock(self->lock);
-            self->threadWaiting = false;
-            return 0;
-        }
-        static rc_t KRWLock_Writer_ThreadFn ( const KThread *thread, void *data ) noexcept
-        {
-            KRWLockFixture* self = (KRWLockFixture*)data;
-            self->threadWaiting = true;
-
-            LOG(LogLevel::e_message, "KRWLock_Writer_ThreadFn: calling KRWLockAcquireExcl\n");
-            auto rc = KRWLockAcquireExcl(self->lock);
-            LOG(LogLevel::e_message, "KRWLock_Writer_ThreadFn: out of KRWLockAcquireExcl\n");
-            if (rc == 0)
-            {
-                LOG(LogLevel::e_message, "KRWLock_Writer_ThreadFn: calling KRWLockUnlock\n");
-                rc = KRWLockUnlock(self->lock);
-            }
-            self->threadWaiting = false;
-            self->threadRc = rc;
-            return 0;
-        }
-        static rc_t KRWLock_ReaderTimed_ThreadFn ( const KThread *thread, void *data )
-        {
-            KRWLockFixture* self = (KRWLockFixture*)data;
-            self->threadWaiting = true;
-
-            auto tm = self->tm;
-            auto rc = KRWLockTimedAcquireShared(self->lock, &tm);
-            if (rc == 0)
-                rc = KRWLockUnlock(self->lock);
-
-            self->threadWaiting = false;
-            self->threadRc = rc;
-            return 0;
-        }
-        static rc_t KRWLock_WriterTimed_ThreadFn ( const KThread *thread, void *data ) noexcept
-        {
-            KRWLockFixture* self = (KRWLockFixture*)data;
-            self->threadWaiting = true;
-
-            auto tm = self->tm;
-            auto rc = KRWLockTimedAcquireExcl(self->lock, &tm);
-            if (rc == 0)
-                rc = KRWLockUnlock(self->lock);
-
-            self->threadWaiting = false;
-            self->threadRc = rc;
-            return 0;
-        }
-    };
-
-    rc_t StartThread(bool writer)
-    {
-        threadRc = rc_t{0};
-        rc_t rc = KThreadMake(&thread, writer ? Thread::KRWLock_Writer_ThreadFn : Thread::KRWLock_Reader_ThreadFn, this);
-        while (!threadWaiting)
+        while (KRWLockAcquireShared(lock) != 0)
         {
             TestEnv::SleepMs(1);
         }
+        auto const rc = KRWLockUnlock(lock);
+        threadWaiting = false;
         return rc;
+    }
+    static rc_t Reader_ThreadFn ( const KThread *thread, void *data )
+    {
+        return reinterpret_cast<KRWLockFixture *>(data)->runReaderThread();
+    }
+    rc_t startReaderThread() {
+        return KThreadMake(&thread, Reader_ThreadFn, reinterpret_cast<void *>(this));
+    }
+    
+    rc_t runWriterThread() {
+        threadWaiting = true;
+
+        LOG(LogLevel::e_message, "KRWLockFixture::runWriterThread: calling KRWLockAcquireExcl\n");
+        auto rc = KRWLockAcquireExcl(lock);
+        LOG(LogLevel::e_message, "KRWLockFixture::runWriterThread: out of KRWLockAcquireExcl\n");
+        if (rc == 0)
+        {
+            LOG(LogLevel::e_message, "KRWLockFixture::runWriterThread: calling KRWLockUnlock\n");
+            rc = KRWLockUnlock(lock);
+        }
+        threadWaiting = false;
+        return rc;
+    }
+    static rc_t Writer_ThreadFn ( const KThread *thread, void *data )
+    {
+        return reinterpret_cast<KRWLockFixture *>(data)->runWriterThread();
+    }
+    rc_t startWriterThread() {
+        return KThreadMake(&thread, Writer_ThreadFn, reinterpret_cast<void *>(this));
+    }
+    
+    rc_t runReaderTimedThread() {
+        threadWaiting = true;
+
+        auto ltm = tm;
+        auto rc = KRWLockTimedAcquireShared(lock, &ltm);
+        if (rc == 0)
+            rc = KRWLockUnlock(lock);
+
+        threadWaiting = false;
+        return rc;
+    }
+    static rc_t ReaderTimed_ThreadFn ( const KThread *thread, void *data )
+    {
+        return reinterpret_cast<KRWLockFixture *>(data)->runReaderTimedThread();
+    }
+    rc_t startReaderTimedThread() {
+        return KThreadMake(&thread, ReaderTimed_ThreadFn, reinterpret_cast<void *>(this));
+    }
+    
+    rc_t runWriterTimedThread() {
+        threadWaiting = true;
+
+        auto ltm = tm;
+        auto rc = KRWLockTimedAcquireExcl(lock, &ltm);
+        if (rc == 0)
+            rc = KRWLockUnlock(lock);
+
+        threadWaiting = false;
+        return rc;
+    }
+    static rc_t WriterTimed_ThreadFn ( const KThread *thread, void *data ) noexcept
+    {
+        return reinterpret_cast<KRWLockFixture *>(data)->runWriterTimedThread();
+    }
+    rc_t startWriterTimedThread() {
+        return KThreadMake(&thread, WriterTimed_ThreadFn, reinterpret_cast<void *>(this));
+    }
+
+    rc_t StartThread(bool writer)
+    {
+        auto const rc = writer ? startWriterThread() : startReaderThread();
+        if (rc) return rc;
+        do { TestEnv::SleepMs(1); } while (!threadWaiting);
+        return 0;
     }
     
     rc_t StartThread(bool writer, size_t timeout)
@@ -422,20 +428,22 @@ protected:
         auto rc = TimeoutInit( &tm, (uint32_t)timeout );
         if (rc) return rc;
         
-        threadRc = rc_t{0};
-        rc = KThreadMake(&thread, writer ? Thread::KRWLock_WriterTimed_ThreadFn : Thread::KRWLock_ReaderTimed_ThreadFn, this);
-        while (rc == 0 && !threadWaiting)
-        {
-            TestEnv::SleepMs(1);
-        }
-        return rc;
+        rc = writer ? startWriterTimedThread() : startReaderTimedThread();
+        if (rc) return rc;
+
+        do { TestEnv::SleepMs(1); } while (!threadWaiting);
+        return 0;
     }
 
-    atomic_rc_t threadRc;
+    std::pair<rc_t, rc_t> waitThread() const {
+        rc_t threadRc = 0, rc = KThreadWait(thread, &threadRc);
+        return {rc, threadRc};
+    }
+
     KThread* thread;
-    atomic_bool_t threadWaiting;
     KRWLock *lock;
     timeout_t tm;
+    atomic_bool threadWaiting;
 };
 
 FIXTURE_TEST_CASE( KRWLock_ManyReaders, KRWLockFixture )
@@ -475,16 +483,13 @@ FIXTURE_TEST_CASE( KRWLock_WriterWaitsForReader, KRWLockFixture )
     LOG(LogLevel::e_message, "KRWLock_WriterWaitsForReader: starting thread\n");
     REQUIRE_RC(StartThread(true));
 
-    REQUIRE(threadWaiting.get());
+    REQUIRE(threadWaiting);
 
     LOG(LogLevel::e_message, "KRWLock_WriterWaitsForReader: calling KRWLockUnlock\n");
     REQUIRE_RC(KRWLockUnlock(lock));
     // let the thread finish
-    while (threadWaiting)
-    {
-        TestEnv::SleepMs(1);
-    }
-    REQUIRE(!threadWaiting.get());
+    do { TestEnv::SleepMs(1); } while (threadWaiting);
+    REQUIRE(!threadWaiting);
 }
 
 FIXTURE_TEST_CASE(KWRLock_Reader_TimedAcquire, KRWLockFixture)
@@ -496,15 +501,14 @@ FIXTURE_TEST_CASE(KWRLock_Reader_TimedAcquire, KRWLockFixture)
     REQUIRE_RC(StartThread(false, 1000));
 
     // see the thread wait
-    REQUIRE(threadWaiting.get());
+    REQUIRE(threadWaiting);
 
     // unlock, see the thread finish
     REQUIRE_RC(KRWLockUnlock(lock));
-    while (threadWaiting)
-    {
-        TestEnv::SleepMs(1);
-    }
-    REQUIRE_RC(threadRc.get());
+    
+    auto const rcs = waitThread();
+    REQUIRE_RC(rcs.first);
+    REQUIRE_RC(rcs.second);
 }
 
 FIXTURE_TEST_CASE(KWRLock_Reader_TimedAcquire_Timeout, KRWLockFixture)
@@ -516,11 +520,9 @@ FIXTURE_TEST_CASE(KWRLock_Reader_TimedAcquire_Timeout, KRWLockFixture)
     REQUIRE_RC(StartThread(false, 500));
 
     // see the thread time out
-    while (threadWaiting)
-    {
-        TestEnv::SleepMs(1);
-    }
-    REQUIRE_EQ(threadRc.get(), SILENT_RC ( rcPS, rcRWLock, rcLocking, rcTimeout, rcExhausted )); // timed out
+    auto const rcs = waitThread();
+    REQUIRE_RC(rcs.first);
+    REQUIRE_EQ(rcs.second, SILENT_RC ( rcPS, rcRWLock, rcLocking, rcTimeout, rcExhausted )); // timed out
 
     REQUIRE_RC(KRWLockUnlock(lock));
 }
@@ -535,15 +537,14 @@ FIXTURE_TEST_CASE(KWRLock_Writer_TimedAcquire, KRWLockFixture)
 
     // see the thread wait
     TestEnv::SleepMs(300);
-    REQUIRE(threadWaiting.get());
+    REQUIRE(threadWaiting);
 
     // unlock, see the thread finish
     REQUIRE_RC(KRWLockUnlock(lock));
-    while (threadWaiting)
-    {
-        TestEnv::SleepMs(1);
-    }
-    REQUIRE_RC(threadRc.get());
+
+    auto const rcs = waitThread();
+    REQUIRE_RC(rcs.first);
+    REQUIRE_RC(rcs.second);
 }
 
 FIXTURE_TEST_CASE(KWRLock_Writer_TimedAcquire_Timeout, KRWLockFixture)
@@ -555,11 +556,9 @@ FIXTURE_TEST_CASE(KWRLock_Writer_TimedAcquire_Timeout, KRWLockFixture)
     REQUIRE_RC(StartThread(true, 500));
 
     // see the thread time out
-    while (threadWaiting)
-    {
-        TestEnv::SleepMs(1);
-    }
-    REQUIRE_EQ(threadRc.get(), SILENT_RC ( rcPS, rcRWLock, rcLocking, rcTimeout, rcExhausted )); // timed out
+    auto const rcs = waitThread();
+    REQUIRE_RC(rcs.first);
+    REQUIRE_EQ(rcs.second, SILENT_RC ( rcPS, rcRWLock, rcLocking, rcTimeout, rcExhausted )); // timed out
 
     REQUIRE_RC(KRWLockUnlock(lock));
 }
@@ -580,8 +579,7 @@ class KConditionFixture
 {
 public:
     KConditionFixture()
-    :   threadRc(0),
-        thread(0),
+    :   thread(0),
         lock(0),
         is_signaled(false),
         do_broadcast(false)
@@ -595,9 +593,10 @@ public:
     {
         if (thread != 0)
         {
-            if (KThreadWait(thread, NULL) != 0)
+            rc_t threadRc = 0;
+            if (KThreadWait(thread, &threadRc) != 0)
                 cerr << "~KConditionFixture: KThreadWait failed" << endl;
-            if (threadRc.get() != 0)
+            if (threadRc != 0)
                 cerr << "~KConditionFixture: thread failed, threadRc != 0" << endl;
             if (KThreadRelease(thread) != 0)
                 cerr << "~KConditionFixture: KThreadRelease failed" << endl;
@@ -609,44 +608,39 @@ public:
     }
 
 protected:
-    class Thread {
-    public:
-        // danger - this should be an extern "C" function
-        // with CC calling convention on Windows
-        static rc_t KCondition_ThreadFn ( const KThread *thread, void *data ) noexcept
-        {
-            KConditionFixture* self = (KConditionFixture*)data;
+    rc_t runThread() {
+        LOG(LogLevel::e_message, "KConditionFixture::runThread: sleeping" << endl);
+        TestEnv::SleepMs(300);
+        
+        LOG(LogLevel::e_message, "KConditionFixture::runThread: signaling condition" << endl);
+        is_signaled = true;
+        
+        auto const rc = do_broadcast ? KConditionBroadcast(cond) : KConditionSignal(cond);
 
-            LOG(LogLevel::e_message, "KCondition_ThreadFn: sleeping" << endl);
-            TestEnv::SleepMs(300);
-            LOG(LogLevel::e_message, "KCondition_ThreadFn: signaling condition" << endl);
-            self->is_signaled = true;
-            if (!self->do_broadcast)
-                self->threadRc = KConditionSignal(self->cond);
-            else
-                self->threadRc = KConditionBroadcast(self->cond);
+        LOG(LogLevel::e_message, "KConditionFixture::runThread: exiting" << endl);
 
-            LOG(LogLevel::e_message, "KCondition_ThreadFn: exiting" << endl);
-            return 0;
-        }
-    };
+        return rc;
+    }
+    static rc_t ThreadFn ( const KThread *thread, void *data ) noexcept
+    {
+        return reinterpret_cast<KConditionFixture *>(data)->runThread();
+    }
+    rc_t startThread() {
+        return KThreadMake(&thread, ThreadFn, reinterpret_cast<void *>(this));
+    }
 
     rc_t StartThread()
     {
         LOG(LogLevel::e_message, "StartThread: starting thread" << endl);
-
-        threadRc = rc_t{0};
-        rc_t rc = KThreadMake(&thread, Thread::KCondition_ThreadFn, this);
-        return rc;
+        return startThread();
     }
 
 public:
-    atomic_rc_t threadRc;
     KThread* thread;
-    timeout_t tm;
     KLock* lock;
     KCondition* cond;
-    atomic_bool_t is_signaled;
+    atomic_bool is_signaled;
+    timeout_t tm;
     bool do_broadcast;
 };
 
@@ -655,7 +649,7 @@ FIXTURE_TEST_CASE( KCondition_TimedWait_Timeout, KConditionFixture )
     REQUIRE_RC(KLockAcquire(lock));
     REQUIRE_RC(TimeoutInit(&tm, 100));
     REQUIRE_RC(KConditionSignal(cond)); // signaling before waiting should not do anything
-    REQUIRE_EQ(KConditionTimedWait(cond, lock, &tm), RC ( rcPS, rcCondition, rcWaiting, rcTimeout, rcExhausted )); // timed out
+    REQUIRE_EQ(KConditionTimedWait(cond, lock, &tm), SILENT_RC ( rcPS, rcCondition, rcWaiting, rcTimeout, rcExhausted )); // timed out
 
     REQUIRE_RC(KLockUnlock(lock));
 }
@@ -794,7 +788,7 @@ protected:
         size_t max_tid;
         uint32_t timeout_ms;
         bool is_reader;
-        atomic_bool_t finish; // will stop generating events and seal the queue once detected
+        atomic_bool finish; // will stop generating events and seal the queue once detected
         bool allow_timeout; // if set, we won't treat timeout as an error
     };
 
