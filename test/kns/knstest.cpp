@@ -107,7 +107,7 @@ FIXTURE_TEST_CASE(KNSManagerGetUserAgent_Default, SessionIdFixture)
     const char * ua = nullptr;
     KNSManagerGetUserAgent(&ua);
     const string ua_contains = "sra-toolkit Test_KNS_dflt.0.0.12 (phid=noc";
-    //fprintf(stderr,"Got: '%s', expected '%s'\n", ua, ua_contains.data());
+    // fprintf(stderr,"Got: '%s', expected '%s'\n", ua, ua_contains.data());
     REQUIRE_NE( string::npos, string(ua).find(ua_contains) );
     // VDB-4896: no double quotes inside UA
     REQUIRE_EQ( string::npos, string(ua).find("\"") );
@@ -337,9 +337,20 @@ static rc_t argsHandler(int argc, char * argv[]) {
     return rc;
 }
 
+static void checkForSanitizers(char *argv0)
+{
+    auto const len = strlen(argv0);
+    if (len <= 5) return;
+    
+    auto const suffix = std::string{argv0 + len - 5};
+    if (suffix == "_asan" || suffix == "_tsan")
+        argv0[len - 5] = '\0';
+}
+
 extern "C"
 int main(int argc, char* argv[])
 {
+    checkForSanitizers(argv[0]);
     VDB::Application app( argc, argv, 12 ); // we need custom version for some tests
     if (!app)
     {
