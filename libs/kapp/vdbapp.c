@@ -36,6 +36,10 @@
 #include <kapp/vdbapp.h>
 #include <kapp/args-conv.h>
 
+#if WINDOWS
+#include <kapp/win/main-priv-win.h>
+#endif
+
 #include <klib/log.h>
 #include <klib/debug.h>
 #include <klib/rc.h>
@@ -188,6 +192,21 @@ VdbInitialize( int argc, char *argv [], ver_t vers )
 
     return rc;
 }
+
+#if WINDOWS
+LIB_EXPORT 
+rc_t 
+wVdbInitialize(int argc, wchar_t* wargv[], char*** argv)
+{
+    rc_t rc = ConvertWArgsToUtf8(argc, wargv, argv, true);
+    if (rc != 0)
+    {
+        return rc;
+    }
+
+    return VdbInitializeSystem();
+}
+#endif
 
 LIB_EXPORT
 int

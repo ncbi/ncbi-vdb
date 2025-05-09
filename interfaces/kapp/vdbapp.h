@@ -43,6 +43,10 @@ extern "C" {
 */
 KAPP_EXTERN rc_t VdbInitialize( int argc, char *argv [], ver_t vers );
 
+#if WINDOWS
+    KAPP_EXTERN rc_t wVdbInitialize(int argc, wchar_t* wargv[], char*** argv);
+#endif
+
 /* Recommended exit code (return from main) if VdbInitialize fails */
 #define VDB_INIT_FAILED 3
 
