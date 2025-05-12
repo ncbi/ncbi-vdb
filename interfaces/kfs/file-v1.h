@@ -265,6 +265,25 @@ KFS_EXTERN rc_t CC KFileMakeStdOut_v1 ( KFile_v1 **std_out );
 KFS_EXTERN rc_t CC KFileMakeStdErr_v1 ( KFile_v1 **std_err );
 
 
+/* SetReadObserver
+ *  set observer that is called after each read.
+ *
+ *  "read_observer_update" [ IN ] - observer's update function
+ *
+ *  "read_observer_destroy" [ IN ] - function to release observer
+ *  to be called when KFile is deleted
+ *
+ *  "read_observer" [ IN ] - has to be passed when "read_observer_update"
+ *  or "read_observer_destroy" is called.
+ */
+KFS_EXTERN rc_t CC KFileSetReadObserver (
+      KFile * self,
+      void ( CC * read_observer_update )
+        ( void * self, rc_t rc, uint64_t pos, void *buffer, size_t num_read ),
+      rc_t ( CC * read_observer_destroy ) ( void *self ),
+      void * read_observer
+    );
+
 #ifdef __cplusplus
 }
 #endif
