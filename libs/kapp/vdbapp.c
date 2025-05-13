@@ -204,7 +204,7 @@ wVdbInitialize(int argc, wchar_t* wargv[], char*** argv)
         return rc;
     }
 
-    return VdbInitializeSystem();
+    return VdbInitialize( argc, *argv, 0 );
 }
 #endif
 
