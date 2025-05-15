@@ -166,12 +166,11 @@ extern "C"
 
 #include <kfg/config.h>
 
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
     // KLogLevelSet(klogDebug);
-    rc_t rc = RestoreReadSuite(argc, argv);
-    return rc;
+    return RestoreReadSuite(argc, argv);
 }
 
 }

@@ -133,9 +133,7 @@ void finish_test( void )
 
 //////////////////////////////////////////// Main
 extern "C"
-{
-
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     rc_t rc = prepare_test( HomeSub );
     if ( rc == 0 )
@@ -143,12 +141,10 @@ rc_t CC KMain ( int argc, char *argv [] )
         rc = make_global_managers();
         if ( rc == 0 )
         {
-            rc = VDB_3305( argc, argv );
+            rc = (rc_t)VDB_3305( argc, argv );
             release_global_managers();
         }
     }
     //finish_test();
-    return rc;
-}
-
+    return (int)rc;
 }

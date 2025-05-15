@@ -218,14 +218,13 @@ static bool out_of_ncbi() {
     return rc != 0;
 }
 
-extern "C" {
-    rc_t CC KMain ( int argc, char *argv [] ) {
-        if ( 0 ) assert ( ! KDbgSetString ( "VFS" ) );
-        KConfigDisableUserSettings ();
-        if ( out_of_ncbi() ) {
-            std::cerr << "Disabled outside of NCBI\n";
-            return 0;
-        }
-        return VResolverTestSuite ( argc, argv );
+int main ( int argc, char *argv [] ) 
+{
+    if ( 0 ) assert ( ! KDbgSetString ( "VFS" ) );
+    KConfigDisableUserSettings ();
+    if ( out_of_ncbi() ) {
+        std::cerr << "Disabled outside of NCBI\n";
+        return 0;
     }
+    return VResolverTestSuite ( argc, argv );
 }

@@ -59,9 +59,9 @@ public:
         THROW_ON_FALSE( BZ_OK == BZ2_bzCompressInit ( & s, blockSize100k, 0, workFactor ) );
 
         s.next_in = const_cast<char*>( src.data() );
-        s.avail_in = src.size();
+        s.avail_in = (unsigned int)src.size();
         s.next_out = dst.data();
-        s.avail_out = dst.size();
+        s.avail_out = (unsigned int)dst.size();
 
         THROW_ON_FALSE( BZ_STREAM_END >= BZ2_bzCompress(&s, BZ_FINISH) );
         assert ( s.total_out_hi32 == 0 );
@@ -79,9 +79,9 @@ public:
         THROW_ON_FALSE( BZ_OK == BZ2_bzDecompressInit ( & s, 0, 0 ) );
 
         s.next_in = const_cast<char*>( input.data() );
-        s.avail_in = input.size();
+        s.avail_in = (unsigned int)input.size();
         s.next_out = decomp.data();
-        s.avail_out = decomp.size();
+        s.avail_out = (unsigned int)decomp.size();
 
         THROW_ON_FALSE( BZ_STREAM_END >= BZ2_bzDecompress(&s) );
         assert ( s.total_out_hi32 == 0 );
@@ -98,7 +98,7 @@ FIXTURE_TEST_CASE(RoundTrip, BZip2Fixture)
 {
     const size_t SrcSize = 2048;
     Buffer src;
-    srand (time(NULL));
+    srand ((unsigned int)time(NULL));
     for (size_t i = 0; i < SrcSize; ++i)
         src.push_back('A'+(rand() % 26));
     Buffer comp = Compress( src );
@@ -111,7 +111,7 @@ FIXTURE_TEST_CASE(Buffer_TooShort, BZip2Fixture)
     const size_t SrcSize = 26;
     Buffer src;
     for (size_t i = 0; i < SrcSize; ++i)
-        src.push_back('a'+i);
+        src.push_back('a'+(char)i);
     Buffer comp = Compress( src );
     REQUIRE_THROW( Decompress( comp, SrcSize ) );
 }
@@ -122,11 +122,10 @@ extern "C"
 
 #include <kfg/config.h>
 
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
-    rc_t rc=Bzip2TestSuite(argc, argv);
-    return rc;
+    return Bzip2TestSuite(argc, argv);
 }
 
 }

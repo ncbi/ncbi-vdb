@@ -604,13 +604,8 @@ FIXTURE_TEST_CASE( VTableCursor_ListReadableColumns, TableCursorFixture )
 #include <kfg/config.h>
 
 extern "C"
-{
-
-rc_t CC KMain ( int argc, char *argv [] )
+int main( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
-    rc_t rc=VdbTableCursorTestSuite_Write(argc, argv);
-    return rc;
-}
-
+    return VdbTableCursorTestSuite_Write(argc, argv);
 }

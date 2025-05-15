@@ -175,26 +175,26 @@ static rc_t argsHandler(int argc, char * argv[]) {
     return rc;
 }
 
-extern "C" {
-    rc_t CC KMain ( int argc, char * argv [] ) { if (
+extern "C" 
+int main ( int argc, char * argv [] ) { if (
 0 ) assert ( ! KDbgSetString ( "KNS-DNS"   ) );   if (
 0 ) assert ( ! KDbgSetString ( "KNS-HTTP"  ) );   if (
 0 ) assert ( ! KDbgSetString ( "KNS-PROXY" ) );   if (
 0 )     ncbi::NK::TestEnv::verbosity = ncbi::NK::LogLevel::E::e_all;
 
 #if _DEBUGGING
-        if ( 0 )     KStsLevelSet ( 5 );
+    if ( 0 )     KStsLevelSet ( 5 );
 #endif
 
-        rc_t rc = KConfigMakeEmpty ( & KFG );
+    rc_t rc = KConfigMakeEmpty ( & KFG );
 
-        if ( rc == 0 )
-            rc = GoogleProxyTestSuite(argc, argv);
+    if ( rc == 0 )
+        rc = (rc_t)GoogleProxyTestSuite(argc, argv);
 
-        rc_t r = KConfigRelease ( KFG );
-        if ( r != 0 && rc == 0 )
-            rc = r;
+    rc_t r = KConfigRelease ( KFG );
+    if ( r != 0 && rc == 0 )
+        rc = r;
 
-        return rc;
-    }
+    return (int)rc;
 }
+

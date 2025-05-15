@@ -578,12 +578,8 @@ TEST_CASE(KDectryptInvalidKey)
 //////////////////////////////////////////// Main
 
 extern "C"
+int main( int argc, char *argv [] )
 {
-    rc_t CC KMain ( int argc, char *argv [] )
-    {
-        KConfigDisableUserSettings();
-        rc_t rc=KEncDecTestSuite(argc, argv);
-        return rc;
-    }
-
+    KConfigDisableUserSettings();
+    return KEncDecTestSuite(argc, argv);
 }

@@ -154,11 +154,10 @@ extern "C"
 
 #include <kfg/config.h>
 
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
-    rc_t rc = ProgressbarTestSuite( argc, argv );
-    return rc;
+    return ProgressbarTestSuite( argc, argv );
 }
 
 }

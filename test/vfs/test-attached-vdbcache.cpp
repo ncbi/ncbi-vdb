@@ -29,7 +29,7 @@
 #include <klib/debug.h> /* KDbgSetString */
 #include <kns/kns-mgr-priv.h> /* KNSManagerMakeLocal */
 #include <kns/manager.h> /* KNSManagerRelease */
-#include <ktst/unit_test.hpp> /* KMain */
+#include <ktst/unit_test.hpp>
 #include <vfs/path.h> /* VPathRelease */
 #include <vfs/services-priv.h> /* KServiceMakeWithMgr */
 
@@ -288,12 +288,11 @@ TEST_CASE(MultipleVdbcache) {
 }
 #endif
 
-extern "C" {
-    rc_t CC KMain ( int argc, char * argv [] ) {
+extern "C" 
+int main ( int argc, char * argv [] ) {
 #if 0
-        KDbgSetString ( "VFS" );
+    KDbgSetString ( "VFS" );
 #endif
-        KConfigDisableUserSettings ();
-        return TestVdbcache(argc, argv);
-    }
+    KConfigDisableUserSettings ();
+    return TestVdbcache(argc, argv);
 }

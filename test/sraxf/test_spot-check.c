@@ -190,9 +190,6 @@ static void check_check_quality() {
     check_check_quality9(&self);
 }
 
-#ifdef WINDOWS
-#define main wmain
-#endif
 int main(int argc, char *argv[]) {
     check_check_quality();
 }

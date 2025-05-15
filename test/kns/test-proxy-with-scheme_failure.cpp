@@ -119,7 +119,7 @@ TEST_CASE ( test ) {
     REQUIRE_RC ( rc );
 }
 
-rc_t CC UsageSummary ( const char * prog_name ) {
+rc_t CC UsageSummary ( const char * prog_name ) noexcept {
     return KOutMsg (
 "Usage:"
 ""
@@ -138,13 +138,12 @@ static rc_t argsHandler ( int argc, char * argv [] ) {
     return ArgsMakeAndHandle ( NULL, argc, argv, 0, NULL, 0 );
 }
 
-extern "C" {
-    rc_t CC KMain ( int argc, char * argv [] ) {
-        putenv((char*)"NCBI_VDB_NO_CACHE_SDL_RESPONSE=1");
-        SetUsageSummary( UsageSummary );
+extern "C" 
+int main( int argc, char * argv [] ) {
+    putenv((char*)"NCBI_VDB_NO_CACHE_SDL_RESPONSE=1");
+    SetUsageSummary( UsageSummary );
 
-        //assert(!KDbgSetString("VFS"));
-        assert(!KDbgSetString("KNS"));
-        return TestProxySchemeSuite ( argc, argv );
-    }
+    //assert(!KDbgSetString("VFS"));
+    assert(!KDbgSetString("KNS"));
+    return TestProxySchemeSuite ( argc, argv );
 }

@@ -208,12 +208,7 @@ TEST_CASE ( SharedSucceedInBlock ) {
 
 //////////////////////////////////////////// Main
 extern "C"
+int main ( int argc, char *argv [] )
 {
-
-rc_t CC KMain ( int argc, char *argv [] )
-{
-    rc_t rc=KtstTestSuite(argc, argv);
-    return rc;
-}
-
+    return KtstTestSuite(argc, argv);
 }

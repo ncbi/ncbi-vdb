@@ -197,7 +197,7 @@ rc_t CC ArgsAddStandardOptions ( Args * self );
 
 
 /* Parse
- *  parse the argc/argv as presented to KMain using the Args structure as built up
+ *  parse the argc/argv as presented to main() using the Args structure as built up
  */
 rc_t CC ArgsParse ( Args * self, int argc, char *argv[] );
 
@@ -293,7 +293,7 @@ rc_t CC ArgsArgvValue (const Args * self, uint32_t iteration, const char ** valu
  * MakeStandardOptions
  *  Calls both Make() and AddStandardOptions()
  *
- * This is probably the first thing to do in KMain(), then add other Options
+ * This is probably the first thing to do in main(), then add other Options
  * via OptDef arracys and structures.  Then call parse.
  */
 rc_t CC ArgsMakeStandardOptions (Args** pself);

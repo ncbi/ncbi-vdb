@@ -948,12 +948,8 @@ FIXTURE_TEST_CASE(View_ColumnDecl_Context_Inherited, AST_View_Fixture)
 #include <klib/out.h>
 
 extern "C"
-{
-
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     return SchemaViewTestSuite(argc, argv);
-}
-
 }
 

@@ -202,10 +202,9 @@ extern "C"
 
 #include <kfg/config.h>
 
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
-    rc_t rc=LinkerTestSuite(argc, argv);
-    return rc;
+    return LinkerTestSuite(argc, argv);
 }
 
 }

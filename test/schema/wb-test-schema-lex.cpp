@@ -294,12 +294,7 @@ TEST_CASE ( Version_2_0 )
 #include <klib/out.h>
 
 extern "C"
-{
-
-rc_t CC KMain ( int argc, char *argv [] )
+int main( int argc, char *argv [] )
 {
     return SchemaLexTestSuite(argc, argv);
 }
-
-}
-

@@ -862,7 +862,7 @@ rc_t CC Usage (const Args * args)
     return rc;
 }
 
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     Args * args;
     rc_t rc;

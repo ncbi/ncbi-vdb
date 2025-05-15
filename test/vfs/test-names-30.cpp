@@ -34,7 +34,7 @@
 #include <klib/rc.h>
 #include <klib/text.h> /* CONST_STRING */
 #include <klib/time.h> /* KTimeMakeTime */
-#include <ktst/unit_test.hpp> /* KMain */
+#include <ktst/unit_test.hpp>
 #include <vfs/path.h> /* VPath */
 #include <vfs/services.h> /* KSrvResponse */
 #include <vfs/services-priv.h> /* KServiceTestNamesExecuteExt */
@@ -509,25 +509,24 @@ if ( 1 )
         NULL, NULL ) );
 }
 
-extern "C" {
-    rc_t CC KMain ( int argc, char * argv [] ) {
-        if (
+extern "C"
+int main ( int argc, char * argv [] ) {
+    if (
 0 ) assert ( ! KDbgSetString ( "VFS" ) );
 
-        KConfigDisableUserSettings ();
+    KConfigDisableUserSettings ();
 
-        rc_t rc = KConfigMake ( & KFG, NULL );
-        if ( rc == 0 )
-            rc = KConfigWriteString ( KFG,
-                "repository/remote/main/CGI/resolver-cgi", RESOLVER_CGI );
+    rc_t rc = KConfigMake ( & KFG, NULL );
+    if ( rc == 0 )
+        rc = KConfigWriteString ( KFG,
+            "repository/remote/main/CGI/resolver-cgi", RESOLVER_CGI );
 
-        if (
+    if (
 0) ncbi::NK::TestEnv::SetVerbosity(ncbi::NK::LogLevel::e_all);
 
-        rc = Names3_0_TestSuite ( argc, argv );
+    rc = (rc_t)Names3_0_TestSuite ( argc, argv );
 
-        RELEASE ( KConfig, KFG );
+    RELEASE ( KConfig, KFG );
 
-        return rc;
-    }
+    return (int)rc;
 }

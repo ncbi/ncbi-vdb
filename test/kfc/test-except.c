@@ -108,26 +108,3 @@ int main ( int argc, char * argv [] )
     return status;
 }
 
-#if WINDOWS
-int CC wmain ( int argc, wchar_t * wargv [] )
-{
-    int i, status;
-    char ** argv = malloc ( argc * sizeof * argv );
-    for ( i = 0; i < argc; ++ i )
-    {
-        size_t src_size, dst_size;
-        uint32_t len = wchar_cvt_string_measure ( wargv [ i ], & src_size, & dst_size );
-        char * dst = malloc ( dst_size + 1 );
-        wchar_cvt_string_copy ( dst, dst_size + 1, wargv [ i ], src_size );
-        argv [ i ] = dst;
-    }
-
-    status = main ( argc, argv );
-
-    for ( i = 0; i < argc; ++ i )
-        free ( argv [ i ] );
-    free ( argv );
-
-    return status;
-}
-#endif

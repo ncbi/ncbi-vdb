@@ -201,7 +201,7 @@ public:
         ret -> root = pb.get() == nullptr ? 0 : pb -> root;
         ret -> id = & m_id;
         ret -> key = key.c_str();
-        ret -> key_size = key.size();
+        ret -> key_size = (int32_t)key.size();
         ret -> was_inserted = false;
         return ret;
     }
@@ -246,7 +246,7 @@ public:
         {
             return true;
         }
-        return string( &((const char *)&node)[node.key_prefix], node.key_prefix_len ) == prefix;
+        return string( &((const char *)&node)[node.key_prefix], (size_t)node.key_prefix_len ) == prefix;
     }
 
     bool CheckWindow( const LeafNode & node, unsigned int index, uint16_t lower, uint16_t upper )
@@ -261,7 +261,7 @@ public:
 
     bool CheckKey( const LeafNode & node, unsigned int index, const string & key )
     {
-        string actual ( &((const char *)&node)[node.ord[index].key], node.ord[index].ksize );
+        string actual ( &((const char *)&node)[node.ord[index].key], (size_t)node.ord[index].ksize );
         if ( actual != key )
         {
             cerr << "CheckKey[" << index << "]: expected " << key << ", actual " << actual << " " << (int)((const char *)&node)[node.ord[index].key] << " " << node.ord[index].ksize << endl;
@@ -462,7 +462,7 @@ FIXTURE_TEST_CASE( Split_LeftOfMedian, BtreeFixture )
     REQUIRE( CheckWindow( * newNode, 'C', 0, 1 ));
     REQUIRE( CheckWindow( * newNode, 'C'+1, 1, 1 ));
 
-    REQUIRE_EQ( string(B), string((const char*)split.key, split.ksize));
+    REQUIRE_EQ( string(B), string((const char*)split.key, (size_t)split.ksize));
     REQUIRE_EQ( 0, (int)split.left );
     REQUIRE_EQ( 4, (int)split.right );
 }
@@ -512,7 +512,7 @@ FIXTURE_TEST_CASE( Split_RightOfMedian, BtreeFixture )
     REQUIRE( CheckWindow( * newNode, 'E', 1, 2 ));
     REQUIRE( CheckWindow( * newNode, 'E'+1, 2, 2 ));
 
-    REQUIRE_EQ( string(C), string((const char*)split.key, split.ksize));
+    REQUIRE_EQ( string(C), string((const char*)split.key, (size_t)split.ksize));
     REQUIRE_EQ( 0, (int)split.left );
     REQUIRE_EQ( 4, (int)split.right );
 }
@@ -562,7 +562,7 @@ FIXTURE_TEST_CASE( Split_Median, BtreeFixture )
     REQUIRE( CheckWindow( * newNode, 'E', 0, 1 ));
     REQUIRE( CheckWindow( * newNode, 'E'+1, 1, 1 ));
 
-    REQUIRE_EQ( string("D"), string((const char*)split.key, split.ksize));
+    REQUIRE_EQ( string("D"), string((const char*)split.key, (size_t)split.ksize));
     REQUIRE_EQ( 0, (int)split.left );
     REQUIRE_EQ( 4, (int)split.right );
 }
@@ -630,10 +630,9 @@ extern "C" {
 
 #include <kfg/config.h>
 
-rc_t CC KMain(int argc, char* argv[])
+int main(int argc, char* argv[])
 {
     KConfigDisableUserSettings();
-    rc_t rc = BtreeTestSuite(argc, argv);
-    return rc;
+    return BtreeTestSuite(argc, argv);
 }
 }

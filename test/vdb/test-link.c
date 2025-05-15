@@ -65,7 +65,7 @@ TestVdb ( const char * p_acc, const char * p_columns[])
     return 0;
 }
 
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     const char * columns [] = { "READ_LEN", NULL };
     rc_t rc;
@@ -81,6 +81,6 @@ rc_t CC KMain ( int argc, char *argv [] )
         string_printf ( msg, sizeof msg, NULL, "Link test failed, rc = %R", rc );
         printf("%s\n", msg);
     }
-    return rc;
+    return (int)rc;
 }
 

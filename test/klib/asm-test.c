@@ -24,7 +24,6 @@
 *
 */
 
-#include <kapp/main.h>
 #include <kapp/args.h>
 #include <klib/log.h>
 #include <klib/out.h>
@@ -33,10 +32,10 @@
 #include <arch-impl.h>
 
 static
-rc_t run ( uint32_t x, uint32_t expected_result )
+int run ( uint32_t x, uint32_t expected_result )
 {
     int32_t lsb = uint32_lsbit(x);
-    if (lsb != expected_result)
+    if (lsb != (int32_t)expected_result)
     {
         KOutMsg ( "uint32_lsbit(%u) failed, expected %u, actual %u\n", x, expected_result, lsb );
         return -1;
@@ -44,17 +43,7 @@ rc_t run ( uint32_t x, uint32_t expected_result )
     return 0;
 }
 
-/* KMain
- */
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
-    Args *args;
-    rc_t rc = ArgsMakeAndHandle ( & args, argc, argv, 0 );
-    if ( rc == 0 )
-    {
-        rc = run (8, 3);
-        ArgsWhack ( args );
-    }
-
-    return rc;
+    return run (8, 3);
 }

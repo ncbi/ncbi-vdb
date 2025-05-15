@@ -63,7 +63,7 @@ public:
     {
         THROW_ON_RC ( VDBManagerMakeUpdate ( & m_mgr, NULL ) );
     }
-    ~WVDB_Fixture()
+    virtual ~WVDB_Fixture()
     {
         if ( m_db != 0 )
         {
@@ -214,10 +214,10 @@ public:
     static std :: string DumpSchema(VSchema & p_schema, bool compact = true)
     {
 
-        auto FlushSchema = [](void *fd, const void * buffer, size_t size) -> rc_t
+        auto FlushSchema  = [](void *fd, const void * buffer, size_t size) noexcept -> rc_t
         {
             std :: ostream & out = *static_cast < std :: ostream * > (fd);
-            out.write(static_cast < const char * > (buffer), size);
+            out.write(static_cast < const char * > (buffer), (std::streamsize)size);
             out.flush();
             return 0;
         };
@@ -229,7 +229,7 @@ public:
             free_intrinsic = true;
         }
         std :: ostringstream out;
-        bool failed = VSchemaDump( & p_schema, compact ? sdmCompact : sdmPrint, 0, FlushSchema, &out);
+        bool failed = VSchemaDump( & p_schema, compact ? sdmCompact : sdmPrint, 0, FlushSchema, &out) != 0;
         if ( free_intrinsic )
         {
             VSchemaRelease( p_schema.dad );

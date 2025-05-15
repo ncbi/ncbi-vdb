@@ -155,11 +155,10 @@ extern "C"
 
 #include <kfg/config.h>
 
-rc_t CC KMain ( int argc, char *argv [] )
+int main( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
-    rc_t rc=KRColumnTestSuite(argc, argv);
-    return rc;
+    return KRColumnTestSuite(argc, argv);
 }
 
 }

@@ -283,8 +283,7 @@ static rc_t argsHandler(int argc, char * argv[]) {
 #include <kfg/config.h>
 
 extern "C"
-{
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
 
@@ -292,8 +291,5 @@ rc_t CC KMain ( int argc, char *argv [] )
 	// (same as running the executable with "-l=message")
 	//TestEnv::verbosity = LogLevel::e_message;
 
-    rc_t rc = KGZipFileTestSuite(argc, argv);
-    return rc;
-}
-
+    return KGZipFileTestSuite(argc, argv);
 }

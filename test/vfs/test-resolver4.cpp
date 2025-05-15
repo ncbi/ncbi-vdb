@@ -204,13 +204,12 @@ TEST_CASE ( Test ) {
 }
 #endif
 
-extern "C" {
-    rc_t CC KMain ( int argc, char * argv [] ) {
-        KConfigDisableUserSettings ();
+extern "C"
+int main ( int argc, char * argv [] ) {
+    KConfigDisableUserSettings ();
 if (
 0 ) assert ( ! KDbgSetString ( "VFS-JSON" ) );
 if (
 0 ) assert ( ! KDbgSetString ( "VFS" ) );
-        return TestResolver4 ( argc, argv );
-    }
+    return TestResolver4 ( argc, argv );
 }

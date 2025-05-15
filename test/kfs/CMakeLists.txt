@@ -24,7 +24,7 @@
 
 add_compile_definitions( __mod__="test/kfs" )
 
-set( LIBS kapp "${COMMON_LIBS_READ}")
+set( LIBS "${COMMON_LIBS_READ}")
 
 if( NOT WIN32 )
     AddExecutableTest( Test_KFS_kdf "kdf" "${LIBS}" )
@@ -38,6 +38,10 @@ if( NOT WIN32 )
     AddExecutableTest( Test_KFS_link "test-link" "${LIBS}" )
 endif()
 
+AddExecutableTest( Test_KFS_read_observer-file "test-read_observer" "${LIBS}" )
+AddExecutableTest( Test_KFS_read_observer-bz "test-read_observer-bz2" "${LIBS}"
+)
+AddExecutableTest( Test_KFS_read_observer-gz "test-read_observer-gz" "${LIBS}" )
 AddExecutableTest( Test_KFS_cachetee "cacheteetest" "${LIBS}" )
 
 if( NOT WIN32 ) # TODO: these fail on Windows

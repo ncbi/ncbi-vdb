@@ -363,7 +363,7 @@ rc_t prepare_test( const char * sub )
     if ( rc == 0 )
         rc = string_printf ( new_home_buffer, sizeof new_home_buffer, &num_writ, "HOME=%s", new_home );
     if ( rc == 0 )
-        rc = putenv( new_home_buffer );
+        rc = (rc_t)putenv( new_home_buffer );
     if ( rc == 0 )
         rc = create_test_config( org_home );
     return rc;
@@ -383,9 +383,7 @@ void finish_test()
 
 //////////////////////////////////////////// Main
 extern "C"
-{
-
-rc_t CC KMain ( int argc, char *argv [] )
+int main( int argc, char *argv [] )
 {
     rc_t rc = prepare_test( HomeSub );
     if ( rc == 0 )
@@ -393,12 +391,10 @@ rc_t CC KMain ( int argc, char *argv [] )
         rc = make_global_managers();
         if ( rc == 0 )
         {
-            rc = VDB_3060( argc, argv );
+            rc = (rc_t)VDB_3060( argc, argv );
             release_global_managers();
         }
     }
     finish_test();
-    return rc;
-}
-
+    return (int)rc;
 }

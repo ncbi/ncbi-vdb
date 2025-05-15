@@ -1205,12 +1205,7 @@ FIXTURE_TEST_CASE(Table_segfault, AST_Table_Fixture)
 #include <klib/out.h>
 
 extern "C"
-{
-
-rc_t CC KMain ( int argc, char *argv [] )
+int main( int argc, char *argv [] )
 {
     return SchemaTableTestSuite(argc, argv);
 }
-
-}
-

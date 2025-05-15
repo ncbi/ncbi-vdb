@@ -27,7 +27,7 @@ add_compile_definitions( __mod__="test/schema" )
 file( MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/actual ) # TODO remove ./actual dir after tests pass (add_test POST?)
 #set( CMAKE_DISABLE_SOURCE_CHANGES ON ) # Cannot use with bison
 
-set( LIBS kapp "${COMMON_LIBS_READ}" schema )
+set( LIBS "${COMMON_LIBS_READ}" schema )
 
 AddExecutableTest( Test_SCHEMA_wb-schema-lex "wb-test-schema-lex" "${LIBS}" )
 AddExecutableTest( Test_SCHEMA_wb-schema-parser "wb-test-schema-parser" "${LIBS}" )
