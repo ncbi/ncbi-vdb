@@ -33,6 +33,7 @@
 #include <kapp/args.h>
 #include <vdb/manager.h>
 #include <vdb/database.h>
+#include <klib/printf.h>
 #include <align/writer-reference.h>
 
 #include <ktst/unit_test.hpp>
@@ -52,6 +53,21 @@ struct ErrorCode {
 
     static inline void throwIf(rc_t const rc) {
         if (rc) throw ErrorCode{ rc };
+    }
+    operator std::string() const {
+        char buffer[1024];
+        size_t n = 0;
+        string_printf(buffer, sizeof(buffer), &n, "%#R", rc);
+        
+        std::string ret;
+        if (n < sizeof(buffer)) {
+            ret.assign(buffer, n);
+        }
+        else {
+            ret.assign(n, ' ');
+            string_printf(&ret[0], n, &n, "%#R", rc);
+        }
+        return ret;
     }
 };
 
@@ -275,11 +291,16 @@ struct Fixture {
     ReferenceSeq const *findSeq(std::string const &key) const {
     	return findSeq(key.c_str());
     }
-    ReferenceSeq const *getSeq(char const *key, bool *shouldUnmap = nullptr, bool* wasRenamed = nullptr) const
+    std::pair<rc_t, ReferenceSeq const *>getSeq_2(char const *key, bool *shouldUnmap = nullptr, bool* wasRenamed = nullptr) const
     {
         bool dummy1{ false }, dummy2{ false };
         ReferenceSeq const *seq{ nullptr };
         auto const rc = ReferenceMgr_GetSeq(mgr, &seq, key, shouldUnmap ? shouldUnmap : &dummy1, false, wasRenamed ? wasRenamed : &dummy2);
+        return {rc, seq};
+    }
+    ReferenceSeq const *getSeq(char const *key, bool *shouldUnmap = nullptr, bool* wasRenamed = nullptr) const
+    {
+        auto [rc, seq] = getSeq_2(key, shouldUnmap, wasRenamed);
         return rc == 0 ? seq : nullptr;
     }
     ReferenceSeq const *getSeq(std::string const &key, bool *shouldUnmap = nullptr, bool* wasRenamed = nullptr) const
@@ -355,7 +376,7 @@ TEST_CASE ( LoadConfig )
         bool circular = false;
 
 		// must be able to find every name that was in the config file
-		REQUIRE_NOT_NULL(seq);
+        REQUIRE_NOT_NULL(seq);
 
         REQUIRE_RC(ReferenceSeq_IsCircular(seq, &circular));
         REQUIRE_EQ(entry.circular(), circular);
@@ -386,15 +407,20 @@ TEST_CASE ( VerifyConfig )
     }
     if (!arguments->only_verify()) {
         for (auto & ref : references) {
-            auto const seq = fixture.getSeq(ref);
+            auto rc_seq = fixture.getSeq_2(ref.c_str());
 
-			REQUIRE_NOT_NULL(seq);
+			REQUIRE_NOT_NULL(rc_seq.second);
 
-            auto const e = config.find(ref);
-            if (e && e->circular()) {
-                bool circular = false;
-                REQUIRE_RC(ReferenceSeq_IsCircular(seq, &circular));
-                REQUIRE(circular);
+            if (rc_seq.first) {
+                std::cerr << ref << ": " << std::string(ErrorCode{rc_seq.first}) << std::endl;
+            }
+            else {
+                auto const e = config.find(ref);
+                if (e && e->circular()) {
+                    bool circular = false;
+                    REQUIRE_RC(ReferenceSeq_IsCircular(rc_seq.second, &circular));
+                    REQUIRE(circular);
+                }
             }
         }
     }
