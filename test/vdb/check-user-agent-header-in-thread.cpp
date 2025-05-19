@@ -58,8 +58,9 @@ void CheckRc(rc_t rc, const char* code, const char* file, int line)
         size_t error_len;
         RCExplain(rc, buffer1, sizeof(buffer1), &error_len);
         char buffer2[8192];
-        unsigned len = sprintf(buffer2, "%s:%d: %s failed: %#x: %s\n",
+        int len = snprintf(buffer2, sizeof(buffer2), "%s:%d: %s failed: %#x: %s\n",
                              file, line, code, rc, buffer1);
+        assert(0 < len && len < sizeof(buffer2));
         write(2, buffer2, len);
         exit(1);
     }

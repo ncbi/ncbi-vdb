@@ -47,7 +47,6 @@ typedef RefSeq Object;
 
 struct RefSeqAsyncLoadInfo {
     KRefcount refcount;
-    KThread *th;
     KLock *mutex;               /**< mostly guards the cursor against concurrent use */
     VCursor const *curs;        /**< can be used by either thread after acquiring the mutex */
     RowRange rr;                /**< of the table */
@@ -72,27 +71,20 @@ static void RefSeqAsyncLoadInfo_Release(RefSeqAsyncLoadInfo *const self)
     }
     VCursorRelease(self->curs);
     KLockRelease(self->mutex);
-    KThreadRelease(self->th);
     free(self);
 }
 
-static rc_t RefSeqAsyncLoadInfoFree(RefSeqAsyncLoadInfo *const self)
+static void RefSeqAsyncLoadInfoFree(RefSeqAsyncLoadInfo *const self)
 {
-    rc_t rc = 0;
     if (self) {
         /* Synchronize with background thread in preparation for clean up */
-        KRefcountAdd(&self->refcount, "RefSeqAsyncLoadInfo"); // keep alive; let die at line 89
+        KRefcountAdd(&self->refcount, "RefSeqAsyncLoadInfo"); // keep alive; let die at line 88
         LOGMSG(klogDebug, "Foreground thread ending background thread");
         KLockAcquire(self->mutex);
         self->count = 0;
         KLockUnlock(self->mutex);
-        KThreadWait(self->th, &rc);
-        LOGERR(klogDebug, rc, "Background thread ended");
         RefSeqAsyncLoadInfo_Release(self);
-        if (rc)
-            LOGERR(klogErr, rc, "asynchronous loader thread failed");
     }
-    return rc;
 }
 
 // packed 2na to unpacked 4na
@@ -424,6 +416,19 @@ char const *RefSeq_Scheme(void) {
     return "NCBI:refseq:tbl:reference";
 }
 
+static rc_t cleanUpAsyncThread(Object const *self)
+{
+    rc_t rc = 0;
+    if (self->th) {
+        KThreadWait(self->th, &rc);
+        if (rc)
+            LOGERR(klogErr, rc, "asynchronous loader thread failed");
+        KThreadRelease(self->th);
+        ((Object *)self)->th = NULL;
+    }
+    return rc;
+}
+
 unsigned RefSeq_getBases(Object const * self, uint8_t *const dst, unsigned const start, unsigned const len)
 {
     atomic_t *const rwl = &((Object *)self)->rwl;
@@ -445,6 +450,10 @@ unsigned RefSeq_getBases(Object const * self, uint8_t *const dst, unsigned const
     while ((atomic_read(rwl) & 1) != 0)
         ;
     /* the state has been updated; use the new state */
+    if (self->async == NULL) {
+        rc_t const rc = cleanUpAsyncThread(self);
+        if (rc) return rc;
+    }
     return RefSeq_getBases(self, dst, start, len);
 }
 
@@ -574,7 +583,7 @@ static rc_t load(  Object *result
         result->length = (unsigned)baseCount;
         result->async = RefSeqAsyncLoadInfoMake(curs, rowRange, info + 1, &rc);
         if (rc == 0) {
-            rc = KThreadMake(&result->async->th, run_load_thread, result);
+            rc = KThreadMake(&result->th, run_load_thread, result);
             if (rc == 0) {
                 result->reader = readNormalIncomplete;
                 return 0;
@@ -618,6 +627,7 @@ static rc_t init(Object *result, VTable const *const tbl)
 void RefSeqFree(Object *self)
 {
     RefSeqAsyncLoadInfoFree(self->async);
+    cleanUpAsyncThread(self);
     RangeListFree(&self->Ns);
     free(self->bases);
     free(self);

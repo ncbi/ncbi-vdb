@@ -39,64 +39,64 @@ extern "C" {
 typedef struct atomic32_t atomic32_t;
 struct atomic32_t
 {
-    volatile int counter;
+    int volatile counter;
 };
 
 /* int atomic32_read ( const atomic32_t *v ); */
 #define atomic32_read( v ) \
-    ( ( v ) -> counter )
+    __atomic_load_n(&((v)->counter), __ATOMIC_SEQ_CST)
 
 /* void atomic32_set ( atomic32_t *v, int i ); */
 #define atomic32_set( v, i ) \
-    ( ( void ) ( ( ( v ) -> counter ) = ( i ) ) )
+    __atomic_store_n(&((v)->counter), i, __ATOMIC_SEQ_CST)
 
 /* add to v -> counter and return the prior value */
-static __inline__ int atomic32_read_and_add ( atomic32_t *v, int i )
-{
-    return __sync_fetch_and_add( & v -> counter, i );
-}
+#define atomic32_read_and_add( v, i ) \
+    __atomic_fetch_add(&((v)->counter), i, __ATOMIC_SEQ_CST)
 
 /* if no read is needed, define the least expensive atomic add */
 #define atomic32_add( v, i ) \
-    atomic32_read_and_add ( v, i )
+    ((void)atomic32_read_and_add(v, i))
 
 /* add to v -> counter and return the result */
-static __inline__ int atomic32_add_and_read ( atomic32_t *v, int i )
+static __inline__ int atomic32_add_and_read ( atomic32_t *const v, int const i )
 {
-    return __sync_add_and_fetch( & v -> counter, i );
+    return __atomic_add_fetch(&((v)->counter), i, __ATOMIC_SEQ_CST);
 }
 
 /* just don't try to find out what the result was */
-static __inline__ void atomic32_inc ( atomic32_t *v )
+static __inline__ void atomic32_inc ( atomic32_t *const v )
 {
     atomic32_add( v, 1 );
 }
 
-static __inline__ void atomic32_dec ( atomic32_t *v )
+static __inline__ void atomic32_dec ( atomic32_t *const v )
 {
-    atomic32_add( v, -1 );
+    __atomic_fetch_sub(&((v)->counter), 1, __ATOMIC_SEQ_CST);
 }
 
 /* decrement by one and test result for 0 */
-static __inline__ int atomic32_dec_and_test ( atomic32_t *v )
+static __inline__ int atomic32_dec_and_test ( atomic32_t *const v )
 {
-    return __sync_add_and_fetch( & v -> counter, -1 ) == 0;
+    return __atomic_sub_fetch(&((v)->counter), 1, __ATOMIC_SEQ_CST) == 0;
 }
 
 /* when atomic32_dec_and_test uses predecrement, you want
    postincrement to this function. so it isn't very useful */
-static __inline__ int atomic32_inc_and_test ( atomic32_t *v )
+static __inline__ int atomic32_inc_and_test ( atomic32_t *const v )
 {
-    return __sync_add_and_fetch( & v -> counter, 1 ) == 0;
+    return atomic32_add_and_read(v, 1) == 0;
 }
 
 /* HERE's useful */
 #define atomic32_test_and_inc( v ) \
     ( atomic32_read_and_add ( v, 1 ) == 0 )
 
-static __inline__ int atomic32_test_and_set ( atomic32_t *v, int newval, int oldval )
+static __inline__ int atomic32_test_and_set ( atomic32_t *const v, int const newval, int const oldval )
 {
-    return __sync_val_compare_and_swap( & v -> counter, oldval, newval ); //NB: newval/oldval switched around
+    int expected = oldval;
+    __atomic_compare_exchange_n(&((v)->counter), &expected, newval, 1, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+    return expected;
 }
 
 /* conditional modifications */

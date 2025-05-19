@@ -234,7 +234,7 @@ static rc_t CC index_lookup_impl(
 #ifdef WINDOWS
                     sprintf_s(query, sizeof(query), "%1X%03X%03X%03X", lane, tile, x, y);
 #else
-                    sprintf(query, "%1X%03X%03X%03X", lane, tile, x, y);
+                    snprintf(query, sizeof(query), "%1X%03X%03X%03X", lane, tile, x, y);
 #endif
                 }
             }

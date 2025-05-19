@@ -433,6 +433,19 @@ LIB_EXPORT rc_t CC SRAMgrGetTableModDate ( const SRAMgr *self,
     return rc;
 }
 
+static rc_t resolveTablePath( const SRAMgr *self,
+    char *path, size_t psize, const char *spec, ... )
+{
+    rc_t rc;
+
+    va_list args;
+    va_start ( args, spec );
+    rc = ResolveTablePath (self, path, psize, spec, args );
+    va_end ( args );
+
+    return rc;
+}
+
 LIB_EXPORT rc_t CC SRAMgrSingleFileArchiveExt(const SRAMgr *self, const char* spec, const bool lightweight, const char** ext)
 {
     rc_t rc;
@@ -441,9 +454,8 @@ LIB_EXPORT rc_t CC SRAMgrSingleFileArchiveExt(const SRAMgr *self, const char* sp
         rc = RC(rcSRA, rcFile, rcConstructing, rcParam, rcNull);
     } else {
         char buf[4096];
-        va_list args;
 
-        if( (rc = ResolveTablePath(self, buf, sizeof(buf), spec, args)) == 0 ) {
+        if( (rc = resolveTablePath(self, buf, sizeof(buf), "%s", spec)) == 0 ) {
             const KDBManager* kmgr;
             if( (rc = SRAMgrGetKDBManagerRead(self, &kmgr)) == 0 ) {
                 int type = KDBManagerPathType(kmgr, "%s", buf) & ~kptAlias;

@@ -64,13 +64,14 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
+#include <atomic>
 
 using namespace std;
 
 #define RANDS_SIZE 2000000
 static uint64_t RANDS[RANDS_SIZE];
 
-static volatile bool KEEPRUNNING = true;
+static atomic<bool> KEEPRUNNING{true};
 static atomic64_t FINDCOUNT;
 static KDirectory* DIR = NULL;
 static KFile* BACKING = NULL;

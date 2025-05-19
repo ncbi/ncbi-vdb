@@ -958,7 +958,7 @@ TEST_CASE(Klib_hash_hamming)
            string_hash(foo1, strlen(foo1)), foo2,
            string_hash(foo2, strlen(foo2)));
     for (uint64_t i = 0; i != 10000000; i++) {
-        sprintf(key, "ABCD%lu", i);
+        snprintf(key, sizeof(key), "ABCD%lu", i);
         uint64_t hash = string_hash(key, strlen(key));
         hash &= mask;
         hash_collisions[hash] = hash_collisions[hash] + 1;

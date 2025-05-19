@@ -148,7 +148,7 @@ rc_t open_sub_cursor ( SubSelect **fself, const VXfactInfo *info, const VFactory
 
     if ( cp -> argv [ 0 ] . count > 0 )
     {
-        sprintf(name,"%.*s",(int)cp->argv[0].count,cp->argv[0].data.ascii);
+        snprintf(name,sizeof(name),"%.*s",(int)cp->argv[0].count,cp->argv[0].data.ascii);
         rc = VCursorLinkedCursorGet(native_curs,name,&curs);
         if(rc == 0)
         {
