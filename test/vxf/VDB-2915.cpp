@@ -486,15 +486,8 @@ FIXTURE_TEST_CASE ( CHECK_RANDOM_DATA, WVDB_Fixture )
 
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kfg/config.h>
-
 int main( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
     return VDB_2915_TEST_SUITE( argc, argv );
-}
-
 }

@@ -35,6 +35,8 @@
 #include <vfs/manager.h>
 #include <vfs/path.h>
 
+#include <kfg/config.h>
+
 #include <cstdarg>
 
 using namespace std;
@@ -99,15 +101,8 @@ TEST_CASE(KDBTextPath_fromVPath)
     REQUIRE( path.empty() );
 }
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kfg/config.h>
-
 int main( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
     return KDBTextPathTestSuite(argc, argv);
-}
-
 }

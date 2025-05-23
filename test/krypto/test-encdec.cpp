@@ -577,7 +577,6 @@ TEST_CASE(KDectryptInvalidKey)
 
 //////////////////////////////////////////// Main
 
-extern "C"
 int main( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();

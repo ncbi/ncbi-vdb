@@ -28,10 +28,14 @@
 
 #include <ktst/unit_test.hpp>
 
+#include <kapp/args.h> // Args
+
+#include <kfg/config.h>
 #include <kfg/kfg-priv.h>
 #include <kns/kns-mgr-priv.h>
 #include <kfs/file.h>
 #include <klib/time.h>
+#include <klib/debug.h>
 #include <kproc/timeout.h>
 #include <cloud/manager.h>
 #include <cloud/impl.h>
@@ -530,10 +534,6 @@ FIXTURE_TEST_CASE( HttpRefreshTestSuite_HeadAsPost_ShortFile, CloudFixture )
 
 //////////////////////////////////////////// Main
 
-#include <kapp/args.h> // Args
-#include <klib/debug.h>
-#include <kfg/config.h>
-
 static rc_t argsHandler ( int argc, char * argv [] ) {
     Args * args = NULL;
     rc_t rc = ArgsMakeAndHandle ( & args, argc, argv, 0, NULL, 0 );
@@ -541,7 +541,6 @@ static rc_t argsHandler ( int argc, char * argv [] ) {
     return rc;
 }
 
-extern "C" 
 int main( int argc, char * argv [] )
 {
     //if ( 1 ) assert ( ! KDbgSetString ( "KNS-HTTP" ) );

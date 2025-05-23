@@ -30,10 +30,13 @@
 
 #include <ktst/unit_test.hpp>
 
+#include <kfg/config.h>
+
 #include <errno.h>
 
 #include <klib/rc.h>
 #include <klib/text.h>
+#include <klib/debug.h>
 #include <kproc/timeout.h>
 #include <kns/manager.h>
 #include <kns/endpoint.h>
@@ -188,12 +191,6 @@ static rc_t argsHandler(int argc, char * argv[]) {
     return rc;
 }
 
-extern "C"
-{
-
-#include <kfg/config.h>
-#include <klib/debug.h>
-
 int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
@@ -204,6 +201,4 @@ int main ( int argc, char *argv [] )
 #endif
 
     return KnsTestSuite(argc, argv);
-}
-
 }

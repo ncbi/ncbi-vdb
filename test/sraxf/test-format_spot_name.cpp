@@ -74,8 +74,6 @@ TEST_CASE(TestFormatSpotName) { // VDB-4097
     REQUIRE_RC(VDBManagerRelease(mgr));
 }
 
-extern "C" 
-
 int main(int argc, char *argv[]) {
     KConfigDisableUserSettings(); // ignore ~/.ncbi/user-settings.mkfg
 

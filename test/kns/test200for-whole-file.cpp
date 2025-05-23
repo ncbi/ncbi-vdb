@@ -119,7 +119,6 @@ TEST_CASE ( Test_200 ) {
     REQUIRE_RC ( KNSManagerRelease ( mgr ) );
 }
 
-extern "C" 
 int main( int argc, char * argv [] ) { if (
 0 ) assert ( ! KDbgSetString ( "KNS-HTTP" ) );
     KConfigDisableUserSettings ();

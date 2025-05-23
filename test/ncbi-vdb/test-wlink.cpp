@@ -24,9 +24,6 @@
 
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-
 #include <kfg/config.h>
 #include <kdb/manager.h>
 
@@ -41,6 +38,4 @@ int main ( int argc, char *argv [] )
         return 3;
 
     return 0;
-}
-
 }

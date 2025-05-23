@@ -24,6 +24,8 @@
 
 #include "WVDB_Fixture.hpp"
 
+#include <kfg/config.h>
+
 #include <sysalloc.h>
 
 #include <klib/symbol.h>
@@ -986,15 +988,8 @@ FIXTURE_TEST_CASE(VDatabaseMemberType_Inherited, ViewFixture)
 //TODO: break these tests out to test-database.c
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kfg/config.h>
-
 int main( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
     return ViewTestSuite(argc, argv);
-}
-
 }

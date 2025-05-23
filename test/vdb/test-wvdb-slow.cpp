@@ -26,6 +26,8 @@
 #define NOMINMAX 1
 #include "WVDB_Fixture.hpp"
 
+#include <kfg/config.h>
+
 using namespace std;
 
 TEST_SUITE( WVdbSlowTestSuite );
@@ -140,15 +142,8 @@ if ( i % 1000000 == 0 ) cout << i/1000000 <<endl;
 }
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kfg/config.h>
-
 int main( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
     return WVdbSlowTestSuite(argc, argv);
-}
-
 }

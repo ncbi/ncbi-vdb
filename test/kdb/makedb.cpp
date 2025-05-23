@@ -36,6 +36,8 @@
 #include <vdb/table.h>
 #include <vdb/cursor.h>
 
+#include <kfg/config.h>
+
 #include <arch-impl.h>
 
 #include <kdb/meta.h>
@@ -140,16 +142,9 @@ MakeDatabase()
 }
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kfg/config.h>
-
 int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
 
     return (int)MakeDatabase();
-}
-
 }

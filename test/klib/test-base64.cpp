@@ -30,6 +30,8 @@
 
 #include <ktst/unit_test.hpp>
 
+#include <kfg/config.h>
+
 #include <klib/base64.h>
 #include <klib/text.h>
 #include <klib/data-buffer.h>
@@ -385,14 +387,8 @@ TEST_CASE ( KBase64_decodeBase64_rfc7 )
 }
 
 //////////////////////////////////////////////////// Main
-extern "C" {
-
-#include <kfg/config.h>
-
 int main(int argc, char* argv[])
 {
     KConfigDisableUserSettings();
     return KBase64TestSuite(argc, argv);
-}
-
 }

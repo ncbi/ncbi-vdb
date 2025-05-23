@@ -449,21 +449,19 @@ TEST_CASE(TimedReadExactlyTwicePartially) {
     t.Finish();
 }
 
-extern "C" {
-    int main(int argc, char *argv[]) {
-        KConfigDisableUserSettings();
+int main(int argc, char *argv[]) {
+    KConfigDisableUserSettings();
 
-        rc_t rc(ObserverTest::Begin(eHttp));
+    rc_t rc(ObserverTest::Begin(eHttp));
 
-        if (rc == 0)
-            rc = ReadObserverTestSuite(argc, argv);
+    if (rc == 0)
+        rc = ReadObserverTestSuite(argc, argv);
 
-        rc_t r2(ObserverTest::End());
-        if (rc == 0 && r2 != 0)
-            rc = r2;
+    rc_t r2(ObserverTest::End());
+    if (rc == 0 && r2 != 0)
+        rc = r2;
 
-        return (rc == 0) ? 0 : IF_EXITCODE(rc, 3);
-    }
+    return (rc == 0) ? 0 : IF_EXITCODE(rc, 3);
 }
 
 /******************************************************************************/

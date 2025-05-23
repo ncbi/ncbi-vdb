@@ -52,7 +52,6 @@
 
 #include <kfg/config.h>
 
-
 #include "WVDB_Fixture.hpp"
 
 using namespace std;
@@ -982,15 +981,9 @@ FIXTURE_TEST_CASE ( BlobChecksumOFF, WVDB_Fixture)
 }
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kfg/config.h>
-
 int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
     return WVdbTestSuite(argc, argv);
 }
 
-}

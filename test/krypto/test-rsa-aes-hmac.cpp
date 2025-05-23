@@ -901,7 +901,6 @@ TEST_CASE ( KEncryptExtendedResultDecryptRoundTrip )
 
 //////////////////////////////////////////// Main
 
-extern "C"
 int main( int argc, char *argv [] )
 {
     KConfigDisableUserSettings ();

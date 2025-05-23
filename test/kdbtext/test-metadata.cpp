@@ -38,6 +38,8 @@
 #include <klib/rc.h>
 #include <klib/json.h>
 
+#include <kfg/config.h>
+
 using namespace std;
 using namespace KDBText;
 
@@ -310,15 +312,8 @@ FIXTURE_TEST_CASE(KMetadata_OpenNodeRead, KTextMetadata_ApiFixture)
 }
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kfg/config.h>
-
 int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
     return KDBTextMetadataTestSuite(argc, argv);
-}
-
 }

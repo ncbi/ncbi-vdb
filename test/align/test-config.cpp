@@ -35,6 +35,7 @@
 #include <vdb/database.h>
 #include <klib/printf.h>
 #include <align/writer-reference.h>
+#include <kfg/config.h>
 
 #include <ktst/unit_test.hpp>
 #include <ktst/unit_test_suite.hpp>
@@ -427,9 +428,7 @@ TEST_CASE ( VerifyConfig )
 }
 
 //////////////////////////////////////////// Main
-#include <kfg/config.h>
 
-extern "C"
 int main( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();

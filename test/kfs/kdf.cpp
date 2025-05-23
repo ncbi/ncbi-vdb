@@ -290,7 +290,6 @@ static rc_t argsHandler ( int argc, char * argv [] ) {
     return rc;
 }
 
-extern "C"
 int main ( int argc, char * argv [] ) {
 ncbi::NK::TestEnv::SetVerbosity(ncbi::NK::LogLevel::e_all);
     int rc = DuSuite ( argc, argv );

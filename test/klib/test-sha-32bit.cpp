@@ -94,7 +94,6 @@ TEST_CASE(SHA256_abc_NIST)
 }
 
 //////////////////////////////////////////////////// Main
-extern "C"
 int main ( int argc, char *argv [] )
 {
     return SHATestSuite(argc, argv);

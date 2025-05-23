@@ -632,7 +632,6 @@ TEST_CASE ( REFSEQ_APP_CACHE_DISABLE ) {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-extern "C"
 int main ( int argc, char * argv [] ) {
     setenv("HOME", ".", 1);
     KConfigDisableUserSettings ();

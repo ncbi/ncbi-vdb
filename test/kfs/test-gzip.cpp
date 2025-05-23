@@ -30,6 +30,8 @@
 
 #include <ktst/unit_test.hpp>
 
+#include <kapp/args.h>
+
 #include <klib/rc.h>
 #include <kfg/config.h>
 #include <kfs/directory.h>
@@ -271,8 +273,6 @@ FIXTURE_TEST_CASE(KGZipFile_Test, KGZipFileFixture)
     TestRead();
 }
 
-#include <kapp/args.h>
-
 static rc_t argsHandler(int argc, char * argv[]) {
     Args * args = NULL;
     rc_t rc = ArgsMakeAndHandle(&args, argc, argv, 0, NULL, 0);
@@ -280,9 +280,6 @@ static rc_t argsHandler(int argc, char * argv[]) {
     return rc;
 }
 
-#include <kfg/config.h>
-
-extern "C"
 int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();

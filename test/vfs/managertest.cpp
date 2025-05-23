@@ -625,7 +625,6 @@ FIXTURE_TEST_CASE(TestVFSManagerCheckAd, MgrFixture) {
 #endif
 
 //////////////////////////////////////////// Main
-extern "C"   
 int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();

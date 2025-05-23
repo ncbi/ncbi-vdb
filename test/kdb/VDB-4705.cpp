@@ -30,6 +30,8 @@
 
 #include <kapp/args.h>
 
+#include <kfg/config.h>
+
 #include <ktst/unit_test.hpp>
 
 #include <sysalloc.h>
@@ -304,13 +306,8 @@ FIXTURE_TEST_CASE ( CopyColumn, KDB_ColumnCopyFixture )
     checkTable ( tableName2 );
 }
 
-extern "C" {
-
-#include <kfg/config.h>
-
 int main( int argc, char *argv[] )
 {
     KConfigDisableUserSettings ();
     return KdbTestSuite ( argc, argv );
-}
 }

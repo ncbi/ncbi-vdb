@@ -168,8 +168,6 @@ TEST_CASE(KRamFileWrite_shift_right)
 }
 
 //////////////////////////////////////////// Main
-
-extern "C"
 int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();

@@ -39,6 +39,10 @@
 #include <kdb/index.h>
 #include <kdb/table.h>
 
+#include <kfg/config.h>
+
+#include <klib/debug.h> // KDbgSetString
+
 #include <vfs/manager.h>
 
 using namespace std;
@@ -56,11 +60,6 @@ static rc_t argsHandler(int argc, char* argv[]) {
     ArgsWhack(args);
     return rc;
 }
-extern "C"
-{
-
-#include <kfg/config.h>
-#include <klib/debug.h> // KDbgSetString
 
 int main ( int argc, char *argv [] )
 {
@@ -69,6 +68,4 @@ int main ( int argc, char *argv [] )
     //KDbgSetModConds ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), DBG_FLAG ( DBG_KNS_SOCKET ) );
     KConfigDisableUserSettings();
     return KdbTestSuite(argc, argv);
-}
-
 }

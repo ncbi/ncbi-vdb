@@ -35,6 +35,8 @@
 #include <klib/debug.h>
 #include <klib/rc.h>
 
+#include <kfg/config.h>
+
 #include <kns/manager.h>
 #include <kns/http.h>
 
@@ -432,11 +434,6 @@ FIXTURE_TEST_CASE(GET_Read_Failed_Reconnect_Failed, HttpFixture)
 #endif
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kfg/config.h>
-
 int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
@@ -446,6 +443,4 @@ int main ( int argc, char *argv [] )
 	// TestEnv::verbosity = LogLevel::e_message;
 
     return HttpTestSuite(argc, argv);
-}
-
 }

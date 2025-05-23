@@ -565,7 +565,6 @@ TEST_CASE(KDBRManager_MakeReadWithVFSManager)
 };
 
 //////////////////////////////////////////// Main
-extern "C"
 int main( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();

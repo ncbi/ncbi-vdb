@@ -24,6 +24,8 @@
 
 #include <cmath>
 
+#include <kfg/config.h>
+
 #include <vdb/manager.h> // VDBManager
 #include <vdb/database.h>
 #include <vdb/table.h>
@@ -155,15 +157,8 @@ FIXTURE_TEST_CASE ( BlobValidationEnabled, VDB_Fixture)
 
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kfg/config.h>
-
 int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
     return BlobValidationTestSuite(argc, argv);
-}
-
 }

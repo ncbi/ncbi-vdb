@@ -30,6 +30,8 @@
 
 #include <ktst/unit_test.hpp>
 
+#include <kfg/config.h>
+
 extern "C"
 {
     #include <../libs/kdb/wcolumnblob.h>
@@ -157,15 +159,8 @@ FIXTURE_TEST_CASE(KWColumn_OpenBlobRead, KColumn_Fixture)
 //TODO: non-virtual write-side only methods
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kfg/config.h>
-
 int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
     return KWColumnTestSuite(argc, argv);
-}
-
 }

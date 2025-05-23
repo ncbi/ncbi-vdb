@@ -35,6 +35,8 @@
 
 #include <ktst/unit_test.hpp>
 
+#include <kfg/config.h>
+
 #include <klib/out.h>
 #include <klib/rc.h>
 
@@ -614,11 +616,6 @@ TEST_CASE( CacheTee2_Multiple_Users_with_Promoting )
 }
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kfg/config.h>
-
 int main ( int argc, char *argv [] )
 {
     srand( time( NULL ) );
@@ -631,6 +628,4 @@ int main ( int argc, char *argv [] )
     }
     KOutMsg( "and the result is: %R\n", rc );
     return (int)rc;
-}
-
 }

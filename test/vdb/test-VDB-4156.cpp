@@ -92,7 +92,6 @@ FIXTURE_TEST_CASE ( DumpToKMDataNode, WVDB_Fixture)
 }
 
 //////////////////////////////////////////// Main
-extern "C"
 int main ( int argc, char *argv [] )
 {
     return KDBVDBTestSuite(argc, argv);

@@ -129,7 +129,6 @@ KOutMsg ( "##[6] OK : Conf (true ) + SetAllow ( true ) = true\n" );
     RELEASE ( KConfig, kfg );
 }
 
-extern "C" 
 int main( int argc, char * argv [] ) { if (
 0 ) assert ( ! KDbgSetString ( "KNS-HTTP" ) );
     KConfigDisableUserSettings ();

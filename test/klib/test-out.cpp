@@ -209,12 +209,8 @@ TEST_CASE(KOutMsgInvalidRC)
 
 
 //////////////////////////////////////////////////// Main
-extern "C"
-{
 int main ( int argc, char *argv [] )
 {   
     // NB do not use VdbApplication; we need VDB to be in an unitialized state (see the top 4 tests in this file)
     return KOutTestSuite(argc, argv);
-}
-
 }

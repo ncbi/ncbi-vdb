@@ -71,7 +71,6 @@ DumpSchema ( const VSchema * p_schema, ostream & p_out )
     }
 }
 
-extern "C"
 int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();

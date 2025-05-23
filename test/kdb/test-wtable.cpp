@@ -30,6 +30,8 @@
 
 #include <ktst/unit_test.hpp>
 
+#include <kfg/config.h>
+
 #include <../libs/kdb/wtable.h>
 #include <../libs/kdb/dbmgr.h>
 
@@ -248,15 +250,8 @@ FIXTURE_TEST_CASE(KWTable_MetaCompare, KTable_Fixture)
 //TODO: non-virtual write-side only methods
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kfg/config.h>
-
 int main( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
     return KWTableTestSuite(argc, argv);
-}
-
 }

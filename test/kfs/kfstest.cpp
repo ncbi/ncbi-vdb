@@ -31,6 +31,9 @@
 #include <cstring>
 
 #include <ktst/unit_test.hpp>
+
+#include <kfg/config.h>
+
 #include <kfs/mmap.h>
 #include <kfs/directory.h>
 #include <kfs/impl.h>
@@ -104,15 +107,8 @@ TEST_CASE(Tar_Parse)
 }
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kfg/config.h>
-
 int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
     return KfsTestSuite(argc, argv);
-}
-
 }

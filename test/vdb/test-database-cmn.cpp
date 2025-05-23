@@ -149,7 +149,6 @@ FIXTURE_TEST_CASE(BAD_NUM_GAP_FULL, Fixture) {
 }
 #endif
 
-extern "C" 
 int main(int argc, char * argv[]) {
     KConfigDisableUserSettings();
     return DatabaseCmnTestSuite(argc, argv);

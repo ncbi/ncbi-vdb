@@ -26,6 +26,8 @@
 
 #include <ktst/unit_test.hpp>
 
+#include <kfg/config.h>
+
 TEST_SUITE(VxfTestSuite);
 
 #include "wb-irzip-impl.h"
@@ -236,15 +238,8 @@ FIXTURE_TEST_CASE(IRZIP_i32_assert1, EncoderFixture)
 }
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kfg/config.h>
-
 int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
     return VxfTestSuite(argc, argv);
-}
-
 }

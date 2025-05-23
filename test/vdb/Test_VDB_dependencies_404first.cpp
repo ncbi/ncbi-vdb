@@ -69,7 +69,6 @@ TEST_CASE(Test_VDB_dependencies_404first) {
     REQUIRE_RC(rc);
 }
 
-extern "C" 
 int main(int argc, char *argv[]) {
     KConfigDisableUserSettings();
     return Test_VDB_dependencies_404firstSuite(argc, argv);
