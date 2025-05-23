@@ -124,7 +124,7 @@ rc_t CC format_spot_name ( void *self,
 #ifdef WINDOWS
                         j+= sprintf_s(sname+j, sizeof(sname) - j,"%d",x);
 #else
-                        j+=sprintf(sname+j,"%d",x);
+                        j += snprintf(sname+j, sizeof(sname) - j, "%d", x);
 #endif
                     }
                     else
@@ -143,7 +143,7 @@ rc_t CC format_spot_name ( void *self,
 #ifdef WINDOWS
                         j+=sprintf_s(sname+j, sizeof(sname) - j, "%d",y);
 #else
-                        j+=sprintf(sname+j,"%d",y);
+                        j += snprintf(sname+j, sizeof(sname) - j, "%d", y);
 #endif
                     }
                     else

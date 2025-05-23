@@ -431,42 +431,22 @@ rc_t SConstExprDump ( const SConstExpr *self, SDumper *b )
                 self -> u . utf32 [ i ];
 
             if ( ch >= 128 )
-#ifdef WINDOWS
-                sprintf_s ( buff, sizeof(buff), "\\u%04x", ch );
-#else
-                sprintf ( buff, "\\u%04x", ch );
-#endif
+                snprintf ( buff, sizeof(buff), "\\u%04x", ch );
             else if ( isprint ( ( int ) ch ) )
                 buff [ 0 ] = ( char ) ch, buff [ 1 ] = 0;
             else switch ( ch )
             {
             case '\n':
-#ifdef WINDOWS
-                sprintf_s ( buff, sizeof(buff), "\\n" );
-#else
-                sprintf ( buff, "\\n" );
-#endif
+                snprintf ( buff, sizeof(buff), "\\n" );
                 break;
             case '\r':
-#ifdef WINDOWS
-                sprintf_s ( buff, sizeof(buff), "\\r" );
-#else
-                sprintf ( buff, "\\r" );
-#endif
+                snprintf ( buff, sizeof(buff), "\\r" );
                 break;
             case '\t':
-#ifdef WINDOWS
-                sprintf_s ( buff, sizeof(buff), "\\t" );
-#else
-                sprintf ( buff, "\\t" );
-#endif
+                snprintf ( buff, sizeof(buff), "\\t" );
                 break;
             default:
-#ifdef WINDOWS
-                sprintf_s ( buff, sizeof(buff), "\\x%02x", ch );
-#else
-                sprintf ( buff, "\\x%02x", ch );
-#endif
+                snprintf ( buff, sizeof(buff), "\\x%02x", ch );
             }
 
             rc = SDumperPrint ( b, buff );

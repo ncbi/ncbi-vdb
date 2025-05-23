@@ -617,12 +617,9 @@ rc_t KDBManagerVOpenDBReadInt ( const KDBManager *self, const KDatabase **dbp,
             /* allocate a new guy */
             rc = KRDatabaseMake ( & db, dir, dbpath, self );
             if ( rc == 0 )
-            {
                 * dbp = db;
-                return 0;
-            }
-
-            KDirectoryRelease ( dir );
+            else
+                KDirectoryRelease ( dir );
         }
     }
     if (aDbpath != dbpath)

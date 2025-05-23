@@ -2997,7 +2997,8 @@ rc_t structured_print_engine ( KBufferedWrtHandler *out,
                       , ( char ) c );
             cvt_len = _snprintf_s(text, sizeof text, sizeof text - 1, ffmt, f64);
 #else
-            sprintf(&ffmt[++i], ".%u%c"
+            ++i;
+            snprintf(&ffmt[i], sizeof(ffmt) - i, ".%u%c"
                 , (uint32_t)f.u.f.precision
                 , (char)c);
             cvt_len = snprintf(text, sizeof text, ffmt, f64);
@@ -3090,7 +3091,7 @@ rc_t structured_print_engine ( KBufferedWrtHandler *out,
                 , VersionGetRelease((uint32_t)u64)
             );
 #else
-            dst_len = sprintf ( text, cfmt
+            dst_len = snprintf ( text, sizeof(text), cfmt
                                 , VersionGetMajor ( ( uint32_t ) u64 )
                                 , VersionGetMinor ( ( uint32_t ) u64 )
                                 , VersionGetRelease ( ( uint32_t ) u64 )
@@ -3136,12 +3137,13 @@ rc_t structured_print_engine ( KBufferedWrtHandler *out,
                         , tm->year
                     );
 #else
-                    dst_len = sprintf ( text, "%s %s %u %u"
+                    dst_len = snprintf ( text, sizeof(text), "%s %s %u %u"
                                         , weekdays [ tm -> weekday ]
                                         , months [ tm -> month ]
                                         , tm -> day + 1
                                         , tm -> year
                         );
+                    assert(0 < dst_len && dst_len < sizeof(text));
 #endif
                 }
                 else
@@ -3153,11 +3155,12 @@ rc_t structured_print_engine ( KBufferedWrtHandler *out,
                         , tm->year
                     );
 #else
-                    dst_len = sprintf ( text, "%s %u %u"
+                    dst_len = snprintf ( text, sizeof(text), "%s %u %u"
                                         , months [ tm -> month ]
                                         , tm -> day + 1
                                         , tm -> year
                         );
+                    assert(0 < dst_len && dst_len < sizeof(text));
 #endif
                 }
             }
@@ -3177,12 +3180,13 @@ rc_t structured_print_engine ( KBufferedWrtHandler *out,
                         , tm->second
                     );
 #else
-                    dst_len += sprintf ( & text [ dst_len ]
+                    dst_len += snprintf ( & text [ dst_len ], sizeof(text) - dst_len
                                          , f . left_fill == '0' ? "%02u:%02u:%02u" : "%u:%02u:%02u"
                                          , tm -> hour
                                          , tm -> minute
                                          , tm -> second
                         );
+                    assert(0 < dst_len && dst_len < sizeof(text));
 #endif
                 }
                 else
@@ -3196,13 +3200,14 @@ rc_t structured_print_engine ( KBufferedWrtHandler *out,
                         , (tm->hour < 12) ? 'A' : 'P'
                     );
 #else
-                    dst_len += sprintf ( & text [ dst_len ]
+                    dst_len += snprintf ( & text [ dst_len ], sizeof(text) - dst_len
                                          , f . left_fill == '0' ? "%02u:%02u:%02u %cM" : "%u:%02u:%02u %cM"
                                          , ( tm -> hour + 11 ) % 12 + 1
                                          , tm -> minute
                                          , tm -> second
                                          , ( tm -> hour < 12 ) ? 'A' : 'P'
                         );
+                    assert(0 < dst_len && dst_len < sizeof(text));
 #endif
                 }
 
@@ -3214,10 +3219,11 @@ rc_t structured_print_engine ( KBufferedWrtHandler *out,
                         , tm->tzoff / 60
                     );
 #else
-                    dst_len += sprintf ( & text [ dst_len ]
+                    dst_len += snprintf ( & text [ dst_len ], sizeof(text) - dst_len
                                          , " %+02d"
                                          , tm -> tzoff / 60
                         );
+                    assert(0 < dst_len && dst_len < sizeof(text));
 #endif
                 }
             }
