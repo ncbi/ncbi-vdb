@@ -2139,8 +2139,8 @@ rc_t ReferenceMgr_ReCover(const ReferenceMgr* cself, uint64_t ref_rows, rc_t (*c
                 if (hi < depth) hi = depth;
                 if (lo > depth) lo = depth;
             }
-            assert ( FITS_INTO_INT8 ( hi ) );
-            assert ( FITS_INTO_INT8 ( lo ) );
+            if ( hi > 255 ) hi = 255;
+            if ( lo > 255 ) lo = 255;
             data[rr].cover.high = (uint8_t)hi;
             data[rr].cover.low  = (uint8_t)lo;
             rc = TableWriterRefCoverage_WriteCoverage(cover_writer,rr+1, &data[rr].cover);
