@@ -380,7 +380,6 @@ TEST_CASE(testLive) {
 
 TEST_SUITE ( TestResolver4 )
 
-extern "C" 
 int main ( int argc, char * argv [] ) {
     if (
 0 )

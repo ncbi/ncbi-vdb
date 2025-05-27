@@ -304,7 +304,6 @@ TEST_CASE(SraReleaseVersionTest) {
 }
 
 //////////////////////////////////////////////////// Main
-extern "C" 
 int main(int argc, char *argv[]) {
     return SraReleaseVersionTestSuite(argc, argv);
 }

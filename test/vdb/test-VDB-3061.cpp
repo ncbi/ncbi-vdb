@@ -270,7 +270,6 @@ void finish_test( const char * sub )
 }
 
 //////////////////////////////////////////// Main
-extern "C"
 int main( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();

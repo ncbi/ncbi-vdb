@@ -1011,7 +1011,6 @@ static rc_t argsHandler(int argc, char * argv[]) {
 #include <klib/debug.h>
 #include <klib/log.h> /* KLogLevelSet */
 
-extern "C" 
 int main( int argc, char *argv [] )
 {
     setenv("HOME", ".", 1);

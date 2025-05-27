@@ -26,6 +26,8 @@
 
 #include <ktst/unit_test.hpp>
 
+#include <kfg/config.h>
+
 #include <ext/zstd.h>
 
 #include <stdlib.h>     /* srand, rand */
@@ -98,15 +100,8 @@ TEST_CASE(getFrameContentSize)
 }
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kfg/config.h>
-
 int main( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
     return ZstdTestSuite(argc, argv);
-}
-
 }

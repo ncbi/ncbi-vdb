@@ -46,7 +46,7 @@ if( WIN32 )
 elseif( NOT HAVE_MBEDTLS_F )
     if ( CMAKE_CXX_COMPILER_ID MATCHES "^(Apple)?Clang$" OR CMAKE_C_COMPILER_ID MATCHES "^(Apple)?Clang$")
         message("ncbi-vdb: ignoring so_check check test for clang")
-    elseif() # see VDB-5951
+    else()
         add_test( NAME Test_NCBI_VDB_vdb COMMAND ./so_check.sh ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libncbi-vdb.so WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
 
         add_test( NAME Test_NCBI_VDB_wvdb COMMAND ./so_check.sh ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/libncbi-wvdb.so WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )

@@ -509,7 +509,6 @@ if ( 1 )
         NULL, NULL ) );
 }
 
-extern "C"
 int main ( int argc, char * argv [] ) {
     if (
 0 ) assert ( ! KDbgSetString ( "VFS" ) );

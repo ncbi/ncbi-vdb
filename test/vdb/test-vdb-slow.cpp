@@ -26,6 +26,7 @@
 
 #include <ktst/unit_test.hpp> // TEST_CASE
 #include <kfg/config.h>
+#include <kapp/args.h>
 
 // #include <sysalloc.h>
 // #include <cstdlib>
@@ -62,8 +63,6 @@ FIXTURE_TEST_CASE(TestReadBitsDirect_vs_CellDataDirect, VDB_Fixture)
     REQUIRE_EQ( remaining_count_ReadBits, remaining_count_CellData );
 }
 //////////////////////////////////////////// Main
-#include <kapp/args.h>
-
 static rc_t argsHandler ( int argc, char * argv [] ) {
     Args * args = NULL;
     rc_t rc = ArgsMakeAndHandle ( & args, argc, argv, 0, NULL, 0 );
@@ -71,7 +70,6 @@ static rc_t argsHandler ( int argc, char * argv [] ) {
     return rc;
 }
 
-extern "C"
 int main( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();

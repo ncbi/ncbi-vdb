@@ -429,7 +429,6 @@ TEST_CASE(expiredNsg) {
 }
 #endif
 
-extern "C"
 int main( int argc, char * argv [] ) {
     if (
 0 )

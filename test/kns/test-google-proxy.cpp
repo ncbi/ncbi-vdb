@@ -27,6 +27,8 @@
 #include <kfs/file.h> /* KFileRelease */
 #include <kfg/kfg-priv.h> /* KConfigMakeEmpty */
 
+#include <kapp/args.h> // Args
+
 #include <klib/debug.h> /* KDbgSetString */
 
 #include <kns/endpoint.h> /* KNSManagerInitDNSEndpoint */
@@ -167,7 +169,6 @@ TEST_CASE ( KClientHttpRequestPOSTTest )
     REQUIRE_RC ( KNSManagerRelease ( mgr ) );
 }
 
-#include <kapp/args.h> // Args
 static rc_t argsHandler(int argc, char * argv[]) {
     Args * args = NULL;
     rc_t rc = ArgsMakeAndHandle(&args, argc, argv, 0, NULL, 0);
@@ -175,7 +176,6 @@ static rc_t argsHandler(int argc, char * argv[]) {
     return rc;
 }
 
-extern "C" 
 int main ( int argc, char * argv [] ) { if (
 0 ) assert ( ! KDbgSetString ( "KNS-DNS"   ) );   if (
 0 ) assert ( ! KDbgSetString ( "KNS-HTTP"  ) );   if (

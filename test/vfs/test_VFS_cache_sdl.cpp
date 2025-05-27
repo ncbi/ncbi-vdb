@@ -468,7 +468,6 @@ FIXTURE_TEST_CASE(ThreadsNotCaching, NotCachingFixture) {
 }
 #endif
 
-extern "C" 
 int main(int argc, char * argv[]) {
 if(0) { KDbgSetString("VFS"); }
     KConfigDisableUserSettings();

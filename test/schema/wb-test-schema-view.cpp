@@ -943,11 +943,6 @@ FIXTURE_TEST_CASE(View_ColumnDecl_Context_Inherited, AST_View_Fixture)
 //TODO: SViewMark
 
 //////////////////////////////////////////// Main
-#include <kapp/args.h>
-#include <kfg/config.h>
-#include <klib/out.h>
-
-extern "C"
 int main ( int argc, char *argv [] )
 {
     return SchemaViewTestSuite(argc, argv);

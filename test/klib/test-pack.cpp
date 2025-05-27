@@ -30,6 +30,8 @@
 
 #include <klib/pack.h>
 
+#include <kfg/config.h>
+
 #include <ktst/unit_test.hpp>
 
 #include <array>
@@ -343,13 +345,8 @@ FIXTURE_TEST_CASE(Pack_fail, PackFixture)
 }
 
 //////////////////////////////////////////////////// Main
-extern "C" {
-
-#include <kfg/config.h>
-
 int main(int argc, char* argv[])
 {
     KConfigDisableUserSettings();
     return KlibPackTestSuite(argc, argv);
-}
 }

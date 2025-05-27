@@ -356,7 +356,6 @@ static void checkForSanitizers(char *argv0)
         argv0[len - 5] = '\0';
 }
 
-extern "C"
 int main(int argc, char* argv[])
 {
     VDB::Application app( argc, argv, 12 ); // we need custom version for some tests

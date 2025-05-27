@@ -72,7 +72,6 @@ TEST_CASE(shl_0)
 }
 
 //////////////////////////////////////////// Main
-extern "C"
 int main ( int argc, char *argv [] )
 {
     return Int128TestSuite(argc, argv);

@@ -29,6 +29,8 @@
 
 #include <ktst/unit_test.hpp>
 
+#include <kfg/config.h>
+
 #include <klib/out.h>
 #include <klib/rc.h>
 
@@ -237,11 +239,6 @@ TEST_CASE( CacheTee_v3_out_of_space )
 }
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kfg/config.h>
-
 int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();

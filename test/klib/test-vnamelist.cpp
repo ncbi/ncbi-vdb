@@ -345,7 +345,6 @@ TEST_CASE( VNamelistJoining )
 }
 
 //////////////////////////////////////////// Main
-extern "C"
 int main( int argc, char *argv [] )
 {
     return T_VNamelist( argc, argv );

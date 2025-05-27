@@ -33,6 +33,7 @@
 
 #include <klib/time.h> /* KSleep */
 #include <klib/rc.h>
+#include <klib/debug.h>
 
 #include <kfg/config.h>
 #include <kfg/kfg-priv.h>
@@ -1037,12 +1038,6 @@ static rc_t argsHandler ( int argc, char * argv [] ) {
     return rc;
 }
 
-extern "C"
-{
-
-#include <kfg/config.h>
-#include <klib/debug.h>
-
 int main ( int argc, char *argv [] )
 {
     // make sure to use singleton, otherwise tests take forever and finally fail
@@ -1058,6 +1053,4 @@ int main ( int argc, char *argv [] )
 	// TestEnv::verbosity = LogLevel::e_message;
 
     return HttpTestSuite(argc, argv);
-}
-
 }

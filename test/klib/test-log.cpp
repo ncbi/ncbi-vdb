@@ -339,7 +339,6 @@ TEST_CASE ( rcBufferrcInsufficientInprep_v_argsstring_vprintf ) {
 // KLogInit
 
 //////////////////////////////////////////////////// Main
-extern "C"
 int main ( int argc, char *argv [] )
 {
     return KLogTestSuite(argc, argv);

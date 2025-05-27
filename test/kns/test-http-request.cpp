@@ -32,6 +32,9 @@
 #include <klib/data-buffer.h>
 #include <klib/printf.h> // string_printf
 #include <klib/vdb_release_version.h> // VDB_RELEASE_VERSION
+#include <klib/debug.h>
+
+#include <kfg/config.h>
 
 #include <kns/http.h>
 #include <kns/http-priv.h>
@@ -559,12 +562,6 @@ static rc_t argsHandler ( int argc, char * argv [] ) {
     return rc;
 }
 
-extern "C"
-{
-
-#include <kfg/config.h>
-#include <klib/debug.h>
-
 int main ( int argc, char *argv [] )
 {
     KConfig * kfg = NULL;
@@ -590,6 +587,4 @@ int main ( int argc, char *argv [] )
         rc = r2;
 
     return (int)rc;
-}
-
 }

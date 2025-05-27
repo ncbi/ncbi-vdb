@@ -50,9 +50,6 @@ typedef struct ErrorReport ErrorReport;
 #include <sstream>
 #include <stdexcept>
 
-extern "C"
-{
-
 static
 bool
 MatchStrings ( const string& p_source, const string p_print )
@@ -139,6 +136,3 @@ int main ( int argc, char *argv [] )
     }
     return failed == 0 ? 0 : 4;
 }
-
-}
-

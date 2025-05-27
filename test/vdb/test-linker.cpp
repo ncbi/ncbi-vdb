@@ -24,6 +24,8 @@
 
 #include "WVDB_Fixture.hpp"
 
+#include <kfg/config.h>
+
 #include <bitstr.h>
 
 using namespace std;
@@ -197,14 +199,7 @@ FIXTURE_TEST_CASE ( OverrideIntrinsic, TestLinkerFicture )
 }
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kfg/config.h>
-
 int main ( int argc, char *argv [] )
 {
     return LinkerTestSuite(argc, argv);
-}
-
 }

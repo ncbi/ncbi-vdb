@@ -1122,7 +1122,6 @@ FIXTURE_TEST_CASE(CondExpr, AST_Fixture)
 //TODO: eCondExpr
 
 //////////////////////////////////////////// Main
-extern "C"
 int main( int argc, char *argv [] )
 {
     return SchemaASTTestSuite(argc, argv);

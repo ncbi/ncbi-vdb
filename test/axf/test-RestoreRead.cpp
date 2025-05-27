@@ -28,6 +28,7 @@
 #include <klib/log.h>
 #include <vdb/manager.h>
 #include <vdb/table.h>
+#include <kfg/config.h>
 
 extern "C" {
 #include "../../libs/axf/restore-read.h"
@@ -161,16 +162,9 @@ FIXTURE_TEST_CASE(ReadSomeAndClose, RR_Fixture)
 }
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kfg/config.h>
-
 int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
     // KLogLevelSet(klogDebug);
     return RestoreReadSuite(argc, argv);
-}
-
 }

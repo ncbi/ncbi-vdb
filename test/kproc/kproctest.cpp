@@ -30,6 +30,8 @@
 
 #include <ktst/unit_test.hpp>
 
+#include <kapp/args.h>
+
 #include <klib/rc.h>
 #include <klib/time.h>
 #include <klib/log.h>
@@ -1007,11 +1009,6 @@ FIXTURE_TEST_CASE(KQueue_Single_Reader_Multi_Writer_Seal, KQueueFixture)
 //TODO: KBarrier (is it used anywhere? is there a Windows implementation?)
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kapp/args.h>
-
 static rc_t argsHandler(int argc, char* argv[]) {
     Args* args = NULL;
     rc_t rc = ArgsMakeAndHandle(&args, argc, argv, 0, NULL, 0);
@@ -1026,6 +1023,4 @@ int main ( int argc, char *argv [] )
 	//TestEnv::verbosity = LogLevel::e_message;
 
     return KProcTestSuite( argc, argv );
-}
-
 }

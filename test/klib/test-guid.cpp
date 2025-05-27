@@ -114,7 +114,6 @@ TEST_CASE(Make_Success)
 }
 
 //////////////////////////////////////////////////// Main
-extern "C"
 int main ( int argc, char *argv [] )
 {
     return GUIDTestSuite(argc, argv);

@@ -28,7 +28,7 @@
 * Unit tests for Kfg interface
 */
 
-#include <kfg/extern.h>
+#include <kfg/config.h>
 
 #include <map>
 #include <string>
@@ -597,15 +597,8 @@ FIXTURE_TEST_CASE(KfgParseVarRefPath, KfgParseFixture)
 }
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kfg/config.h>
-
 int main( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
     return KfgWbTestSuite(argc, argv);
-}
-
 }

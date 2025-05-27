@@ -94,7 +94,6 @@ TEST_CASE(Test_VDBManagerGetObjVersion) {
     REQUIRE_RC(VDBManagerRelease(m));
 }
 
-extern "C" 
 int main(int argc, char *argv[]) {
     VDB::Application app(argc, argv);
     if (0)

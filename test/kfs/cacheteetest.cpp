@@ -35,6 +35,10 @@
 
 #include <ktst/unit_test.hpp>
 
+#include <kfg/config.h>
+
+#include <kapp/vdbapp.h>
+
 #include <klib/out.h>
 #include <klib/rc.h>
 
@@ -652,12 +656,6 @@ TEST_CASE( CacheTee_None_Promoting )
 
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kfg/config.h>
-#include <kapp/vdbapp.h>
-
 int main ( int argc, char *argv [] )
 {
     VDB::Application app(argc, argv);
@@ -673,6 +671,4 @@ int main ( int argc, char *argv [] )
 	}
     KOutMsg( "and the result is: %R\n", rc );
     return (int) rc;
-}
-
 }

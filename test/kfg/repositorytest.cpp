@@ -247,16 +247,8 @@ FIXTURE_TEST_CASE(Mgr_RemoteOff, RepositoryFixture)
 
 
 //////////////////////////////////////////// Main
-
-extern "C"
-{
-
-#include <kfg/config.h>
-
 int main( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
     return RepositoryTestSuite(argc, argv);
-}
-
 }

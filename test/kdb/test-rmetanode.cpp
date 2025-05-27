@@ -30,6 +30,8 @@
 
 #include <ktst/unit_test.hpp>
 
+#include <kfg/config.h>
+
 #include <klib/rc.h>
 #include <klib/namelist.h>
 
@@ -586,15 +588,8 @@ FIXTURE_TEST_CASE(KRMDataNode_ListChildren, KRMDataNode_Fixture)
 
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kfg/config.h>
-
 int main( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
     return KDBRMDataNodeTestSuite(argc, argv);
-}
-
 }
