@@ -512,11 +512,12 @@ bool _ReadDescNextRead(ReadDesc *self, VdbBlastStatus *status)
             *status = _ReadDescFixReadId(self);
             return true;
         }
-        else
+        else {
             TRACE();
 
             return read;
         }
+    }
 }
 
 static
