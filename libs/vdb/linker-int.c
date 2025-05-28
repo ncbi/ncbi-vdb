@@ -54,7 +54,7 @@ rc_t CC fake_stub_func ( void *self, const VXformInfo *info, int64_t row_id,
 {
     assert(!"THIS FUNCTION IS NEVER TO BE CALLED");
     abort();
-    return 0;
+    /*return 0;*/
 }
 
 /* select is REALLY internal */
@@ -324,7 +324,7 @@ rc_t CC VLinkerEnterSpecial ( KSymTable *tbl, const SchemaEnv *env,
 
 static
 rc_t VLinkerAddUntyped ( VLinker *self,
-    const VLinkerIntSpecial *special, uint32_t count,
+    const VLinkerIntSpecial *special_, uint32_t count,
     KSymTable *tbl, const SchemaEnv *env )
 {
     uint32_t i;
@@ -338,7 +338,7 @@ rc_t VLinkerAddUntyped ( VLinker *self,
         /* I am intrinsic and have no dl symbol */
         lspec -> addr = NULL;
         lspec -> name = NULL;
-        lspec -> func = special [ i ] . f;
+        lspec -> func = special_ [ i ] . f;
 
         /* add to linker */
         rc = VectorAppend ( & self -> special, & lspec -> id, lspec );
@@ -349,7 +349,7 @@ rc_t VLinkerAddUntyped ( VLinker *self,
         }
 
         /* create name */
-        rc = VLinkerEnterSpecial ( tbl, env, lspec, special [ i ] . name );
+        rc = VLinkerEnterSpecial ( tbl, env, lspec, special_ [ i ] . name );
         if ( rc != 0 )
         {
             void *ignore;
