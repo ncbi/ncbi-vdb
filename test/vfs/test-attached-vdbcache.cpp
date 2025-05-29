@@ -288,7 +288,6 @@ TEST_CASE(MultipleVdbcache) {
 }
 #endif
 
-extern "C" 
 int main ( int argc, char * argv [] ) {
 #if 0
     KDbgSetString ( "VFS" );

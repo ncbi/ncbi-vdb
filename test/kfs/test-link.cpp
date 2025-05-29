@@ -135,7 +135,6 @@ FIXTURE_TEST_CASE(Test_Link, Fixture) {
     REQUIRE_RC(Fini());
 }
 
-extern "C"
 int main(int argc, char *argv[]) {
     return LinkSuite(argc, argv);
 }

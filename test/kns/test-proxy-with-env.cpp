@@ -89,7 +89,6 @@ TEST_CASE ( TEST_PROXY_FROM_ENV ) {
     c = NULL;
 }
 
-extern "C" {
 #define TODO -1
 
 int main( int argc, char * argv [] )  {
@@ -106,5 +105,4 @@ s << "getenv("<<name<<")="<<(e==NULL?"NULL":e)<<"\n";std::cerr <<s.str();
     KConfigDisableUserSettings ();
 
     return ProxyWithEnvTestSuite ( argc, argv );
-}
 }

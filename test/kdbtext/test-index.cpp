@@ -37,6 +37,8 @@
 #include <klib/rc.h>
 #include <klib/json.h>
 
+#include <kfg/config.h>
+
 using namespace std;
 using namespace KDBText;
 
@@ -631,15 +633,8 @@ FIXTURE_TEST_CASE(KIndex_SetMaxRowId, KTextIndex_ApiFixture)
 }
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kfg/config.h>
-
 int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
     return KDBTextIndexTestSuite(argc, argv);
-}
-
 }

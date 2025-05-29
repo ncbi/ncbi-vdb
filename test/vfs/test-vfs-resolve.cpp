@@ -440,7 +440,6 @@ FIXTURE_TEST_CASE(ResolveTestLocalPath, Fixture) {
     REQUIRE_RC(VPathRelease(p));
 }
 
-extern "C" 
 int main(int argc, char * argv[]) {
     putenv((char*)"NCBI_VDB_NO_CACHE_SDL_RESPONSE=1");
 #if 0

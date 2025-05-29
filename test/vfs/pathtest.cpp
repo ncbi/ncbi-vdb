@@ -31,6 +31,8 @@
 
 #include "../../libs/vfs/path-priv.h"
 
+#include <klib/rc.h>
+
 #include <klib/text.h>
 
 #include <ktst/unit_test.hpp>
@@ -1142,11 +1144,6 @@ FIXTURE_TEST_CASE(Pileup, PathFixture)
 #endif
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <klib/rc.h>
-
 static void clear_recorded_errors( void )
 {
     rc_t rc;
@@ -1163,6 +1160,4 @@ int main( int argc, char *argv [] )
     int rc=VPathTestSuite(argc, argv);
     clear_recorded_errors();
     return rc;
-}
-
 }

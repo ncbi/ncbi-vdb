@@ -30,9 +30,12 @@
 
 #include <ktst/unit_test.hpp>
 
+#include <kfg/config.h>
+
 #include <sysalloc.h>
 
 #include <klib/text.h>
+#include <klib/debug.h> // KDbgSetString
 #include <kdb/manager.h>
 #include <kdb/database.h>
 #include <kdb/index.h>
@@ -169,18 +172,10 @@ FIXTURE_TEST_CASE ( ColumnMetadata, WKDB_Fixture )
 
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kfg/config.h>
-#include <klib/debug.h> // KDbgSetString
-
 int main( int argc, char *argv [] )
 {
     //assert(!KDbgSetString("KFG"));
     //assert(!KDbgSetString("VFS"));
     KConfigDisableUserSettings();
     return KdbTestSuite(argc, argv);
-}
-
 }

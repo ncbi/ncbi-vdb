@@ -506,7 +506,6 @@ TEST_CASE(uint32__ror)
 #endif
 
 //////////////////////////////////////////// Main
-extern "C"
 int main ( int argc, char *argv [] )
 {
     return AsmTestSuite(argc, argv);

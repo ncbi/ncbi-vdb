@@ -30,6 +30,8 @@
 
 #include <ktst/unit_test.hpp>
 
+#include <kfg/config.h>
+
 #include <kfs/directory.h>
 #include <kfs/file.h>
 #include <kfs/lockfile.h>
@@ -397,16 +399,8 @@ FIXTURE_TEST_CASE(ObjIdRegister_Lock, ObjIdBindingFixture)
 }
 
 //////////////////////////////////////////// Main
-
-extern "C"
-{
-
-#include <kfg/config.h>
-
 int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
     return KeyStoreTestSuite(argc, argv);
-}
-
 }

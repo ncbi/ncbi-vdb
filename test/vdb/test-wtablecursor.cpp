@@ -24,6 +24,8 @@
 
 #include <vdb/cursor.h>
 
+#include <kfg/config.h>
+
 #include <sstream>
 
 #include <klib/rc.h>
@@ -601,9 +603,6 @@ FIXTURE_TEST_CASE( VTableCursor_ListReadableColumns, TableCursorFixture )
 }
 
 //////////////////////////////////////////// Main
-#include <kfg/config.h>
-
-extern "C"
 int main( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();

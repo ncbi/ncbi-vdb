@@ -44,7 +44,6 @@ TEST_CASE(Report_InitFini)
 }
 
 //////////////////////////////////////////////////// Main
-extern "C"
 int main ( int argc, char *argv [] )
 {
     return KReportTestSuite(argc, argv);

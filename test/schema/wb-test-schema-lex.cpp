@@ -31,6 +31,9 @@
 #include <sstream>
 
 #include <ktst/unit_test.hpp>
+#include <kapp/args.h>
+#include <kfg/config.h>
+#include <klib/out.h>
 
 #include "../../libs/schema/SchemaScanner.hpp"
 
@@ -289,11 +292,7 @@ TEST_CASE ( Version_2_0 )
 }
 
 //////////////////////////////////////////// Main
-#include <kapp/args.h>
-#include <kfg/config.h>
-#include <klib/out.h>
 
-extern "C"
 int main( int argc, char *argv [] )
 {
     return SchemaLexTestSuite(argc, argv);

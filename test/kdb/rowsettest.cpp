@@ -761,7 +761,6 @@ FIXTURE_TEST_CASE ( KRowSetUnionNormalTest, RowSetFixture )
 }
 
 //////////////////////////////////////////// Main
-extern "C"
 int main ( int argc, char *argv [] )
 {
     srand ( time(NULL) );

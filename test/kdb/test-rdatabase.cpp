@@ -30,6 +30,8 @@
 
 #include <ktst/unit_test.hpp>
 
+#include <kfg/config.h>
+
 #include <../libs/kdb/rdatabase.h>
 #include <../libs/kdb/dbmgr.h>
 
@@ -443,15 +445,8 @@ FIXTURE_TEST_CASE(KDBRManager_PathContents_SRR, KDatabase_Fixture)
 //KDB_EXTERN rc_t CC KDatabaseGetPath ( struct KDatabase const *self, const char **path );
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kfg/config.h>
-
 int main( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
     return KRDatabaseTestSuite(argc, argv);
-}
-
 }

@@ -91,7 +91,6 @@ MatchStrings ( const string& p_source, const string p_print )
     return true;
 }
 
-extern "C"
 int main( int argc, char *argv [] )
 {
     HYBRID_FUNC_ENTRY( rcSRA, rcSchema, rcParsing );

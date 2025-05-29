@@ -33,6 +33,8 @@
 
 #include <ktst/unit_test.hpp>
 
+#include <kfg/config.h>
+
 #include <kfs/directory.h>
 #include <kfs/impl.h>
 #include <kfs/md5.h>
@@ -162,15 +164,9 @@ TEST_CASE(KMD5WriteFileNotTruncateWithoutChange)
 }
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kfg/config.h>
-
 int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
     return KMD5FileTestSuite(argc, argv);
 }
 
-}

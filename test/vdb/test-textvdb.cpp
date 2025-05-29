@@ -247,7 +247,6 @@ FIXTURE_TEST_CASE( VdbMgr_Read_I8, TextVdbReadFixture )
 }
 
 //////////////////////////////////////////// Main
-extern "C"
 int main( int argc, char *argv [] )
 {
     return VdbTextSuite(argc, argv);

@@ -382,7 +382,6 @@ void finish_test()
 }
 
 //////////////////////////////////////////// Main
-extern "C"
 int main( int argc, char *argv [] )
 {
     rc_t rc = prepare_test( HomeSub );

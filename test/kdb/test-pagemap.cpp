@@ -25,6 +25,8 @@
 
 #include <ktst/unit_test.hpp>
 
+#include <kfg/config.h>
+
 #include <kdb/page-map.h>
 
 using namespace std;
@@ -109,15 +111,9 @@ TEST_CASE ( PageMap_AppendRows )
 
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kfg/config.h>
-
 int main( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
     return KdbPageMapTestSuite(argc, argv);
 }
 
-}

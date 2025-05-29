@@ -788,7 +788,6 @@ TEST_CASE ( View_JoinExpressionLikePhysicalIdent )
 
 //////////////////////////////////////////// Main
 
-extern "C"
 int main( int argc, char *argv [] )
 {
     return SchemaParserTestSuite(argc, argv);

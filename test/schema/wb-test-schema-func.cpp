@@ -944,7 +944,6 @@ FIXTURE_TEST_CASE(Func_Physical_SchemaParams, AST_Function_Fixture)
 }
 
 //////////////////////////////////////////// Main
-extern "C"
 int main( int argc, char *argv [] )
 {
     return SchemaFuncTestSuite(argc, argv);

@@ -26,6 +26,8 @@
 
 #include <ktst/unit_test.hpp>
 
+#include <kfg/config.h>
+
 #include <ext/bzlib.h>
 
 #include <memory>
@@ -117,15 +119,8 @@ FIXTURE_TEST_CASE(Buffer_TooShort, BZip2Fixture)
 }
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kfg/config.h>
-
 int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
     return Bzip2TestSuite(argc, argv);
-}
-
 }

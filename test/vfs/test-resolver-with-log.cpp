@@ -190,7 +190,6 @@ FIXTURE_TEST_CASE ( ZZZZ99, Fixture ) {
     free ( const_cast < String * > ( uri ) );
 }
 
-extern "C"
 int main( int argc, char * argv [] ) {
 #if _DEBUGGING
     KDbgSetString ( "VFS" );

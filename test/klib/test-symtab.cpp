@@ -30,6 +30,8 @@
 
 #include <klib/symtab.h>
 
+#include <kfg/config.h>
+
 #include <stdexcept>
 
 #include <ktst/unit_test.hpp>
@@ -294,15 +296,8 @@ FIXTURE_TEST_CASE ( FindNext_Found, SymtabFixture )
 }
 
 //////////////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kfg/config.h>
-
 int main( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
     return KSymtabTestSuite(argc, argv);
-}
-
 }

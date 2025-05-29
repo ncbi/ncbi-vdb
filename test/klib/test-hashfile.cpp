@@ -28,6 +28,7 @@
 */
 
 #include <ktst/unit_test.hpp>
+#include <kfg/config.h>
 
 #include <arch-impl.h>
 #include <atomic.h>
@@ -740,10 +741,6 @@ TEST_CASE(Klib_HashFileIterator)
     KHashFileDispose(hmap);
 }
 
-extern "C" {
-
-#include <kfg/config.h>
-
 int main(int argc, char* argv[])
 {
     rc_t rc;
@@ -777,5 +774,4 @@ int main(int argc, char* argv[])
     if (rc) return (int)rc;
 
     return 0;
-}
 }

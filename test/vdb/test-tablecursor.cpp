@@ -29,6 +29,10 @@
 #include <klib/rc.h>
 #include <klib/symbol.h>
 
+#include <kfg/config.h>
+
+#include <kapp/args.h>
+
 #include <vdb/table.h>
 #include <vdb/manager.h>
 #include <vdb/database.h>
@@ -677,10 +681,6 @@ FIXTURE_TEST_CASE( VTableCursor_ListReadableColumns, TableCursorFixture )
 }
 
 //////////////////////////////////////////// Main
-#include <kfg/config.h>
-
-#include <kapp/args.h>
-
 static rc_t argsHandler ( int argc, char * argv [] ) {
     Args * args = NULL;
     rc_t rc = ArgsMakeAndHandle ( & args, argc, argv, 0, NULL, 0 );
@@ -688,7 +688,6 @@ static rc_t argsHandler ( int argc, char * argv [] ) {
     return rc;
 }
 
-extern "C"
 int main( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();

@@ -30,6 +30,8 @@
 
 #include <ktst/unit_test.hpp>
 
+#include <kfg/config.h>
+
 #include <klib/data-buffer.h>
 #include <klib/hashtable.h>
 #include <klib/log.h>
@@ -988,15 +990,9 @@ TEST_CASE(Klib_hash_hamming)
 
 #endif // BENCHMARK
 
-extern "C" {
-
-#include <kfg/config.h>
-
 int main(int argc, char* argv[])
 {
     srandom(time(NULL));
     KConfigDisableUserSettings();
     return KHashTableTestSuite(argc, argv);
-}
-
 }

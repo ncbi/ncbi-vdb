@@ -30,6 +30,8 @@
 
 #include <ktst/unit_test.hpp>
 
+#include <kfg/config.h>
+
 #include <../libs/kdb/rdatabase.h>
 #include <../libs/kdb/dbmgr.h>
 #include <../libs/kdb/libkdb.vers.h>
@@ -215,15 +217,8 @@ FIXTURE_TEST_CASE(KDBRManager_OpenColumnRead, KDBManager_Fixture)
 //KDBManagerVPathOpenRemoteDBRead
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kfg/config.h>
-
 int main( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
     return KDBRManagerTestSuite(argc, argv);
-}
-
 }

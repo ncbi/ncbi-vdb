@@ -322,7 +322,6 @@ public:
 #include "test-resolve-qual-1.hpp"
 #include "test-resolve-qual-2.hpp"
 #endif
-extern "C" 
 int main( int argc, char * argv [] ) {
     rc_t rc = 0;
     if (
