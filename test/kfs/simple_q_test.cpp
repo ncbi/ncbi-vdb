@@ -33,6 +33,8 @@
 
 #include <ktst/unit_test.hpp>
 
+#include <kfg/config.h>
+
 #include <klib/out.h>
 #include <klib/rc.h>
 #include <klib/time.h>
@@ -215,11 +217,6 @@ FIXTURE_TEST_CASE( SimpleCOND_2, CONDFixture )
 }
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kfg/config.h>
-
 #define OPTION_DUMMY    "dummy"
 #define ALIAS_DUMMY     "d"
 
@@ -240,6 +237,4 @@ int main ( int argc, char *argv [] )
         rc = SimpleQTests( argc, argv );
     }
     return rc;
-}
-
 }

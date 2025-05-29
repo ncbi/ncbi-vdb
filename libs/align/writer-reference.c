@@ -818,6 +818,8 @@ rc_t ImportFasta(ReferenceSeq *const obj, KDataBuffer const *const buf)
         ++dst;
     }
     MD5StateFinish(&mds, obj->md5);
+    if (dst == start)
+        (void)PLOGERR(klogWarn, (klogWarn, SILENT_RC(rcAlign, rcFile, rcReading, rcData, rcEmpty), "Reference sequence '$(defline)' is empty", "defline=%s", fastaSeqId));
     rc = KDataBufferSub(buf, &obj->u.local.buf, start, dst - start);
     if (rc == 0) {
         obj->fastaSeqId = fastaSeqId;
@@ -1154,7 +1156,7 @@ rc_t OpenFastaFile(KFile const **const kf,
     return rc;
 }
 
-#if 1
+#if _DEBUGGING
 void ReferenceSeq_Dump(ReferenceSeq const *const rs)
 {
     static char const *types[] = {
@@ -1168,7 +1170,6 @@ void ReferenceSeq_Dump(ReferenceSeq const *const rs)
     };
     unsigned j;
 
-    ((void)types); /* stupid warning */
     ALIGN_CF_DBGF(("{ "));
     ALIGN_CF_DBGF(("type: %s, ", (rs->type < 0 || rs->type > rst_dead) ? "null" : types[rs->type]));
 
@@ -1204,9 +1205,11 @@ void ReferenceSeq_Dump(ReferenceSeq const *const rs)
     }
     ALIGN_CF_DBGF(("] }"));
 }
+#endif
 
 LIB_EXPORT void ReferenceMgr_DumpConfig(ReferenceMgr const *const self)
 {
+#if _DEBUGGING
     unsigned const n = (unsigned)self->refSeqs.elem_count;
     unsigned i;
 
@@ -1217,8 +1220,8 @@ LIB_EXPORT void ReferenceMgr_DumpConfig(ReferenceMgr const *const self)
         ALIGN_CF_DBGF((",\n"));
     }
     ALIGN_CF_DBGF(("]\n"));
-}
 #endif
+}
 
 static
 rc_t ReferenceSeq_GetRefSeqInfo(ReferenceSeq *const self)
@@ -1322,8 +1325,8 @@ static void sortCandidateList(unsigned const len, struct Candidate *list)
         ksort(list, len, sizeof(list[0]), cmpCandidate, NULL);
 }
 
-static void candidates(ReferenceMgr *const self,
-                       unsigned *const count,
+static
+unsigned candidates(ReferenceMgr *const self,
                        struct Candidate **const rslt,
                        unsigned const idLen,
                        char const id[],
@@ -1360,8 +1363,8 @@ static void candidates(ReferenceMgr *const self,
         free(possible);
         possible = NULL;
     }
-    *count = num_possible;
     *rslt = possible;
+    return num_possible;
 }
 
 static rc_t tryFastaOrRefSeq(ReferenceMgr *const self,
@@ -1523,12 +1526,11 @@ static rc_t findSeq(ReferenceMgr *const self,
                     bool wasRenamed[])
 {
     unsigned const idLen = (unsigned)string_size(id);
-    unsigned num_possible = 0;
-    struct Candidate *possible = NULL;
     ReferenceSeq *chosen = NULL;
     rc_t rc = 0;
-
-    candidates(self, &num_possible, &possible, idLen, id, seq_len, md5);
+    struct Candidate *possible = NULL;
+    unsigned const num_possible = candidates(self, &possible, idLen, id, seq_len, md5);
+    
     if (num_possible == 0) {
         /* nothing was found; try a fasta file */
         bool tryAgain = false;
@@ -2137,8 +2139,8 @@ rc_t ReferenceMgr_ReCover(const ReferenceMgr* cself, uint64_t ref_rows, rc_t (*c
                 if (hi < depth) hi = depth;
                 if (lo > depth) lo = depth;
             }
-            assert ( FITS_INTO_INT8 ( hi ) );
-            assert ( FITS_INTO_INT8 ( lo ) );
+            if ( hi > 255 ) hi = 255;
+            if ( lo > 255 ) lo = 255;
             data[rr].cover.high = (uint8_t)hi;
             data[rr].cover.low  = (uint8_t)lo;
             rc = TableWriterRefCoverage_WriteCoverage(cover_writer,rr+1, &data[rr].cover);
@@ -2335,6 +2337,11 @@ LIB_EXPORT rc_t CC ReferenceMgr_GetSeq(ReferenceMgr const * cself,
             *shouldUnmap = true;
             return 0;
         }
+        if (obj->seq_len == 0) {
+            rc = RC(rcAlign, rcFile, rcReading, rcData, rcEmpty);
+            PLOGERR(klogErr, (klogErr, rc, "Reference sequence '$(id)' is empty", "id=%s", id));
+            return rc;
+        }
         if (obj->start_rowid == 0 && self->db != NULL) {
             rc = ReferenceMgr_LoadSeq(self, obj);
             if (rc) return rc;
@@ -2428,9 +2435,8 @@ LIB_EXPORT rc_t CC ReferenceMgr_FastaPath(const ReferenceMgr* cself, const char*
 
 LIB_EXPORT rc_t CC ReferenceMgr_FastaFile(const ReferenceMgr* cself, const KFile* file)
 {
-    if(cself == NULL || file == NULL) {
+    if (cself == NULL || file == NULL)
         return RC(rcAlign, rcFile, rcConstructing, rcParam, rcNull);
-    }
     return ImportFastaFile((ReferenceMgr *)cself, file, NULL);
 }
 

@@ -30,6 +30,8 @@
 
 #include <ktst/unit_test.hpp>
 
+#include <kfg/config.h>
+
 #include <klib/rc.h>
 #include <klib/debug.h>
 #include <kdb/manager.h>
@@ -144,15 +146,8 @@ FIXTURE_TEST_CASE(KRMetadata_OpenNodeRead, KMetadata_Fixture)
 }
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kfg/config.h>
-
 int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
     return KDBRMetadataTestSuite(argc, argv);
-}
-
 }

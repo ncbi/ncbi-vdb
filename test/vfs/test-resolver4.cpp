@@ -204,7 +204,6 @@ TEST_CASE ( Test ) {
 }
 #endif
 
-extern "C"
 int main ( int argc, char * argv [] ) {
     KConfigDisableUserSettings ();
 if (

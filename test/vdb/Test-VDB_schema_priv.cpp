@@ -160,7 +160,6 @@ TEST_CASE(TestSchemaPriv) {
     REQUIRE_RC(VDBManagerRelease(m));
 }
 
-extern "C" 
 int main(int argc, char *argv[]) {
     KConfigDisableUserSettings();
     return SchemaPrivSuite(argc, argv);

@@ -30,6 +30,8 @@
 
 #include <ktst/unit_test.hpp>
 
+#include <kfg/config.h>
+
 #include <klib/btree.h>
 #include <kfs/pagefile.h>
 #include <kfs/directory.h>
@@ -626,13 +628,8 @@ FIXTURE_TEST_CASE( LotsaFixedSizeInserts, BtreeFixture )
 }
 
 //////////////////////////////////////////////////// Main
-extern "C" {
-
-#include <kfg/config.h>
-
 int main(int argc, char* argv[])
 {
     KConfigDisableUserSettings();
     return BtreeTestSuite(argc, argv);
-}
 }

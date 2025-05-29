@@ -34,6 +34,8 @@
 
 #include <kapp/args.h>
 
+#include <kfg/config.h>
+
 #include <ktst/unit_test.hpp>
 
 #include <memory>
@@ -325,13 +327,9 @@ FIXTURE_TEST_CASE ( CopyMeta, KDB_ColumnCopyFixture )
     checkTable ( tableName2 );
 }
 
-extern "C" {
-
-#include <kfg/config.h>
-
 int main ( int argc, char *argv[] )
 {
     KConfigDisableUserSettings ();
     return KdbTestSuite ( argc, argv );
 }
-}
+

@@ -275,7 +275,6 @@ FIXTURE_TEST_CASE(WindowsRootStore, MbedTlsFixture)
 
 #endif
 
-extern "C"
 int main ( int argc, char *argv [] )
 {
 KDbgSetString ( "KNS-PROXY" );

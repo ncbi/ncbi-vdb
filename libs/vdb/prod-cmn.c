@@ -1567,13 +1567,13 @@ rc_t VFunctionProdCallCompare1(VFunctionProd *self, VBlob **vblob, int64_t id, u
 
                             for (k = 0, m = 0; k != count; ++k) {
                                 if (m == 0) {
-                                    sprintf(ax, "%08X>", k);
-                                    sprintf(bx, "%08X<", k);
+                                    snprintf(ax, sizeof(ax), "%08X>", k);
+                                    snprintf(bx, sizeof(bx), "%08X<", k);
                                 }
                                 f = a[k] == b[k] ? ' ': '*';
-                                sprintf(ax + m * 4 + 9, " %02x%c", a[k], f);
+                                snprintf(ax + m * 4 + 9, sizeof(ax) - (m * 4 + 9), " %02x%c", a[k], f);
                                 av[m] = isprint(a[k]) ? a[k] : '.';
-                                sprintf(bx + m * 4 + 9, " %02x%c", b[k], f);
+                                snprintf(bx + m * 4 + 9, sizeof(bx) - (m * 4 + 9), " %02x%c", b[k], f);
                                 bv[m] = isprint(b[k]) ? b[k] : '.';
                                 m++;
                                 if(m == 16 || k == count - 1) {

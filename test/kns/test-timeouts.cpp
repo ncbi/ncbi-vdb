@@ -374,7 +374,6 @@ TEST_CASE ( TestTimeouts ) {
     REQUIRE_RC(KConfigRelease(kfg));
 }
 
-extern "C" 
 int main( int argc, char * argv [] ) {
     KConfigDisableUserSettings ();
     return TEST_TIMEOUTS( argc, argv );

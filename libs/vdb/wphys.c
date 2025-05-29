@@ -104,9 +104,10 @@ void CC VPhysicalWhack ( void *item, void *ignore )
             /* create rename strings */
             char buff [ 300 ];
             char *oldname, *colname, *tmpname = buff;
-            int sz = snprintf ( buff, sizeof buff / 3, "%.*s.tmp",
+            char *tmpname_end = buff + 100;
+            int sz = snprintf ( tmpname, tmpname_end - tmpname, "%.*s.tmp",
                 ( int ) name -> size - 1, name -> addr + 1 );
-            if ( sz < 0 || sz > sizeof buff / 3 )
+            if ( sz < 0 || tmpname + sz >= tmpname_end )
             {
                 tmpname = malloc ( 3 * 4 * 1024 );
                 if ( tmpname == NULL )
@@ -116,15 +117,15 @@ void CC VPhysicalWhack ( void *item, void *ignore )
                         "colname=%.*s", ( int ) name -> size - 1, name -> addr + 1 ));
                     return;
                 }
-
-                sz = snprintf ( tmpname, 4 * 1024, "%.*s.tmp",
-                    ( int ) name -> size - 1, name -> addr + 1 );
-                assert ( sz > 0 && sz < 4 * 1024 );
+                tmpname_end = tmpname + 4 * 1024;
+                sz = snprintf ( tmpname, tmpname_end - tmpname, "%.*s.tmp",
+                                ( int ) name -> size - 1, name -> addr + 1 );
+                assert ( sz > 0 && tmpname + sz < tmpname_end );
             }
             oldname = & tmpname [ ++ sz ];
             colname = & oldname [ sz ];
-            sprintf ( oldname, "%.*s.old", ( int ) name -> size - 1, name -> addr + 1 );
-            sprintf ( colname, "%.*s", ( int ) name -> size - 1, name -> addr + 1 );
+            snprintf ( oldname, tmpname_end - oldname, "%.*s.old", ( int ) name -> size - 1, name -> addr + 1 );
+            snprintf ( colname, tmpname_end - colname, "%.*s", ( int ) name -> size - 1, name -> addr + 1 );
 
             /* close and rename static column */
             if ( self -> knode != NULL )

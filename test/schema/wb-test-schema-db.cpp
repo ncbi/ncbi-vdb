@@ -320,7 +320,6 @@ FIXTURE_TEST_CASE(DB_ViewOnAliasMemberOnAnotherViewAliasMember, AST_Db_Fixture)
 //TODO: SViewAliasMemberDump
 
 //////////////////////////////////////////// Main
-extern "C"
 int main ( int argc, char *argv [] )
 {
     return SchemaDbTestSuite(argc, argv);

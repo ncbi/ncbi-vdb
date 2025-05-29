@@ -30,6 +30,8 @@
 
 #include <ktst/unit_test.hpp>
 
+#include <kfg/config.h>
+
 #include <klib/progressbar.h>
 #include <klib/time.h>
 
@@ -149,15 +151,8 @@ TEST_CASE ( Progress10 )
 }
 
 //////////////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kfg/config.h>
-
 int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
     return ProgressbarTestSuite( argc, argv );
-}
-
 }

@@ -41,6 +41,8 @@
 #include <klib/json.h>
 #include <klib/namelist.h>
 
+#include <kfg/config.h>
+
 #include <arch-impl.h>
 
 using namespace std;
@@ -662,15 +664,8 @@ FIXTURE_TEST_CASE(KMetanode_ListChildren, KTextMetanode_ApiFixture)
 }
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kfg/config.h>
-
 int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
     return KDBTextMetanodeTestSuite(argc, argv);
-}
-
 }

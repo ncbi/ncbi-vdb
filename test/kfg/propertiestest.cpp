@@ -30,6 +30,8 @@
 
 #include <ktst/unit_test.hpp>
 
+#include <kfg/config.h>
+
 #include <kapp/vdbapp.h>
 #include "kfg-fixture.hpp"
 
@@ -430,12 +432,6 @@ FIXTURE_TEST_CASE( GetSet_Telemetry, KfgFixture ) {
 #endif
 
 //////////////////////////////////////////// Main
-
-extern "C"
-{
-
-#include <kfg/config.h>
-
 int main ( int argc, char *argv [] )
 {
     VDB::Application app(argc, argv);
@@ -443,4 +439,3 @@ int main ( int argc, char *argv [] )
     return PropertiesTestSuite(argc, argv);
 }
 
-}

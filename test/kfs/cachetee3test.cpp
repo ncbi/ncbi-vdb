@@ -40,6 +40,11 @@
 
 #include <ktst/unit_test.hpp>
 
+#include <kapp/args.h>
+
+#include <kfg/config.h>
+
+
 #include <klib/out.h>
 #include <klib/rc.h>
 #include <klib/time.h>
@@ -1462,11 +1467,6 @@ TEST_CASE( concurrent_reads_from_different_files )
 }
 
 //////////////////////////////////////////// Main
-extern "C" {
-
-#include <kapp/args.h>
-#include <kfg/config.h>
-
 #define OPTION_DUMMY "dummy"
 #define ALIAS_DUMMY "d"
 
@@ -1497,4 +1497,3 @@ int main ( int argc, char *argv[] )
     return rc;
 }
 
-} /* extern "C" */

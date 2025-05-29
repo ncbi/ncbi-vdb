@@ -224,7 +224,6 @@ TEST_CASE(TestJwtKartValidateStringWhiteSections) {
     REQUIRE_RC(JwtKartValidateString(&s, NULL));
 }
 
-extern "C" 
 int main(int argc, char *argv[]) {
     KConfigDisableUserSettings(); // ignore ~/.ncbi/user-settings.mkfg
 

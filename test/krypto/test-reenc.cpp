@@ -97,8 +97,8 @@ TEST_CASE(KReEncryptEncFile)
                 char file_path[1024];
                 char file_path_reenc[1024];
 
-                sprintf(file_path, enc_file_path_fmt, ( long long unsigned int ) file_size);
-                sprintf(file_path_reenc, reenc_file_path_fmt, ( long long unsigned int ) file_size);
+                snprintf(file_path, sizeof(file_path), enc_file_path_fmt, ( long long unsigned int ) file_size);
+                snprintf(file_path_reenc, sizeof(file_path_reenc), reenc_file_path_fmt, ( long long unsigned int ) file_size);
 
                 printf("reencrypting encrypted file %s, size: %llu, i: %zu, j: %zu\n", file_path, ( long long unsigned int ) file_size, i, j);
 
@@ -192,8 +192,8 @@ TEST_CASE(KReEncryptPtFile)
                 char file_path[1024];
                 char file_path_reenc[1024];
 
-                sprintf(file_path, file_path_fmt, ( long long unsigned int ) file_size);
-                sprintf(file_path_reenc, reenc_file_path_fmt, ( long long unsigned int ) file_size);
+                snprintf(file_path, sizeof(file_path), file_path_fmt, ( long long unsigned int ) file_size);
+                snprintf(file_path_reenc, sizeof(file_path_reenc), reenc_file_path_fmt, ( long long unsigned int ) file_size);
 
                 printf("reencrypting NOT encrypted file %s, size: %llu, i: %zu, j: %zu\n", file_path, ( long long unsigned int ) file_size, i, j);
 
@@ -348,7 +348,6 @@ TEST_CASE(KReencryptZeroContentSizePtFile)
 
 //////////////////////////////////////////// Main
 
-extern "C"
 int main( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();

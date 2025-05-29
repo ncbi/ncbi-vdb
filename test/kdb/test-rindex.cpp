@@ -30,6 +30,8 @@
 
 #include <ktst/unit_test.hpp>
 
+#include <kfg/config.h>
+
 #include <klib/rc.h>
 #include <kdb/index.h>
 #include <kdb/database.h>
@@ -217,15 +219,8 @@ FIXTURE_TEST_CASE(KRIndex_SetMaxRowId, KIndex_Fixture)
 }
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kfg/config.h>
-
 int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
     return KDBRIndexTestSuite(argc, argv);
-}
-
 }

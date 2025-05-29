@@ -32,6 +32,9 @@
 
 #include <klib/rc.h>
 #include <klib/printf.h>
+#include <klib/debug.h>
+
+#include <kfg/config.h>
 
 #include <kns/endpoint.h>
 #include <kns/stream.h>
@@ -1032,12 +1035,6 @@ static rc_t argsHandler(int argc, char * argv[]) {
     return rc;
 }
 
-extern "C"
-{
-
-#include <kfg/config.h>
-#include <klib/debug.h>
-
 int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
@@ -1058,6 +1055,4 @@ int main ( int argc, char *argv [] )
     KDirectoryRelease(dir);
 
     return KnsIpcTestSuite(argc, argv);
-}
-
 }

@@ -43,7 +43,7 @@ int main(int argc, char **argv) {
     tail -= last - argv[0];
     size_t sPfx = n - argv[0];
     char command[PATH_MAX] = "";
-    sprintf(command,
+    snprintf(command, sizeof(command),
         "./ncbi-home-from-env.sh %.*ssra-tools%.*s/../bin/vdb-config",
         sPfx, argv[0], l - tail - s, n + s);
     return system(command) != 0;

@@ -163,7 +163,6 @@ TEST_CASE( CheckSEQUENCE )
 }
 
 //////////////////////////////////////////// Main
-extern "C"
 int main(int argc, char *argv[])
 {
     return VDB_3418(argc, argv);

@@ -94,7 +94,6 @@ TEST_CASE ( AwsProxyTest ) {
     REQUIRE_RC ( KNSManagerRelease ( mgr ) );
 }
 
-extern "C" 
 int main( int argc, char * argv [] ) {
     if (
 0 ) assert ( ! KDbgSetString ( "KNS" ) );

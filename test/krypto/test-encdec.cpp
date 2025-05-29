@@ -90,7 +90,7 @@ TEST_CASE(KEncryptDecrypt)
                 uint64_t file_size = file_sizes_n_32k[i] * BLOCK_32K_SIZE + file_size_variants[j];
 
                 char file_path[1024];
-                sprintf(file_path, enc_file_path_fmt, ( long long unsigned int ) file_size);
+                snprintf(file_path, sizeof(file_path), enc_file_path_fmt, ( long long unsigned int ) file_size);
 
                 printf("encrypting/decrypting file %s, size: %llu, i: %zu, j: %zu\n", file_path, ( long long unsigned int ) file_size, i, j);
 
@@ -577,7 +577,6 @@ TEST_CASE(KDectryptInvalidKey)
 
 //////////////////////////////////////////// Main
 
-extern "C"
 int main( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();

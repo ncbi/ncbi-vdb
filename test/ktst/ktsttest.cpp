@@ -207,7 +207,6 @@ TEST_CASE ( SharedSucceedInBlock ) {
 //TODO: test REQUIRE_THROW, THROW_ON_RC
 
 //////////////////////////////////////////// Main
-extern "C"
 int main ( int argc, char *argv [] )
 {
     return KtstTestSuite(argc, argv);

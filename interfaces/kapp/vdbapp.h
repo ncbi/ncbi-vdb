@@ -181,7 +181,7 @@ rc_t CC NextLogLevelCommon ( const char * level_parameter );
             void setRc( rc_t p_rc ) { m_rc = p_rc; }
 
             // recommended exit code for main() based on reported rc
-            int getExitCode() const { return m_rc == 0 ? 0 : 3; }
+            int getExitCode() const { return m_rc == 0 ? 0 : IF_EXITCODE( m_rc, 3 ); }
 
             int getArgC() const { return m_argc; }
             char** getArgV() { return m_argv; }

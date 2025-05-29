@@ -45,6 +45,8 @@
 #include <klib/json.h>
 #include <klib/namelist.h>
 
+#include <kfg/config.h>
+
 using namespace std;
 using namespace KDBText;
 
@@ -445,15 +447,8 @@ FIXTURE_TEST_CASE(KTextTable_MetaCompare, KTextTable_ApiFixture)
 }
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kfg/config.h>
-
 int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
     return KTextTableTestSuite(argc, argv);
-}
-
 }

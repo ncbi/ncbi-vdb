@@ -39,71 +39,71 @@ extern "C" {
 typedef struct atomic64_t atomic64_t;
 struct atomic64_t
 {
-    volatile long int counter;
+    long volatile counter;
 };
 
 /* int atomic64_read ( const atomic64_t *v ); */
 #define atomic64_read( v ) \
-    ( ( v ) -> counter )
+    __atomic_load_n(&((v)->counter), __ATOMIC_SEQ_CST)
 
 /* void atomic64_set ( atomic64_t *v, long int i ); */
 #define atomic64_set( v, i ) \
-    ( ( void ) ( ( ( v ) -> counter ) = ( i ) ) )
+    __atomic_store_n(&((v)->counter), i, __ATOMIC_SEQ_CST)
 
 /* add to v -> counter and return the prior value */
-static __inline__ long int atomic64_read_and_add ( atomic64_t *v, long int i )
-{
-    return __sync_fetch_and_add( & v -> counter, i );
-}
+#define atomic64_read_and_add( v, i ) \
+    __atomic_fetch_add(&((v)->counter), i, __ATOMIC_SEQ_CST)
 
 /* if no read is needed, define the least expensive atomic add */
 #define atomic64_add( v, i ) \
-    atomic64_read_and_add ( v, i )
+    ((void)atomic64_read_and_add(v, i))
 
 /* add to v -> counter and return the result */
-static __inline__ long int atomic64_add_and_read ( atomic64_t *v, long int i )
+static __inline__ long atomic64_add_and_read ( atomic64_t *const v, long const i )
 {
-    return __sync_add_and_fetch( & v -> counter, i );
+    return __atomic_add_fetch(&((v)->counter), i, __ATOMIC_SEQ_CST);
 }
 
 /* just don't try to find out what the result was */
-static __inline__ void atomic64_inc ( atomic64_t *v )
+static __inline__ void atomic64_inc ( atomic64_t *const v )
 {
     atomic64_add( v, 1 );
 }
 
-static __inline__ void atomic64_dec ( atomic64_t *v )
+static __inline__ void atomic64_dec ( atomic64_t *const v )
 {
-    atomic64_add( v, -1 );
+    __atomic_fetch_sub(&((v)->counter), 1, __ATOMIC_SEQ_CST);
 }
 
 /* decrement by one and test result for 0 */
-static __inline__ int atomic64_dec_and_test ( atomic64_t *v )
+static __inline__ int atomic64_dec_and_test ( atomic64_t *const v )
 {
-    return __sync_add_and_fetch( & v -> counter, -1 ) == 0;
+    return __atomic_sub_fetch(&((v)->counter), 1, __ATOMIC_SEQ_CST) == 0;
 }
 
 /* when atomic64_dec_and_test uses predecrement, you want
    postincrement to this function. so it isn't very useful */
-static __inline__ int atomic64_inc_and_test ( atomic64_t *v )
+static __inline__ int atomic64_inc_and_test ( atomic64_t *const v )
 {
-    return __sync_add_and_fetch( & v -> counter, 1 ) == 0;
+    return atomic64_add_and_read(v, 1) == 0;
 }
 
 /* HERE's useful */
 #define atomic64_test_and_inc( v ) \
     ( atomic64_read_and_add ( v, 1L ) == 0 )
 
-static __inline__ long int atomic64_test_and_set ( atomic64_t *v, long int newval, long int oldval )
+static __inline__ long int atomic64_test_and_set ( atomic64_t *const v, long int const newval, long int const oldval )
 {
-    return __sync_val_compare_and_swap( & v -> counter, oldval, newval ); //NB: newval/oldval switched around
+    long expected = oldval;
+    __atomic_compare_exchange_n(&((v)->counter), &expected, newval, 1, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+    return expected;
 }
 
 /* conditional modifications */
 static __inline__
 long int atomic64_read_and_add_lt ( atomic64_t *v, long int i, long int t )
 {
-	int val, val_intern;
+	long val, val_intern;
 	for ( val = atomic64_read ( v ); val < t; val = val_intern )
 	{
 		val_intern = atomic64_test_and_set ( v, val + i, val );
@@ -119,7 +119,7 @@ long int atomic64_read_and_add_lt ( atomic64_t *v, long int i, long int t )
 static __inline__
 long int atomic64_read_and_add_le ( atomic64_t *v, long int i, long int t )
 {
-	int val, val_intern;
+	long int val, val_intern;
 	for ( val = atomic64_read ( v ); val <= t; val = val_intern )
 	{
 		val_intern = atomic64_test_and_set ( v, val + i, val );
@@ -135,7 +135,7 @@ long int atomic64_read_and_add_le ( atomic64_t *v, long int i, long int t )
 static __inline__
 long int atomic64_read_and_add_eq ( atomic64_t *v, long int i, long int t )
 {
-	int val, val_intern;
+	long int val, val_intern;
 	for ( val = atomic64_read ( v ); val == t; val = val_intern )
 	{
 		val_intern = atomic64_test_and_set ( v, val + i, val );
@@ -151,7 +151,7 @@ long int atomic64_read_and_add_eq ( atomic64_t *v, long int i, long int t )
 static __inline__
 long int atomic64_read_and_add_ne ( atomic64_t *v, long int i, long int t )
 {
-	int val, val_intern;
+	long int val, val_intern;
 	for ( val = atomic64_read ( v ); val != t; val = val_intern )
 	{
 		val_intern = atomic64_test_and_set ( v, val + i, val );
@@ -167,7 +167,7 @@ long int atomic64_read_and_add_ne ( atomic64_t *v, long int i, long int t )
 static __inline__
 long int atomic64_read_and_add_ge ( atomic64_t *v, long int i, long int t )
 {
-	int val, val_intern;
+	long int val, val_intern;
 	for ( val = atomic64_read ( v ); val >= t; val = val_intern )
 	{
 		val_intern = atomic64_test_and_set ( v, val + i, val );
@@ -183,7 +183,7 @@ long int atomic64_read_and_add_ge ( atomic64_t *v, long int i, long int t )
 static __inline__
 long int atomic64_read_and_add_gt ( atomic64_t *v, long int i, long int t )
 {
-	int val, val_intern;
+	long int val, val_intern;
 	for ( val = atomic64_read ( v ); val > t; val = val_intern )
 	{
 		val_intern = atomic64_test_and_set ( v, val + i, val );
@@ -199,7 +199,7 @@ long int atomic64_read_and_add_gt ( atomic64_t *v, long int i, long int t )
 static __inline__
 long int atomic64_read_and_add_odd ( atomic64_t *v, long int i )
 {
-	int val, val_intern;
+	long int val, val_intern;
 	for ( val = atomic64_read ( v ); val & 1; val = val_intern )
 	{
 		val_intern = atomic64_test_and_set ( v, val + i, val );
@@ -212,7 +212,7 @@ long int atomic64_read_and_add_odd ( atomic64_t *v, long int i )
 static __inline__
 long int atomic64_read_and_add_even ( atomic64_t *v, long int i )
 {
-	int val, val_intern;
+	long int val, val_intern;
 	for ( val = atomic64_read ( v ); ! ( val & 1 ); val = val_intern )
 	{
 		val_intern = atomic64_test_and_set ( v, val + i, val );

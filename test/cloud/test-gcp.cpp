@@ -374,7 +374,6 @@ static rc_t argsHandler(int argc, char * argv[]) {
     return rc;
 }
 
-extern "C"
 int main( int argc, char *argv [] )
 {
     VDB::Application app(argc,argv);

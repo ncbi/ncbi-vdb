@@ -24,6 +24,8 @@
 
 #include <ktst/unit_test.hpp> // TEST_CASE
 
+#include <kfg/config.h>
+
 #include <klib/symbol.h>
 #include <vdb/table.h>
 #include <vdb/cursor.h>
@@ -618,15 +620,8 @@ FIXTURE_TEST_CASE( ViewCursor_Join_NullKey, ViewOnTableCursorFixture )
 #include "test-view-on-view-cursor.cpp"
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kfg/config.h>
-
 int main( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
     return ViewCursorTestSuite(argc, argv);
-}
-
 }

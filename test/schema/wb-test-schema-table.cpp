@@ -1200,11 +1200,6 @@ FIXTURE_TEST_CASE(Table_segfault, AST_Table_Fixture)
 }
 
 //////////////////////////////////////////// Main
-#include <kapp/args.h>
-#include <kfg/config.h>
-#include <klib/out.h>
-
-extern "C"
 int main( int argc, char *argv [] )
 {
     return SchemaTableTestSuite(argc, argv);

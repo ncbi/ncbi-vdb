@@ -458,7 +458,6 @@ FIXTURE_TEST_CASE( Copy_DB_Meta, Test_Meta_Fixture ) {
 }
 
 //////////////////////////////////////////// Main
-extern "C" 
 int main( int argc, char *argv [] ) 
 {
     return VDB_META_CMP_COPY_Suite( argc, argv ); 

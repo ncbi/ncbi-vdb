@@ -241,7 +241,6 @@ FIXTURE_TEST_CASE(LoalObsoleteQualityTest, SraDescTestFixture) {
 }
 #endif
 
-extern "C" 
 int main(int argc, char * argv[]) {
     KConfigDisableUserSettings();
     return SraDescTestSuite(argc, argv);

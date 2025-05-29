@@ -40,6 +40,8 @@
 #include <vfs/path.h>
 #include <vfs/manager.h>
 
+#include <kfg/config.h>
+
 using namespace std;
 
 TEST_SUITE(KDBTextManagerTestSuite);
@@ -366,17 +368,10 @@ FIXTURE_TEST_CASE(KDBManager_getVFSManager, KDBTextManager_Fixture)
 }
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kfg/config.h>
-
 int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
     return KDBTextManagerTestSuite(argc, argv);
-}
-
 }
 
 #if 0

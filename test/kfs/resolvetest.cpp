@@ -166,8 +166,6 @@ FIXTURE_TEST_CASE( ResolveTest_Relative, ResolveFixture )
 #endif
 
 //////////////////////////////////////////// Main
-
-extern "C"
 int main( int argc, char *argv [] )
 {
     return ResolveSuite( argc, argv );

@@ -44,6 +44,7 @@
 #include <klib/debug.h>
 #include <klib/rc.h>
 #include <klib/report.h>
+#include <klib/status.h> /* KStsLibHandlerSetStdOut */
 #include <klib/text.h>
 #include <klib/sra-release-version.h>
 
@@ -130,6 +131,11 @@ VdbInitialize( int argc, char *argv [], ver_t vers )
         memset(&v, 0, sizeof v);
         SraReleaseVersionGet( &v );
         SetKAppVersion( v . version );
+        vers = v . version;
+    }
+    else
+    {
+        SetKAppVersion( vers );
     }
 
     /* initialize error reporting */

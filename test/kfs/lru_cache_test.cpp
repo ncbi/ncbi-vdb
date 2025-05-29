@@ -30,6 +30,8 @@
 
 #include <ktst/unit_test.hpp>
 
+#include <kfg/config.h>
+
 #include <klib/out.h>
 #include <klib/rc.h>
 #include <klib/time.h>
@@ -341,11 +343,6 @@ TEST_CASE( LRU_Cache_Test_Random_Reading )
 }
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kfg/config.h>
-
 int main ( int argc, char *argv [] )
 {
     int rc;
@@ -353,6 +350,4 @@ int main ( int argc, char *argv [] )
     rc = LRU_Cache_Test( argc, argv );
     KOutMsg( "lru-cache-test : %R\n", rc );
     return rc;
-}
-
 }

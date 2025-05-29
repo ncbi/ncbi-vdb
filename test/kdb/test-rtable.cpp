@@ -30,6 +30,8 @@
 
 #include <ktst/unit_test.hpp>
 
+#include <kfg/config.h>
+
 #include <../libs/kdb/rtable.h>
 #include <../libs/kdb/dbmgr.h>
 
@@ -241,15 +243,9 @@ FIXTURE_TEST_CASE(KRTable_MetaCompare, KTable_Fixture)
 }
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kfg/config.h>
-
 int main( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
     return KRTableTestSuite(argc, argv);
 }
 
-}

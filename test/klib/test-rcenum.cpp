@@ -318,7 +318,6 @@ TEST_CASE( test )
     ////////////////////////////////////////////////////////////////////////////////
 }
 
-extern "C" 
 int main( int argc, char * argv[] )
 {
     return TestRCEnumSuite( argc, argv );
