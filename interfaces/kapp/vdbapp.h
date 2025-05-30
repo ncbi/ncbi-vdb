@@ -39,9 +39,22 @@
 extern "C" {
 #endif
 
+/* Initialize the VDB environment
+*/
 KAPP_EXTERN rc_t VdbInitialize( int argc, char *argv [], ver_t vers );
 
-KAPP_EXTERN void VdbTerminate( rc_t rc );
+#if WINDOWS
+    KAPP_EXTERN rc_t wVdbInitialize(int argc, wchar_t* wargv[], char*** argv);
+#endif
+
+/* Recommended exit code (return from main) if VdbInitialize fails */
+#define VDB_INIT_FAILED 3
+
+/* Terminate the VDB environment
+ *  "rc" [ IN ] - result code as reported by VDB
+ *  return recommended exit code for main()
+*/
+KAPP_EXTERN int VdbTerminate( rc_t rc );
 
 /* Quitting
  *  is the program supposed to exit
@@ -167,14 +180,18 @@ rc_t CC NextLogLevelCommon ( const char * level_parameter );
             rc_t getRc() const { return m_rc; }
             void setRc( rc_t p_rc ) { m_rc = p_rc; }
 
-            int GetArgC() const { return m_argc; }
-            char** GetArgV() const { return m_argv; }
+            // recommended exit code for main() based on reported rc
+            int getExitCode() const { return m_rc == 0 ? 0 : IF_EXITCODE( m_rc, 3 ); }
+
+            int getArgC() const { return m_argc; }
+            char** getArgV() { return m_argv; }
+            const char** getArgV() const { return (const char**)m_argv; }
 
         private:
             int m_argc;
             char** m_argv;
             bool m_argvOwned; // true if args have been rewritten
-            rc_t m_rc;
+            rc_t m_rc = 0;
         };
 
     }

@@ -510,7 +510,7 @@ rc_t CC Args_parse_inf_file( Args * args, const char * file_option )
                     rc = Args_tokenize_file_into_argv( filename, &argc, &argv );
                     if ( rc == 0 && argv != NULL && argc > 0 )
                     {
-                        rc = ArgsParse ( args, argc, argv );
+                        rc = ArgsParse ( args, argc, (const char**)argv );
                         Args_free_token_argv( argc, argv );
                     }
                 }

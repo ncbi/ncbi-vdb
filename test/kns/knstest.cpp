@@ -371,5 +371,5 @@ int main(int argc, char* argv[])
 
     KConfigDisableUserSettings();
 
-    return KnsTestSuite(argc, app.GetArgV());
+    return KnsTestSuite(argc, app.getArgV());
 }

@@ -31,11 +31,8 @@
 
 int main ( int argc, char *argv [] )
 {
-    int ret = VdbInitialize( argc, argv, 0 );
-    if ( ret != 0 )
-    {
-        return ret;
-    }
+    if ( VdbInitialize( argc, argv, 0 ) )
+        return VDB_INIT_FAILED;
 
     do {
         while ( true ) {
@@ -43,6 +40,5 @@ int main ( int argc, char *argv [] )
         }
     } while (false);
 
-    VdbTerminate( 0 );
-    return 0;
+    return VdbTerminate( 0 );
 }

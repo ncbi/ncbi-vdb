@@ -28,10 +28,10 @@
 
 using namespace VDB;
 
-Application::Application(int argc, char* argv[], ver_t vers) 
+Application::Application(int argc, char* argv[], ver_t vers)
     : m_argc( argc ), m_argv( argv ), m_argvOwned ( false )
-{ 
-    m_rc = VdbInitialize(argc, argv, vers); 
+{
+    m_rc = VdbInitialize(argc, argv, vers);
 }
 
 #if WINDOWS && UNICODE
@@ -52,9 +52,9 @@ Application::Application(int argc, wchar_t* argv[], ver_t vers)
 }
 #endif
 
-Application::~Application() 
-{ 
-    VdbTerminate(m_rc); 
+Application::~Application()
+{
+    VdbTerminate(m_rc);
     if (m_argvOwned)
     {
         int i = m_argc;
@@ -62,6 +62,6 @@ Application::~Application()
         {
             free ( m_argv [ i ] );
         }
-        free ( m_argv );        
+        free ( m_argv );
     }
 }

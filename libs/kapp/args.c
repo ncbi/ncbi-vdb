@@ -1169,7 +1169,7 @@ rc_t CC ProcessArgsConversion(Args * self)
 }
 
 static
-rc_t ArgsParseInt (Args * self, int argc, char *argv[])
+rc_t ArgsParseInt (Args * self, int argc, const char *argv[])
 {
     rc_t rc = 0;        /* hard fail - quit processing */
     rc_t orc = 0;       /* soft fail - keep processing but we'll fail in the end */
@@ -1503,7 +1503,7 @@ rc_t ArgsParseInt (Args * self, int argc, char *argv[])
     return rc;
 }
 
-rc_t CC ArgsParse_int (Args * self, int argc, char *argv[])
+rc_t CC ArgsParse_int (Args * self, int argc, const char *argv[])
 {
     KLogLevel lvl = KLogLevelGet ();
     rc_t rc = KLogLevelSet ( klogWarn );
@@ -1513,7 +1513,7 @@ rc_t CC ArgsParse_int (Args * self, int argc, char *argv[])
 }
 
 /** Process `argv` using the options that have been defined. */
-rc_t CC ArgsParse (Args * self, int argc, char *argv[])
+rc_t CC ArgsParse (Args * self, int argc, const char *argv[])
 {
     /*
      This function is called AFTER all options have been defined,
@@ -2063,7 +2063,7 @@ rc_t CC ArgsHandleStandardOptions (Args * self)
 /* if pself == NULL
    then process / initialize standard arguments and release Args */
 static
-rc_t ArgsMakeAndHandleInt ( Args ** pself, int argc, char ** argv,
+rc_t ArgsMakeAndHandleInt ( Args ** pself, int argc, const char ** argv,
     const ParamDef *params, uint32_t param_count, uint32_t optdef_count, va_list ap )
 {
     rc_t rc;
@@ -2154,7 +2154,7 @@ rc_t CC ArgsMakeAndHandle (Args ** pself, int argc, char ** argv, uint32_t table
     rc_t rc;
     va_list args;
     va_start ( args, table_count );
-    rc = ArgsMakeAndHandleInt ( pself, argc, argv, NULL, 0, table_count, args );
+    rc = ArgsMakeAndHandleInt ( pself, argc, (const char**)argv, NULL, 0, table_count, args );
     va_end ( args );
     return rc;
 }
@@ -2165,7 +2165,7 @@ rc_t CC ArgsMakeAndHandle2 (Args ** pself, int argc, char ** argv,
     rc_t rc;
     va_list args;
     va_start ( args, table_count );
-    rc = ArgsMakeAndHandleInt ( pself, argc, argv, params, param_count, table_count, args );
+    rc = ArgsMakeAndHandleInt ( pself, argc, (const char**)argv, params, param_count, table_count, args );
     va_end ( args );
     return rc;
 }
