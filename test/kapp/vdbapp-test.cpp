@@ -99,8 +99,8 @@ TEST_CASE(WCharConversion)
     wchar_t * wargv[] = {L"wide string 0", L"wide string 1"};
     int wargc = 2;
     VDB::Application app(wargc, wargv);
-    REQUIRE_EQ( string("wide string 0"), string(app.GetArgV()[0]) );
-    REQUIRE_EQ( string("wide string 1"), string(app.GetArgV()[1]) );
+    REQUIRE_EQ( string("wide string 0"), string(app.getArgV()[0]) );
+    REQUIRE_EQ( string("wide string 1"), string(app.getArgV()[1]) );
 }
 
 TEST_CASE(WCharConversion_BadArgs)
@@ -116,5 +116,5 @@ TEST_CASE(WCharConversion_BadArgs)
 int main(int argc, char* argv[])
 {
     VDB::Application app( argc, argv, AppVersion );
-    return VDBAppTestSuite(argc, app.GetArgV());
+    return VDBAppTestSuite(argc, app.getArgV());
 }

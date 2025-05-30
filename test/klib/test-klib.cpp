@@ -1129,5 +1129,5 @@ TEST_CASE(KnowIfTheFunctionExistsAtCompileTime) {
 int main(int argc, char* argv[])
 {
     VDB::Application app(argc, argv);
-    return KlibTestSuite(argc, app.GetArgV());
+    return KlibTestSuite(argc, app.getArgV());
 }
