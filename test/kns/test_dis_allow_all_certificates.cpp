@@ -129,8 +129,9 @@ KOutMsg ( "##[6] OK : Conf (true ) + SetAllow ( true ) = true\n" );
     RELEASE ( KConfig, kfg );
 }
 
-int main( int argc, char * argv [] ) { if (
-0 ) assert ( ! KDbgSetString ( "KNS-HTTP" ) );
+int main( int argc, char * argv [] ) {
+    if ( 0 ) assert ( ! KDbgSetString ( "KNS-HTTP" ) );
+
     KConfigDisableUserSettings ();
 
     // turn off certificate validation to download from storage.googleapis.com
