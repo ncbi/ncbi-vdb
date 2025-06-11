@@ -66,7 +66,6 @@ set( KFS_CMN
     tocfile
     sra
     tar
-    teefile
     buffile
     buffile-read
     buffile-write

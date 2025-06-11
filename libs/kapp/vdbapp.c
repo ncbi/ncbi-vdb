@@ -180,6 +180,9 @@ VdbInitialize( int argc, char *argv [], ver_t vers )
 
         sep = string_chr ( tool = sep, tool_size, '.' );
         if ( sep != NULL )
+#if WINDOWS
+          if (strcmp(sep, ".exe") != 0)
+#endif
             tool_size = sep - tool;
 
         KNSManagerSetUserAgent ( kns, PKGNAMESTR " sra-toolkit %.*s.%.3V", ( uint32_t ) tool_size, tool, vers );
@@ -272,11 +275,12 @@ rc_t CC KAppCheckEnvironment ( bool require64Bits, uint64_t requireRamSize )
     if ( requireRamSize && totalRam < requireRamSize )
     {
         rc = RC ( rcApp, rcNoTarg, rcInitializing, rcResources, rcUnsupported );
-        PLOGERR ( klogFatal, ( klogFatal, rc,  "there is not enough RAM in the system."
+     /* PLOGERR ( klogFatal, - to eliminate Windows warning: <=: is always true (for klogFatal)*/
+        pLogLibErr ( klogFatal, rc,  "there is not enough RAM in the system."
                                            " required size: $(REQUIRED) B, present: $(PRESENT) B"
                               , "REQUIRED=%lu,PRESENT=%lu"
                               , requireRamSize
-                              , totalRam ) );
+                              , totalRam ) /* ) */;
         return rc;
     }
 
@@ -311,7 +315,8 @@ void CC HandleAsciiToIntError ( const char *arg, void *ignore )
     else
         rc = RC ( rcApp, rcNumeral, rcConverting, rcString, rcInvalid );
 
-    LOGERR ( klogFatal, rc, "expected numeral" );
+ /* LOGERR - to eliminate Windows warning: <=: is always true  (for klogFatal)*/
+    LogLibErr ( klogFatal, rc, "expected numeral" );
     exit ( 10 );
 }
 
@@ -424,8 +429,9 @@ void CC logLevelFromString ( const char * str, void *data )
     }
 
     /* this RC should reflect an invalid string parameter to set the log level */
-    PLOGERR ( klogFatal, ( klogFatal, RC ( rcApp, rcArgv, rcParsing, rcRange, rcInvalid ),
-                           "log level '$(lvl)' is unrecognized", "lvl=%s", str ));
+ /* PLOGERR ( klogFatal, -to eliminate Windows warning: <= is always true for klogFatal*/
+    pLogLibErr ( klogFatal, RC ( rcApp, rcArgv, rcParsing, rcRange, rcInvalid ),
+                           "log level '$(lvl)' is unrecognized", "lvl=%s", str ) /* ) */;
     exit ( 10 );
 }
 

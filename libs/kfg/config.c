@@ -3305,8 +3305,23 @@ static rc_t _KConfigCheckAd(KConfig * self) {
     const KConfigNode * kfg = NULL;
     KConfigNode * flat = NULL;
 
-    const char * name = "/repository/user/ad/public/apps/file/volumes/flat";
+    const char * name = "/repository/user/ad/disabled";
     rc_t rc = KConfigOpenNodeUpdate(self, &flat, name);
+    if (rc == 0) {
+        bool disabled = false;
+        rc = KConfigNodeReadBool(flat, &disabled);
+        {
+            rc_t r2 = KConfigNodeRelease(flat);
+            if (rc == 0 && r2 != 0)
+                rc = r2;
+        }
+        if (disabled) /* AD is disabled in configuration, do not fix it */
+            return rc;
+    }
+    rc = 0;
+
+    name = "/repository/user/ad/public/apps/file/volumes/flat";
+    rc = KConfigOpenNodeUpdate(self, &flat, name);
     if (rc == 0) {
         rc_t r2 = 0;
         char buffer[1] = "";
