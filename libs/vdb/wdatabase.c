@@ -150,7 +150,11 @@ rc_t VDatabaseOpenUpdate ( VDatabase *self, const char *decl )
             if ( sdb != NULL && self -> sdb != NULL && sdb != self -> sdb )
                 rc = RC ( rcVDB, rcDatabase, rcOpening, rcSchema, rcIncorrect );
             else if ( sdb == NULL && self -> sdb == NULL )
+            {
+                PLOGMSG ( klogWarn, ( klogWarn, "database '$(expr)' is not found",
+                            "expr=%s", decl ));
                 rc = RC ( rcVDB, rcDatabase, rcOpening, rcSchema, rcNotFound );
+            }
             else if ( self -> sdb == NULL )
             {
                 /* write schema to metadata */
@@ -312,11 +316,11 @@ LIB_EXPORT rc_t CC VDatabaseDropDB ( VDatabase *self,
 {
     rc_t rc;
     va_list args;
-    
+
     va_start ( args, name );
     rc = VDatabaseVDropDB(self, name, args);
     va_end ( args );
-    
+
     return rc;
 }
 
@@ -331,11 +335,11 @@ LIB_EXPORT rc_t CC VDatabaseDropTable ( VDatabase *self,
 {
     rc_t rc;
     va_list args;
-    
+
     va_start ( args, name );
     rc = VDatabaseVDropTable(self, name, args);
     va_end ( args );
-    
+
     return rc;
 }
 
@@ -380,7 +384,7 @@ LIB_EXPORT rc_t CC VDBManagerVOpenDBUpdate ( VDBManager *self, VDatabase **dbp,
                     if ( rc == 0 )
                         return 0;
                 }
-                        
+
                 VDatabaseWhack ( db );
             }
         }
