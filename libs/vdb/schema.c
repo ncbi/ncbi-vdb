@@ -462,7 +462,9 @@ rc_t SNameOverloadVectorCopy ( BSTree *scope, const Vector *src, Vector *dest )
  * VIncludedPath
  */
 typedef struct VIncludedPath VIncludedPath;
-struct VIncludedPath
+struct VIncludedPath /* CAUTION: if any [types of] members of this structure
+                        change, need to fix all memory allocations like in
+                        VIncludedPathMake below */
 {
     BSTNode n;
     uint32_t ord;
@@ -500,13 +502,13 @@ int64_t CC VIncludedPathSortByOrder ( const BSTNode *item, const BSTNode *n )
  */
 rc_t CC VIncludedPathMake ( BSTree *paths, uint32_t *count, const char *path )
 {
-    size_t path_len = strlen ( path );
-    VIncludedPath *p = malloc ( sizeof * p + path_len );
+    size_t path_size_tz = strlen ( path ) + 1;
+    VIncludedPath *p = malloc ( sizeof(BSTNode) + sizeof(uint32_t) + path_size_tz );
     if ( p == NULL )
         return RC ( rcVDB, rcSchema, rcParsing, rcMemory, rcExhausted );
     p -> ord = ( * count ) ++;
 #ifdef WINDOWS
-        strcpy_s ( p -> path, path_len, path );
+    strcpy_s ( p -> path, path_size_tz, path );
 #else
     strcpy ( p -> path, path );
 #endif
