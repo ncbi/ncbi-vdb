@@ -234,7 +234,7 @@ rc_t CC format_spot_name ( void *self,
     }
 
     /* spot has no name */
-    return RC ( rcSRA, rcColumn, rcReading, rcRow, rcNull );
+    return 0; //RC ( rcSRA, rcColumn, rcReading, rcRow, rcNull );
 }
 static
 rc_t CC format_spot_name_no_coord ( void *self,
