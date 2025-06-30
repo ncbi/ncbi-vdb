@@ -519,7 +519,7 @@ static
 rc_t init_token_source ( KTokenText *tt, KTokenSource *src,
                          char *full, size_t fsize, const char *srcpath, const char *path, va_list args )
 {
-    size_t num_writ;
+    size_t num_writ = 0;
     rc_t rc = 0;
 
     /* VDB-4386: cannot treat va_list as a pointer! */
@@ -1155,7 +1155,8 @@ LIB_EXPORT rc_t CC KConfigNodeAppend ( KConfigNode *self, const char *buffer, si
 LIB_EXPORT rc_t CC KConfigNodeReadAttr ( const KConfigNode *self, const char *name,
                                          char *buffer, size_t bsize, size_t *size )
 {
-    PLOGMSG (klogFatal, (klogFatal, "$(F) unimplemented", "F=%s", __func__));
+ /* PLOGMSG (klogFatal,-to eliminate warning: <=: is always true for klogFatal*/
+    pLogLibMsg(klogFatal, "$(F) unimplemented", "F=%s", __func__); /* ); */
     return -1;
 }
 
@@ -1170,7 +1171,8 @@ LIB_EXPORT rc_t CC KConfigNodeReadAttr ( const KConfigNode *self, const char *na
 LIB_EXPORT rc_t CC KConfigNodeWriteAttr ( KConfigNode *self,
                                           const char *name, const char *value )
 {
-    PLOGMSG (klogFatal, (klogFatal, "$(F) unimplemented", "F=%s", __func__));
+ /* PLOGMSG (klogFatal,-to eliminate warning: <=: is always true for klogFatal*/
+    pLogLibMsg(klogFatal, "$(F) unimplemented", "F=%s", __func__); /* ); */
     return -1;
 }
 
@@ -1189,19 +1191,22 @@ LIB_EXPORT rc_t CC KConfigNodeDropAll ( KConfigNode *self )
 
 LIB_EXPORT rc_t CC KConfigNodeDropAttr ( KConfigNode *self, const char *attr )
 {
-    PLOGMSG (klogFatal, (klogFatal, "$(F) unimplemented", "F=%s", __func__));
+ /* PLOGMSG (klogFatal,-to eliminate warning: <=: is always true for klogFatal*/
+    pLogLibMsg(klogFatal, "$(F) unimplemented", "F=%s", __func__); /* ); */
     return -1;
 }
 
 LIB_EXPORT rc_t CC KConfigNodeVDropChild ( KConfigNode *self, const char *path, va_list args )
 {
-    PLOGMSG (klogFatal, (klogFatal, "$(F) unimplemented", "F=%s", __func__));
+ /* PLOGMSG (klogFatal,-to eliminate warning: <=: is always true for klogFatal*/
+    pLogLibMsg(klogFatal, "$(F) unimplemented", "F=%s", __func__); /* ); */
     return -1;
 }
 
 LIB_EXPORT rc_t CC KConfigNodeDropChild ( KConfigNode *self, const char *path, ... )
 {
-    PLOGMSG (klogFatal, (klogFatal, "$(F) unimplemented", "F=%s", __func__));
+ /* PLOGMSG (klogFatal,-to eliminate warning: <=: is always true for klogFatal*/
+    pLogLibMsg(klogFatal, "$(F) unimplemented", "F=%s", __func__); /* ); */
     return -1;
 }
 
@@ -1217,13 +1222,15 @@ LIB_EXPORT rc_t CC KConfigNodeDropChild ( KConfigNode *self, const char *path, .
  */
 LIB_EXPORT rc_t CC KConfigNodeRenameAttr ( KConfigNode *self, const char *from, const char *to )
 {
-    PLOGMSG (klogFatal, (klogFatal, "$(F) unimplemented", "F=%s", __func__));
+ /* PLOGMSG (klogFatal,-to eliminate warning: <=: is always true for klogFatal*/
+    pLogLibMsg(klogFatal, "$(F) unimplemented", "F=%s", __func__); /* ); */
     return -1;
 }
 
 LIB_EXPORT rc_t CC KConfigNodeRenameChild ( KConfigNode *self, const char *from, const char *to )
 {
-    PLOGMSG (klogFatal, (klogFatal, "$(F) unimplemented", "F=%s", __func__));
+ /* PLOGMSG (klogFatal,-to eliminate warning: <=: is always true for klogFatal*/
+    pLogLibMsg(klogFatal, "$(F) unimplemented", "F=%s", __func__); /* ); */
     return -1;
 }
 
@@ -1307,9 +1314,10 @@ rc_t write_nvp(void* pself, const char* name, size_t nameLen, VNamelist* values)
         String* nameStr;
 
         /* some old config files may have "dbGaP" in their repository keys misspelled as "dbGap" - fix if seen */
+        bool needsFix = false;
         const char* oldGaPprefix = "/repository/user/protected/dbGap-";
-        size_t size = sizeof("/repository/user/protected/dbGap-") - 1;
-        bool needsFix = string_cmp(name, string_size(name), oldGaPprefix, size, (uint32_t)size) == 0;
+        size = sizeof("/repository/user/protected/dbGap-") - 1;
+        needsFix = string_cmp(name, string_size(name), oldGaPprefix, size, (uint32_t)size) == 0;
 
         String tmp;
         StringInit(&tmp, name, nameLen, (uint32_t)nameLen);
@@ -1509,8 +1517,9 @@ static rc_t KConfigNodeReadData(const KConfigNode* self,
 char ToHex(uint32_t i)
 {
     if (i <= 9)
-        return '0' + i;
-    return 'A' + (i - 10);
+        return (char)('0' + i);
+    else
+        return (char)('A' + (i - 10));
 }
 
 static
@@ -1620,11 +1629,10 @@ static rc_t KConfigNodePrintWithIncluded (const KConfigNode *self, int indent,
         rc = printIndent(indent, pb);
         if (rc == 0) {
             bool found = false;
-            uint32_t i = 0;
             va_list args_copy;
-            if (skipCount > 0)
-                va_copy(args_copy, args);
-            for (i = 0; i < skipCount; ++i) {
+            if (skipCount > 0) {
+              va_copy(args_copy, args);
+              for (i = 0; i < skipCount; ++i) {
                 const char *skip = va_arg(args_copy, const char*);
                 if (string_cmp(skip, string_measure(skip, NULL), root,
                         string_measure(root, NULL), string_measure(root, NULL))
@@ -1635,6 +1643,7 @@ static rc_t KConfigNodePrintWithIncluded (const KConfigNode *self, int indent,
                     found = true;
                     break;
                 }
+              }
             }
             if (skipCount > 0)
                 va_end(args_copy);
@@ -1643,25 +1652,22 @@ static rc_t KConfigNodePrintWithIncluded (const KConfigNode *self, int indent,
             rc = PrintBuffPrint(pb, "<%s>", root);
             if ( withIncluded ) {
 //              bool hasAny = false;
-                uint32_t count = 0;
-                KNamelist * names = NULL;
-                rc_t rc = KConfigListIncluded ( withIncluded, & names );
-                if ( rc == 0 )
-                    rc = KNamelistCount ( names, & count );
-                if ( rc == 0 ) {
-                    uint32_t i = 0;
-                    rc = printIndent(indent, pb);
+                rc_t r2 = KConfigListIncluded ( withIncluded, & names );
+                if ( r2 == 0 )
+                    r2 = KNamelistCount ( names, & count );
+                if ( r2 == 0 ) {
+                    r2 = printIndent(indent, pb);
                     PrintBuffPrint ( pb, "\n  <ConfigurationFiles>\n" );
-                    for ( i = 0; i < count && rc == 0; ++i ) {
+                    for ( i = 0; i < count && r2 == 0; ++i ) {
                         const char * name = NULL;
-                        if ( rc == 0 )
-                            rc = KNamelistGet(names, i, &name);
-                        if (rc == 0) {
+                        if ( r2 == 0 )
+                            r2 = KNamelistGet(names, i, &name);
+                        if (r2 == 0) {
                             PrintBuffPrint ( pb, "%s\n", name );
 //                          hasAny = true;
                         }
                     }
-                    rc = printIndent(indent, pb);
+                    r2 = printIndent(indent, pb);
                     PrintBuffPrint ( pb, "  </ConfigurationFiles>" );
                 }
                 RELEASE ( KNamelist, names );
@@ -1670,10 +1676,10 @@ static rc_t KConfigNodePrintWithIncluded (const KConfigNode *self, int indent,
     }
 
     if (rc == 0) {
-        rc_t rc = KConfigNodeReadData(self, data, sizeof data, &num_data);
-        DISP_RC2(rc, "KConfigNodeReadData()", root);
-        if (rc == 0 && num_data > 0) {
-            _printNodeData(root, data, num_data,
+        rc_t r2 = KConfigNodeReadData(self, data, sizeof data, &num_data);
+        DISP_RC2(r2, "KConfigNodeReadData()", root);
+        if (r2 == 0 && num_data > 0) {
+            _printNodeData(root, data, (uint32_t)num_data,
                 native, aFullpath, !native, pb);
         }
         if (debug && self->came_from) {
@@ -1937,7 +1943,7 @@ LIB_EXPORT rc_t CC KConfigLoadFile ( KConfig * self, const char * path, const KF
         rc = KMMapMakeRead ( & mm, file );
         if ( rc == 0 )
         {
-            size_t size;
+            size_t size = 0;
             const void * ptr;
             rc = KMMapAddrRead ( mm, & ptr );
             if ( rc == 0 )
@@ -2628,8 +2634,9 @@ bool load_from_fs_location ( KConfig *self, const char *confdir )
             {
                 rc = KConfigAppendToLoadPath(self, resolved);
             }
-            if ((loaded = load_from_dir_path(self, dir, confdir,
-                                       string_measure ( confdir, NULL ))))
+            loaded = load_from_dir_path(self, dir, confdir,
+                string_measure(confdir, NULL));
+            if (loaded)
                 DBGMSG( DBG_KFG, DBG_FLAG(DBG_KFG),
                     ( "KFG: found from dyn. loader %s\n", confdir ) );
             KDirectoryRelease ( dir );
@@ -2966,7 +2973,7 @@ void add_predefined_nodes ( KConfig * self, const char * appname )
 
 #if WINDOWS
 
-static isexistingdir(const char *path, const KDirectory *dir) {
+static bool isexistingdir(const char* path, const KDirectory* dir) {
     return (KDirectoryPathType(dir, path) & ~kptAlias) == kptDir;
 }
 
@@ -3058,7 +3065,7 @@ static rc_t _KConfigNodeFixChildRepeatedDrives(KConfigNode *self,
 
     rc = KConfigNodeVOpenNodeUpdate(self, &node, name, args);
     if (rc == 0) {
-        rc_t rc = _KConfigNodeFixRepeatedDrives(node, updated, dir);
+     /* rc_t rc = */ _KConfigNodeFixRepeatedDrives(node, updated, dir);
         KConfigNodeRelease(node);
     }
 
@@ -3084,28 +3091,28 @@ static rc_t _KConfigFixRepeatedDrives(KConfig *self,
         uint32_t i = 0;
         uint32_t count = 0;
         KNamelist *categories = NULL;
-        rc_t rc = KConfigNodeListChildren(user, &categories);
-        if (rc == 0) {     /* main protected ... */
-            rc = KNamelistCount(categories, &count);
+        rc_t r2 = KConfigNodeListChildren(user, &categories);
+        if (r2 == 0) {     /* main protected ... */
+            r2 = KNamelistCount(categories, &count);
         }
-        for (i = 0; rc == 0 && i < count; ++i) {
+        for (i = 0; r2 == 0 && i < count; ++i) {
             const char *nCategory = NULL;
-            rc_t rc = KNamelistGet(categories, i, &nCategory);
-            if (rc == 0) { /* main protected ... */
+            r2 = KNamelistGet(categories, i, &nCategory);
+            if (r2 == 0) { /* main protected ... */
                 KConfigNode *category = NULL;
-                rc_t rc = KConfigNodeOpenNodeUpdate(user, &category, nCategory);
-                if (rc == 0) {
-                    uint32_t i = 0;
-                    uint32_t count = 0;
+                r2 = KConfigNodeOpenNodeUpdate(user, &category, nCategory);
+                if (r2 == 0) {
+                    uint32_t j = 0;
+                    uint32_t cnt = 0;
                     KNamelist *subcategories = NULL;
-                    rc_t rc = KConfigNodeListChildren(category, &subcategories);
-                    if (rc == 0) {     /* main protected ... */
-                        rc = KNamelistCount(subcategories, &count);
+                    r2 = KConfigNodeListChildren(category, &subcategories);
+                    if (r2 == 0) {     /* main protected ... */
+                        r2 = KNamelistCount(subcategories, &cnt);
                     }
-                    for (i = 0; rc == 0 && i < count; ++i) {
+                    for (j = 0; r2 == 0 && j < cnt; ++j) {
                         const char *name = NULL;
-                        rc_t rc = KNamelistGet(subcategories, i, &name);
-                        if (rc == 0) {
+                        r2 = KNamelistGet(subcategories, j, &name);
+                        if (r2 == 0) {
                             _KConfigNodeFixChildRepeatedDrives(category,
                                 dir, updated, "%s/%s", name, "root");
                         }
@@ -3494,24 +3501,24 @@ rc_t KConfigMakeImpl ( KConfig ** cfg, const KDirectory * cfgdir, bool local,
                 rc = KLockMake ( & mgr -> nodeLock );
 
             if ( rc == 0 ) {
-                rc_t rc = 0;
+                rc_t r2 = 0;
 
                 bool updated = false;
 
                 if ( ! KConfigDisabledUserSettings() ) {
                     bool updatd2 = false;
 
-                    if (rc == 0) {
-                        rc = _KConfigUsePileupAppWithExtFlatAlg(mgr, &updatd2);
+                    if (r2 == 0) {
+                        r2 = _KConfigUsePileupAppWithExtFlatAlg(mgr, &updatd2);
                         updated |= updatd2;
                     }
 
-                    if (rc == 0) {
-                        rc = _KConfigUseRealignAppWithExtFlatAlg(mgr, &updatd2);
+                    if (r2 == 0) {
+                        r2 = _KConfigUseRealignAppWithExtFlatAlg(mgr, &updatd2);
                         updated |= updatd2;
                     }
 
-                    if ( rc == 0 && updated ) {
+                    if (r2 == 0 && updated ) {
                         KConfigCommit ( mgr ); /* keep if commit fails: */
                         updated = false;       /* ignore rc */
                     }
@@ -4144,7 +4151,7 @@ LIB_EXPORT rc_t CC KConfigRead ( const KConfig * self, const char * path,
 /* this macro wraps a call to KConfigNodeGetXXX in a node-accessing
    code to implement the corresponding KConfigGetXXX function */
 #define NODE_TO_CONFIG_ACCESSOR(fn) \
-    const KConfigNode* node;                                \
+    const KConfigNode* node = NULL;                                \
     assert(self);                                           \
     rc_t rc = KLockAcquire ( self->nodeLock ), rc2 = 0;     \
     if (rc == 0)                                            \
@@ -4540,7 +4547,6 @@ static rc_t _KConfigMkPwdFileAndNode(KConfig *self,
     ncbiHome = NULL;
 
     if (rc == 0) {
-        size_t num_writ = 0;
         assert(result && result->addr);
         rc = string_printf(encryptionKeyPath, sizeof encryptionKeyPath,
             &num_writ, "%s/dbGaP-%s.enc_key", result->addr, kgc->projectId);

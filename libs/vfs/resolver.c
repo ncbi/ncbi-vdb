@@ -1271,7 +1271,7 @@ rc_t VResolverAlgParseResolverCGIResponse_1_0 ( const char *start, size_t size,
     if ( rslt_code . size == 0 )
         return RC ( rcVFS, rcResolver, rcResolving, rcMessage, rcCorrupt );
     result_code = strtoul ( rslt_code . addr, & rslt_end, 10 );
-    if ( ( const char* ) rslt_end - rslt_code . addr != rslt_code . size )
+    if ( (size_t)(( const char* ) rslt_end - rslt_code . addr) != rslt_code . size )
         return RC ( rcVFS, rcResolver, rcResolving, rcMessage, rcCorrupt );
 
     /* still have to test the URL */
@@ -1378,7 +1378,7 @@ static int getDigit ( char c, rc_t * rc ) {
      if ( * rc != 0 )
          return 0;
 
-     c = tolower ( c );
+     c = (char) tolower ( c );
      if ( ! isdigit ( c ) && c < 'a' && c > 'f' ) {
          * rc = RC ( rcVFS, rcQuery, rcExecuting, rcItem, rcIncorrect );
          return 0;
@@ -1509,7 +1509,7 @@ rc_t VResolverAlgParseResolverCGIResponse_1_1 ( const char *astart, size_t size,
     if ( rslt_code . size == 0 )
         return RC ( rcVFS, rcResolver, rcResolving, rcMessage, rcCorrupt );
     result_code = strtoul ( rslt_code . addr, & rslt_end, 10 );
-    if ( ( const char* ) rslt_end - rslt_code . addr != rslt_code . size )
+    if ( (size_t) (( const char* ) rslt_end - rslt_code . addr) != rslt_code . size )
         return RC ( rcVFS, rcResolver, rcResolving, rcMessage, rcCorrupt );
 
     /* still have to test the URL */
@@ -1548,8 +1548,8 @@ rc_t VResolverAlgParseResolverCGIResponse_1_1 ( const char *astart, size_t size,
             if ( md5 . addr != NULL && md5 . size == 32 ) {
                 int i = 0;
                 for ( i = 0; i < 16 && rc == 0; ++ i ) {
-                    ud5 [ i ]  = getDigit ( md5 . addr [ 2 * i ], & rc ) * 16;
-                    ud5 [ i ] += getDigit ( md5 . addr [ 2 * i + 1 ], & rc );
+                    ud5 [ i ]  = (uint8_t) (getDigit ( md5 . addr [ 2 * i ], & rc ) * 16);
+                    ud5 [ i ] += (uint8_t) getDigit ( md5 . addr [ 2 * i + 1 ], & rc );
                 }
                 has_md5 = rc == 0;
             }
@@ -2077,7 +2077,6 @@ rc_t VResolverAlgRemoteResolve ( const VResolverAlg *self,
         )
     {
         bool done = false;
-        int i = 0;
         for ( i = 0; i < 2 && ! done; ++i ) {
             if ( version == NULL )
 #ifdef TESTING_SERVICES_VS_OLD_RESOLVING
@@ -2117,7 +2116,7 @@ rc_t VResolverAlgRemoteResolve ( const VResolverAlg *self,
             VPathGetUri_t ( * path ) != vpuri_fasp )
         {
             const String *s = NULL;
-            rc_t rc = VPathMakeString(*path, &s);
+            rc = VPathMakeString(*path, &s);
             if (rc != 0)
             {
                 LOGERR(klogInt, rc,
@@ -2280,7 +2279,7 @@ rc_t VResolverAlgMakeCachePath ( const VResolverAlg *self,
     const VResolverAccToken *tok, const VPath ** path, bool legacy_wgs_refseq,
     const KDirectory * wd )
 {
-    uint32_t i, count;
+    uint32_t i = 0, count;
 
     /* expanded accession */
     String exp;
@@ -2304,8 +2303,8 @@ rc_t VResolverAlgMakeCachePath ( const VResolverAlg *self,
 
     /* now search all volumes */
     count = VectorLength ( & self -> vols );
-    for ( i = 0; i < count; ++ i )
-    {
+ /* for (i = 0; i < count; ++i) */
+    if ( count > 0 ) {
         vol = VectorGet ( & self -> vols, i );
         return VResolverAlgMakeLocalPath ( self, vol, & exp, path, wd );
     }
@@ -2333,9 +2332,9 @@ rc_t VResolverAlgMakeCacheFilePath ( const VResolverAlg *self,
         ? ".ncbi_enc" : "";
 
     /* now search all volumes */
-    uint32_t i, count = VectorLength ( & self -> vols );
-    for ( i = 0; i < count; ++ i )
-    {
+    uint32_t i = 0, count = VectorLength ( & self -> vols );
+ /* for ( i = 0; i < count; ++ i ) */
+    if ( count > 0 ) {
         const String *vol = VectorGet ( & self -> vols, i );
         return VResolverAlgMakeLocalFilePath ( self, vol, & fname,
             krypto_ext, path, wd, query->projectId );
@@ -2638,22 +2637,22 @@ uint32_t get_accession_code ( const String * accession, VResolverAccToken *tok )
     size -= i;
 
     /* check pileup extension */
-    if ( string_cmp( acc, size, "pileup", 6, size + 6 ) == 0 )
+    if ( string_cmp( acc, size, "pileup", 6, (uint32_t)(size + 6) ) == 0 )
     {
         i = 6;
     }
     /* check realign extension */
-    else if (string_cmp(acc, size, "realign", 7, size + 7) == 0)
+    else if (string_cmp(acc, size, "realign", 7, (uint32_t)(size + 7)) == 0)
     {
         i = 7;
     }
     /* check vdbcache extension */
-    else if (string_cmp(acc, size, "vdbcache", 8, size + 8) == 0)
+    else if (string_cmp(acc, size, "vdbcache", 8, (uint32_t)(size + 8)) == 0)
     {   /* vdbcache uses the same code as its accession */
         tok -> vdbcache = true;
         return code;
     }
-    else if (string_cmp(acc, size, "sra.vdbcache", 12, size + 8) == 0)
+    else if (string_cmp(acc, size, "sra.vdbcache", 12, (uint32_t)(size + 8)) == 0)
     {   /* vdbcache uses the same code as its accession */
         tok->vdbcache = true;
         return code;
@@ -3294,7 +3293,7 @@ rc_t VResolverLocalResolve ( const VResolver *self, const String * accession,
             for (j = 0; quality[j] != '\0'; ++j) {
                 const bool for_cache = false;
                 tok.noqual = quality[j] == 'Z';
-                rc_t rc = VResolverAlgLocalResolve ( alg, self -> wd,
+                rc = VResolverAlgLocalResolve ( alg, self -> wd,
                     & tok, path, legacy_wgs_refseq, for_cache, dir, false,
                     VFSManagerExtNoqual(NULL) );
                 if ( rc == 0 )
@@ -3934,7 +3933,7 @@ rc_t VResolverCacheResolve ( const VResolver *self, const VPath * query,
         count = VResolverResolveToAd(self) ? VectorLength(&self->ad) : 0;
         for (i = 0; i < count; ++i)
         {
-            const VResolverAlg *alg = VectorGet(&self->ad, i);
+            alg = VectorGet(&self->ad, i);
             if (alg->cache_capable && alg -> protected == protected &&
                 (alg->app_id == app || alg->app_id == appAny))
             {
@@ -4034,7 +4033,7 @@ rc_t VResolverCacheResolve ( const VResolver *self, const VPath * query,
         count = useAd ? VectorLength(&self->ad) : 0;
         for (i = 0; i < count; ++i)
         {
-            const VResolverAlg *alg = VectorGet(&self->ad, i);
+            alg = VectorGet(&self->ad, i);
             if (alg->cache_enabled && alg -> protected == protected &&
                 (alg->app_id == app || alg->app_id == appAny))
             {
@@ -4136,7 +4135,7 @@ rc_t VResolverCacheFile ( const VResolver *self, const VPath * query, const VPat
         /* check AD */
         count = VResolverResolveToAd(self) ? VectorLength(&self->ad) : 0;
         for (i = 0; i < count; ++i) {
-            const VResolverAlg *alg = VectorGet(&self->ad, i);
+            alg = VectorGet(&self->ad, i);
             if (alg->cache_capable
                 && ( alg -> protected == protected
                     || protected ) /* file AD app is not protected: use it to resolve dbGaP numeric id-s */
@@ -6519,7 +6518,7 @@ static rc_t VResolverLoad(VResolver *self, const KRepository *protectedRepo,
 
         if (rc == 0) {
             const KConfigNode * node = NULL;
-            rc_t rc =
+            rc =
                 KConfigNodeOpenNodeRead ( kfg, & node, "user/cache-disabled" );
             if ( rc == 0 ) {
                 bool disabled = false;
@@ -6804,7 +6803,7 @@ rc_t VResolverMake ( VResolver ** objp, const KDirectory *wd,
 
         if ( mgr != NULL )
         {
-            rc_t rc = VFSManagerGetKNSMgr ( mgr, & kns );
+            rc = VFSManagerGetKNSMgr ( mgr, & kns );
             if ( rc != 0 )
             {
                 rc = 0;
@@ -6812,7 +6811,7 @@ rc_t VResolverMake ( VResolver ** objp, const KDirectory *wd,
             }
         }
         else {
-            rc_t rc = KNSManagerMake ( & kns );
+            rc = KNSManagerMake ( & kns );
             if ( rc != 0 )
             {
                 rc = 0;
