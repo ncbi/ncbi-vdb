@@ -131,7 +131,7 @@ public:
 
     static void set_handlers(void);
 
-    static std::string lastLocation;
+    static char lastLocation[];
     static LogLevel::E verbosity;
     static bool verbositySet;
     bool catch_system_errors;
@@ -470,26 +470,30 @@ protected:
 
 class TestInvoker {
 protected:
-    TestInvoker(const std::string& name) : _name(name), _ec(0) {}
+    TestInvoker(const std::string& name) : _ec(0) 
+    {
+        strncpy( _name, name.c_str(), sizeof(_name) - 1 );
+        _name[ sizeof(_name) - 1 ] = 0;
+    }
     virtual ~TestInvoker(void) {}
 public:
     virtual void Run(void* globalFixtute) throw () = 0;
-    const std::string& GetName(void) const { return _name; }
+    std::string GetName(void) const { return _name; }
     ncbi::NK::counter_t GetErrorCounter(void) { return _ec; }
 protected:
     void SetErrorCounter(ncbi::NK::counter_t ec)
     { _ec = ec; }
 private:
-    const std::string _name;
+    char _name[1024];
     ncbi::NK::counter_t _ec;
 };
 
 class TestRunner {
-    typedef std::vector<ncbi::NK::TestInvoker*> T;
-    typedef T::const_iterator TCI;
+    typedef ncbi::NK::TestInvoker* T[1024]; // pointers are not owned
 
 public:
     TestRunner();
+    virtual ~TestRunner();
 
     int    argc;
     char** argv;
@@ -501,6 +505,7 @@ public:
 
 private:
     T _cases;
+    size_t _cases_count = 0;
 };
 
 extern ncbi::NK::TestRunner* GetTestSuite();

@@ -390,7 +390,11 @@ if ( SINGLE_CONFIG )
 endif()
 
 include(CheckCXXCompilerFlag)
-check_cxx_compiler_flag("-fsanitize=address" HAS_SANITIZERS)
+check_cxx_compiler_flag(-fsanitize HAS_SANITIZERS)
+message( "HAS_SANITIZERS=" ${HAS_SANITIZERS})
+
+#NOTE: temporary for VDB-6033
+set(HAS_SANITIZERS true)
 
 if ( HAS_SANITIZERS )
     if( NOT SINGLE_CONFIG )
