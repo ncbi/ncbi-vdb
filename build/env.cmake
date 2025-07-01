@@ -389,10 +389,15 @@ if ( SINGLE_CONFIG )
     )
 endif()
 
-include(CheckCXXCompilerFlag)
-check_cxx_compiler_flag("-fsanitize=address" HAS_SANITIZERS)
+execute_process( COMMAND sh -c "${CMAKE_CXX_COMPILER} -fsanitize=address test.cpp && ./a.out"
+    RESULT_VARIABLE ASAN_WORKS
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/build  )
+execute_process( COMMAND sh -c "${CMAKE_CXX_COMPILER} -fsanitize=thread test.cpp && ./a.out"
+    RESULT_VARIABLE TSAN_WORKS
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/build  )
 
-if ( HAS_SANITIZERS )
+if( ASAN_WORKS EQUAL 0 AND TSAN_WORKS EQUAL 0 )
+
     if( NOT SINGLE_CONFIG )
         if( RUN_SANITIZER_TESTS )
             message( "RUN_SANITIZER_TESTS (${RUN_SANITIZER_TESTS}) cannot be turned on in a non single config mode - overriding to OFF" )
@@ -418,10 +423,13 @@ if ( HAS_SANITIZERS )
         set( RUN_SANITIZER_TESTS ON )
     endif()
     message( "RUN_SANITIZER_TESTS: ${RUN_SANITIZER_TESTS}" )
+
 else()
+
     message("ASAN suport is not detected. Disabling sanitizer tests.")
     set( RUN_SANITIZER_TESTS OFF )
     set( RUN_SANITIZER_TESTS_OVERRIDE OFF )
+
 endif()
 
 endif(NOT _NCBIVDB_CFG_PACKAGING)
