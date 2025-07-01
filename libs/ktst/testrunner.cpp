@@ -29,14 +29,14 @@
 using namespace ncbi::NK;
 
 TestRunner::TestRunner() : argc(0), argv(NULL) {}
-TestRunner::~TestRunner() {}
 
 void TestRunner::ReportTestNumber(void)
 {
-    if (_cases_count == 1) {
-       LOG(LogLevel::e_fatal_error, "Running " << _cases_count << " test case...\n");
-    } else if (_cases_count > 1) {
-       LOG(LogLevel::e_fatal_error, "Running " << _cases_count << " test cases...\n");
+    T::size_type sz = _cases.size();
+    if (sz == 1) {
+       LOG(LogLevel::e_fatal_error, "Running " << sz << " test case...\n");
+    } else if (sz > 1) {
+       LOG(LogLevel::e_fatal_error, "Running " << sz << " test cases...\n");
     }
 }
 
@@ -48,20 +48,18 @@ void TestRunner::SetArgs(int p_argc, char* p_argv[])
 
 void TestRunner::Add(ncbi::NK::TestInvoker* t)
 {
-    if (t && _cases_count < sizeof(_cases) )
+    if (t)
     {
-        _cases[ _cases_count ] = t;
-        ++ _cases_count;
+        _cases.push_back(t);
     }
 }
 
 counter_t TestRunner::Run(void* globalFixture) const throw ()
 {
     counter_t ec = 0;
-    for( size_t i = 0; i < _cases_count; ++i )
-    //for (TCI it = _cases.begin(); it != _cases.end(); ++it)
+    for (TCI it = _cases.begin(); it != _cases.end(); ++it)
     {
-        ncbi::NK::TestInvoker* c = _cases[ i ];
+        ncbi::NK::TestInvoker* c = *it;
         auto start = std::chrono::high_resolution_clock::now();
         try
         {
