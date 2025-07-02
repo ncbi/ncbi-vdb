@@ -2109,6 +2109,8 @@ rc_t KCacheTeeFileOpen ( KCacheTeeFile_v3 * self, KDirectory * dir, const KFile 
                     KFileRelease ( self -> cache_file );
                     self -> cache_file = NULL;
                 }
+                else
+                    STATUS (STAT_PWR, "Use '%s' as cache file\n", self -> path);
             }
 
             /* always break */
