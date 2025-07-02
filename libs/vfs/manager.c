@@ -78,6 +78,7 @@
 #include <klib/out.h>
 #include <klib/printf.h>
 #include <klib/rc.h>
+#include <klib/status.h> /* STATUS */
 #include <klib/strings.h> /* ENV_VDB_REMOTE_NEED_CE */
 #include <klib/time.h>
 #include <klib/vector.h>
