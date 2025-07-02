@@ -359,6 +359,7 @@ TEST_CASE(GetLocation) {
 #if TO_SHOW_RESULTS
             cout << "***location=" << string( location -> addr, location -> size ) << endl;
 #endif
+            StringWhack( location );
         }
         REQUIRE_RC( CloudRelease(cloud) );
     }
