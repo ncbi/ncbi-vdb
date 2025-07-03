@@ -350,6 +350,7 @@ TEST_CASE( Parse_Access_Token )
     char * token;
     KTime_t expiration;
     REQUIRE_RC( ParseAccessToken( json, & token, & expiration ) );
+    free( token );
 }
 TEST_CASE( Parse_Access_Token_Bad )
 {// VDB-5300, check protection against truncated json
