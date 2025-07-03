@@ -64,7 +64,7 @@ TestEnv::~TestEnv ()
     }
 }
 
-string TestEnv::lastLocation = "<init>";
+char TestEnv::lastLocation[] = "<init>";
 LogLevel::E TestEnv::verbosity = LogLevel::e_error;
 bool TestEnv::verbositySet = false;
 
@@ -294,7 +294,8 @@ void ::ncbi::NK::saveLocation(const char* file, unsigned int line)
     std::ostringstream s;
     s << file << "(" << line << ")";
     saveLocation_mtx.lock();
-    TestEnv::lastLocation = s.str();
+    strncpy( TestEnv::lastLocation, s.str().c_str(), sizeof(TestEnv::lastLocation) - 1 );
+    TestEnv::lastLocation [ sizeof(TestEnv::lastLocation) - 1 ] = 0;
     saveLocation_mtx.unlock();
 }
 
