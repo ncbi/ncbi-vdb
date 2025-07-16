@@ -70,7 +70,6 @@ const string CompactSchemaText =
 
 FIXTURE_TEST_CASE ( ViewAlias_DumpSchema_Compact, WVDB_v2_Fixture )
 {
-    REQUIRE_RC ( VDBManagerMakeUpdate ( & m_mgr, NULL ) );
     REQUIRE_RC ( VDBManagerMakeSchema ( m_mgr, & m_schema ) );
     ParseSchema ( m_schema, CompactSchemaText );
     string d = DumpSchema( * m_schema );
@@ -107,7 +106,6 @@ FIXTURE_TEST_CASE ( ViewAlias_DumpSchema_Full, WVDB_v2_Fixture )
         "}\n"
     ;
 
-    REQUIRE_RC ( VDBManagerMakeUpdate ( & m_mgr, NULL ) );
     REQUIRE_RC ( VDBManagerMakeSchema ( m_mgr, & m_schema ) );
     ParseSchema ( m_schema, FullSchemaText );
     string d = DumpSchema( * m_schema, false );
