@@ -1077,7 +1077,10 @@ KWDatabaseVOpenTableRead ( const KDatabase *self, const KTable **tblp, const cha
         if ( rc == 0 )
         {
             KWTable *tbl = ( KWTable* ) * tblp;
-            tbl -> db = KDatabaseAttach ( self );
+            if ( tbl->dad.refcount.counter == 1)
+            {   // newly created
+                tbl -> db = KDatabaseAttach ( self );
+            }
         }
     }
 
