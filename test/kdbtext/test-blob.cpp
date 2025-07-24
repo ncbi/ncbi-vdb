@@ -252,7 +252,7 @@ public:
     }
     ~KTextColumnBlob_ApiFixture()
     {
-        KColumnBlobRelease( m_blob );
+        delete (ColumnBlob*) m_blob;
         KJsonValueWhack( m_json );
     }
     void Setup( const string & data )
