@@ -113,11 +113,19 @@ static void OnTbl(void *item, void *data) noexcept {
         *aRc = 20;
         return;
     }
+
 #ifdef SHOW_RESULTS
     else
         std::cerr << "TABLE-NAME: " <<
            std::string(sn->name->name->addr, sn->name->name->size) << std::endl;
 #endif
+
+    KSymbolNameWhack( sn );
+}
+
+static void WhackTbl(void *item, void *data) noexcept
+{
+
 }
 
 TEST_CASE(TestSchemaPriv) {

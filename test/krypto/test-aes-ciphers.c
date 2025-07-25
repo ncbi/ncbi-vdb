@@ -771,5 +771,7 @@ int main ( int argc, char *argv [] )
         STSMSG (0, ("Passed %d tests out of 28 possible\n", test_count));
     if (rc)
         LOGERR (klogErr, rc, "Exiting with a failure status");
+
+    ArgsRelease( args );
     return error_count;
 }

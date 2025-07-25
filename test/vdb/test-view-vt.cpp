@@ -25,7 +25,6 @@
 // this file is included into test-view-cursor.cpp
 
 ///////////////////////////// View-attached VCursor, tests covering virtual table functions
-
 FIXTURE_TEST_CASE ( ViewCursor_AddRef, ViewOnTableCursorFixture )
 {
     CreateCursor ( GetName(), ViewOnTableName );
@@ -230,7 +229,6 @@ FIXTURE_TEST_CASE( ViewCursor_IdRange_SameAsPrimaryTable, ViewOnTableCursorFixtu
         "{  column INSDC:SRA:spotid_t spot_id = t . SPOT_ID; }";
         // the view's id range is t's row_id range
 
-    REQUIRE_RC ( VDBManagerMakeUpdate ( & m_mgr, NULL ) );
     const VDatabase * db;
     REQUIRE_RC ( VDBManagerOpenDBRead ( m_mgr, & db, NULL, "SRR1063272" ) );
     VSchema * schema = NULL;

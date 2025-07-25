@@ -46,6 +46,8 @@
 
 #include <vfs/path.h>
 
+#include <atomic.h>
+
 /*--------------------------------------------------------------------------
  * KDatabase
  *  connection to a database within file system
@@ -1077,7 +1079,10 @@ KWDatabaseVOpenTableRead ( const KDatabase *self, const KTable **tblp, const cha
         if ( rc == 0 )
         {
             KWTable *tbl = ( KWTable* ) * tblp;
-            tbl -> db = KDatabaseAttach ( self );
+            if ( atomic_read(&tbl->dad.refcount) == 1)
+            {   // newly created
+                tbl -> db = KDatabaseAttach ( self );
+            }
         }
     }
 
