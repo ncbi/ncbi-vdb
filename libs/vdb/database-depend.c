@@ -687,7 +687,7 @@ static void CC bstProcess(BSTNode* n, void* data) {
             errno_t err = getenv_s ( & buf_env_count, buf_env, sizeof ( buf_env ), "NCBI_VDB_NO_CACHE_SDL_RESPONSE" );
             assert ( err != ERANGE );
             assert ( buf_env_count <= sizeof ( buf_env ) );
-            reuseWgsResponse = (bool)err;
+            reuseWgsResponse = buf_env_count == 0;
 #else
             reuseWgsResponse
                 = getenv("NCBI_VDB_NO_CACHE_SDL_RESPONSE") == NULL;
