@@ -411,7 +411,7 @@ static rc_t DefaultWorkerThreadFn(const KThread * self, void * data) noexcept {
         if (r2 != 0 && rc == 0)
             rc = r2;
 
-        ESdlCacheState state(eSCSEmpty);
+        uint32_t state(eSCSEmpty);
         VFSManagerSdlCacheCount(f->mgr, &state);
         if (state > eSCSFound)
             VFSManagerSdlCacheClear(f->mgr);

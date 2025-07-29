@@ -376,7 +376,8 @@ static void CC BstCount(BSTNode * n, void * data) {
 }
 
 uint32_t
-VFSManagerSdlCacheCount(const VFSManager * self, ESdlCacheState * state)
+VFSManagerSdlCacheCount(const VFSManager * self,
+    /* ESdlCacheState */ uint32_t * state)
 {
     uint32_t count = 0;
 
