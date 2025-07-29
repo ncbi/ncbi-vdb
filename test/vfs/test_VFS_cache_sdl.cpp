@@ -49,7 +49,8 @@
 #include "../../libs/vdb/dbmgr-priv.h" // VDBManagerWhackStatic
 #include "../../libs/vfs/manager-priv.h" // VFSManagerSdlCacheEmpty
 
-#include<string>
+#include <mutex>
+#include <string>
 
 #include <limits.h> /* PATH_MAX */
 #ifndef PATH_MAX
@@ -190,17 +191,20 @@ FIXTURE_TEST_CASE(CountCaching, CachingFixture) {
     REQUIRE_NOT_NULL(remote);
     REQUIRE(VFSManagerSdlCacheCount(mgr, NULL) == 1);
 
-    const KDirectory * dir(0);
-    REQUIRE_RC(VPathGetDirectory(query, &dir));
-    REQUIRE_NULL(dir);
-    const KDBManager * kdb(0);
-    REQUIRE_RC(KDBManagerMakeReadWithVFSManager(&kdb, 0, mgr));
-    REQUIRE(KDBManagerPathTypeVPath(kdb, query) == kptTable);
-    REQUIRE_RC(VPathGetDirectory(query, &dir));
-    REQUIRE_NOT_NULL(dir);
-    REQUIRE_RC(VPathGetDirectory(query, &dir));
-    REQUIRE_RC(KDirectoryRelease(dir));
-    REQUIRE_RC(KDBManagerRelease(kdb));
+    {
+        const KDirectory * dir(0);
+        REQUIRE_RC(VPathGetDirectory(query, &dir));
+        REQUIRE_NULL(dir);
+
+        const KDBManager * kdb(0);
+        REQUIRE_RC(KDBManagerMakeReadWithVFSManager(&kdb, 0, mgr));
+        REQUIRE(KDBManagerPathTypeVPath(kdb, query) == kptTable);
+        REQUIRE_RC(VPathGetDirectory(query, &dir));
+        REQUIRE_NOT_NULL(dir);
+
+        REQUIRE_RC(KDirectoryRelease(dir));
+        REQUIRE_RC(KDBManagerRelease(kdb));
+    }
 
     REQUIRE_RC(QueryRemote(acc2));
     REQUIRE(VFSManagerSdlCacheCount(mgr, NULL) == 2);
@@ -383,14 +387,16 @@ FIXTURE_TEST_CASE(WgsCaching, CachingFixture) {
     REQUIRE(VFSManagerSdlCacheCount(mgr, NULL) == 1);
 }
 
+std::mutex mtx;
 static rc_t DefaultWorkerThreadFn(const KThread * self, void * data) noexcept {
     CachingFixture * f((CachingFixture*)data);
     assert(f);
 
     rc_t rc(0);
-
     for (int i = 0; i < 50 && rc == 0; ++i) {
         const VPath * remote(NULL);
+
+        mtx.lock();
         rc = VResolverRemote(f->resolver, 0, f->query, &remote);
 //      if (rc != 0) int i = 0;
 
@@ -399,6 +405,8 @@ static rc_t DefaultWorkerThreadFn(const KThread * self, void * data) noexcept {
             rc = VPathReadUri(remote, path, sizeof path, NULL);
 
         rc_t r2(VPathRelease(remote));
+        mtx.unlock();
+
         remote = NULL;
         if (r2 != 0 && rc == 0)
             rc = r2;
