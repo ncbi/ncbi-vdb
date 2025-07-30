@@ -420,7 +420,7 @@ static rc_t cache_access( int tid, int num_threads, const KFile * origfile, cons
 27:     #0 open <null> (libtsan.so.2+0x42e42)
 27:     #1 KSysDirCreateFile_v1 /home/boshkina/devel/ncbi-vdb/libs/kfs/unix/sysdir.c:2105 (Test_KFS_cachetee_tsan+0x4e7594)
 27:     #2 KThreadRun /home/boshkina/devel/ncbi-vdb/libs/kproc/unix/systhread.c:81 (Test_KFS_cachetee_tsan+0x59b3c7)
-27: 
+27:
 27:   Previous write of size 8 at 0x7b0400000040 by main thread:
 27:     #0 pipe <null> (libtsan.so.2+0x43e81)
 27:     #1 __sanitizer::IsAccessibleMemoryRange(unsigned long, unsigned long) <null> (libubsan.so.1+0x1f75e)
@@ -428,7 +428,7 @@ static rc_t cache_access( int tid, int num_threads, const KFile * origfile, cons
 27:     #3 ncbi::NK::TestRunner::Run(void*) const /home/boshkina/devel/ncbi-vdb/libs/ktst/testrunner.cpp:70 (Test_KFS_cachetee_tsan+0x42503e)
 27:     #4 CacheTeeTests(int, char**) /home/boshkina/devel/ncbi-vdb/test/kfs/cacheteetest.cpp:60 (Test_KFS_cachetee_tsan+0x4063ad)
 27:     #5 main /home/boshkina/devel/ncbi-vdb/test/kfs/cacheteetest.cpp:669 (Test_KFS_cachetee_tsan+0x412bf9)
-27: 
+27:
 27:   Thread T1 (tid=1845781, running) created by main thread at:
 27:     #0 pthread_create <null> (libtsan.so.2+0x41436)
 27:     #1 KThreadMakeStackSize /home/boshkina/devel/ncbi-vdb/libs/kproc/unix/systhread.c:154 (Test_KFS_cachetee_tsan+0x59b60d)
@@ -436,7 +436,7 @@ static rc_t cache_access( int tid, int num_threads, const KFile * origfile, cons
 27:     #3 ncbi::NK::TestRunner::Run(void*) const /home/boshkina/devel/ncbi-vdb/libs/ktst/testrunner.cpp:70 (Test_KFS_cachetee_tsan+0x42503e)
 27:     #4 CacheTeeTests(int, char**) /home/boshkina/devel/ncbi-vdb/test/kfs/cacheteetest.cpp:60 (Test_KFS_cachetee_tsan+0x4063ad)
 27:     #5 main /home/boshkina/devel/ncbi-vdb/test/kfs/cacheteetest.cpp:669 (Test_KFS_cachetee_tsan+0x412bf9)
-27: 
+27:
 27: SUMMARY: ThreadSanitizer: data race (/opt/ncbi/gcc/13.2.0/lib64/libtsan.so.2+0x42e42) in __interceptor_open
 27: ==================
 
@@ -507,7 +507,6 @@ TEST_CASE( CacheTee_Multiple_Users_Multiple_Inst )
         REQUIRE_RC( KThreadRelease ( t[ i ] ) );
     }
 }
-#endif
 
 TEST_CASE( CacheTee_Multiple_Users_Single_Inst )
 {
@@ -549,6 +548,7 @@ TEST_CASE( CacheTee_Multiple_Users_Single_Inst )
     REQUIRE_RC( KFileRelease( org ) );
     REQUIRE_RC( KDirectoryRelease( dir ) );
 }
+#endif
 
 // TODO: fix, this does not work on Windows
 #if !defined(WINDOWS) && !defined(_WIN32) && !defined(MAC)
