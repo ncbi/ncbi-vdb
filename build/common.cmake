@@ -39,6 +39,13 @@ function( MSVS_DLLRuntime name )
     endif()
 endfunction()
 
+#
+# sanitizer settings
+#   address sanitizer: stop and fail the test if undefined behavior is detected
+set( asan_defs "-fsanitize=address" "-fsanitize=undefined" "-fno-sanitize-recover=undefined" )
+set( tsan_defs "-fsanitize=thread" )
+#
+
 function( GenerateStaticLibsWithDefs target_name sources compile_defs )
     add_library( ${target_name} STATIC ${sources} )
     if( NOT "" STREQUAL "${compile_defs}" )
@@ -54,7 +61,6 @@ function( GenerateStaticLibsWithDefs target_name sources compile_defs )
     endif()
 
     if( RUN_SANITIZER_TESTS )
-        set( asan_defs "-fsanitize=address" "-fsanitize=undefined" )
         add_library( "${target_name}-asan" STATIC ${sources} )
         if( NOT "" STREQUAL "${compile_defs}" )
             target_compile_definitions( "${target_name}-asan" PRIVATE ${compile_defs} )
@@ -62,7 +68,6 @@ function( GenerateStaticLibsWithDefs target_name sources compile_defs )
         target_compile_options( "${target_name}-asan" PUBLIC ${asan_defs} )
         target_link_options( "${target_name}-asan" PUBLIC ${asan_defs} )
 
-        set( tsan_defs "-fsanitize=thread" "-fsanitize=undefined" )
         add_library( "${target_name}-tsan" STATIC ${sources} )
         if( NOT "" STREQUAL "${compile_defs}" )
             target_compile_definitions( "${target_name}-tsan" PRIVATE ${compile_defs} )
@@ -213,13 +218,11 @@ function( AddExecutableTest test_name sources libraries )
 	add_test( NAME ${test_name} COMMAND ${test_name} WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
 
 	if( RUN_SANITIZER_TESTS )
-		set( asan_defs "-fsanitize=address" "-fsanitize=undefined" )
 		BuildExecutableForTest( "${test_name}_asan" "${sources}" "${libraries}" )
 		target_compile_options( "${test_name}_asan" PRIVATE ${asan_defs} )
 		target_link_options( "${test_name}_asan" PRIVATE ${asan_defs} )
 		add_test( NAME "${test_name}_asan" COMMAND "${test_name}_asan" WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
 
-		set( tsan_defs "-fsanitize=thread" "-fsanitize=undefined" )
 		BuildExecutableForTest( "${test_name}_tsan" "${sources}" "${libraries}" )
 		target_compile_options( "${test_name}_tsan" PRIVATE ${tsan_defs} )
 		target_link_options( "${test_name}_tsan" PRIVATE ${tsan_defs} )
