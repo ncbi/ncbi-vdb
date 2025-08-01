@@ -98,54 +98,47 @@ rc_t CC KNSManagerInitDNSEndpoint ( struct KNSManager const *self,
 
                 if ( rc ==  0 )
                 {
-                    int lerrno;
-                    struct hostent *remote = gethostbyname ( hostname );
-                    if ( remote != NULL )
-                    { 
-                        struct in_addr ** addr_list
-                            = ( struct in_addr ** ) remote -> h_addr_list;
+                                       struct addrinfo hints;
+                    memset(&hints, 0, sizeof hints);
+                    hints.ai_family = AF_INET; // IPv4
+
+                    char port_s [ 6 ];
+                    rc = string_printf ( port_s, sizeof( port_s ), NULL, "%u", port );
+
+                    struct addrinfo * res = NULL;
+                    int ret = getaddrinfo ( hostname, port_s, & hints, & res );
+                    if ( ret == 0 && res != NULL )
+                    {
+                        struct sockaddr_in * ipv4
+                            = ( struct sockaddr_in * ) res -> ai_addr;
                         string_copy_measure ( ep -> ip_address,
                             sizeof ep -> ip_address,
-                            inet_ntoa ( * addr_list [ 0 ] ));
+                            inet_ntoa ( ipv4->sin_addr ) );
                         STATUS ( STAT_PRG, "%s resolved to %s\n",
-                                           hostname , ep -> ip_address );
+                                    hostname , ep -> ip_address );
 
                         ep -> type = epIPV4;
-                        memmove ( & ep -> u . ipv4 . addr, remote -> h_addr_list [ 0 ], sizeof ep -> u . ipv4 . addr );
-                        ep -> u . ipv4 . addr = htonl ( ep -> u . ipv4 . addr );
+                        ep -> u . ipv4 . addr = htonl ( ipv4 ->sin_addr.s_addr );
                         ep -> u . ipv4 . port = ( uint16_t ) port;
+
+                        freeaddrinfo( res );
                     }
-                    else switch ( lerrno = WSAGetLastError () )
+                    else switch ( ret )
                     {
-                    case WSANOTINITIALISED: /* Must have WSAStartup call */
-                        rc = RC ( rcNS, rcNoTarg, rcInitializing, rcEnvironment, rcUndefined );
-                        break;
-                    case WSAENETDOWN:/* network subsystem failed */
-                        rc = RC ( rcNS, rcNoTarg, rcInitializing, rcNoObj, rcFailed );
-                        break;
-                    case WSAHOST_NOT_FOUND: /* Answer host not found */
+                    case EAI_NONAME: /* The specified host is unknown */
                         rc = RC ( rcNS, rcNoTarg, rcValidating, rcConnection, rcNotFound );
                         break;
-                    case WSATRY_AGAIN: /* host not found or server failure */
-                        rc = RC ( rcNS, rcNoTarg, rcValidating, rcConnection, rcBusy );
-                        break;
-                    case WSANO_RECOVERY: /* non-recoverable error */
-                        rc = RC ( rcNS, rcNoTarg, rcValidating, rcConnection, rcDestroyed );
-                        break;
-                    case WSANO_DATA: /* name is valid but no data */
+                    case EAI_FAMILY: /* The requested name is valid but does not have an IPv4 address */
                         rc = RC ( rcNS, rcNoTarg, rcValidating, rcConnection, rcEmpty );
                         break;
-                    case WSAEINPROGRESS: /* call is in progress */
-                        rc = RC ( rcNS, rcNoTarg, rcReading, rcId, rcUndefined );
+                    case EAI_FAIL: /* A nonrecoverable name server error occured */
+                        rc = RC ( rcNS, rcNoTarg, rcValidating, rcConnection, rcDestroyed );
                         break;
-                    case WSAEFAULT: /* name paremeter is not valid part of addr space */
-                        rc = RC ( rcNS, rcNoTarg, rcReading, rcMemory, rcOutofrange );
+                    case EAI_AGAIN: /* A temporary error occured on an authoritative name server. Try again later */
+                        rc = RC ( rcNS, rcNoTarg, rcValidating, rcConnection, rcBusy );
                         break;
-                    case WSAEINTR: /* socket call was calanceled */
-                        rc = RC ( rcNS, rcNoTarg, rcReading, rcConnection, rcCanceled );
-                        break;
-                    default:
-                        rc = RC ( rcNS, rcNoTarg, rcReading, rcError, rcUnknown );
+                    default :
+                        rc = RC ( rcNS, rcNoTarg, rcValidating, rcConnection, rcUnknown );
                     }
                 }
             }
