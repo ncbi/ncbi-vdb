@@ -32,6 +32,9 @@ using namespace std;
 
 TEST_SUITE( WVdbSlowTestSuite );
 
+// on hosts with less memory or lower quota these tests get the process killed
+#ifdef  TEAMCITY_SH
+
 FIXTURE_TEST_CASE ( VCursorCommit_BufferOverflow, WVDB_Fixture )
 {   // VDB-4341
     m_databaseName = ScratchDir + GetName();
@@ -107,6 +110,10 @@ FIXTURE_TEST_CASE ( VCursorCommit_BufferOverflow, WVDB_Fixture )
 
 FIXTURE_TEST_CASE ( VCursor_PageMapOverflow, WVDB_Fixture )
 {   // VDB-4897
+    //NB: this test case consumes a lot of memory;
+    // if this process gets killed by the kernel,
+    // consider a host with more memory
+
     m_databaseName = ScratchDir + GetName();
     RemoveDatabase();
 
@@ -140,6 +147,8 @@ if ( i % 1000000 == 0 ) cout << i/1000000 <<endl;
         REQUIRE_RC ( VCursorRelease ( cursor ) );
     }
 }
+
+#endif
 
 //////////////////////////////////////////// Main
 int main( int argc, char *argv [] )
