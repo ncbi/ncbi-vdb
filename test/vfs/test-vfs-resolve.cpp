@@ -27,7 +27,7 @@
 #include <kapp/args.h> /* ArgsMakeAndHandle */
 #include <kfg/config.h> /* KConfigDisableUserSettings */
 #include <klib/debug.h> /* KDbgSetString */
-#include <ktst/unit_test.hpp> 
+#include <ktst/unit_test.hpp>
 
 #include <vfs/manager.h> /* VFSManagerRelease */
 #include <vfs/path.h> /* VPathRelease */
@@ -292,14 +292,14 @@ FIXTURE_TEST_CASE(ResolveTestRemote, Fixture) {
     REQUIRE_NULL(cache);
     REQUIRE_RC(VPathEqual(outP, remote, &notequal));
     REQUIRE(notequal == 0);
-    REQUIRE_RC(VPathRelease(out));
+    REQUIRE_RC(VPathRelease(remote));
 
     REQUIRE_RC(VFSManagerResolveVPathAll(mgr, p, &out, &remote, &cache));
     REQUIRE_NULL(out);
     REQUIRE_NULL(cache);
     REQUIRE_RC(VPathEqual(outP, remote, &notequal));
     REQUIRE(notequal == 0);
-    REQUIRE_RC(VPathRelease(out));
+    REQUIRE_RC(VPathRelease(remote));
 
     REQUIRE_RC(VPathRelease(outP));
     REQUIRE_RC(VPathRelease(p));
