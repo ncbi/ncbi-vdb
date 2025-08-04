@@ -1015,7 +1015,18 @@ static const char * VDBManagerGetQuality(const VDBManager * self) {
         return s_SetQuality;
 
     if (!s_EnvQualitySet) {
+#ifdef WINDOWS
+        char buf_e[4096];
+        const char * e = NULL;
+        size_t buf_count = 0;
+        errno_t err = getenv_s ( & buf_count, buf_e, sizeof ( buf_e ), "NCBI_VDB_QUALITY" );
+        assert ( err != ERANGE );
+        assert ( buf_count <= sizeof ( buf_e ) );
+        if (!err)
+            e = buf_e;
+#else
         char * e = getenv("NCBI_VDB_QUALITY");
+#endif
         s_EnvQualitySet = true;
         s_EnvQuality = e;
     }
