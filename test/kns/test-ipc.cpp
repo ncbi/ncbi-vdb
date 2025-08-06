@@ -374,7 +374,7 @@ public:
     size_t num;
     char buf[MaxMessageSize];
 };
-#if 0
+
 PROCESS_FIXTURE_TEST_CASE(IPCEndpoint_Basic, SocketFixture, 0, 5)
 {   // client runs in a child process
     string content = GetName();
@@ -443,7 +443,7 @@ PROCESS_FIXTURE_TEST_CASE(IPCEndpoint_ReadAll, SocketFixture, 0, 5)
 
     CloseClientStream(stream);
 }
-#endif
+
 //////////////////////////////////////////// IPC, timed reads
 class TimedReadSocketFixture : public SocketFixture
 {
@@ -663,6 +663,7 @@ PROCESS_FIXTURE_TEST_CASE(TimedConnection_Read_NULL_Timeout, TimedConnection_Rea
 
 	TeardownClient();
 }
+
 PROCESS_FIXTURE_TEST_CASE(TimedConnection_TimedReadOverride_NULL_Timeout, TimedConnection_ReadSocketFixture, 0, 20)
 {   // 2.1.1 wait indefinitely until the server responds
     string content = GetName();
@@ -698,6 +699,7 @@ PROCESS_FIXTURE_TEST_CASE(TimedConnection_Read_0_Timeout, TimedConnection_ReadSo
     TestEnv::SleepMs(SERVER_WRITE_DELAY_MS * 2); // let the server wake up to handle the 'done' message
 	TeardownClient();
 }
+
 PROCESS_FIXTURE_TEST_CASE(TimedConnection_ReadOverride_0_Timeout, TimedConnection_ReadSocketFixture, 0, 20)
 {   // 2.2.1 time out immediately when the server has not yet responded
     string content = GetName();
@@ -717,6 +719,7 @@ PROCESS_FIXTURE_TEST_CASE(TimedConnection_ReadOverride_0_Timeout, TimedConnectio
     TestEnv::SleepMs(SERVER_WRITE_DELAY_MS * 2); // let the server wake up to handle the 'done' message
 	TeardownClient();
 }
+
 PROCESS_FIXTURE_TEST_CASE(TimedConnection_SettingsOverride_0_Timeout, TimedConnection_ReadSocketFixture, 0, 20)
 {   // 2.2.2 time out immediately when the server has not yet responded
     REQUIRE_RC(KNSManagerSetConnectionTimeouts(m_mgr, 5000, 0, 0)); // override default setting (long time-out) to "no wait"
@@ -754,6 +757,7 @@ PROCESS_FIXTURE_TEST_CASE(TimedConnection_Read_Short_Timeout, TimedConnection_Re
     TestEnv::SleepMs(SERVER_WRITE_DELAY_MS * 2); // let the server wake up to handle the 'done' message
 	TeardownClient();
 }
+
 PROCESS_FIXTURE_TEST_CASE(TimedConnection_ReadOverride_Short_Timeout, TimedConnection_ReadSocketFixture, 0, 20)
 {   // 2.3.1. time out when the server has not responded quickly enough
     string content = GetName();
@@ -788,6 +792,7 @@ PROCESS_FIXTURE_TEST_CASE(TimedConnection_Read_Long_Timeout, TimedConnection_Rea
 
 	TeardownClient();
 }
+
 PROCESS_FIXTURE_TEST_CASE(TimedConnection_ReadOverride_Long_Timeout, TimedConnection_ReadSocketFixture, 0, 20)
 {   // 2.4.1. wait enough time for the server to respond
     string content = GetName();

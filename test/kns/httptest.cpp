@@ -880,6 +880,7 @@ FIXTURE_TEST_CASE( KClientHttpResult_FormatMsg, HttpFixture)
     REQUIRE_RC ( KClientHttpResultFormatMsg ( rslt, & buffer, "->", "\n" ) );
     REQUIRE_EQ ( expected, string ((char*)buffer.base) );
     REQUIRE_RC ( KClientHttpResultRelease ( rslt ) );
+    KDataBufferWhack( & buffer );
 }
 #endif
 
