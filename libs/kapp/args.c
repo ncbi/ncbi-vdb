@@ -2238,10 +2238,10 @@ void CC HelpVersion (const char * fullpath, ver_t version)
         (sraVersion.version == version && sraVersion.revision == 0 &&
          sraVersion.type == eSraReleaseVersionTypeFinal))
     {
-        OUTMSG (("\n%s : %.3V\n\n", fullpath, version));
+        OUTMSG (("%s : %.3V\n\n", fullpath, version));
     }
     else {
-        OUTMSG (("\n%s : %.3V%s ( %s%s )\n\n",
+        OUTMSG (("%s : %.3V%s ( %s%s )\n\n",
             fullpath, version, HASH_SRA_TOOLS, cSra, HASH_NCBI_VDB));
     }
 }
