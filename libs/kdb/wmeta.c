@@ -262,90 +262,93 @@ rc_t CC KWMDataNodeAuxFunc ( void *param, const void *node, size_t *num_writ,
 }
 
 static
-rc_t KWMetadataFlushToMem ( KWMetadata *self, KMDFlushData *pb )
+rc_t KWMetadataFlushToMem(KWMetadata* self, KMDFlushData* pb)
 {
     rc_t rc = 0;
 
-            /* write header */
-            KDBHdr *hdr = ( KDBHdr* ) pb -> buffer;
-            hdr -> endian = eByteOrderTag;
-            hdr -> version = KMETADATAVERS;
-            pb -> marker = sizeof * hdr;
+    /* write header */
+    KDBHdr* hdr = (KDBHdr*)pb->buffer;
+    hdr->endian = eByteOrderTag;
+    hdr->version = KMETADATAVERS;
+    pb->marker = sizeof * hdr;
 
-            /* persist root node */
-            rc = BSTreePersist ( & self -> root -> child, NULL,
-                KMDWriteFunc, pb, KWMDataNodeAuxFunc, NULL );
+    /* persist root node */
+    rc = BSTreePersist(&self->root->child, NULL,
+        KMDWriteFunc, pb, KWMDataNodeAuxFunc, NULL);
 
     return rc;
 }
 
 static
 rc_t
-MetadataPopulateFromMem ( KMetadata *bself, bool read_only, const void* addr, size_t size )
+MetadataPopulateFromMem(
+    KMetadata* bself, bool read_only, const void* addr, size_t size)
 {
     rc_t rc = 0;
 
     CAST();
 
-                union
-                {
-                    KDBHdr v1;
-                    KDBHdr v2;
-                } hdrs;
+    union
+    {
+        KDBHdr v1;
+        KDBHdr v2;
+    } hdrs;
 
-                const KDBHdr *hdr = ( const KDBHdr* ) addr;
-                const void *pbstree_src = hdr + 1;
+    const KDBHdr* hdr = (const KDBHdr*)addr;
+    const void* pbstree_src = hdr + 1;
 
-                rc = KDBHdrValidate ( hdr, size, 1, KMETADATAVERS );
-                if ( self -> read_only && GetRCState ( rc ) == rcIncorrect && GetRCObject ( rc ) == rcByteOrder )
-                {
-                    hdrs . v1 . endian = bswap_32 ( hdr -> endian );
-                    hdrs . v1 . version = bswap_32 ( hdr -> version );
-                    rc = KDBHdrValidate ( & hdrs . v1, size, 1, KMETADATAVERS );
-                    if ( rc == 0 )
-                    {
-                        self -> byteswap = true;
-                        switch ( hdrs . v1 . version )
-                        {
-                        case 1:
-                            hdr = & hdrs . v1;
-                            break;
-                        case 2:
-                            hdr = & hdrs . v2;
-                            break;
-                        }
-                    }
-                }
-                if ( rc == 0 )
-                {
-                    PBSTree *bst;
-                    rc = PBSTreeMake ( & bst, pbstree_src, size - sizeof * hdr, self -> byteswap );
-                    if ( rc != 0 )
-                        rc = RC ( rcDB, rcMetadata, rcConstructing, rcData, rcCorrupt );
-                    else
-                    {
-                        KWMDataNodeInflateData pb;
+    rc = KDBHdrValidate(hdr, size, 1, KMETADATAVERS);
+    if (self->read_only
+        && GetRCState(rc) == rcIncorrect && GetRCObject(rc) == rcByteOrder)
+    {
+        hdrs.v1.endian = bswap_32(hdr->endian);
+        hdrs.v1.version = bswap_32(hdr->version);
+        rc = KDBHdrValidate(&hdrs.v1, size, 1, KMETADATAVERS);
+        if (rc == 0)
+        {
+            self->byteswap = true;
+            switch (hdrs.v1.version)
+            {
+            case 1:
+                hdr = &hdrs.v1;
+                break;
+            case 2:
+                hdr = &hdrs.v2;
+                break;
+            }
+        }
+    }
+    if (rc == 0)
+    {
+        PBSTree* bst;
+        rc = PBSTreeMake(
+            &bst, pbstree_src, size - sizeof * hdr, self->byteswap);
+        if (rc != 0)
+            rc = RC(rcDB, rcMetadata, rcConstructing, rcData, rcCorrupt);
+        else
+        {
+            KWMDataNodeInflateData pb;
 
-                        pb . meta = self;
-                        pb . par = self -> root;
-                        pb . bst = & self -> root -> child;
-                        pb . node_size_limit = read_only ? NODE_SIZE_LIMIT : 0;
-                        pb . node_child_limit = read_only ? NODE_CHILD_LIMIT : 0;
-                        pb . rc = 0;
-                        pb . byteswap = self -> byteswap;
+            pb.meta = self;
+            pb.par = self->root;
+            pb.bst = &self->root->child;
+            pb.node_size_limit = read_only ? NODE_SIZE_LIMIT : 0;
+            pb.node_child_limit = read_only ? NODE_CHILD_LIMIT : 0;
+            pb.rc = 0;
+            pb.byteswap = self->byteswap;
 
-                        if ( hdr -> version == 1 )
-                            PBSTreeDoUntil ( bst, false, KWMDataNodeInflate_v1, & pb );
-                        else
-                            PBSTreeDoUntil ( bst, false, KWMDataNodeInflate, & pb );
-                        rc = pb . rc;
+            if (hdr->version == 1)
+                PBSTreeDoUntil(bst, false, KWMDataNodeInflate_v1, &pb);
+            else
+                PBSTreeDoUntil(bst, false, KWMDataNodeInflate, &pb);
+            rc = pb.rc;
 
-                        self -> vers = hdr -> version;
+            self->vers = hdr->version;
 
-                        PBSTreeWhack ( bst );
-                    }
-                }
-    
+            PBSTreeWhack(bst);
+        }
+    }
+
     return rc;
 }
 
