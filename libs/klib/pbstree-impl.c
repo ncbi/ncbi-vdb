@@ -804,8 +804,27 @@ rc_t CC PBSTreeImplCheckPersisted ( const P_BSTree *pt, size_t size )
         const uint8_t *end, *data_start;
 
         GET32 ( data_size, pt -> data_size );
-        if ( size < sizeof * pt || data_size == 0 )
+        if ( data_size == 0 )
             return RC ( rcCont, rcTree, rcConstructing, rcData, rcIncomplete );
+        else if ( size < sizeof * pt ) {
+            /* size of P_BSTree without data_idx union */
+            size_t dSize = sizeof * pt - sizeof pt -> data_idx;
+            if (
+                ( data_size <= 256 /* if less than 256 nodes... */
+                    /* ...then v8 member of union is used */
+                  &&
+                  size <
+                    dSize + sizeof pt -> data_idx . v8 [ 0 ]
+        /* minimum data size is 2: offset(1 byte) + minimum node name(1 byte) */
+                     + 2
+                )
+                ||
+                ( data_size > 256 && size < sizeof * pt )
+              )
+            {
+             return RC ( rcCont, rcTree, rcConstructing, rcData, rcIncomplete );
+            }
+        }
 
         end = ( const uint8_t* ) pt + size;
 
