@@ -262,207 +262,31 @@ rc_t CC KWMDataNodeAuxFunc ( void *param, const void *node, size_t *num_writ,
 }
 
 static
-rc_t KWMetadataFlush ( KWMetadata *self )
+rc_t KWMetadataFlushToMem ( KWMetadata *self, KMDFlushData *pb )
 {
-    rc_t rc;
-    KMDFlushData pb;
-    memset ( & pb, 0, sizeof pb );
+    rc_t rc = 0;
 
-    /* allocate buffer */
-    pb . buffer = malloc ( pb . bsize = 32 * 1024 );
-    if ( pb . buffer == NULL )
-        rc = RC ( rcDB, rcMetadata, rcPersisting, rcMemory, rcExhausted );
-    else
-    {
-        /* open output file */
-        rc = KWColumnFileCreate ( & pb . f, & pb . fmd5, self -> dir, self -> md5,
-                                 kcmInit | kcmParents, false, "md/cur.tmp" );
-        /* ZZZZ do we need a "KMD5FileReset ( pb -> fmd5 )" ? I don't think so */
-        if ( rc == 0 )
-        {
             /* write header */
-            KDBHdr *hdr = ( KDBHdr* ) pb . buffer;
+            KDBHdr *hdr = ( KDBHdr* ) pb -> buffer;
             hdr -> endian = eByteOrderTag;
             hdr -> version = KMETADATAVERS;
-            pb . marker = sizeof * hdr;
+            pb -> marker = sizeof * hdr;
 
             /* persist root node */
             rc = BSTreePersist ( & self -> root -> child, NULL,
-                KMDWriteFunc, & pb, KWMDataNodeAuxFunc, NULL );
-            if ( rc == 0 && pb . marker != 0 )
-            {
-                size_t num_flushed;
-                rc = KFileWrite ( pb . f, pb . pos,
-                                  pb . buffer, pb . marker, & num_flushed );
-                if ( rc == 0 && num_flushed != pb . marker )
-                    rc = RC ( rcDB, rcMetadata, rcPersisting, rcTransfer, rcIncomplete );
-            }
-            pb . rc = KFileRelease ( pb . f );
-            if ( pb . rc  ==  0 )
-                pb . fmd5 = NULL;
-            if ( rc == 0 && ( rc = pb . rc ) == 0 )
-            {
-                /* rename file */
-                rc = KDirectoryRename ( self -> dir, true, "md/cur.tmp", "md/cur" );
+                KMDWriteFunc, pb, KWMDataNodeAuxFunc, NULL );
 
-                if ( self->md5 != NULL && rc == 0 )
-                    rc = KMD5SumFmtRename ( self -> md5, "md/cur.tmp", "md/cur" );
-
-                if ( rc == 0 )
-                    self -> dirty = false;
-            }
-        }
-
-        free ( pb . buffer );
-    }
     return rc;
 }
-
-/* Whack
- */
-static
-rc_t CC
-KWMetadataWhack ( KMetadata *bself )
-{
-    CAST();
-
-    rc_t rc = 0;
-    KSymbol * symb;
-    KDBManager *mgr = self -> mgr;
-    assert ( mgr != NULL );
-
-    if ( self -> dirty )
-    {
-        /* if this was a version 1 file,
-           first freeze it */
-        if ( self -> vers == 1 )
-        {
-            rc = KMetadataFreeze ( bself );
-            if ( rc != 0 )
-                return rc;
-        }
-
-        /* flush it */
-        rc = KWMetadataFlush ( self );
-        if ( rc != 0 )
-            return rc;
-        self -> dirty = false;
-    }
-
-    if ( self -> db != NULL )
-    {
-        rc = KDatabaseSever ( self -> db );
-        if ( rc != 0 )
-            return rc;
-        self -> db = NULL;
-    }
-    else if ( self -> tbl != NULL )
-    {
-        rc = KTableSever ( & self -> tbl -> dad );
-        if ( rc != 0 )
-            return rc;
-        self -> tbl = NULL;
-    }
-    else if ( self -> col != NULL )
-    {
-        rc = KColumnSever ( self -> col );
-        if ( rc != 0 )
-            return rc;
-        self -> col = NULL;
-    }
-
-    if ( self -> md5 != NULL )
-    {
-	rc = KMD5SumFmtRelease ( self -> md5 );
-	if ( rc != 0 )
-	    return rc;
-	self -> md5 = NULL;
-    }
-
-    /* remove from mgr */
-    symb = KDBManagerOpenObjectFind (mgr, self->path);
-    if (symb != NULL)
-    {
-        rc = KDBManagerOpenObjectDelete (mgr, symb);
-        if (rc == 0)
-        {
-            /* release manager
-               should never fail */
-            rc = KDBManagerSever ( mgr );
-            if ( rc != 0 )
-                KDBManagerOpenObjectAdd (mgr, symb);
-            else
-            {
-                /* complete */
-                KDirectoryRelease ( self -> dir );
-                KMDataNodeRelease ( & self -> root -> dad );
-                return KMetadataBaseWhack( bself );
-            }
-        }
-    }
-
-    KRefcountInit ( & self -> dad . refcount, 1, "KMetadata", "whack", "kmeta" );
-    return rc;
-}
-
-
-/* AddRef
- * Release
- *  all objects are reference counted
- *  NULL references are ignored
- */
-static
-rc_t CC
-KWMetadataAddRef ( const KMetadata *bself )
-{
-    CAST();
-
-    rc_t rc = KMetadataBaseAddRef( bself );
-    if ( rc == 0 )
-    {
-        ++ self -> opencount;
-    }
-    return rc;
-}
-
-static
-rc_t CC
-KWMetadataRelease ( const KMetadata *bself )
-{
-    CAST();
-
-    if ( self != NULL )
-    {
-        -- self -> opencount;
-    }
-    return KMetadataBaseRelease( bself );
-}
-
-/* Make
- */
 
 static
 rc_t
-KMetadataPopulate ( KMetadata *bself, const KDirectory *dir, const char *path, bool read_only )
+MetadataPopulateFromMem ( KMetadata *bself, bool read_only, const void* addr, size_t size )
 {
+    rc_t rc = 0;
+
     CAST();
 
-    const KFile *f;
-    rc_t rc = KDirectoryOpenFileRead ( dir, & f, "%s", path );
-    if ( rc == 0 )
-    {
-        const KMMap *mm;
-        rc = KMMapMakeRead ( & mm, f );
-        if ( rc == 0 )
-        {
-            size_t size;
-            const void *addr = NULL;
-            rc = KMMapSize ( mm, & size );
-            if ( rc == 0 )
-                rc = KMMapAddrRead ( mm, & addr );
-
-            if ( rc == 0 )
-            {
                 union
                 {
                     KDBHdr v1;
@@ -521,6 +345,231 @@ KMetadataPopulate ( KMetadata *bself, const KDirectory *dir, const char *path, b
                         PBSTreeWhack ( bst );
                     }
                 }
+    
+    return rc;
+}
+
+/* Verify that we will be able to load the P_BSTree that we are going to save */
+static
+rc_t
+KWMetadataCheckPBSTree ( const void *addr, size_t size )
+{
+    bool read_only = false;
+
+    KWMetadata* self = NULL;
+    rc_t rc = KWMetadataMake(&self, NULL, "", 0, false, read_only);
+    
+    if (rc == 0)
+        assert(self);
+    
+    if (rc == 0)
+        rc = MetadataPopulateFromMem ( & self -> dad, read_only, addr, size );
+    
+    if (rc == 0)
+        rc = KMetadataRelease ( & self -> dad );
+    
+    return rc;
+}
+
+static
+rc_t KWMetadataFlush ( KWMetadata *self )
+{
+    rc_t rc;
+    KMDFlushData pb;
+    memset ( & pb, 0, sizeof pb );
+
+    /* allocate buffer */
+    pb . buffer = malloc ( pb . bsize = 32 * 1024 );
+    if ( pb . buffer == NULL )
+        rc = RC ( rcDB, rcMetadata, rcPersisting, rcMemory, rcExhausted );
+    else
+    {
+        /* open output file */
+        rc = KWColumnFileCreate ( & pb . f, & pb . fmd5, self -> dir, self -> md5,
+                                 kcmInit | kcmParents, false, "md/cur.tmp" );
+        /* ZZZZ do we need a "KMD5FileReset ( pb -> fmd5 )" ? I don't think so */
+        if ( rc == 0 )
+        {
+            rc = KWMetadataFlushToMem ( self, & pb );
+            if ( rc == 0 && pb . marker != 0 )
+            {
+              rc = KWMetadataCheckPBSTree ( pb . buffer, pb . marker );
+              if ( rc == 0 ) {
+                size_t num_flushed;
+                rc = KFileWrite ( pb . f, pb . pos,
+                                  pb . buffer, pb . marker, & num_flushed );
+                if ( rc == 0 && num_flushed != pb . marker )
+                    rc = RC ( rcDB, rcMetadata, rcPersisting, rcTransfer, rcIncomplete );
+              }
+            }
+            pb . rc = KFileRelease ( pb . f );
+            if ( pb . rc  ==  0 )
+                pb . fmd5 = NULL;
+            if ( rc == 0 && ( rc = pb . rc ) == 0 )
+            {
+                /* rename file */
+                rc = KDirectoryRename ( self -> dir, true, "md/cur.tmp", "md/cur" );
+
+                if ( self->md5 != NULL && rc == 0 )
+                    rc = KMD5SumFmtRename ( self -> md5, "md/cur.tmp", "md/cur" );
+
+                if ( rc == 0 )
+                    self -> dirty = false;
+            }
+        }
+
+        free ( pb . buffer );
+    }
+    return rc;
+}
+
+/* Whack
+ */
+static
+rc_t CC
+KWMetadataWhack ( KMetadata *bself )
+{
+    CAST();
+
+    rc_t rc = 0;
+    KSymbol * symb;
+    KDBManager *mgr = self -> mgr;
+
+    if ( self -> dirty )
+    {
+        /* if this was a version 1 file,
+           first freeze it */
+        if ( self -> vers == 1 )
+        {
+            rc = KMetadataFreeze ( bself );
+            if ( rc != 0 )
+                return rc;
+        }
+
+        /* flush it */
+        rc = KWMetadataFlush ( self );
+        if ( rc != 0 )
+            return rc;
+        self -> dirty = false;
+    }
+
+    if ( self -> db != NULL )
+    {
+        rc = KDatabaseSever ( self -> db );
+        if ( rc != 0 )
+            return rc;
+        self -> db = NULL;
+    }
+    else if ( self -> tbl != NULL )
+    {
+        rc = KTableSever ( & self -> tbl -> dad );
+        if ( rc != 0 )
+            return rc;
+        self -> tbl = NULL;
+    }
+    else if ( self -> col != NULL )
+    {
+        rc = KColumnSever ( self -> col );
+        if ( rc != 0 )
+            return rc;
+        self -> col = NULL;
+    }
+
+    if ( self -> md5 != NULL )
+    {
+	rc = KMD5SumFmtRelease ( self -> md5 );
+	if ( rc != 0 )
+	    return rc;
+	self -> md5 = NULL;
+    }
+
+    /* mgr can we NULL when called from KWMetadataCheckPBSTree */
+    if ( mgr != NULL ) {
+      /* remove from mgr */
+      symb = KDBManagerOpenObjectFind (mgr, self->path);
+      if (symb != NULL)
+      {
+        rc = KDBManagerOpenObjectDelete (mgr, symb);
+        if (rc == 0)
+        {
+            /* release manager
+               should never fail */
+            rc = KDBManagerSever ( mgr );
+            if ( rc != 0 )
+                KDBManagerOpenObjectAdd (mgr, symb);
+        }
+      }
+    }
+
+    if ( rc == 0 )
+    {
+                /* complete */
+                KDirectoryRelease ( self -> dir );
+                KMDataNodeRelease ( & self -> root -> dad );
+                return KMetadataBaseWhack( bself );
+    }
+
+    KRefcountInit ( & self -> dad . refcount, 1, "KMetadata", "whack", "kmeta" );
+    return rc;
+}
+
+
+/* AddRef
+ * Release
+ *  all objects are reference counted
+ *  NULL references are ignored
+ */
+static
+rc_t CC
+KWMetadataAddRef ( const KMetadata *bself )
+{
+    CAST();
+
+    rc_t rc = KMetadataBaseAddRef( bself );
+    if ( rc == 0 )
+    {
+        ++ self -> opencount;
+    }
+    return rc;
+}
+
+static
+rc_t CC
+KWMetadataRelease ( const KMetadata *bself )
+{
+    CAST();
+
+    if ( self != NULL )
+    {
+        -- self -> opencount;
+    }
+    return KMetadataBaseRelease( bself );
+}
+
+/* Make
+ */
+
+static
+rc_t
+KMetadataPopulate ( KMetadata *bself, const KDirectory *dir, const char *path, bool read_only )
+{
+    const KFile *f;
+    rc_t rc = KDirectoryOpenFileRead ( dir, & f, "%s", path );
+    if ( rc == 0 )
+    {
+        const KMMap *mm;
+        rc = KMMapMakeRead ( & mm, f );
+        if ( rc == 0 )
+        {
+            size_t size;
+            const void *addr = NULL;
+            rc = KMMapSize ( mm, & size );
+            if ( rc == 0 )
+                rc = KMMapAddrRead ( mm, & addr );
+
+            if ( rc == 0 )
+            {
+                rc = MetadataPopulateFromMem ( bself, read_only, addr, size );
             }
 
             KMMapRelease ( mm );
