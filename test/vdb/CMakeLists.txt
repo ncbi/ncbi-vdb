@@ -88,5 +88,3 @@ AddExecutableTest( SlowTest_VDB_wvdb-slow "test-wvdb-slow" "${LIBS_WRITE}" )
 # TODO: make sure runs are not cached in the user repository when running tests
 
 # TODO: valgrind
-
-AddExecutableTest( X ok "${LIBS_WRITE}" )
