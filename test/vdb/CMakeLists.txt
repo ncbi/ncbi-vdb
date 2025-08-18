@@ -75,6 +75,7 @@ AddExecutableTest( Test_VDB_VDB-4156 "test-VDB-4156" "${LIBS_WRITE}" )
 AddExecutableTest( Test_VDB_NodeDrop "test-VDB-NodeDrop" "${LIBS_WRITE}" )
 AddExecutableTest( Test_VDB_META_CMP_COPY "test-vdb-meta-cmp-copy" "${LIBS_WRITE}" )
 AddExecutableTest( Test_VDB_schema_priv "Test-VDB_schema_priv" "${LIBS_READ}" )
+AddExecutableTest( Test_VDB_TooBigMeta "test-VDB-TooBigMeta" "${LIBS_WRITE}" )
 AddExecutableTest( Test_VDB_link "test-link" "${LIBS_READ}" )
 AddExecutableTest( Test_VDB_text "test-textvdb" "${LIBS_READ};kdbtext" )
 AddExecutableTest( Test_VDB_linker "test-linker" "${LIBS_WRITE}" )
@@ -87,3 +88,5 @@ AddExecutableTest( SlowTest_VDB_wvdb-slow "test-wvdb-slow" "${LIBS_WRITE}" )
 # TODO: make sure runs are not cached in the user repository when running tests
 
 # TODO: valgrind
+
+AddExecutableTest( X ok "${LIBS_WRITE}" )
