@@ -393,10 +393,17 @@ rc_t KWMetadataFlush ( KWMetadata *self )
         /* ZZZZ do we need a "KMD5FileReset ( pb -> fmd5 )" ? I don't think so */
         if ( rc == 0 )
         {
+            // This function writes KWMetadata to pb.buffer.
+            // However if the amount of data is > pb . bsize
+            // then pb.buffer is flushed to disk, pb . pos becomes > 0
+            // and pb.buffer will contain remaining data
             rc = KWMetadataFlushToMem ( self, & pb );
             if ( rc == 0 && pb . marker != 0 )
             {
-              rc = KWMetadataCheckPBSTree ( pb . buffer, pb . marker );
+              // if (pb.pos > 0) then we cannot validate pb . buffer
+              if (pb.pos == 0)
+                rc = KWMetadataCheckPBSTree ( pb . buffer, pb . marker );
+              
               if ( rc == 0 ) {
                 size_t num_flushed;
                 rc = KFileWrite ( pb . f, pb . pos,
@@ -405,6 +412,7 @@ rc_t KWMetadataFlush ( KWMetadata *self )
                     rc = RC ( rcDB, rcMetadata, rcPersisting, rcTransfer, rcIncomplete );
               }
             }
+
             pb . rc = KFileRelease ( pb . f );
             if ( pb . rc  ==  0 )
                 pb . fmd5 = NULL;
