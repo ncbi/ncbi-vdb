@@ -68,7 +68,7 @@ FIXTURE_TEST_CASE (TooBigMetaTest, WVDB_Fixture)
     REQUIRE_RC ( KDatabaseOpenMetadataUpdate ( Db, & Md ) );
 
     size_t size(8193);
-    const void* buffer(malloc(size));
+    void* buffer(malloc(size));
     REQUIRE(buffer);
 
     // Created metadata will overflow buffer in WMetadataFlush.
