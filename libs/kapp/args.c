@@ -45,6 +45,7 @@
 #include <kapp/args-conv.h>
 
 #include "args_debug.h"
+#include "version-hash.h" /* HASH_SRA_TOOLS */
 
 #include <assert.h>
 #include <ctype.h>
@@ -2237,10 +2238,11 @@ void CC HelpVersion (const char * fullpath, ver_t version)
         (sraVersion.version == version && sraVersion.revision == 0 &&
          sraVersion.type == eSraReleaseVersionTypeFinal))
     {
-        OUTMSG (("\n%s : %.3V\n\n", fullpath, version));
+        OUTMSG (("%s : %.3V\n\n", fullpath, version));
     }
     else {
-        OUTMSG (("\n%s : %.3V ( %s )\n\n", fullpath, version, cSra));
+        OUTMSG (("%s : %.3V%s ( %s%s )\n\n",
+            fullpath, version, HASH_SRA_TOOLS, cSra, HASH_NCBI_VDB));
     }
 }
 
