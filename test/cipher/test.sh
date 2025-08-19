@@ -47,7 +47,7 @@ python -mpip install --upgrade pip     || exit 3
 # the following creates "build dist .eggs" in $CIPHER_DIR
 tmp_cur_dir=$(pwd)
 cd $CIPHER_DIR          || exit 4
-python -m pip install . || exit 5
+python -m pip install --use-pep517 . || exit 5
 cd $tmp_cur_dir         || exit 6
 unset tmp_cur_dir
 
