@@ -1355,7 +1355,7 @@ static rc_t KNSManagerVMakeHttpFileIntUnstableImpl( const KNSManager *self,
                     rc = KClientHttpMakeRequestInt ( http, & req, & f -> block, buf_f );
                     if ( rc == 0 )
                     {
-                        KClientHttpResult *rslt;
+                        KClientHttpResult *rslt = NULL;
 
                         KClientHttpRequestSetCloudParams ( req, need_env_token, payRequired );
                         if ( need_env_token )
