@@ -30,45 +30,49 @@ if [ "${PYTHON}" = "" ]; then
     echo "skipping python cipher test: PYTHON not defined"
     exit 0
 fi
-if [ "${VIRTUALENV}" = "" ]; then
-    echo "skipping python cipher test: no virtualenv"
-    exit 0
-fi
 
 #installing cipher module into newly created virtual env
-tmp_py_env=$(pwd)/temp_env
+tmp_py_env=$(pwd)/temp_env_${OS}
 
-${PYTHON} -V
-${VIRTUALENV} -p ${PYTHON} $tmp_py_env || exit 1
+if [ "${VIRTUALENV}" != "" ]; then
+   virtualenv -p ${PYTHON} $tmp_py_env || exit 1
+else
+   ${PYTHON} -m venv $tmp_py_env       || exit 1
+fi
 . $tmp_py_env/bin/activate             || exit 2
-python -mpip install --upgrade pip     || exit 3
-#now inside the virtual env, python is ${PYTHON}
+
+#now inside the virtual env, python is python
 
 # the following creates "build dist .eggs" in $CIPHER_DIR
 tmp_cur_dir=$(pwd)
-cd $CIPHER_DIR          || exit 4
-python -m pip install . || exit 5
-cd $tmp_cur_dir         || exit 6
+cd $CIPHER_DIR                       || exit 3
+python -m pip install --use-pep517 . || exit 4
+cd $tmp_cur_dir                      || exit 5
 unset tmp_cur_dir
 
 echo "Running python cipher test..."
 
 #running cipher test in py virtual env
 rm -f test.in test.enc test.out
+if [ "${OS}" = "mac" ]; then
+    rm -f libncbi-vdb.dylib
+    ln -s $LD_LIBRARY_PATH/libncbi-vdb.dylib || exit 6
+fi
 
 for i in {0..10000}
 do
     echo "Hello world $i" >> test.in
 done
 
-python ${CIPHER_DIR}/encrypt.py --password=password123 test.in test.enc ||exit 7
-python ${CIPHER_DIR}/decrypt.py --password=password123 test.enc test.out||exit 8
+encrypt.py --password=password123 test.in  test.enc || exit 7
+decrypt.py --password=password123 test.enc test.out || exit 8
 
 diff test.in test.out
 exit_code=$?
 rm test.in test.enc test.out
+if [ "${OS}" = "mac" ]; then rm libncbi-vdb.dylib; fi
 
-echo "python cipher test is complete."
+echo "...python cipher test is complete."
 
 # cleanup
 deactivate || exit 9
