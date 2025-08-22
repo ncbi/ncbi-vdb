@@ -1392,6 +1392,7 @@ static rc_t KNSManagerVMakeHttpFileIntUnstableImpl( const KNSManager *self,
                                     buf_f -> elem_count - 1, buf_f -> base,
                                     ep . ip_address, local_ep . ip_address ) );
                             }
+                            KClientHttpResultRelease ( rslt );
                         }
                         else
                         {
