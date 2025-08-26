@@ -1016,16 +1016,20 @@ static const char * VDBManagerGetQuality(const VDBManager * self) {
 
     if (!s_EnvQualitySet) {
 #ifdef WINDOWS
-        char buf_e[4096];
-        const char * e = NULL;
-        size_t buf_count = 0;
-        errno_t err = getenv_s ( & buf_count, buf_e, sizeof ( buf_e ), "NCBI_VDB_QUALITY" );
-        assert ( err != ERANGE );
-        assert ( buf_count <= sizeof ( buf_e ) );
-        if (!err)
-            e = buf_e;
-#else
+#pragma warning(push)
+#pragma warning(disable:4996)
+/* Disabling unsafe getenv function warning since
+   it cannot be substituted with a safe one, since
+   here the global result of getenv is assigned to
+   a global variable s_EnvQuality and in addition to
+   that is returned outside to be used there.
+   Significant redesign of VDBManagerGetQuality and
+   all its callers is required
+*/
+#endif
         char * e = getenv("NCBI_VDB_QUALITY");
+#ifdef WINDOWS
+#pragma warning(pop)
 #endif
         s_EnvQualitySet = true;
         s_EnvQuality = e;
