@@ -188,9 +188,10 @@ void CC KConfigNodeWhack ( BSTNode *n, void * data )
     if ( mgr == NULL )
     {
         /* just releasing reference */
-        KConfigSever ( self -> mgr );
-        self -> mgr = NULL;
+        mgr = self -> mgr;
+        self -> mgr = NULL; /* update self before releasing self -> mgr */
         self -> read_only = false;
+        KConfigSever ( mgr );
     }
     else
     {
