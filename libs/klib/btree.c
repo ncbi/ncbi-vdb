@@ -39,7 +39,7 @@
 
 #include "int_checks-priv.h"
 
- 
+
 //#define assert(e) { if ( ! (e) ) abort(); }
 
 #if ! _DEBUGGING
@@ -875,8 +875,6 @@ rc_t branch_insert ( BranchNode *node, const Split *split, int32_t slot )
     memmove ( & ( ( uint8_t* ) node ) [ PGSIZE - node -> key_bytes ], key, ksize + (int16_t) sizeof ( uint32_t ) );
 
     /* enter the new transitions */
-    assert ( node -> ord [ ( int ) slot - 1 ] . trans == split -> left );
-    node -> ord [ ( int ) slot - 1 ] . trans = split -> left;
     node -> ord [ slot ] . trans = split -> right;
 
     ++ node -> count;
@@ -960,7 +958,16 @@ static rc_t split_branch ( BranchNode *left, BranchNode *right, const Split *val
         right -> key_bytes += (int16_t) ksize;
         right -> ord [ i ] . key = PGSIZE - right -> key_bytes;
         memmove ( & rpage [ PGSIZE - right -> key_bytes ], & lpage [ left -> ord [ j ] . key ], ksize );
-        right -> ord [ i - 1 ] . trans = left -> ord [ j - 1 ] . trans;
+
+        if ( i == 0 )
+        {
+            right -> ltrans = left -> ord [ j - 1 ] . trans;
+        }
+        else
+        {
+            right -> ord [ i - 1 ] . trans = left -> ord [ j - 1 ] . trans;
+        }
+
         if(i == 0 && left->key_prefix_len > 0){
             off = PGSIZE - right -> key_bytes - left -> key_prefix_len;
             memmove ( & rpage [ off ], lpage + left -> key_prefix, left -> key_prefix_len );
@@ -1293,7 +1300,9 @@ rc_t branch_entry ( EntryData *pb, void const *page, Split *rsplit)
 
     /* the node id is left-shifted by 1 and has the "branch-bit" indicator
      in the LSB. the remaining bits should NOT be zero */
-    nid = cnode -> ord [ upper - 1 ] . trans;
+    /* NB - if "upper" is 0 and type is signed,
+        this will access entry -1, giving "ltrans" */
+    nid = (upper == 0) ? cnode->ltrans : cnode -> ord [ upper - 1 ] . trans;
     assert ( ( nid >> 1 ) != 0 );
 
     /* access child node */
@@ -1471,7 +1480,7 @@ MIN_KEY_COUNT * ( sizeof ( BranchEntry ) + sizeof ( uint32_t ) ) \
     if ( key_size > MAX_KEY_SIZE)
     {
         return RC ( rcDB, rcTree, rcInserting, rcData, rcTooLong );
-    }    
+    }
 
     {
         EntryData pb;
@@ -1830,7 +1839,7 @@ static void printf_branch(uint32_t nodeid, Pager *pager, Pager_vt const *vt )
 
     printf("Branch id = %u:\n", (nodeid << 1) + 1);
     PrintBranch(node);
-    
+
     {   // left transition
         uint32_t const child = node->ltrans;
         if (child != 0)

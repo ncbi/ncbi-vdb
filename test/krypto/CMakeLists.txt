@@ -36,4 +36,5 @@ AddExecutableTest( Test_KRYPTO_rsa-aes-hmac "test-rsa-aes-hmac" "${LIBS}" )
 AddExecutableTest( Test_KRYPTO_hash-in-pwd "test-hash-in-pwd" "${LIBS}" )
 AddExecutableTest( Test_KRYPTO_aes-ciphers "test-aes-ciphers" "kryptotest;${LIBS}" )
 
-AddExecutableTest( SlowTest_KRYPTO_krypto-slow "test-krypto-slow;test-cmn" "${LIBS}" )
+#  uses a lot of disk space; migrated to asm-trace with its own version of test-cmn.[hc]
+#AddExecutableTest( SlowTest_KRYPTO_krypto-slow "test-krypto-slow;test-cmn" "${LIBS}" )

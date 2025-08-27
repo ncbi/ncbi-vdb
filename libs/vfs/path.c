@@ -2392,6 +2392,10 @@ LIB_EXPORT rc_t CC VFSManagerExtractAccessionOrOID ( const VFSManager * self,
                 return 0;
             }
         }
+        else if ( orig -> path . addr == NULL )
+        {
+            rc = RC ( rcVFS, rcPath, rcConstructing, rcParam, rcIncorrect );
+        }
         else
         {
             String path = orig -> path;
@@ -4765,7 +4769,7 @@ rc_t VPathGetDirectory(const VPath * self, const KDirectory ** dir) {
 
 rc_t VPathSetDirectory(VPath * self, const KDirectory * dir) {
     static int DISABLE_DIRECTORY_CACHING = -1;
-    
+
     rc_t rc = 0;
 
     if (DISABLE_DIRECTORY_CACHING < 0)

@@ -282,6 +282,10 @@ void uint128_bswap_copy ( uint128_t *to, const uint128_t *from )
 static __inline__
 uint32_t uint32_rol ( uint32_t val, uint8_t bits )
 {
+    if ( bits == 0 )
+    {
+        return val;
+    }
     uint32_t rtn;
     rtn = ( val << bits ) | ( val >> ( 32 - bits ) );
     return rtn;
@@ -290,6 +294,10 @@ uint32_t uint32_rol ( uint32_t val, uint8_t bits )
 static __inline__
 uint32_t uint32_ror ( uint32_t val, uint8_t bits )
 {
+    if ( bits == 0 )
+    {
+        return val;
+    }
     uint32_t rtn;
     rtn = ( val >> bits ) | ( val << ( 32 - bits ) );
     return rtn;
@@ -298,6 +306,10 @@ uint32_t uint32_ror ( uint32_t val, uint8_t bits )
 static __inline__
 uint64_t uint64_rol ( uint64_t val, uint8_t bits )
 {
+    if ( bits == 0 )
+    {
+        return val;
+    }
     uint64_t rtn;
     rtn = ( val << bits ) | ( val >> ( 64 - bits ) );
     return rtn;
@@ -306,6 +318,10 @@ uint64_t uint64_rol ( uint64_t val, uint8_t bits )
 static __inline__
 uint64_t uint64_ror ( uint64_t val, uint8_t bits )
 {
+    if ( bits == 0 )
+    {
+        return val;
+    }
     uint64_t rtn;
     rtn = ( val >> bits ) | ( val << ( 64 - bits ) );
     return rtn;
