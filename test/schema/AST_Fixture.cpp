@@ -47,8 +47,7 @@ AST_Fixture :: AST_Fixture()
     m_parseTree ( 0 ),
     m_builder ( 0 ),
     m_ast ( 0 ),
-    m_schema ( 0 ),
-    m_newParse ( true )
+    m_schema ( 0 )
 {
     HYBRID_FUNC_ENTRY( rcSRA, rcSchema, rcParsing );
     VSchema * intrinsic;
@@ -202,49 +201,42 @@ AST_Fixture :: MakeFqn ( const char* p_text ) // p_text = (ident:)+ident
 AST *
 AST_Fixture :: MakeAst ( const char* p_source )
 {
-    if ( m_newParse )
+    HYBRID_FUNC_ENTRY( rcSRA, rcSchema, rcParsing );
+
+    if ( ! m_parser . ParseString ( ctx, p_source, m_debugParse ) )
     {
-        HYBRID_FUNC_ENTRY( rcSRA, rcSchema, rcParsing );
-
-        if ( ! m_parser . ParseString ( ctx, p_source, m_debugParse ) )
-        {
-            throw std :: logic_error ( string ( "AST_Fixture::MakeAst : ParseString() failed: " ) + m_parser . GetErrors () . GetMessageText ( 0 ) );
-        }
-        if ( m_parseTree != 0 )
-        {
-            ParseTree :: Destroy ( m_parseTree );
-        }
-        m_parseTree = m_parser . MoveParseTree ();
-        if ( m_parseTree == 0 )
-        {
-            throw std :: logic_error ( "AST_Fixture::MakeAst : MoveParseTree() returned 0" );
-        }
-        if ( m_printTree )
-        {
-            PrintTree ( * m_parseTree );
-        }
-        if ( m_ast != 0 )
-        {
-            AST :: Destroy ( m_ast );
-        }
-        m_ast = m_builder -> Build ( ctx, * m_parseTree, "", m_debugAst );
-        if ( m_builder -> GetErrorCount() != 0)
-        {
-            throw std :: logic_error ( string ( "AST_Fixture::MakeAst : ASTBuilder::Build() failed: " ) + string ( m_builder -> GetErrorMessage ( 0 ) ) );
-        }
-        else if ( m_ast == 0 )
-        {
-            throw std :: logic_error ( "AST_Fixture::MakeAst : ASTBuilder::Build() failed, no message!" );
-        }
-
-        if ( FAILED () )
-        {
-            throw std :: logic_error ( WHAT() );
-        }
+        throw std :: logic_error ( string ( "AST_Fixture::MakeAst : ParseString() failed: " ) + m_parser . GetErrors () . GetMessageText ( 0 ) );
     }
-    else if ( ! OldParse ( p_source ) )
+    if ( m_parseTree != 0 )
     {
-        throw std :: logic_error ( "AST_Table_Fixture::ParseTable : OldParse() failed" );
+        ParseTree :: Destroy ( m_parseTree );
+    }
+    m_parseTree = m_parser . MoveParseTree ();
+    if ( m_parseTree == 0 )
+    {
+        throw std :: logic_error ( "AST_Fixture::MakeAst : MoveParseTree() returned 0" );
+    }
+    if ( m_printTree )
+    {
+        PrintTree ( * m_parseTree );
+    }
+    if ( m_ast != 0 )
+    {
+        AST :: Destroy ( m_ast );
+    }
+    m_ast = m_builder -> Build ( ctx, * m_parseTree, "", m_debugAst );
+    if ( m_builder -> GetErrorCount() != 0)
+    {
+        throw std :: logic_error ( string ( "AST_Fixture::MakeAst : ASTBuilder::Build() failed: " ) + string ( m_builder -> GetErrorMessage ( 0 ) ) );
+    }
+    else if ( m_ast == 0 )
+    {
+        throw std :: logic_error ( "AST_Fixture::MakeAst : ASTBuilder::Build() failed, no message!" );
+    }
+
+    if ( FAILED () )
+    {
+        throw std :: logic_error ( WHAT() );
     }
 
     return m_ast;
@@ -253,51 +245,44 @@ AST_Fixture :: MakeAst ( const char* p_source )
 void
 AST_Fixture :: VerifyErrorMessage ( const char* p_source, const char* p_expectedError, uint32_t p_line, uint32_t p_column )
 {
-    if ( m_newParse )
+    HYBRID_FUNC_ENTRY( rcSRA, rcSchema, rcParsing );
+
+    if ( ! m_parser . ParseString ( ctx, p_source ) )
     {
-        HYBRID_FUNC_ENTRY( rcSRA, rcSchema, rcParsing );
-
-        if ( ! m_parser . ParseString ( ctx, p_source ) )
-        {
-            throw std :: logic_error ( "AST_Fixture::VerifyErrorMessage : ParseString() failed" );
-        }
-        m_parseTree = m_parser . MoveParseTree ();
-        if ( m_parseTree == 0 )
-        {
-            throw std :: logic_error ( "AST_Fixture::VerifyErrorMessage : MoveParseTree() returned 0" );
-        }
-        ParseTree :: Destroy ( m_builder -> Build ( ctx, * m_parseTree ) );
-        if ( m_builder -> GetErrorCount() == 0 )
-        {
-            throw std :: logic_error ( "AST_Fixture::VerifyErrorMessage : no error" );
-        }
-        const ErrorReport :: Error * err = m_builder -> GetErrors () . GetError ( 0 );
-        if ( string ( err -> m_message ) != string ( p_expectedError ) )
-        {
-            throw std :: logic_error ( "AST_Fixture::VerifyErrorMessage : expected '" + string ( p_expectedError ) +
-                                                                        "', received '" + string ( m_builder -> GetErrorMessage ( 0 ) ) + "'" );
-        }
-        if ( p_line != 0 && p_line != err -> m_line )
-        {
-            ostringstream out;
-            out << "AST_Fixture::VerifyErrorMessage : expected line " << p_line << ", received " << err -> m_line;
-            throw std :: logic_error ( out . str () );
-        }
-        if ( p_column != 0 && p_column != err -> m_column )
-        {
-            ostringstream out;
-            out << "AST_Fixture::VerifyErrorMessage : expected column " << p_column << ", received " << err -> m_column;
-            throw std :: logic_error ( out . str () );
-        }
-
-        if ( FAILED () )
-        {
-            throw std :: logic_error ( WHAT() );
-        }
+        throw std :: logic_error ( "AST_Fixture::VerifyErrorMessage : ParseString() failed" );
     }
-    else if ( OldParse ( p_source ) )
+    m_parseTree = m_parser . MoveParseTree ();
+    if ( m_parseTree == 0 )
     {
-        throw std :: logic_error ( "AST_Function_Fixture::VerifyErrorMessage : no error" );
+        throw std :: logic_error ( "AST_Fixture::VerifyErrorMessage : MoveParseTree() returned 0" );
+    }
+    ParseTree :: Destroy ( m_builder -> Build ( ctx, * m_parseTree ) );
+    if ( m_builder -> GetErrorCount() == 0 )
+    {
+        throw std :: logic_error ( "AST_Fixture::VerifyErrorMessage : no error" );
+    }
+    const ErrorReport :: Error * err = m_builder -> GetErrors () . GetError ( 0 );
+    if ( string ( err -> m_message ) != string ( p_expectedError ) )
+    {
+        throw std :: logic_error ( "AST_Fixture::VerifyErrorMessage : expected '" + string ( p_expectedError ) +
+                                                                    "', received '" + string ( m_builder -> GetErrorMessage ( 0 ) ) + "'" );
+    }
+    if ( p_line != 0 && p_line != err -> m_line )
+    {
+        ostringstream out;
+        out << "AST_Fixture::VerifyErrorMessage : expected line " << p_line << ", received " << err -> m_line;
+        throw std :: logic_error ( out . str () );
+    }
+    if ( p_column != 0 && p_column != err -> m_column )
+    {
+        ostringstream out;
+        out << "AST_Fixture::VerifyErrorMessage : expected column " << p_column << ", received " << err -> m_column;
+        throw std :: logic_error ( out . str () );
+    }
+
+    if ( FAILED () )
+    {
+        throw std :: logic_error ( WHAT() );
     }
 }
 
@@ -306,23 +291,14 @@ AST_Fixture :: VerifySymbol ( const char* p_name, uint32_t p_type )
 {
     HYBRID_FUNC_ENTRY( rcSRA, rcSchema, rcParsing );
     const KSymbol* sym = 0;
-    if ( m_newParse )
+    AST_FQN * ast = MakeFqn ( p_name );
+    sym = m_builder -> Resolve ( ctx, * ast );
+    if ( sym != 0 && ToCppString ( sym -> name ) !=
+            ast -> GetChild ( ast -> ChildrenCount() - 1 ) -> GetTokenValue () )
     {
-        AST_FQN * ast = MakeFqn ( p_name );
-        sym = m_builder -> Resolve ( ctx, * ast );
-        if ( sym != 0 && ToCppString ( sym -> name ) !=
-                ast -> GetChild ( ast -> ChildrenCount() - 1 ) -> GetTokenValue () )
-        {
-            throw std :: logic_error ( "AST_Fixture::VerifySymbol : object name mismatch" );
-        }
-        AST :: Destroy ( ast );
+        throw std :: logic_error ( "AST_Fixture::VerifySymbol : object name mismatch" );
     }
-    else // old parser
-    {
-        String name;
-        StringInitCString ( & name, p_name );
-        sym = ( const KSymbol* ) BSTreeFind ( & m_schema -> scope, & name, KSymbolCmp );
-    }
+    AST :: Destroy ( ast );
 
     if ( sym == 0 )
     {
@@ -366,29 +342,6 @@ AST_Fixture :: VerifyDatatype ( const char* p_name, const char* p_baseName, uint
     {
         throw std :: logic_error ( "AST_Fixture::VerifyDatatype : wrong domain" );
     }
-    return ret;
-}
-
-bool
-AST_Fixture :: OldParse ( const char* p_source )
-{
-    const VDBManager *mgr;
-    if ( VDBManagerMakeRead ( & mgr, 0 ) != 0 )
-    {
-        throw std :: logic_error ( "AST_Function_Fixture::ParseFunction : VDBManagerMakeRead() failed" );
-    }
-    if ( VDBManagerMakeSchema ( mgr, & m_schema ) != 0 )
-    {
-        throw std :: logic_error ( "AST_Function_Fixture::ParseFunction : VDBManagerMakeSchema() failed" );
-    }
-    // expect an error, do not need to see it
-    KWrtHandler* h =  KLogLibHandlerGet ();
-    //KLogLibHandlerSet ( NULL, NULL );
-    bool ret = VSchemaParseText ( m_schema, 0, p_source, string_size ( p_source ) ) == 0;
-    KLogLibHandlerSet ( h -> writer, h -> data );
-
-    VDBManagerRelease ( mgr );
-
     return ret;
 }
 
