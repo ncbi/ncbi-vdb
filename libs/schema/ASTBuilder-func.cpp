@@ -100,8 +100,10 @@ FunctionDeclaration :: HandleOverload ( ctx_t ctx, const AST_FQN & p_fqn, const 
     rc_t rc = VectorInsertUnique ( & name -> items, m_self, & idx, SFunctionSort );
     if ( rc == 0 ) // overload added
     {
+        m_self->name = name -> name;
         return m_builder . VectorAppend ( ctx, functions, & m_self -> id, m_self );
     }
+
     if ( GetRCState ( rc ) == rcExists )
     {   /* an overload with the same major version exists */
         /* see if new function trumps old */
@@ -114,12 +116,16 @@ FunctionDeclaration :: HandleOverload ( ctx_t ctx, const AST_FQN & p_fqn, const 
 
             /* if existing is in the same schema... */
             if ( ( const void* ) name == exist -> name -> u . obj )
-            {
-                /* need to swap with old */
+            {   /* replace the old one with the new */
                 assert ( exist -> id >= VectorStart ( & functions ) );
                 VectorSwap ( & functions, exist -> id, m_self, & prior );
                 m_self -> id = exist -> id;
                 SFunctionWhack ( (SFunction*)prior, 0 );
+            }
+            else
+            {   /* add to the current schema */
+                m_builder . VectorAppend ( ctx, functions, & m_self -> id, m_self );
+                m_self -> name = name -> name;
             }
             return true;
         }
@@ -178,8 +184,8 @@ FunctionDeclaration :: SetName ( ctx_t ctx,
             }
         }
     }
-    else
-    {
+    else // declared previously
+    {   
         if ( ! p_canOverload  || priorDecl -> type == eFactory )
         {
             m_builder . ReportError ( ctx, "Declared earlier and cannot be overloaded", p_fqn );
@@ -187,8 +193,7 @@ FunctionDeclaration :: SetName ( ctx_t ctx,
         }
 
         if ( HandleOverload ( ctx, p_fqn, priorDecl ) )
-        {   // declared previously, this version not ignored
-            m_self -> name = priorDecl;
+        {   // our version is used
             m_destroy = false;
             return true;
         }

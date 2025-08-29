@@ -113,37 +113,25 @@ public:
 
     FunctionAccess ParseFunction ( const char * p_source, const char * p_name, uint32_t p_idx = 0, uint32_t p_type = eFunction )
     {
-        const SFunction* ret = 0;
         MakeAst ( p_source );
-        if ( m_newParse )
-        {
-            const KSymbol* sym = VerifySymbol ( p_name, p_type );
+        const KSymbol* sym = VerifySymbol ( p_name, p_type );
 
-            // for functions, sym points to an entry in the overloads table (schema->fname)
-            const SNameOverload* name = static_cast < const SNameOverload* > ( sym -> u . obj );
-            if ( 1u != VectorLength ( & name -> items ) )
-            {
-                throw std :: logic_error ( "AST_Function_Fixture::ParseFunction : too many overloads" );
-            }
-            ret = static_cast < const SFunction* > ( VectorGet ( & name -> items, 0 ) );
-            if ( ret -> name == 0 )
-            {
-                throw std :: logic_error ( "AST_Function_Fixture::ParseFunction : NULL name" );
-            }
-            if ( string ( p_name ) != ToCppString ( ret -> name -> name ) )
-            {
-                throw std :: logic_error ( "AST_Function_Fixture::ParseFunction : wrong name" );
-            }
-        }
-        else
+        // for functions, sym points to an entry in the overloads table (schema->fname)
+        const SNameOverload* name = static_cast < const SNameOverload* > ( sym -> u . obj );
+        if ( 1u != VectorLength ( & name -> items ) )
         {
-            ret = static_cast < const SFunction* > ( VectorGet ( & m_schema -> func, p_idx ) );
-
-            if ( string ( p_name ) != ToCppString ( ret -> name -> name ) )
-            {
-                throw std :: logic_error ( "AST_Function_Fixture::ParseFunction : wrong name" );
-            }
+            throw std :: logic_error ( "AST_Function_Fixture::ParseFunction : too many overloads" );
         }
+        const SFunction* ret = static_cast < const SFunction* > ( VectorGet ( & name -> items, 0 ) );
+        if ( ret -> name == 0 )
+        {
+            throw std :: logic_error ( "AST_Function_Fixture::ParseFunction : NULL name" );
+        }
+        if ( string ( p_name ) != ToCppString ( ret -> name -> name ) )
+        {
+            throw std :: logic_error ( "AST_Function_Fixture::ParseFunction : wrong name" );
+        }
+
         return FunctionAccess ( ret );
     }
 
@@ -290,12 +278,9 @@ FIXTURE_TEST_CASE(Func_Redeclared_DiffMajor, AST_Function_Fixture)
 }
 
 FIXTURE_TEST_CASE(Func_Redeclared_HigherMinor, AST_Function_Fixture)
-{   // higner minor is used
-    if ( m_newParse ) // the old parser fails here!
-    {
-        FunctionAccess fn = ParseFunction ( "function U8 f#1();function U16 f#1.2();",  "f" );
-        REQUIRE_EQ ( U16_id, fn . ReturnType () -> fd . td . type_id ); // 2nd decl used
-    }
+{   // higher minor is used
+    FunctionAccess fn = ParseFunction ( "function U8 f#1();function U16 f#1.2();",  "f" );
+    REQUIRE_EQ ( U16_id, fn . ReturnType () -> fd . td . type_id ); // 2nd decl used
 }
 
 FIXTURE_TEST_CASE(Func_NoChangingReleaseNumberForSimpleFunctions, AST_Function_Fixture)
@@ -783,32 +768,22 @@ public:
 PhysicalAccess
 AST_Function_Fixture :: ParsePhysical ( const char * p_source, const char * p_name )
 {
-    const SPhysical* ret = 0;
-    if ( m_newParse )
-    {
-        MakeAst ( p_source );
-        const KSymbol* sym = VerifySymbol ( p_name, ePhysical );
+    MakeAst ( p_source );
+    const KSymbol* sym = VerifySymbol ( p_name, ePhysical );
 
-        // for physical functions, sym points to an entry in the overloads table (schema->pname)
-        const SNameOverload* name = static_cast < const SNameOverload* > ( sym -> u . obj );
-        if ( 0 == VectorLength ( & name -> items ) )
-        {
-            throw std :: logic_error ( "AST_Function_Fixture::ParsePhysical : no overloads" );
-        }
-        ret = static_cast < const SPhysical* > ( VectorGet ( & name -> items, 0 ) );
-        if ( string ( p_name ) != ToCppString ( ret -> name -> name ) )
-        {
-            throw std :: logic_error ( "AST_Function_Fixture::ParsePhysical : wrong name" );
-        }
-    }
-    else if ( OldParse ( p_source ) )
+    // for physical functions, sym points to an entry in the overloads table (schema->pname)
+    const SNameOverload* name = static_cast < const SNameOverload* > ( sym -> u . obj );
+    if ( 0 == VectorLength ( & name -> items ) )
     {
-        ret = static_cast < const SPhysical* > ( VectorGet ( & m_schema -> phys, 0 ) );
-        if ( string ( p_name ) != ToCppString ( ret -> name -> name ) )
-        {
-            throw std :: logic_error ( "AST_Function_Fixture::ParsePhysical : wrong name" );
-        }
+        throw std :: logic_error ( "AST_Function_Fixture::ParsePhysical : no overloads" );
     }
+
+    const SPhysical* ret = static_cast < const SPhysical* > ( VectorGet ( & name -> items, 0 ) );
+    if ( string ( p_name ) != ToCppString ( ret -> name -> name ) )
+    {
+        throw std :: logic_error ( "AST_Function_Fixture::ParsePhysical : wrong name" );
+    }
+
     return PhysicalAccess ( ret );
 }
 
@@ -857,12 +832,9 @@ FIXTURE_TEST_CASE(Func_Physical_OverloadOlderMajorVersion, AST_Function_Fixture)
 
 FIXTURE_TEST_CASE(Func_Physical_OverloadNewerVersion, AST_Function_Fixture)
 {
-    if ( m_newParse ) // the old parser fails here!
-    {
-        PhysicalAccess fn = ParsePhysical  ( "physical U8 f#1.2 = { return 1; } physical U16 f#1.3 = { return 2; }", "f" );
-        REQUIRE_NOT_NULL ( fn . ReturnType () );
-        REQUIRE_EQ ( U16_id, fn . ReturnType () -> fd . td . type_id ); // 2nd version chosen
-    }
+    PhysicalAccess fn = ParsePhysical  ( "physical U8 f#1.2 = { return 1; } physical U16 f#1.3 = { return 2; }", "f" );
+    REQUIRE_NOT_NULL ( fn . ReturnType () );
+    REQUIRE_EQ ( U16_id, fn . ReturnType () -> fd . td . type_id ); // 2nd version chosen
 }
 
 FIXTURE_TEST_CASE(Func_Physical_Decode, AST_Function_Fixture)

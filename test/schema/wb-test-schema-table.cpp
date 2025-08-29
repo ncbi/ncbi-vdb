@@ -887,15 +887,12 @@ FIXTURE_TEST_CASE(Table_ColumnDecl_SymConstAsSchemaArg, AST_Table_Fixture)
 
 FIXTURE_TEST_CASE(Table_ColumnDecl_NonUintSymConstAsSchemaArg, AST_Table_Fixture)
 {   // schema constant arguments must be uint
-    if ( m_newParse ) // old parser does not check this condition, only mentions it in a comment
-    {
-        VerifyErrorMessage (
-            "physical < U8 C > U8 ph #1 = { return C; }\n"
-            "const I8 c1 = 1; \n"
-            "table t#1 { column < c1 > ph#1  c; }",
-            "Schema argument constant has to be an unsigned integer scalar: 'c1'",
-            3, 22 );
-    }
+    VerifyErrorMessage (
+        "physical < U8 C > U8 ph #1 = { return C; }\n"
+        "const I8 c1 = 1; \n"
+        "table t#1 { column < c1 > ph#1  c; }",
+        "Schema argument constant has to be an unsigned integer scalar: 'c1'",
+        3, 22 );
 }
 
 FIXTURE_TEST_CASE(Table_ColumnDecl_BadSchemaArg, AST_Table_Fixture)
@@ -1173,14 +1170,6 @@ FIXTURE_TEST_CASE(Table_PhysicalColumn_Inherited, AST_Table_Fixture)
     REQUIRE_NOT_NULL ( c -> expr );
     REQUIRE_EQ ( ( uint32_t ) eConstExpr, c -> expr -> var );
 }
-
-/* only for 1.1, not used anywhere - and broken.
-FIXTURE_TEST_CASE(Table_DefaultView, AST_Table_Fixture)
-{
-    m_newParse = false;
-    TableAccess t = ParseTable ( "version 1.1; table t#1 { default view \"V\"; }", "t" );
-}
-*/
 
 FIXTURE_TEST_CASE(Table_Untyped, AST_Table_Fixture)
 {

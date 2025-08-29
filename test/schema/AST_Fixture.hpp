@@ -88,9 +88,7 @@ public:
 
     static AST_FQN * MakeFqn ( const char* p_text ); // p_text = (ident:)+ident
 
-    bool OldParse ( const char* p_source );
-
-    const VSchema * GetSchema () const { return m_newParse ? m_builder -> GetSchema () : m_schema; }
+    const VSchema * GetSchema () const { return m_builder -> GetSchema (); }
 
     uint32_t Version ( uint32_t p_major, uint32_t p_minor = 0, uint32_t p_release = 0 )
     {
@@ -119,8 +117,6 @@ public:
     AST*            m_ast;
 
     VSchema *   m_schema;
-    bool        m_newParse;
-
 };
 
 // convernience wrapper for Vector ( a KVector of void * )
