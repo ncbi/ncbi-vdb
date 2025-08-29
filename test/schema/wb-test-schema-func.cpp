@@ -117,12 +117,12 @@ public:
         const KSymbol* sym = VerifySymbol ( p_name, p_type );
 
         // for functions, sym points to an entry in the overloads table (schema->fname)
-        const SNameOverload* name = static_cast < const SNameOverload* > ( sym -> u . obj );
-        if ( 1u != VectorLength ( & name -> items ) )
+        const SNameOverload* ovl = static_cast < const SNameOverload* > ( sym -> u . obj );
+        if ( 1u != VectorLength ( & ovl -> items ) )
         {
             throw std :: logic_error ( "AST_Function_Fixture::ParseFunction : too many overloads" );
         }
-        const SFunction* ret = static_cast < const SFunction* > ( VectorGet ( & name -> items, 0 ) );
+        const SFunction* ret = static_cast < const SFunction* > ( VectorGet ( & ovl -> items, 0 ) );
         if ( ret -> name == 0 )
         {
             throw std :: logic_error ( "AST_Function_Fixture::ParseFunction : NULL name" );
@@ -140,13 +140,13 @@ public:
         const KSymbol* sym = VerifySymbol ( p_name, eFunction );
 
         // for functions, sym points to an entry in the overloads table (schema->fname)
-        const SNameOverload* name = static_cast < const SNameOverload* > ( sym -> u . obj );
-        if ( p_idx >= VectorLength ( & name -> items ) )
+        const SNameOverload* ovl = static_cast < const SNameOverload* > ( sym -> u . obj );
+        if ( p_idx >= VectorLength ( & ovl -> items ) )
         {
             throw std :: logic_error ( "AST_Function_Fixture::GetOverload : index out of range" );
         }
 
-        return FunctionAccess ( static_cast < const SFunction * > ( VectorGet ( & name -> items, p_idx ) ) );
+        return FunctionAccess ( static_cast < const SFunction * > ( VectorGet ( & ovl -> items, p_idx ) ) );
     }
 
     PhysicalAccess ParsePhysical ( const char * p_source, const char * p_name );
