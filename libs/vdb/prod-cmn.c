@@ -151,7 +151,12 @@ rc_t VProductionMake ( VProduction **prodp, Vector *owned, size_t size,
         {
 #if PROD_NAME
             prod -> name = ( ( const char* ) prod ) + psize;
+
+#ifdef WINDOWS
+            strcpy_s ( ( char* ) prod -> name, size - psize, name ? name : "" );
+#else
             strcpy ( ( char* ) prod -> name, name ? name : "" );
+#endif
 #endif
 
             if ( fd != NULL )
