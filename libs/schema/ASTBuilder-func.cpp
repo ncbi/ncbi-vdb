@@ -79,10 +79,10 @@ FunctionDeclaration :: HandleOverload ( ctx_t ctx, const AST_FQN & p_fqn, const 
 
     Vector & functions = m_builder . GetSchema () -> func;
 
-    SNameOverload *name = ( SNameOverload* ) p_priorDecl -> u . obj;
-    assert ( name != 0 );
+    SNameOverload *ovl = ( SNameOverload* ) p_priorDecl -> u . obj;
+    assert ( ovl != 0 );
 
-    SFunction *exist = static_cast < SFunction * > ( VectorGet ( & name -> items, 0 ) );
+    SFunction *exist = static_cast < SFunction * > ( VectorGet ( & ovl -> items, 0 ) );
     assert ( exist != 0 );
     if ( exist -> script )
     {
@@ -97,30 +97,36 @@ FunctionDeclaration :: HandleOverload ( ctx_t ctx, const AST_FQN & p_fqn, const 
     }
 
     uint32_t idx;
-    rc_t rc = VectorInsertUnique ( & name -> items, m_self, & idx, SFunctionSort );
+    rc_t rc = VectorInsertUnique ( & ovl -> items, m_self, & idx, SFunctionSort );
     if ( rc == 0 ) // overload added
     {
+        m_self->name = ovl -> name;
         return m_builder . VectorAppend ( ctx, functions, & m_self -> id, m_self );
     }
+
     if ( GetRCState ( rc ) == rcExists )
     {   /* an overload with the same major version exists */
         /* see if new function trumps old */
-        SFunction *exist = static_cast < SFunction * > ( VectorGet ( & name -> items, idx ) );
+        SFunction *exist = static_cast < SFunction * > ( VectorGet ( & ovl -> items, idx ) );
         if ( m_self -> version > exist -> version )
         {
             /* insert our function in name overload */
             void * prior;
-            VectorSwap ( & name -> items, idx, m_self, & prior );
+            VectorSwap ( & ovl -> items, idx, m_self, & prior );
 
             /* if existing is in the same schema... */
-            if ( ( const void* ) name == exist -> name -> u . obj )
-            {
-                /* need to swap with old */
+            if ( ( const void* ) ovl == exist -> name -> u . obj )
+            {   /* replace the old one with the new */
                 assert ( exist -> id >= VectorStart ( & functions ) );
                 VectorSwap ( & functions, exist -> id, m_self, & prior );
                 m_self -> id = exist -> id;
                 SFunctionWhack ( (SFunction*)prior, 0 );
             }
+            else
+            {   /* add to the current schema */
+                m_builder . VectorAppend ( ctx, functions, & m_self -> id, m_self );
+            }
+            m_self -> name = ovl -> name;
             return true;
         }
     }
@@ -178,7 +184,7 @@ FunctionDeclaration :: SetName ( ctx_t ctx,
             }
         }
     }
-    else
+    else // declared previously
     {
         if ( ! p_canOverload  || priorDecl -> type == eFactory )
         {
@@ -187,8 +193,7 @@ FunctionDeclaration :: SetName ( ctx_t ctx,
         }
 
         if ( HandleOverload ( ctx, p_fqn, priorDecl ) )
-        {   // declared previously, this version not ignored
-            m_self -> name = priorDecl;
+        {   // our version is used
             m_destroy = false;
             return true;
         }

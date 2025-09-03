@@ -50,6 +50,8 @@
 #include <kproc/timeout.h>
 
 #include <algorithm>
+#include <atomic>
+#include <set>
 
 static rc_t argsHandler(int argc, char* argv[]);
 TEST_SUITE_WITH_ARGS_HANDLER(KnsIpcTestSuite, argsHandler);
@@ -219,12 +221,17 @@ public:
                 KThreadCancel(server);
                 KThreadWait(server, nullptr);
                 KThreadRelease(server);
-                KThreadRelease(server);/* for some reason KThread is initialized with refcout = 2 */
+                KThreadRelease(server);/* for some reason this KThread is initialized with refcount = 2 */
 
                 if (listener)
                 {   /* shutdown the (possibly blocked) listener */
                     LOG(LogLevel::e_message, "server releasing the listener" << endl);
                     KListenerRelease(listener);
+                }
+
+                for( auto t = workers.begin(); t != workers.end(); ++t )
+                {
+                    KThreadRelease( *t );
                 }
             }
         }
@@ -270,9 +277,10 @@ public:
                     THROW_ON_RC ( KSocketRelease ( socket ) );
 
                     LOG(LogLevel::e_message, "server detected connection, starting worker" << endl);
-                    KThread* worker;
-                    if (KThreadMake ( &worker, threadWorker == 0 ? DefaultWorkerThreadFn : threadWorker, stream) != 0 || worker == 0)
+                    KThread * worker;
+                    if (KThreadMake ( &worker, threadWorker.load() == 0 ? DefaultWorkerThreadFn : threadWorker.load(), stream) != 0 || worker == 0)
                         throw logic_error ( "SocketFixture: KThreadMake failed" );
+                    workers.insert( worker);
                 }
             }
             LOG(LogLevel::e_message, "server  exiting" << endl);
@@ -319,7 +327,7 @@ public:
             throw;
         }
         LOG(LogLevel::e_message, "worker "  << (void*)self << " exiting" << endl);
-        return KThreadRelease(self);
+        return 0;
     }
 
     void CloseClientStream(KStream* p_stream)
@@ -359,7 +367,8 @@ public:
     KListener* listener;
 
     // may be set by subclasses
-    WorkerThreadFn threadWorker;
+    atomic<WorkerThreadFn> threadWorker;
+    set<KThread*> workers; // make thread safe?
 
     // for use in test cases
     size_t num;
@@ -416,6 +425,7 @@ PROCESS_FIXTURE_TEST_CASE(IPCEndpoint_MultipleListeners, SocketFixture, 0, 100)
     CloseClientStream(stream);
     CloseClientStream(stream2);
 }
+
 
 PROCESS_FIXTURE_TEST_CASE(IPCEndpoint_ReadAll, SocketFixture, 0, 5)
 {   // call ReadAll requesting more bytes than available, see it return only what is available
@@ -524,7 +534,7 @@ public:
             throw;
         }
         LOG(LogLevel::e_message, "worker "  << (void*)self << " exiting" << endl);
-        return KThreadRelease(self);
+        return 0;
     }
 
     // for use in test cases
@@ -653,6 +663,7 @@ PROCESS_FIXTURE_TEST_CASE(TimedConnection_Read_NULL_Timeout, TimedConnection_Rea
 
 	TeardownClient();
 }
+
 PROCESS_FIXTURE_TEST_CASE(TimedConnection_TimedReadOverride_NULL_Timeout, TimedConnection_ReadSocketFixture, 0, 20)
 {   // 2.1.1 wait indefinitely until the server responds
     string content = GetName();
@@ -688,6 +699,7 @@ PROCESS_FIXTURE_TEST_CASE(TimedConnection_Read_0_Timeout, TimedConnection_ReadSo
     TestEnv::SleepMs(SERVER_WRITE_DELAY_MS * 2); // let the server wake up to handle the 'done' message
 	TeardownClient();
 }
+
 PROCESS_FIXTURE_TEST_CASE(TimedConnection_ReadOverride_0_Timeout, TimedConnection_ReadSocketFixture, 0, 20)
 {   // 2.2.1 time out immediately when the server has not yet responded
     string content = GetName();
@@ -707,6 +719,7 @@ PROCESS_FIXTURE_TEST_CASE(TimedConnection_ReadOverride_0_Timeout, TimedConnectio
     TestEnv::SleepMs(SERVER_WRITE_DELAY_MS * 2); // let the server wake up to handle the 'done' message
 	TeardownClient();
 }
+
 PROCESS_FIXTURE_TEST_CASE(TimedConnection_SettingsOverride_0_Timeout, TimedConnection_ReadSocketFixture, 0, 20)
 {   // 2.2.2 time out immediately when the server has not yet responded
     REQUIRE_RC(KNSManagerSetConnectionTimeouts(m_mgr, 5000, 0, 0)); // override default setting (long time-out) to "no wait"
@@ -744,6 +757,7 @@ PROCESS_FIXTURE_TEST_CASE(TimedConnection_Read_Short_Timeout, TimedConnection_Re
     TestEnv::SleepMs(SERVER_WRITE_DELAY_MS * 2); // let the server wake up to handle the 'done' message
 	TeardownClient();
 }
+
 PROCESS_FIXTURE_TEST_CASE(TimedConnection_ReadOverride_Short_Timeout, TimedConnection_ReadSocketFixture, 0, 20)
 {   // 2.3.1. time out when the server has not responded quickly enough
     string content = GetName();
@@ -778,6 +792,7 @@ PROCESS_FIXTURE_TEST_CASE(TimedConnection_Read_Long_Timeout, TimedConnection_Rea
 
 	TeardownClient();
 }
+
 PROCESS_FIXTURE_TEST_CASE(TimedConnection_ReadOverride_Long_Timeout, TimedConnection_ReadSocketFixture, 0, 20)
 {   // 2.4.1. wait enough time for the server to respond
     string content = GetName();
@@ -870,7 +885,7 @@ public:
 		return KStreamTimedWrite(p_stream, p_msg.c_str(), p_msg.size(), &num, p_timeoutMs == -1 ? nullptr : &tm);
 	}
 
-	static volatile bool go;
+	static atomic<bool> go;
     static rc_t TimedWriteServerFn ( const KThread *self, void *data )
     {
         // this function does not always exit, so using STL string in this function leads to occasional leaks.
@@ -951,7 +966,7 @@ public:
             throw;
         }
         LOG(LogLevel::e_message, (string(prefix) + " exiting\n"));
-        return KThreadRelease(self);
+        return 0;
     }
 
     // for use in test cases (=client code)
@@ -984,7 +999,7 @@ public:
     KStream* m_control;
 };
 
-volatile bool TimedWriteSocketFixture::go = false;
+atomic<bool> TimedWriteSocketFixture::go ( false );
 
 //  1. flood the socket, see KStreamTimedWrite time out
 PROCESS_FIXTURE_TEST_CASE(TimedWrite_Short_Timeout, TimedWriteSocketFixture, 0, 20)

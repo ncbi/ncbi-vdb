@@ -107,7 +107,7 @@ TEST_CASE ( GoogleProxyTest ) {
     if (http_proxy != NULL)
     {
         REQUIRE_RC ( KNSManagerMakeHttpFile ( mgr, & file, NULL, 0x01010000,
-            "https://www.nlm.nih.gov/" ) );
+            "https://usa.gov/" ) );
 
         char buffer [ 256 ] = "";
         size_t num_read = 0;

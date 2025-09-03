@@ -1609,13 +1609,13 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
         }
 
         /* send the message and create a response */
-        rc = KClientHttpSendReceiveMsg ( self -> http, _rslt,
+        rc = KClientHttpSendReceiveMsg ( self -> http, & rslt,
             (char *) buffer.base,
             buffer.elem_count - 1, NULL, (char *) self -> url_buffer . base );
         if ( rc != 0 )
         {
             KClientHttpClose ( self -> http );
-            rc = KClientHttpSendReceiveMsg ( self -> http, _rslt,
+            rc = KClientHttpSendReceiveMsg ( self -> http, & rslt,
                 (char *) buffer.base, buffer.elem_count - 1, NULL,
                 (char *) self -> url_buffer . base );
             if ( rc != 0 ) {
@@ -1624,9 +1624,6 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
             }
         }
 
-        KDataBufferWhack( & buffer );
-
-        rslt = * _rslt;
         rslt -> expiration = expiration; /* expiration has to reach the caller */
         expiration = NULL;
 
@@ -1634,6 +1631,8 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
         rc = KDataBufferWhack(&buffer);
         if (rc != 0)
             return rc;
+
+        * _rslt = rslt;
 
         /* look at status code */
         switch ( rslt -> status )
@@ -1666,6 +1665,7 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
                 /* downgrade version requested */
                 self -> http -> vers -= 0x00010000;
                 /* TBD - remove any HTTP/1.1 specific headers */
+                KClientHttpResultRelease( rslt );
                 continue;
             }
 
@@ -1674,6 +1674,7 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
         case 400:
             if ( uriForm == 1 ) {
                 ++ uriForm; /* got 400; try to use different Request-URI form */
+                KClientHttpResultRelease( rslt );
                 continue;
             }
 /*          else no break here: tried both Request-URI forms */
