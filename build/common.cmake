@@ -212,6 +212,9 @@ function( BuildExecutableForTest exe_name sources libraries )
 	    MSVS_StaticRuntime( ${exe_name} )
     endif()
 	target_link_libraries( ${exe_name} ${libraries} )
+
+    add_dependencies( ${exe_name} ncbi-vdb ncbi-wvdb )
+
 endfunction()
 
 function( AddExecutableTest test_name sources libraries )
