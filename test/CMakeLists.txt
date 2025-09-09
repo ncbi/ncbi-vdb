@@ -46,7 +46,6 @@ else()
 
     if ( DYNAMIC_LINK )
         set( LIBX ${SHLX} )
-
     else()
         set( LIBX ${STLX} )
     endif()
@@ -54,10 +53,8 @@ else()
     set( COMMON_LIBS_READ  "ncbi-vdb.${LIBX}"  dl pthread ${MBEDTLS_LIBS} )
     set( COMMON_LIBS_WRITE "ncbi-wvdb.${LIBX}" dl pthread ${MBEDTLS_LIBS} )
 
-    if ( "mac" STREQUAL ${OS} )
-        set( CMAKE_INSTALL_RPATH ${CMAKE_LIBRARY_OUTPUT_DIRECTORY} )
-    endif()
 endif()
+
 
 add_subdirectory(ktst)
 add_subdirectory(cc)
