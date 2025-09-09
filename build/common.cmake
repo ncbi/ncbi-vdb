@@ -213,7 +213,9 @@ function( BuildExecutableForTest exe_name sources libraries )
     endif()
 	target_link_libraries( ${exe_name} ${libraries} )
 
-    add_dependencies( ${exe_name} ncbi-vdb ncbi-wvdb )
+    if ( "mac" STREQUAL ${OS} )
+        set_target_properties( ${exe_name} PROPERTIES BUILD_RPATH ${CMAKE_LIBRARY_OUTPUT_DIRECTORY} )
+    endif()
 
 endfunction()
 
