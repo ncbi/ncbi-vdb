@@ -40,6 +40,9 @@ extern "C" {
 LIB_EXPORT rc_t CC KartMake2  ( Kart ** kart );
 LIB_EXPORT rc_t CC KartAddRow ( Kart * self, const char * row, size_t size );
 
+LIB_EXPORT rc_t CC KDirectory_IsKartFile (
+    const struct KDirectory * self, bool* isKart, const char *path, ...  );
+
 
 #ifdef __cplusplus
 }
