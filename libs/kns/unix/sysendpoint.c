@@ -35,6 +35,9 @@
 
 #include "stream-priv.h"
 
+#ifndef __USE_GNU
+    #define __USE_GNU
+#endif
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <netdb.h>
