@@ -206,11 +206,17 @@ function( BuildExecutableForTest exe_name sources libraries )
     if( WIN32 )
         target_link_options( ${exe_name} PRIVATE "/ENTRY:mainCRTStartup" )
     endif()
+    target_link_options( "${exe_name}" PRIVATE -L${CMAKE_LIBRARY_OUTPUT_DIRECTORY} )
 
     if(NOT _NCBIVDB_CFG_PACKAGING)
 	    MSVS_StaticRuntime( ${exe_name} )
     endif()
 	target_link_libraries( ${exe_name} ${libraries} )
+
+    if ( "mac" STREQUAL ${OS} )
+        set_target_properties( ${exe_name} PROPERTIES BUILD_RPATH ${CMAKE_LIBRARY_OUTPUT_DIRECTORY} )
+    endif()
+
 endfunction()
 
 function( AddExecutableTest test_name sources libraries )
