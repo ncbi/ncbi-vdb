@@ -37,7 +37,11 @@ AddExecutableTest( SlowTest_KNS_http "HttpFixture;httptest" "${LIBS}" )
 AddExecutableTest( Test_KNS_http-dropconn "http_dropconnection_test" "${LIBS}" )
 AddExecutableTest( Test_KNS_http_request "HttpFixture;test-http-request" "${LIBS}" )
 AddExecutableTest( Test_KNS_KNSManagerSingletonTest "KNSManagerSingletonTest" "${LIBS}" )
-AddExecutableTest( Test_KNS_connect "HttpFixture;test-connect" "${LIBS}" )
+
+if ( NOT "mac" STREQUAL ${OS} OR NOT DYNAMIC_LINK )
+    AddExecutableTest( Test_KNS_connect "HttpFixture;test-connect" "${LIBS}" )
+endif()
+
 AddExecutableTest( Test_KNS_refresh-expired "HttpFixture;KStableHttpFile;test-refresh-expired-url" "${LIBS}" )
 AddExecutableTest( Test_KNS_timeouts "test-timeouts" "${LIBS}" )
 

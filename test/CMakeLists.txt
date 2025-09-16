@@ -50,8 +50,8 @@ else()
         set( LIBX ${STLX} )
     endif()
     link_libraries( ${COMMON_LINK_LIBRARIES} )
-    set( COMMON_LIBS_READ  "ncbi-vdb.${LIBX}"  dl pthread ${MBEDTLS_LIBS} )
-    set( COMMON_LIBS_WRITE "ncbi-wvdb.${LIBX}" dl pthread ${MBEDTLS_LIBS} )
+    set( COMMON_LIBS_READ  "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/${LIBPFX}ncbi-vdb.${LIBX}"  dl pthread ${MBEDTLS_LIBS} )
+    set( COMMON_LIBS_WRITE "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/${LIBPFX}ncbi-wvdb.${LIBX}" dl pthread ${MBEDTLS_LIBS} )
 
 endif()
 
