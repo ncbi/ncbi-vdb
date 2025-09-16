@@ -1664,8 +1664,20 @@ LIB_EXPORT rc_t CC VFSManagerResolveWithCache(const VFSManager * self,
     if (in == NULL)
         return RC(rcVFS, rcQuery, rcExecuting, rcParam, rcNull);
     rc = VFSManagerMakePath(self, &path, "%s", in);
-    if (rc == 0)
-        rc = VFSManagerResolveVPathWithCache(self, path, out, cache);
+
+    if (rc == 0) {
+        const VPath* orig = path;
+        VFSManagerCheckEnvAndAd(self, path, &orig);
+        if (rc == 0)
+            rc = VFSManagerResolveVPathWithCache(self, orig, out, cache);
+
+        if (orig != path) {
+            rc_t r = VPathRelease(orig);
+            if (rc == 0 && r != 0)
+                rc = r;
+        }
+    }
+
     RELEASE(VPath, path);
     return rc;
 }
