@@ -306,7 +306,7 @@ KLIB_EXTERN rc_t CC vLogLibErr ( KLogLevel lvl, rc_t rc, const char *msg, const 
  *  LOGMSG (logWarn, rc, "Something wicked this way comes");
  */
 #define LOGERR(lvl,rc,msg)        \
-    ((((unsigned)lvl) <= KLogLevelGet()) ? LogLibErr (lvl,rc,msg) : (rc_t)0)
+    (((int)(lvl) <= (int)KLogLevelGet()) ? LogLibErr (lvl,rc,msg) : (rc_t)0) /* KLogLevelGet() is casted to int to avoid MSVS warning C4296 */
 
 /*
  * fmt is  two fmt strings plus parameters 

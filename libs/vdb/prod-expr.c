@@ -567,14 +567,7 @@ rc_t CC VProdResolveCapture ( void *data, const void *buffer, size_t size )
 {
     if ( xsz + size >= sizeof xbuffer )
     {
-#ifdef WINDOWS
-#pragma warning(push)
-#pragma warning(disable:4296)
-#endif
         LOGERR (klogFatal, (rc_t)-1, "( xsz + size >= sizeof xbuffer )");
-#ifdef WINDOWS
-#pragma warning(pop)
-#endif
         return (rc_t)-1;
     }
     memmove ( & xbuffer [ xsz ], buffer, size );
