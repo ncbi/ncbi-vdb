@@ -2368,6 +2368,8 @@ struct VResolver
 
     const KConfig *kfg;
 
+    const struct VFSManager *vfs;
+
     /* if there is a working protected repository,
        store the download ticket here */
     const String *ticket;
@@ -2394,6 +2396,25 @@ struct VResolver
     VERSNS versions;
     bool resoveOidName;
 };
+
+rc_t VResolverSetManager(VResolver* self, const struct VFSManager* mgr) {
+    if (mgr == NULL)
+        return 0;
+
+    else if (self == NULL)
+        return RC(rcVFS, rcResolver, rcUpdating, rcSelf, rcNull);
+
+    else {
+        rc_t rc = VFSManagerAddRef(mgr);
+        if (rc != 0)
+            return rc;
+
+        else {
+            self->vfs = mgr;
+            return 0;
+        }
+    }
+}
 
 
 /* "process" global settings
@@ -2456,6 +2477,8 @@ rc_t VResolverWhack ( VResolver *self )
     RELEASE ( KDirectory, self -> wd );
 
     RELEASE ( KConfig, self -> kfg );
+
+    RELEASE ( VFSManager, self -> vfs );
 
     memset ( self, 0, sizeof * self );
     free ( self );
@@ -4594,18 +4617,28 @@ rc_t VResolverQueryPath ( const VResolver * self, const VPath * query, const VPa
 {
     rc_t rc;
 
+    assert(self);
+
     if ( local == NULL )
         return RC ( rcVFS, rcResolver, rcResolving, rcPath, rcNotFound );
 
     switch ( KDirectoryPathType ( self -> wd, "%.*s", ( int ) query -> path . size, query -> path . addr ) )
     {
-    case kptFile:
     case kptDir:
+    case kptDir | kptAlias:
+        if (self->vfs != NULL) {
+            const VPath* orig = query;
+            VFSManagerCheckAd(self->vfs, query, &orig);
+            if (query != orig) {
+                *local = orig;
+                return 0;
+            }
+        }
+    case kptFile:
     case kptCharDev:
     case kptBlockDev:
     case kptFIFO:
     case kptFile | kptAlias:
-    case kptDir | kptAlias:
     case kptCharDev | kptAlias:
     case kptBlockDev | kptAlias:
     case kptFIFO | kptAlias:
