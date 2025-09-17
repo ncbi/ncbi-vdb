@@ -78,7 +78,7 @@ set( VDBCMN_SRC
 )
 
 if ( "GNU" STREQUAL "${CMAKE_C_COMPILER_ID}")
-    set_source_files_properties( sschema-expr prod-func
+    set_source_files_properties( schema-expr prod-func
         PROPERTIES COMPILE_FLAGS -Wno-array-bounds )
 endif()
 
