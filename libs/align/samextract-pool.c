@@ -46,7 +46,7 @@ void morecore(size_t alloc_size)
     }
     cur_block_remain = alloc_size;
 
-    VectorAppend(&allocs, NULL, (const void*)cur_block);
+    VectorAppend(&allocs, NULL, cur_block);
     DBG("morecore %p", cur_block);
 }
 
