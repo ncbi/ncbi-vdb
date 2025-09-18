@@ -62,7 +62,7 @@ static
 int64_t CC NodeNameCmp( void const *a, BSTNode const *n )
 {
     String b;
-    
+
     StringInit( &b, ( ( Node const * )n )->name, ( ( Node const * )n )->namelen,
                     ( uint32_t )( ( Node const * )n )->namelen );
     return StringOrderNoNullCheck( a, &b );
@@ -73,8 +73,8 @@ int64_t CC NodeCmp( BSTNode const *A, BSTNode const *B )
 {
     String a;
     String b;
-    
-    StringInit( &a, ( ( Node const * )A )->name, ( ( Node const * )A )->namelen, 
+
+    StringInit( &a, ( ( Node const * )A )->name, ( ( Node const * )A )->namelen,
                     ( uint32_t )( ( Node const * )A )->namelen );
     StringInit( &b, ( ( Node const * )B )->name, ( ( Node const * )B )->namelen,
                     ( uint32_t )( ( Node const * )B )->namelen );
@@ -97,7 +97,7 @@ rc_t NodeProcessIDs( Node *self, unsigned row, VCursor const *curs, uint32_t con
     unsigned i;
     bitsz_t dummy;
     size_t max = *bmax;
-    
+
     for ( i = 0; i != N; ++i )
     {
         uint64_t const *globalRefStart;
@@ -116,21 +116,21 @@ rc_t NodeProcessIDs( Node *self, unsigned row, VCursor const *curs, uint32_t con
                                     ( void const ** )&preserveQual, &boff, &n );
         if ( rc != 0 )
             return rc;
-        
+
         offset = ( globalRefStart[ 0 ] ) % max_seq_len;
         if ( offset + n > max )
         {
             max = offset + n;
         }
 
-        if ( max >= sz ) 
+        if ( max >= sz )
         {
             return RC( rcXF, rcNode, rcConstructing, rcBuffer, rcInsufficient );
         }
 
         {
             unsigned j;
-            
+
             for ( j = 0; j != n; ++j )
             {
                 buf[ j + offset ] |= preserveQual[ j ];
@@ -164,25 +164,25 @@ rc_t OpenAlignCursor( VCursor const **curs, uint32_t cid[], VDatabase const *db,
     char const * tname = isPrimary ? "PRIMARY_ALIGNMENT" : "SECONDARY_ALIGNMENT";
     VTable const * atbl;
     rc_t rc = VDatabaseOpenTableRead( db, &atbl, tname );
-    
+
     if ( rc == 0 )
     {
         VCursor const *acurs;
         rc = VTableCreateCursorRead( atbl, &acurs );
         VTableRelease( atbl );
-        
+
         while ( rc == 0 )
         {
             rc = VCursorAddColumn( acurs, &cid[ 0 ], "(U64)GLOBAL_REF_START" );
             assert( rc == 0 );
             if ( rc != 0 )
                 break;
-            
+
             rc = VCursorAddColumn( acurs, &cid[ 1 ], "(bool)REF_PRESERVE_QUAL" );
             assert( rc == 0 );
             if ( rc != 0 )
                 break;
-            
+
             rc = VCursorOpen( acurs );
             if ( rc != 0 )
                 break;
@@ -209,11 +209,11 @@ rc_t NodeLoadIDs( Node *self, VTable const *tbl, VDatabase const *db, bool buf[]
     {
         VCursor const *curs;
         rc = VTableCreateCursorRead( tbl, &curs );
-        
+
         if ( rc == 0 )
         {
             uint32_t cid;
-            
+
             rc = VCursorAddColumn( curs, &cid, cname );
             if ( rc == 0 )
             {
@@ -222,7 +222,7 @@ rc_t NodeLoadIDs( Node *self, VTable const *tbl, VDatabase const *db, bool buf[]
                 {
                     unsigned i;
                     size_t bmax = 0;
-                    
+
                     memset( buf, 0, sz );
                     for ( i = 0; i != self->row_count; ++i )
                     {
@@ -230,7 +230,7 @@ rc_t NodeLoadIDs( Node *self, VTable const *tbl, VDatabase const *db, bool buf[]
                         uint32_t elem_bits;
                         uint32_t boff;
                         uint32_t n;
-                        
+
                         rc = VCursorCellDataDirect( curs, self->first_row + i, cid,
                                                     &elem_bits, &base, &boff, &n );
                         if ( rc != 0 )
@@ -252,7 +252,7 @@ rc_t NodeLoadIDs( Node *self, VTable const *tbl, VDatabase const *db, bool buf[]
     }
     else if ( !isPrimary )
         rc = 0;
-    
+
     return rc;
 }
 
@@ -278,11 +278,11 @@ rc_t NodeMake( Node **rslt, VTable const *tbl, String const *refName, INSDC_coor
     VDatabase const *db;
     VCursor const *curs;
     rc_t rc = VTableCreateCursorRead( tbl, &curs );
-    
+
     if ( rc == 0 )
     {
         uint32_t cid;
-        
+
         rc = VCursorAddColumn( curs, &cid, "NAME_RANGE" );
         if ( rc == 0 )
         {
@@ -306,16 +306,16 @@ rc_t NodeMake( Node **rslt, VTable const *tbl, String const *refName, INSDC_coor
     }
     if ( rc != 0 )
         return rc;
-    
+
     self = malloc( ( size_t )( sizeof( *self ) + refName->len + ( ( ( data[ 1 ] - data[ 0 ] + 1 ) * max_seq_len + 7 ) >> 3 )  ) );
     if ( self == NULL )
         return RC( rcXF, rcNode, rcConstructing, rcMemory, rcExhausted );
-    
+
     memmove( &self[ 1 ], refName->addr, self->namelen = refName->len );
     self->name = ( char const * )&self[ 1 ];
     self->bitmap = ( uint8_t * )&self->name[ refName->len ];
     self->row_count = data[ 1 ] - ( self->first_row = data[ 0 ] ) + 1;
-    
+
     rc = VTableOpenParentRead( tbl, &db );
     if ( rc == 0 )
     {
@@ -340,7 +340,7 @@ rc_t NodeMake( Node **rslt, VTable const *tbl, String const *refName, INSDC_coor
     }
     free( self );
     *rslt = NULL;
-    
+
     return rc;
 }
 
@@ -364,12 +364,12 @@ rc_t CC generate_preserve_qual_impl( void *Self, VXformInfo const *info,
     /*Node *map;*/
     rc_t rc;
     /*String refName;*/
-    uint32_t const max_seq_len = ( ( uint32_t const * )argv[ 2 ].u.data.base )[ argv[ 2 ].u.data.first_elem ];
+    //uint32_t const max_seq_len = ( ( uint32_t const * )argv[ 2 ].u.data.base )[ argv[ 2 ].u.data.first_elem ];
     INSDC_coord_len const seq_len = ( ( INSDC_coord_len const * )argv[ 1 ].u.data.base )[ argv[ 1 ].u.data.first_elem ];
 
     assert( argv[ 1 ].u.data.elem_bits == sizeof( seq_len ) * 8 );
-    assert( argv[ 2 ].u.data.elem_bits == sizeof( max_seq_len ) * 8 );
-    
+    //assert( argv[ 2 ].u.data.elem_bits == sizeof( max_seq_len ) * 8 );
+
     rslt->data->elem_bits = rslt->elem_bits;
     rslt->elem_count = seq_len;
     rc = KDataBufferResize( rslt->data, rslt->elem_count );
@@ -398,10 +398,10 @@ rc_t CC generate_preserve_qual_impl( void *Self, VXformInfo const *info,
     {{
         size_t const start = ( size_t )( ( row_id - map->first_row ) * max_seq_len );
         size_t dummy;
-        
+
         Unpack( 1, 8, map->bitmap, start, seq_len, NULL, rslt->data->base, seq_len, &dummy );
     }}
-    
+
     return 0;
 #endif
 }
