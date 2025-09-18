@@ -39,7 +39,7 @@ size_t cur_block_remain = 0;
 
 void morecore(size_t alloc_size)
 {
-    cur_block = calloc(1, alloc_size);
+    cur_block = malloc(alloc_size);
     if (cur_block == NULL) {
         ERR("out of memory");
         abort();
