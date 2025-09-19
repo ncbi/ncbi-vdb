@@ -2423,7 +2423,7 @@ static rc_t CC KArcDirResolvePath (const KArcDir *self,
                                    const char *path,
                                    va_list args)
 {
-    char * full;
+    char * full = NULL;
     rc_t   rc;
 
     assert (self != NULL);
