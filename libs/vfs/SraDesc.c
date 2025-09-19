@@ -132,6 +132,8 @@ static rc_t SraDescLoadBin(SraDesc * self,
     default:
         assert(0);
     }
+
+    n.u = 0;
     for (from = 9; from < size;) {
         int i = 0;
 
