@@ -570,10 +570,10 @@ rc_t CC TrieValidateRemainder ( Trie *tt, const String *key )
             {
                 /* get the new width */
                 uint16_t width = tt -> width + 1;
-                
+
                 /* get a new value for idx */
                 idx = tt -> width;
-                
+
                 /* make sure the expansion would not exceed
                    the 16 bit limit on array width */
                 if ( width == 0 )
@@ -581,7 +581,7 @@ rc_t CC TrieValidateRemainder ( Trie *tt, const String *key )
                     rc = RC ( rcCont, rcTrie, rcInserting, rcRange, rcExcessive );
                     break;
                 }
-                
+
                 /* incorporate the character */
                 rc = TrieAutoExpand ( tt, ch );
                 if ( rc != 0 )
@@ -1046,7 +1046,7 @@ rc_t CC TrieFindTrans ( const Trie *tt, TTrans *trans, const String *item, TTran
 
         rc = TrieNextIdx ( tt, & key, & idx );
 	/* This might actually happen if the trie has more internal
-	   nodes than one might think, and the string is short 
+	   nodes than one might think, and the string is short
 	   (i.e. it terminates in an "internal" node */
 	/* This needs to know the reconstructed RC for better readability */
 	if (rc == RC( rcText, rcChar, rcRemoving, rcString, rcEmpty ) ) {
@@ -1228,13 +1228,13 @@ LIB_EXPORT TNode * CC TrieFind ( const Trie *tt, const String *item )
 {
     if ( tt != NULL && item != NULL && tt -> root != NULL && item -> len != 0 )
     {
-        TTrans *trans;
+        TTrans *trans = NULL;
         rc_t rc = TrieFindTrans ( tt, tt -> root, item, & trans );
-	if (rc == 0)
+    	if (rc == 0)
         {
-	    return ( TNode* ) BSTreeFind ( & trans -> vals, item,
+	        return ( TNode* ) BSTreeFind ( & trans -> vals, item,
                 ( int64_t ( CC * ) ( const void*, const BSTNode* ) ) TNodeCmp );
-	}
+	    }
     }
 
     return NULL;
@@ -1264,7 +1264,7 @@ LIB_EXPORT rc_t CC TrieFindAll ( const Trie *tt, const String *item,
     uint32_t *num_found )
 {
     rc_t rc;
-    TTrans *trans;
+    TTrans *trans = NULL;
     uint32_t count;
 
     if ( tt == NULL )
@@ -1459,7 +1459,7 @@ bool CC TrieExploreTrans( const Trie *tt, TTrans *trans, String *key, TrieExplor
     return BSTreeDoUntil(&trans->vals, true, TrieExploreBSTree, data);
 }
 
-LIB_EXPORT bool CC TrieExplore( const Trie *tt, const String *item, 
+LIB_EXPORT bool CC TrieExplore( const Trie *tt, const String *item,
     bool ( CC * f ) ( TNode *n, void *data ), void *data )
 {
     if ( tt != NULL && item != NULL && tt->root != NULL && item->len != 0 ) {
