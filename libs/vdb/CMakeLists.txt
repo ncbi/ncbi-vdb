@@ -80,6 +80,8 @@ set( VDBCMN_SRC
 if ( "GNU" STREQUAL "${CMAKE_C_COMPILER_ID}")
     set_source_files_properties( schema-expr prod-func
         PROPERTIES COMPILE_FLAGS -Wno-array-bounds )
+    set_source_files_properties( cursor-cmn
+        PROPERTIES COMPILE_FLAGS -Wno-stringop-truncation )
 endif()
 
 set( VDB_SRC
