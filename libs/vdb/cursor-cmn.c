@@ -948,7 +948,7 @@ VCursorLinkedCursorSet(const VCursor * cself,const char *tbl,VCursor const *curs
                 }
                 else
                 {
-                    memcpy ( node->tbl, tbl, len + 1 );
+                    memmove( node->tbl, tbl, len + 1 );
                     node->curs = (VCursor*) curs;
                     rc = BSTreeInsertUnique( & self -> linked_cursors, (BSTNode *)node, NULL, LinkedCursorNodeComp);
                 }
