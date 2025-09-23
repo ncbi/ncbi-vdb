@@ -349,6 +349,10 @@ rc_t VProdResolveFuncParams ( const VProdResolve *self, Vector *out,
     rc_t rc;
     VFormatdecl fd, ffd;
 
+    ffd.fmt = 0;
+    ffd.td.dim = 0;
+    ffd.td.type_id = 0;
+
     uint32_t i, count = VectorLength ( expr );
     uint32_t end = VectorLength ( & formal -> parms );
     VectorInit ( out, 0, count );
@@ -525,13 +529,13 @@ rc_t VFunctionProdMakeFactParms ( VFunctionProd *self, const VProdResolve *pr,
                 }
                 else if ( cxp [ i ] -> dad . var != eConstExpr )
                 {
-                    rc = -1;
+                    rc = (rc_t)-1;
                     LOGERR (klogFatal, rc, "(cxp[i]->dad.var != eConstExpr)");
                     break;
                 }
                 else if ( i >= fp -> argc )
                 {
-                    rc = -1;
+                    rc = (rc_t)-1;
                     LOGERR (klogFatal, rc, "(i >= fp->argc)");
                     break;
                 }
