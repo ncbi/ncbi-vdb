@@ -411,6 +411,7 @@ static rc_t VResolversQuery ( const VResolver * self,
     }
     else
         rc = VFSManagerMakeOidPath ( mgr, & query, oid );
+
     if (rc == 0 && path != NULL) {
         if (path->projectId >= 0) {
             assert(query);
@@ -791,7 +792,11 @@ static rc_t KServiceResolvers(const KService * self, VRemoteProtocols protocols,
     if (rc == 0) {
         assert(resolver);
         VResolverResolveName(resolver, KServiceGetResolveName(self));
-        rc = VResolversQuery(resolver, h->mgr, h->cache, protocols, path,
+
+        rc = VResolverSetManager(resolver, h->mgr);
+
+        if ( rc == 0  )
+          rc = VResolversQuery(resolver, h->mgr, h->cache, protocols, path,
             id, iid, vps, ff, outDir, outFile, mapping, origAcc,
             checkCache, checkLocal);
     }
@@ -1570,8 +1575,22 @@ LIB_EXPORT rc_t CC VFSManagerResolveVPathAll(const VFSManager * self,
 {
     VResolver * resolver = NULL;
     rc_t rc = VFSManagerGetResolver(self, &resolver);
-    if (rc == 0)
+
+    if (rc == 0) {
         rc = VResolverQuery(resolver, 0, in, local, remote, cache);
+
+        if (rc == 0 && local != NULL && *local != NULL) {
+            const VPath* orig = *local;
+            VFSManagerCheckAd(self, *local, &orig);
+            if (orig != *local) {
+                rc_t r = VPathRelease(*local);
+                if (rc == 0 && r != 0)
+                    rc = r;
+                *local = orig;
+            }
+        }
+    }
+
     if (rc == 0 && *remote == NULL)
         // ignore rc
         VResolverQuery(resolver, 0, in, NULL, remote, cache);
@@ -1598,8 +1617,20 @@ LIB_EXPORT rc_t CC VFSManagerResolveVPathLocal(const VFSManager * self,
 {
     VResolver * resolver = NULL;
     rc_t rc = VFSManagerGetResolver(self, &resolver);
-    if (rc == 0)
-        rc = VResolverQuery(resolver, 0, in, out, NULL, NULL);
+
+    if (rc == 0) {
+        const VPath* orig = in;
+        VFSManagerCheckAd(self, in, &orig);
+
+        rc = VResolverQuery(resolver, 0, orig, out, NULL, NULL);
+
+        if (orig != in) {
+            rc_t r = VPathRelease(orig);
+            if (rc == 0 && r != 0)
+                rc = r;
+        }
+    }
+
     RELEASE(VResolver, resolver);
     return rc;
 }
@@ -1637,12 +1668,18 @@ LIB_EXPORT rc_t CC VFSManagerResolveVPathWithCache(const VFSManager * self,
     VResolver * resolver = NULL;
     const VPath * local = NULL;
     const VPath * remote = NULL;
+    const VPath * orig = in;
+
     if (out == NULL)
         return RC(rcVFS, rcQuery, rcExecuting, rcParam, rcNull);
     *out = NULL;
+
+    VFSManagerCheckAd(self, in, &orig);
+
     rc = VFSManagerGetResolver(self, &resolver);
     if (rc == 0)
-        rc = VResolverQuery(resolver, 0, in, &local, &remote, cache);
+        rc = VResolverQuery(resolver, 0, orig, &local, &remote, cache);
+
     if (rc == 0) {
         if (local != NULL) {
             *out = local;
@@ -1653,6 +1690,13 @@ LIB_EXPORT rc_t CC VFSManagerResolveVPathWithCache(const VFSManager * self,
             RELEASE(VPath, local);
         }
     }
+
+    if (orig != in) {
+        rc_t r = VPathRelease(orig);
+        if (rc == 0 && r != 0)
+            rc = r;
+    }
+
     RELEASE(VResolver, resolver);
     return rc;
 }
@@ -1665,8 +1709,10 @@ LIB_EXPORT rc_t CC VFSManagerResolveWithCache(const VFSManager * self,
     if (in == NULL)
         return RC(rcVFS, rcQuery, rcExecuting, rcParam, rcNull);
     rc = VFSManagerMakePath(self, &path, "%s", in);
+
     if (rc == 0)
         rc = VFSManagerResolveVPathWithCache(self, path, out, cache);
+
     RELEASE(VPath, path);
     return rc;
 }

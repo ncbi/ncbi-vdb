@@ -4734,6 +4734,8 @@ static bool VFSManagerCheckEnvAndAdImplNoqual(const VFSManager * self,
             rc = VPathAttachVdbcache((VPath*)(*outPath), vdbcache);
 
         RELEASE(VPath, vdbcache);
+
+        ((VPath*)(*outPath))->highly_reliable = inPath->highly_reliable;
     }
 
     RELEASE(KNgcObj, ngc);

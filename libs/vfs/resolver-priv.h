@@ -143,6 +143,7 @@ struct KDirectory;
 struct KNgcObj;
 struct KNSManager;
 struct String;
+struct VFSManager;
 struct VResolverAccToken;
 struct VResolverAlg;
 
@@ -277,6 +278,8 @@ bool VResolverResolveToAd(const VResolver *self);
 VResolverEnableState VResolverGetRemoteEnable();
 
 rc_t VResolverSetQuality(VResolver * self, const char * quality);
+
+rc_t VResolverSetManager(VResolver * self, const struct VFSManager * mgr);
 
 /*rc_t VFSManagerMakeDbgapResolver(const struct VFSManager * self,
     VResolver ** new_resolver, const struct KConfig * cfg,
