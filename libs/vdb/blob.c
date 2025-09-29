@@ -73,11 +73,16 @@ void VBlobCheckIntegrity ( const VBlob *self )
 
 rc_t VBlobNew ( VBlob **lhs, int64_t start_id, int64_t stop_id, const char *name ) {
     VBlob *y;
+    size_t name_len = 0;
 
     if ( name == NULL )
         name = "";
 #if VBLOG_HAS_NAME
-    *lhs = y = malloc(sizeof(*y) + strlen(name));
+    name_len = strlen(name) + 1;
+#endif
+
+#if VBLOG_HAS_NAME
+    *lhs = y = malloc(sizeof(*y) + name_len);
 #else
     *lhs = y = calloc(1, sizeof(*y));
 #endif
@@ -93,7 +98,11 @@ rc_t VBlobNew ( VBlob **lhs, int64_t start_id, int64_t stop_id, const char *name
         y->spmc = NULL;
         memset(&y->data, 0, sizeof(y->data));
         y->no_cache = 0;
+#ifdef WINDOWS
+        strcpy_s(&(((char *)y->name)[0]), name_len, name);
+#else
         strcpy(&(((char *)y->name)[0]), name);
+#endif
 #endif
 
         return 0;
@@ -329,8 +338,8 @@ static rc_t encode_header_v2(
                 return RC(rcVDB, rcBlob, rcConstructing, rcBuffer, rcInsufficient);
 
             dst[0] = header_byte;
-            dst[1] = hdr_size;
-            dst[2] = map_size;
+            dst[1] = (uint8_t)hdr_size;
+            dst[2] = (uint8_t)map_size;
         }
         else if ((map_size >> 16) == 0) {
             *used = 4;
@@ -338,9 +347,9 @@ static rc_t encode_header_v2(
                 return RC(rcVDB, rcBlob, rcConstructing, rcBuffer, rcInsufficient);
 
             dst[0] = header_byte | 0x10;
-            dst[1] = hdr_size;
-            dst[2] = map_size;
-            dst[3] = map_size >> 8;
+            dst[1] = (uint8_t)hdr_size;
+            dst[2] = (uint8_t)map_size;
+            dst[3] = (uint8_t)(map_size >> 8);
         }
         else {
             *used = 6;
@@ -348,11 +357,11 @@ static rc_t encode_header_v2(
                 return RC(rcVDB, rcBlob, rcConstructing, rcBuffer, rcInsufficient);
 
             dst[0] = header_byte | 0x20;
-            dst[1] = hdr_size;
-            dst[2] = map_size;
-            dst[3] = map_size >> 8;
-            dst[4] = map_size >> 16;
-            dst[5] = map_size >> 24;
+            dst[1] = (uint8_t)hdr_size;
+            dst[2] = (uint8_t)map_size;
+            dst[3] = (uint8_t)(map_size >> 8);
+            dst[4] = (uint8_t)(map_size >> 16);
+            dst[5] = (uint8_t)(map_size >> 24);
         }
     }
     else {
@@ -362,15 +371,15 @@ static rc_t encode_header_v2(
 
         dst[0] = header_byte | 0x30;
 
-        dst[1] = hdr_size;
-        dst[2] = hdr_size >> 8;
-        dst[3] = hdr_size >> 16;
-        dst[4] = hdr_size >> 24;
+        dst[1] = (uint8_t)hdr_size;
+        dst[2] = (uint8_t)(hdr_size >> 8);
+        dst[3] = (uint8_t)(hdr_size >> 16);
+        dst[4] = (uint8_t)(hdr_size >> 24);
 
-        dst[5] = map_size;
-        dst[6] = map_size >> 8;
-        dst[7] = map_size >> 16;
-        dst[8] = map_size >> 24;
+        dst[5] = (uint8_t)map_size;
+        dst[6] = (uint8_t)(map_size >> 8);
+        dst[7] = (uint8_t)(map_size >> 16);
+        dst[8] = (uint8_t)(map_size >> 24);
     }
     return 0;
 }
@@ -621,7 +630,7 @@ static void VBlobOptimize_UnRLE_uint8_t(VBlob **vblobp)
 {
 	VBlob   *sblob  = *vblobp;
 	VBlob *vblob;
-	rc_t rc = VBlobNewAsArray(&vblob,sblob -> start_id, sblob -> stop_id,sblob->pm->length[0],sblob->data.elem_bits);
+	rc_t rc = VBlobNewAsArray(&vblob,sblob -> start_id, sblob -> stop_id,sblob->pm->length[0],(uint32_t)sblob->data.elem_bits);
 	if( rc == 0){
 		uint32_t i,j;
 		uint8_t *src=sblob->data.base;
@@ -643,7 +652,7 @@ static void VBlobOptimize_UnRLE_uint16_t(VBlob **vblobp)
 {
 	VBlob   *sblob  = *vblobp;
 	VBlob *vblob;
-	rc_t rc = VBlobNewAsArray(&vblob,sblob -> start_id, sblob -> stop_id,sblob->pm->length[0],sblob->data.elem_bits);
+	rc_t rc = VBlobNewAsArray(&vblob,sblob -> start_id, sblob -> stop_id,sblob->pm->length[0],(uint32_t)sblob->data.elem_bits);
 	if( rc == 0) {
 		uint32_t i,j;
 		uint16_t *src=sblob->data.base;
@@ -665,7 +674,7 @@ static void VBlobOptimize_UnRLE_uint32_t(VBlob **vblobp)
 {
 	VBlob   *sblob  = *vblobp;
 	VBlob *vblob;
-	rc_t rc = VBlobNewAsArray(&vblob,sblob -> start_id, sblob -> stop_id,sblob->pm->length[0],sblob->data.elem_bits);
+	rc_t rc = VBlobNewAsArray(&vblob,sblob -> start_id, sblob -> stop_id,sblob->pm->length[0],(uint32_t)sblob->data.elem_bits);
 	if( rc == 0) {
 		uint32_t i,j;
 		uint32_t *src=sblob->data.base;
@@ -687,7 +696,7 @@ static void VBlobOptimize_UnRLE_uint64_t(VBlob **vblobp)
 {
 	VBlob   *sblob  = *vblobp;
 	VBlob *vblob;
-	rc_t rc = VBlobNewAsArray(&vblob,sblob -> start_id, sblob -> stop_id,sblob->pm->length[0],sblob->data.elem_bits);
+	rc_t rc = VBlobNewAsArray(&vblob,sblob -> start_id, sblob -> stop_id,sblob->pm->length[0],(uint32_t)sblob->data.elem_bits);
 	if( rc == 0) {
 		uint32_t i,j;
 		uint64_t *src=sblob->data.base;
@@ -750,7 +759,7 @@ void VBlobPageMapOptimize ( VBlob **vblobp)
 	if(pm->row_count > 1024 && (sblob->data.elem_bits & 7) == 0)
     {
 		elem_count_t	minlen,maxlen;
-		elem_count_t	elem_sz = sblob->data.elem_bits/8;
+		elem_count_t	elem_sz = (elem_count_t)(sblob->data.elem_bits/8);
 		rc_t rc = PageMapRowLengthRange(pm, &minlen,&maxlen);
 		if( rc == 0  && maxlen*elem_sz > 2 && maxlen*elem_sz <= 2048 /* do not optimize super large entries */){
 		/******* TRY dictionary **/
@@ -831,7 +840,7 @@ void VBlobPageMapOptimize ( VBlob **vblobp)
 							}
 						}
 						src +=pm->length[i]*elem_sz;
-						assert(src - (uint8_t*)sblob->data.base <= sblob->data.elem_count * elem_sz);
+						assert((int64_t)(src - (uint8_t*)sblob->data.base) <= (int64_t)(sblob->data.elem_count * elem_sz));
 					}
 				}
 				if(rc == 0 ){
@@ -1032,7 +1041,7 @@ rc_t VBlobAppendRow(VBlob *self,
                 length) != 0
         )
     {
-        *last_offset = self->data.elem_count;
+        *last_offset = (elem_count_t)self->data.elem_count;
         rc = KDataBufferResize(&self->data, *last_offset + length);
         if (rc == 0) {
             COPY(self->data.bit_offset, self->data.elem_bits,
@@ -1051,7 +1060,7 @@ rc_t VBlobAppendRow(VBlob *self,
 static rc_t VBlobGetLastRow(VBlob *self, elem_count_t *offset, elem_count_t *length) {
 
     *length = PageMapLastLength(self->pm);
-    *offset = self->data.elem_count - *length;
+    *offset = (elem_count_t)(self->data.elem_count - *length);
 
     return 0;
 }
@@ -1085,7 +1094,7 @@ rc_t VBlobAppend(VBlob *self, const VBlob *other) {
     if (rc == 0) {
         PageMapIterator iter;
 
-        rc = PageMapNewIterator(other->pm, &iter, 0, -1);
+        rc = PageMapNewIterator(other->pm, &iter, 0, (uint64_t)-1);
         if (rc == 0) {
             KDataBuffer orig;
 
@@ -1120,9 +1129,9 @@ rc_t VBlobSubblob( const struct VBlob *self,struct VBlob **sub, int64_t start_id
     if (start_id < self->start_id || start_id > self->stop_id)
         return RC(rcVDB, rcBlob, rcConverting, rcId, rcOutofrange);
 
-    rc=PageMapNewIterator(self->pm,&pmi, 0, -1);
+    rc=PageMapNewIterator(self->pm,&pmi, 0, (uint64_t)-1);
     if(rc == 0){
-        if(PageMapIteratorAdvance(&pmi,start_id-self->start_id)){
+        if(PageMapIteratorAdvance(&pmi,(row_count_t)(start_id-self->start_id))){
             row_count_t numrep = PageMapIteratorRepeatCount(&pmi);
             elem_count_t offset = PageMapIteratorDataOffset(&pmi);
             elem_count_t length = PageMapIteratorDataLength(&pmi);
@@ -1204,7 +1213,7 @@ LIB_EXPORT rc_t CC VBlobCellData ( const VBlob *self, int64_t row_id,
             uint64_t start;
 
             /* TBD - this may be wrong */
-            * elem_bits = self -> data . elem_bits;
+            * elem_bits = (uint32_t) self -> data . elem_bits;
             * row_len = PageMapGetIdxRowInfo ( self -> pm, ( uint32_t ) ( row_id - self -> start_id ), boff, NULL );
             start = ( uint64_t ) boff [ 0 ] * elem_bits [ 0 ];
             * base = ( uint8_t* ) self -> data . base + ( start >> 3 );
@@ -1409,7 +1418,7 @@ static
 rc_t VBlobCacheWhack (uint64_t start_id, const void *n, void *ignore )
 {
     VBlobCache *self = ( VBlobCache* ) n;
-    assert(start_id == self->blob->start_id);
+    assert((int64_t)start_id == self->blob->start_id);
     VBlobRelease ( ( VBlob* ) self -> blob );
     free ( self );
     return 0;
