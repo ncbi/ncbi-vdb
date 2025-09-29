@@ -1540,6 +1540,7 @@ VDatabaseMemberType(const struct VDatabase * self, const char * name, uint32_t *
     {
         const SDatabase * db_schema = self -> sdb;
         assert( db_schema );
+        UNUSED( db_schema );
 
         const SNameOverload * mem_name;
         uint32_t mem_type;

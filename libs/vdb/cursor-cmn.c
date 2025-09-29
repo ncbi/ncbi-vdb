@@ -941,16 +941,18 @@ VCursorLinkedCursorSet(const VCursor * cself,const char *tbl,VCursor const *curs
                 rc = RC(rcVDB, rcCursor, rcAccessing, rcMemory, rcExhausted);
             else
             {
-#ifdef WINDOWS
-                size_t tbl_len = strlen ( tbl );
-                assert ( tbl_len < sizeof node->tbl );
-                strncpy_s ( node->tbl, sizeof node->tbl, tbl, tbl_len );
+                size_t len = strlen( tbl );
+                if ( len >= sizeof( node->tbl ) )
+                {
+                    rc = RC( rcVDB, rcCursor, rcAccessing, rcName, rcTooLong );
+                }
+                else
+                {
+                    memmove( node->tbl, tbl, len + 1 );
+                    node->curs = (VCursor*) curs;
+                    rc = BSTreeInsertUnique( & self -> linked_cursors, (BSTNode *)node, NULL, LinkedCursorNodeComp);
+                }
 
-#else
-                strncpy ( node->tbl, tbl, sizeof node->tbl );
-#endif
-                node->curs = (VCursor*) curs;
-                rc = BSTreeInsertUnique( & self -> linked_cursors, (BSTNode *)node, NULL, LinkedCursorNodeComp);
                 if ( rc == 0 )
                 {
                     ( ( VCursor * ) curs )->is_sub_cursor = true;

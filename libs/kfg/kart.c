@@ -930,6 +930,7 @@ static rc_t read_textkart(KDataBuffer *mem, const KFile *orig) {
     }
     return rc;
 }
+
 KFG_EXTERN rc_t CC KartMakeText(const struct KDirectory *dir, const char *path,
     Kart **kart, bool *isKart)
 {
@@ -1047,40 +1048,85 @@ static rc_t KartNgcInit(Kart * self,
     }
 }
 
-LIB_EXPORT rc_t CC KartMakeWithNgc(const KDirectory *dir, const char *path,
-    Kart **kart, bool *isKart, const char *ngcPath)
+static rc_t KDirectory_VIsKartFile(const KDirectory* self,
+    bool* isKart, const char* path, va_list args)
 {
     rc_t rc = 0;
-    const KFile *f = NULL;
+    const KFile* f = NULL;
     char hdr[8] = "";
     size_t num_read = 0;
 
-    if (dir == NULL || path == NULL || kart == NULL || isKart == NULL) {
+    if (path == NULL || isKart == NULL)
         return RC(rcKFG, rcFile, rcReading, rcParam, rcNull);
-    }
 
     *isKart = false;
-    *kart = NULL;
 
-    rc = KDirectoryOpenFileRead(dir, &f, "%s", path);
-    if (rc != 0) {
+    if (self == NULL)
+        return RC(rcKFG, rcFile, rcReading, rcSelf, rcNull);
+
+    rc = KDirectoryVOpenFileRead(self, &f, path, args);
+    if (rc != 0)
         return rc;
-    }
 
     rc = KFileReadAll(f, 0, hdr, sizeof hdr, &num_read);
     if (rc == 0 && num_read == sizeof hdr &&
         memcmp(hdr, "ncbikart", sizeof hdr) == 0)
     {
+        *isKart = true;
+    }
+
+    RELEASE(KFile, f);
+
+    return rc;
+}
+
+LIB_EXPORT rc_t KDirectory_IsKartFile(const KDirectory* self,
+    bool* isKart, const char* path, ...)
+{
+    rc_t rc = 0;
+
+    va_list args;
+    va_start(args, path);
+
+    rc = KDirectory_VIsKartFile(self, isKart, path, args);
+
+    va_end(args);
+
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KartMakeWithNgc(const KDirectory *dir, const char *path,
+    Kart **kart, bool *isKart, const char *ngcPath)
+{
+    rc_t rc = 0;
+    char hdr[8] = "";
+
+    if (path == NULL || kart == NULL || isKart == NULL) {
+        return RC(rcKFG, rcFile, rcReading, rcParam, rcNull);
+    }
+
+    *kart = NULL;
+
+    rc = KDirectory_IsKartFile(dir, isKart, "%s", path);
+    if (rc != 0) {
+        return rc;
+    }
+
+    if (*isKart)
+    {
+        const KFile* f = NULL;
         KConfig * kfg = NULL;
 
         Kart *obj = NULL;
-
-        *isKart = true;
 
         obj = calloc(1, sizeof *obj);
         if (obj == NULL) {
             return RC(rcKFG, rcData, rcAllocating, rcMemory, rcExhausted);
         }
+
+        rc = KDirectoryOpenFileRead(dir, &f, "%s", path);
+        if (rc != 0)
+            return rc;
 
         rc = decode_kart(&obj->mem, f, sizeof hdr);
         if (rc == 0) {
@@ -1105,9 +1151,9 @@ LIB_EXPORT rc_t CC KartMakeWithNgc(const KDirectory *dir, const char *path,
         else {
             KartWhack(obj);
         }
-    }
 
-    RELEASE(KFile, f);
+        RELEASE(KFile, f);
+    }
 
     return rc;
 }

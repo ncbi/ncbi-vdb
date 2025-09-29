@@ -86,9 +86,9 @@ static void BSTItemWhack ( BSTNode * n, void * ignore ) {
 static int64_t CC BSTItemCmp ( const void * item, const BSTNode * n ) {
     const String * s = item;
     const BSTItem * i = ( BSTItem * ) n;
- 
+
     assert ( s && i );
- 
+
     return string_cmp ( s -> addr, s -> size,
         i -> ticket -> addr, i -> ticket -> size, s -> len );
 }
@@ -186,7 +186,7 @@ static rc_t HResolver(H * self, const KService * service,
             *resolver = i->resolver;
         }
         else if (!isProtected) {
-            /* here find resolver in configuration by ticket 
+            /* here find resolver in configuration by ticket
                ( when ngc file was not provided) */
             rc = KServiceGetResolver(self->service, ticket, resolver);
             if (rc == 0 && *resolver != NULL) {
@@ -398,7 +398,7 @@ static rc_t VResolversQuery ( const VResolver * self,
         if (ff == eSFFVdbcache && servicesCache == NULL) {
             String s;
             CONST_STRING(&s, ".vdbcache");
-            if (acc->len <= s.len 
+            if (acc->len <= s.len
                 || strstr(acc->addr, s.addr) == NULL)
             {
                 vdbcache = true;
@@ -411,6 +411,7 @@ static rc_t VResolversQuery ( const VResolver * self,
     }
     else
         rc = VFSManagerMakeOidPath ( mgr, & query, oid );
+
     if (rc == 0 && path != NULL) {
         if (path->projectId >= 0) {
             assert(query);
@@ -611,7 +612,7 @@ static void _StringFixSrrWithVersion(String * self) {
 }
 
 static rc_t _VPathGetId ( const VPath * self, const String ** newId,
-                          String * oldId, const VFSManager * mgr ) 
+                          String * oldId, const VFSManager * mgr )
 {
     rc_t rc = 0;
 
@@ -791,7 +792,11 @@ static rc_t KServiceResolvers(const KService * self, VRemoteProtocols protocols,
     if (rc == 0) {
         assert(resolver);
         VResolverResolveName(resolver, KServiceGetResolveName(self));
-        rc = VResolversQuery(resolver, h->mgr, h->cache, protocols, path,
+
+        rc = VResolverSetManager(resolver, h->mgr);
+
+        if ( rc == 0  )
+          rc = VResolversQuery(resolver, h->mgr, h->cache, protocols, path,
             id, iid, vps, ff, outDir, outFile, mapping, origAcc,
             checkCache, checkLocal);
     }
@@ -804,7 +809,7 @@ static rc_t KServiceResolvers(const KService * self, VRemoteProtocols protocols,
 #endif
 
 static
-rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols, 
+rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols,
     const char * cgi, const char * version, const KSrvResponse ** aResponse,
     const char * outDir, const char * outFile, const char * expected )
 {
@@ -853,7 +858,7 @@ rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols,
 
 /*************** WE ALWAYS RESOLVE LOCALLY FIRST, THEN REMOTELY. **************/
             bool isProtected = false;
-            const KNgcObj * o = KServiceGetNgcFile(self, &isProtected); 
+            const KNgcObj * o = KServiceGetNgcFile(self, &isProtected);
             RELEASE(KNgcObj, o);
 /******** Except when we accessing protected data (they never have 0-quality) */
             skipLocal = isProtected;
@@ -955,7 +960,7 @@ rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols,
 
         if ( protocols == eProtocolDefault )
              protocols = DEFAULT_PROTOCOLS;
-        
+
         {
             uint32_t n = KSrvResponseLength  ( response );
             for ( i = 0; rc == 0 && i < n; ++ i ) {
@@ -1107,7 +1112,7 @@ rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols,
 
 #if 0
 static
-rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols, 
+rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols,
     const char * cgi, const char * version, const KSrvResponse ** aResponse,
     const char * outDir, const char * outFile, const char * expected )
 {
@@ -1161,7 +1166,7 @@ rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols,
 
         if ( protocols == eProtocolDefault )
              protocols = DEFAULT_PROTOCOLS;
-        
+
         {
             uint32_t n = KSrvResponseLength  ( response );
             for ( i = 0; rc == 0 && i < n; ++ i ) {
@@ -1336,14 +1341,14 @@ rc_t KServiceNamesQueryExtImpl ( KService * self, VRemoteProtocols protocols,
 }
 #endif
 
-rc_t KServiceNamesQueryExt ( KService * self, VRemoteProtocols protocols, 
+rc_t KServiceNamesQueryExt ( KService * self, VRemoteProtocols protocols,
     const char * cgi, const char * version, const char * outDir,
     const char * outFile, const KSrvResponse ** aResponse )
 {
     return KServiceNamesQueryExtImpl ( self, protocols, cgi, version,
                                        aResponse, outDir, outFile, NULL );
 }
-                             
+
 rc_t KServiceNamesQuery ( KService * self, VRemoteProtocols protocols,
                           const KSrvResponse ** aResponse )
 {
@@ -1408,43 +1413,44 @@ static rc_t KDirectoryLocalMagicResolve(const KDirectory * self,
     if (rc != 0)
         return rc;
 
-    if (!checkAd) {
-        const VPath * vdbcache = NULL;
-        rc = KDirectoryMagicResolve(self, &vdbcache, accession, app,
-            "VDB_LOCAL_VDBCACHE",
-            eCheckExistTrue, eCheckFilePathTrue, eCheckUrlFalse, &checkAd);
-        if (rc == 0) {
-            if (vdbcache == NULL && magic != NULL) {
-                rc = VFSManagerMakePathWithExtension((VFSManager*)1,
-                    (VPath**)&vdbcache, magic, ".vdbcache");
-                if (rc == 0) {
-                    assert(vdbcache);
-                    if ((KDirectoryPathType(self, vdbcache->path.addr)
-                        & ~kptAlias) != kptFile)
-                    {
-                        RELEASE(VPath, vdbcache);
-                    }
-                }
-            }
-            VPathAttachVdbcache((VPath*)magic, vdbcache);
-            RELEASE(VPath, vdbcache);
-        }
-        *path = magic;
-        return rc;
-    }
-    else {
-        assert(0);
-        /* When LOCAL magic env.var. is found and it refers to AD
-           (the same as accession but it's a directory in cwd)
-           - we still need to resolve it to real path.
+    assert( ! checkAd );
+    /* When LOCAL magic env.var. is found and it refers to AD
+        (the same as accession but it's a directory in cwd)
+        - we still need to resolve it to real path.
+    if ( checkAd )
+    {
         const VPath * local = NULL;
         rc = VResolverCheckAD(self, &local, app, tok, legacy_wgs_refseq, dir);
         if (rc == 0)
             *path = local;
         RELEASE(VPath, magic);
 
-        return rc; */
+        return rc;
     }
+    */
+
+    const VPath * vdbcache = NULL;
+    rc = KDirectoryMagicResolve(self, &vdbcache, accession, app,
+        "VDB_LOCAL_VDBCACHE",
+        eCheckExistTrue, eCheckFilePathTrue, eCheckUrlFalse, &checkAd);
+    if (rc == 0) {
+        if (vdbcache == NULL && magic != NULL) {
+            rc = VFSManagerMakePathWithExtension((VFSManager*)1,
+                (VPath**)&vdbcache, magic, ".vdbcache");
+            if (rc == 0) {
+                assert(vdbcache);
+                if ((KDirectoryPathType(self, vdbcache->path.addr)
+                    & ~kptAlias) != kptFile)
+                {
+                    RELEASE(VPath, vdbcache);
+                }
+            }
+        }
+        VPathAttachVdbcache((VPath*)magic, vdbcache);
+        RELEASE(VPath, vdbcache);
+    }
+    *path = magic;
+    return rc;
 }
 
 LIB_EXPORT rc_t CC VFSManagerResolve(const VFSManager * self,
@@ -1569,8 +1575,22 @@ LIB_EXPORT rc_t CC VFSManagerResolveVPathAll(const VFSManager * self,
 {
     VResolver * resolver = NULL;
     rc_t rc = VFSManagerGetResolver(self, &resolver);
-    if (rc == 0)
+
+    if (rc == 0) {
         rc = VResolverQuery(resolver, 0, in, local, remote, cache);
+
+        if (rc == 0 && local != NULL && *local != NULL) {
+            const VPath* orig = *local;
+            VFSManagerCheckAd(self, *local, &orig);
+            if (orig != *local) {
+                rc_t r = VPathRelease(*local);
+                if (rc == 0 && r != 0)
+                    rc = r;
+                *local = orig;
+            }
+        }
+    }
+
     if (rc == 0 && *remote == NULL)
         // ignore rc
         VResolverQuery(resolver, 0, in, NULL, remote, cache);
@@ -1597,8 +1617,20 @@ LIB_EXPORT rc_t CC VFSManagerResolveVPathLocal(const VFSManager * self,
 {
     VResolver * resolver = NULL;
     rc_t rc = VFSManagerGetResolver(self, &resolver);
-    if (rc == 0)
-        rc = VResolverQuery(resolver, 0, in, out, NULL, NULL);
+
+    if (rc == 0) {
+        const VPath* orig = in;
+        VFSManagerCheckAd(self, in, &orig);
+
+        rc = VResolverQuery(resolver, 0, orig, out, NULL, NULL);
+
+        if (orig != in) {
+            rc_t r = VPathRelease(orig);
+            if (rc == 0 && r != 0)
+                rc = r;
+        }
+    }
+
     RELEASE(VResolver, resolver);
     return rc;
 }
@@ -1636,12 +1668,18 @@ LIB_EXPORT rc_t CC VFSManagerResolveVPathWithCache(const VFSManager * self,
     VResolver * resolver = NULL;
     const VPath * local = NULL;
     const VPath * remote = NULL;
+    const VPath * orig = in;
+
     if (out == NULL)
         return RC(rcVFS, rcQuery, rcExecuting, rcParam, rcNull);
     *out = NULL;
+
+    VFSManagerCheckAd(self, in, &orig);
+
     rc = VFSManagerGetResolver(self, &resolver);
     if (rc == 0)
-        rc = VResolverQuery(resolver, 0, in, &local, &remote, cache);
+        rc = VResolverQuery(resolver, 0, orig, &local, &remote, cache);
+
     if (rc == 0) {
         if (local != NULL) {
             *out = local;
@@ -1652,6 +1690,13 @@ LIB_EXPORT rc_t CC VFSManagerResolveVPathWithCache(const VFSManager * self,
             RELEASE(VPath, local);
         }
     }
+
+    if (orig != in) {
+        rc_t r = VPathRelease(orig);
+        if (rc == 0 && r != 0)
+            rc = r;
+    }
+
     RELEASE(VResolver, resolver);
     return rc;
 }
@@ -1664,8 +1709,10 @@ LIB_EXPORT rc_t CC VFSManagerResolveWithCache(const VFSManager * self,
     if (in == NULL)
         return RC(rcVFS, rcQuery, rcExecuting, rcParam, rcNull);
     rc = VFSManagerMakePath(self, &path, "%s", in);
+
     if (rc == 0)
         rc = VFSManagerResolveVPathWithCache(self, path, out, cache);
+
     RELEASE(VPath, path);
     return rc;
 }

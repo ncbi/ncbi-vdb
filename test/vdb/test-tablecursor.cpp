@@ -528,6 +528,13 @@ FIXTURE_TEST_CASE( VTableCursor_LinkedCursorSet, TableCursorFixture )
     REQUIRE_RC ( VCursorRelease ( curs ) );
 }
 
+FIXTURE_TEST_CASE( VTableCursor_LinkedCursorSet_NameTooLong, TableCursorFixture )
+{
+    MakeReadCursorAddColumnOpen ( Accession, Column );
+
+    REQUIRE_RC_FAIL ( VCursorLinkedCursorSet ( m_cur, string(64, 'A').c_str(), m_cur ) );
+}
+
 FIXTURE_TEST_CASE( VTableCursor_GetCacheCapacity, TableCursorFixture )
 {
     MakeReadCursor ( Accession );

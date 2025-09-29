@@ -22,7 +22,7 @@ set( SRC_JUDY
 remove_definitions( -DDEBUG )
 
 if ( "GNU" STREQUAL "${CMAKE_C_COMPILER_ID}")
-    set( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-array-bounds -Wno-aggressive-loop-optimizations" )
+    set( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-array-bounds -Wno-aggressive-loop-optimizations -Wno-stringop-overflow" )
 elseif ( CMAKE_CXX_COMPILER_ID MATCHES "^(Apple)?Clang$" )
     set( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-array-bounds" )
 elseif ( "MSVC" STREQUAL "${CMAKE_C_COMPILER_ID}" )

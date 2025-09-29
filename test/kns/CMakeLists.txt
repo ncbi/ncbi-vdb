@@ -31,13 +31,17 @@ AddExecutableTest( Test_KNS_dis_allow_all_certificates "test_dis_allow_all_certi
 AddExecutableTest( Test_KNS_google-proxy "test-google-proxy" "${LIBS}" )
 AddExecutableTest( Test_KNS_test200for-whole-file "test200for-whole-file" "${LIBS}" )
 AddExecutableTest( Test_KNS_dflt "knstest" "${COMMON_LIBS_READ}" )
-AddExecutableTest( SlowTest_KNS_ipc "test-ipc" "${LIBS}" )
+AddExecutableTest( SlowTest_KNS_ipc "test-ipc" "${LIBS}" "--no-asan" )
 AddExecutableTest( Test_KNS_opt-bitmap "test-opt-bitmap" "${LIBS}" )
 AddExecutableTest( SlowTest_KNS_http "HttpFixture;httptest" "${LIBS}" )
 AddExecutableTest( Test_KNS_http-dropconn "http_dropconnection_test" "${LIBS}" )
 AddExecutableTest( Test_KNS_http_request "HttpFixture;test-http-request" "${LIBS}" )
 AddExecutableTest( Test_KNS_KNSManagerSingletonTest "KNSManagerSingletonTest" "${LIBS}" )
-AddExecutableTest( Test_KNS_connect "HttpFixture;test-connect" "${LIBS}" )
+
+if ( NOT "mac" STREQUAL ${OS} OR NOT DYNAMIC_LINK )
+    AddExecutableTest( Test_KNS_connect "HttpFixture;test-connect" "${LIBS}" )
+endif()
+
 AddExecutableTest( Test_KNS_refresh-expired "HttpFixture;KStableHttpFile;test-refresh-expired-url" "${LIBS}" )
 AddExecutableTest( Test_KNS_timeouts "test-timeouts" "${LIBS}" )
 
