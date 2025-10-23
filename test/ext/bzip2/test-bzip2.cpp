@@ -39,7 +39,7 @@ using namespace std;
 TEST_CASE(Version)
 {
     // not going to survive an update
-    REQUIRE_EQ( string("1.0.6, 6-Sept-2010"), string( BZ2_bzlibVersion() ));
+    REQUIRE_EQ( string("1.0.8, 13-Jul-2019"), string( BZ2_bzlibVersion() ));
 }
 
 class BZip2Fixture
