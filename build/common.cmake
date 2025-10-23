@@ -203,6 +203,7 @@ endfunction()
 
 function( BuildExecutableForTest exe_name sources libraries )
 	add_executable( ${exe_name} ${sources} )
+    add_dependencies( ${exe_name} ncbi-vdb ncbi-wvdb )
     if( WIN32 )
         target_link_options( ${exe_name} PRIVATE "/ENTRY:mainCRTStartup" )
     else()
