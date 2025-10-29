@@ -189,11 +189,6 @@ FIXTURE_TEST_CASE(ServiceWorksWithoutUrlInConfig, Fixture) {
 #endif
 
 #ifdef ALL
-FIXTURE_TEST_CASE(ServiceCallsSdlWithCgiInConfig, Fixture) {
-    REQUIRE_RC(RunService("/repository/remote/main/CGI/resolver-cgi",
-        "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi"));
-    REQUIRE_RC(End());
-}
 FIXTURE_TEST_CASE(ServiceCallsSdlWithSglInConfig, Fixture) {
     REQUIRE_RC(RunService("/repository/remote/main/SDL.2/resolver-cgi",
         "https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve"));
@@ -212,14 +207,6 @@ FIXTURE_TEST_CASE(ServiceCallsCustomSdl, Fixture) {
 #ifdef ALL
 FIXTURE_TEST_CASE(ResolverFailsWithoutUrlInConfig, Fixture) {
     REQUIRE_RC(ResolverFails());
-    REQUIRE_RC(End());
-}
-#endif
-
-#ifdef ALL
-FIXTURE_TEST_CASE(ResolverFailsWithCgiInConfig, Fixture) {
-    REQUIRE_RC(ResolverFails("/repository/remote/main/CGI/resolver-cgi",
-        "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi"));
     REQUIRE_RC(End());
 }
 #endif
