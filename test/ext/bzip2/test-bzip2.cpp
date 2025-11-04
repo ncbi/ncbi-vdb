@@ -28,7 +28,7 @@
 
 #include <kfg/config.h>
 
-#include "../../../libs/ext/bzip2/bzlib.h"
+#include <ext/bzlib.h>
 
 #include <memory>
 
