@@ -91,7 +91,7 @@ TEST_CASE ( CreateDestroy )
 
 TEST_CASE ( CreateDestroy_WithIntrinsic )
 {
-    BSTree intrinsic;
+    BSTree intrinsic = { nullptr };
     KSymTable self;
     REQUIRE_RC ( KSymTableInit ( & self, & intrinsic ) );
     KSymTableWhack ( & self );
