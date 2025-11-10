@@ -37,13 +37,11 @@ extern "C" {
 #include <byteswap.h>
 #include <limits.h>
 #include <math.h> 
-/*#include <netinet/in.h>*/
 #include <search.h> 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-/*#include <unistd.h>*/
-#include <zlib.h>
+#include "../ext/zlib/zlib.h"
 #include <stdint.h>
 
 #define SIG_HUFF_TREESIZE         512

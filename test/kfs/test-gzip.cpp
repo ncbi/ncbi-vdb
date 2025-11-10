@@ -37,7 +37,7 @@
 #include <kfs/directory.h>
 #include <kfs/file.h>
 #include <kfs/gzip.h>
-#include <zlib.h>
+#include "../../libs/ext/zlib/zlib.h"
 
 #include <os-native.h>
 
