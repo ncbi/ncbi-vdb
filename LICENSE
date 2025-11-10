@@ -31,13 +31,13 @@ Please cite the authors in any work or product based on this material.
 ==============================================================
 EXCEPTIONS (in all cases excluding NCBI-written makefiles):
 
-Location: {libs,interfaces}/ext/bzip2
+Location: libs/ext/bzip2
 Author:   Julian R Seward
 License:  BSDish [libs/ext/bzip2/LICENSE]
 
-Location: {libs,interfaces}/ext/zlib
+Location: libs/ext/zlib
 Authors:  Jean-loup Gailly and Mark Adler
-License:  BSDish [interfaces/ext/zlib.h]
+License:  BSDish [libs/ext/zlib/LICENSE]
 
 Location: libs/klib
 Author:   Douglas C. Schmidt
@@ -73,5 +73,5 @@ A. No, you cannot license or relicense the source code written by NCBI
 Q. What if these copyright guidelines are not clear enough or are not
    applicable to my particular case?
 
-A. Contact us. Send your questions to 'sra-tools@ncbi.nlm.nih.gov'.
+A. Contact us. Send your questions to 'sra@ncbi.nlm.nih.gov'.
 
