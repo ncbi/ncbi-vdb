@@ -46,7 +46,7 @@
 #include <vfs/resolver.h>
 
 #include "../../libs/vfs/manager-priv.h" // VFSManagerSdlCacheClear
-#include "../../libs/vfs/resolver-cgi.h" /* RESOLVER_CGI */
+#include "../../libs/vfs/resolver-cgi.h" /* SDL_CGI */
 #include "../../libs/vfs/path-priv.h" // VPathEqual
 
 #include <cstdlib>

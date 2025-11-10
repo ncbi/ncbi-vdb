@@ -150,11 +150,10 @@ TEST_CASE ( KClientHttpRequestPOSTTest )
 
     KHttpRequest * req = NULL;
     REQUIRE_RC ( KNSManagerMakeClientRequest ( mgr, & req, 0x01000000,
-        NULL, "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi" ) );
+        NULL, "https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve" ) );
 
     REQUIRE_RC(KHttpRequestAddPostParam(req, "acc=AAAB01"));
     REQUIRE_RC(KHttpRequestAddPostParam(req, "accept-proto=https"));
-    REQUIRE_RC(KHttpRequestAddPostParam(req, "version=1.2"));
 
     KHttpResult * rslt = NULL;
 /* POST: format HTTP request in KClientHttpRequestFormatMsgBegin using

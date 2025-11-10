@@ -75,7 +75,6 @@ struct KfgConfigNamelist;
 #include "kfg-parse.h"
 #include "config-grammar.h"
 
-#include "../vfs/resolver-cgi.h" /* RESOLVER_CGI */
 #include "docker.h"
 
 #ifndef PATH_MAX
@@ -4455,47 +4454,6 @@ rc_t _KConfigNncToKGapConfig(const KConfig *self, char *text, KGapConfig *kgc)
     return 0;
 }
 
-LIB_EXPORT rc_t KConfigFixMainResolverCgiNode ( KConfig * self ) {
-    rc_t rc = 0;
-    return rc;
-}
-
-/* We need to call it from KConfigFixProtectedResolverCgiNode:
- * otherwise we call names.cgi, not SDL for dbGaP resolution. */
-static rc_t KConfigFixProtectedSdlCgiNode(KConfig * self) {
-    rc_t rc = 0;
-
-    KConfigNode *node = NULL;
-    struct String *result = NULL;
-
-    assert(self);
-
-    if (rc == 0)
-        rc = KConfigOpenNodeUpdate(self, &node,
-            "/repository/remote/protected/SDL.2/resolver-cgi");
-
-    if (rc == 0)
-        rc = KConfigNodeReadString(node, &result);
-
-    if (rc == 0) {
-        assert(result);
-        if (result->size == 0) {
-            const char https[] = SDL_CGI;
-            rc = KConfigNodeWrite(node, https, sizeof https);
-        }
-    }
-
-    free(result);
-
-    KConfigNodeRelease(node);
-
-    return rc;
-}
-
-LIB_EXPORT rc_t KConfigFixProtectedResolverCgiNode ( KConfig * self ) {
-    rc_t rc = 0;
-    return rc;
-}
 
 static rc_t _KConfigNodeUpdateChild(KConfigNode *self,
     const char *name, const char *val)
@@ -4776,14 +4734,6 @@ aprintf("KConfigImportNgc %d\n", __LINE__);*/
 /*DBGMSG(DBG_KFG, DBG_FLAG(DBG_KFG), ("KConfigImportNgc %d\n", __LINE__));
 aprintf("KConfigImportNgc %d\n", __LINE__);*/
                 rc = _KConfigNncToKGapConfig(self, mem.base, &kgc);
-/*DBGMSG(DBG_KFG, DBG_FLAG(DBG_KFG), ("KConfigImportNgc %d\n", __LINE__));
-aprintf("KConfigImportNgc %d\n", __LINE__);*/
-            }
-
-            if (rc == 0) {
-/*DBGMSG(DBG_KFG, DBG_FLAG(DBG_KFG), ("KConfigImportNgc %d\n", __LINE__));
-aprintf("KConfigImportNgc %d\n", __LINE__);*/
-                rc = KConfigFixProtectedResolverCgiNode(self);
 /*DBGMSG(DBG_KFG, DBG_FLAG(DBG_KFG), ("KConfigImportNgc %d\n", __LINE__));
 aprintf("KConfigImportNgc %d\n", __LINE__);*/
             }
