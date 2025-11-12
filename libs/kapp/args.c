@@ -643,7 +643,7 @@ static FILE *dumpOptionDefs = NULL;
 static void printOption(char const *const name, char const *const aliases, bool const hasArg)
 {
     if (dumpOptionDefs) {
-        fprintf(dumpOptionDefs, "        { \"%s\", \"%s\", 0, %s, false },\n"
+        fprintf(dumpOptionDefs, "    TOOL_ARG(\"%s\", \"%s\", %s),\n"
             , name
             , aliases ? aliases : ""
             , hasArg ? "true" : "false");
@@ -700,14 +700,11 @@ static bool cleaned(unsigned const max, char *result, char const *name)
 
  Example output:
  @code
- namespace VDB_DUMP_defs {
-    static auto const toolName = "vdb-dump";
-    static ParameterDefinition const defs[] = {
-        { "columns", "C", 0, true, false },
-        { "row_id_on", "I", 0, false, false },
-        { nullptr, nullptr, 0, false, false }
-    };
-}
+TOOL_ARGS_BEGIN(VDB_DUMP, "vdb-dump")
+    TOOL_ARG("columns", "C", true),
+    TOOL_ARG("row_id_on", "I", false),
+    TOOL_ARG(0, 0, 0)
+TOOL_ARGS_END
  @endcode
  */
 static void openOptionDefs(char const *argv0) {
@@ -723,9 +720,7 @@ static void openOptionDefs(char const *argv0) {
         cleaned(sizeof(toolname), toolname, base);
 
         dumpOptionDefs = strcmp(enval, "-") ? fopen(enval, "a") : stdout;
-        fprintf(dumpOptionDefs, "namespace %S_defs {\n", toolname);
-        fprintf(dumpOptionDefs, "    static auto const toolName = \"%s\";\n", base);
-        fprintf(dumpOptionDefs, "    static auto const defs[] = {\n");
+        fprintf(dumpOptionDefs, "TOOL_ARGS_BEGIN(%s, \"%s\")\n", toolname, base);
     }
 #endif
 }
@@ -737,9 +732,8 @@ static void openOptionDefs(char const *argv0) {
  */
 static void closeOptionDefs(void) {
     if (dumpOptionDefs) {
-        fprintf(dumpOptionDefs, "        { nullptr, nullptr, 0, false, false }\n");
-        fprintf(dumpOptionDefs, "    };\n"); /* defs[] */
-        fprintf(dumpOptionDefs, "}\n\n"); /* namespace */
+        fprintf(dumpOptionDefs, "    TOOL_ARG(0, 0, 0)\n");
+        fprintf(dumpOptionDefs, "TOOL_ARGS_END\n\n"); 
         fclose(dumpOptionDefs);
         exit(0);
     }
