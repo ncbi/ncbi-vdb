@@ -24,7 +24,7 @@ Please cite the author in any work or product based on this material.
 
 
 ## NCBI VDB 3.3.0
-**November 4, 2025**
+**November 18, 2025**
 
   **kdbmeta, ngs, pileup-stats, prefetch, srapath, vfs**: improved directory path handling  
   **kfg, prefetch**: improved file type handling  
