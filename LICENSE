@@ -39,6 +39,11 @@ Location: libs/ext/zlib
 Authors:  Jean-loup Gailly and Mark Adler
 License:  BSDish [libs/ext/zlib/LICENSE]
 
+Location: libs/ext/zstd
+Copyright:Meta Platforms, Inc. and affiliates
+License:  BSDish [libs/ext/zstd/LICENSE]
+          GNU General Public [libs/ext/zstd/COPYING]
+
 Location: libs/klib
 Author:   Douglas C. Schmidt
 License:  GNU Lesser General Public [libs/klib/qsort.c]
