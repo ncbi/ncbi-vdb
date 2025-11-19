@@ -33,13 +33,7 @@
 #include <vdb/schema.h> // VSchemaRelease
 #include <vdb/schema-priv.h> // VSchemaGetDb
 
-static rc_t argsHandler(int argc, char *argv[]) {
-    Args *args = NULL;
-    rc_t rc = ArgsMakeAndHandle(&args, argc, argv, 0, NULL, 0);
-    ArgsWhack(args);
-    return rc;
-}
-TEST_SUITE_WITH_ARGS_HANDLER(SchemaPrivSuite, argsHandler)
+TEST_SUITE(SchemaPrivSuite)
 
 static void OnDb(void *item, void *data) noexcept {
     assert(item && data);

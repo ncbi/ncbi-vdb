@@ -352,8 +352,6 @@ int main(int argc, char* argv[])
     // make sure to use singleton, otherwise some tests fail
     KNSManagerUseSingleton(true);
 
-//    assert(!KDbgSetString("KNS"));
-
     KConfigDisableUserSettings();
 
     return KnsTestSuite(argc, app.getArgV());

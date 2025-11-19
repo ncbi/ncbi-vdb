@@ -174,8 +174,6 @@ FIXTURE_TEST_CASE ( ColumnMetadata, WKDB_Fixture )
 //////////////////////////////////////////// Main
 int main( int argc, char *argv [] )
 {
-    //assert(!KDbgSetString("KFG"));
-    //assert(!KDbgSetString("VFS"));
     KConfigDisableUserSettings();
     return KdbTestSuite(argc, argv);
 }

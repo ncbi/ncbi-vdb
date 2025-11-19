@@ -33,10 +33,7 @@
 #define RELEASE( type, obj ) do { rc_t rc2 = type##Release ( obj ); \
     if (rc2 != 0 && rc == 0) { rc = rc2; } obj = NULL; } while ( false )
 
-static rc_t argsHandler ( int argc, char * argv [] )
-{   return ArgsMakeAndHandle ( NULL, argc, argv, 0, NULL, 0 ); }
-
-TEST_SUITE_WITH_ARGS_HANDLER ( T200FOR_WHOLE_FILE, argsHandler )
+TEST_SUITE ( T200FOR_WHOLE_FILE )
 
 TEST_CASE ( Test_206) {
     KNSManager * mgr = NULL;
@@ -120,7 +117,6 @@ TEST_CASE ( Test_200 ) {
 }
 
 int main( int argc, char * argv [] ) {
-    if ( 0 ) assert ( ! KDbgSetString ( "KNS-HTTP" ) );
     KConfigDisableUserSettings ();
 
     KConfig * kfg = NULL;

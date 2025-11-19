@@ -51,8 +51,7 @@ using namespace::std;
 
 #define TO_SHOW_RESULTS 0
 
-static rc_t argsHandler(int argc, char* argv[]);
-TEST_SUITE_WITH_ARGS_HANDLER(AwsTestSuite, argsHandler)
+TEST_SUITE(AwsTestSuite)
 
 //
 // Unit tests for functions in cloud/aws-auth.c
@@ -369,27 +368,11 @@ TEST_CASE(GetLocation) {
 
 //////////////////////////////////////////// Main
 
-static rc_t argsHandler(int argc, char * argv[]) {
-    Args * args = nullptr;
-    rc_t rc = ArgsMakeAndHandle(&args, argc, argv, 0, nullptr, 0);
-    ArgsWhack(args);
-    return rc;
-}
-
 int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
 
     rc_t rc = KConfigMakeEmpty(&KFG);
-
-    // this makes messages from the test code appear
-    // (same as running the executable with "-l=message")
-    //TestEnv::verbosity = LogLevel::e_message;
-
-#if TO_SHOW_RESULTS
-    assert(!KDbgSetString("KNS"));
-#endif
-KDbgSetString ( "KNS-PROXY" );
 
     if (rc == 0)
         rc = (rc_t)AwsTestSuite(argc, argv);

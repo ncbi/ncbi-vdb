@@ -39,11 +39,7 @@
     #define PATH_MAX 4096
 #endif
 
-static rc_t argsHandler(int argc, char* argv[]) {
-    return ArgsMakeAndHandle(NULL, argc, argv, 0, NULL, 0);
-}
-
-TEST_SUITE_WITH_ARGS_HANDLER(TestResolveSuite, argsHandler)
+TEST_SUITE(TestResolveSuite)
 
 class TestHelper : protected ncbi::NK::TestCase {
     TestCase * dad;
@@ -177,10 +173,8 @@ TEST_CASE(Protected) {
     x.Release();
 }
 
-int main( int argc, char * argv [] ) {
-#if 0
-    KDbgSetString ( "VFS" );
-#endif
+int main( int argc, char * argv [] )
+{
     KConfigDisableUserSettings ();
     return TestResolveSuite(argc, argv);
 }

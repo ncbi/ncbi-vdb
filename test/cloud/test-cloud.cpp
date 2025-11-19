@@ -41,8 +41,7 @@
 
 #define PATH_MAX 4096
 
-static rc_t argsHandler(int argc, char* argv[]);
-TEST_SUITE_WITH_ARGS_HANDLER(CloudTestSuite, argsHandler);
+TEST_SUITE(CloudTestSuite);
 
 using namespace std;
 using namespace ncbi::NK;
@@ -998,31 +997,13 @@ FIXTURE_TEST_CASE(GCP_Credentials_KfgCredentials, GcpFixture) {
 
 //////////////////////////////////////////// Main
 
-#include <kapp/args.h>
-
-static rc_t argsHandler(int argc, char * argv[]) {
-    Args * args = NULL;
-    rc_t rc = ArgsMakeAndHandle(&args, argc, argv, 0, NULL, 0);
-    ArgsWhack(args);
-    return rc;
-}
-
 #include <kfg/config.h>
-#include <klib/debug.h>
-#include <klib/log.h> /* KLogLevelSet */
 
 int main( int argc, char *argv [] )
 {
     setenv("HOME", ".", 1);
 
     KConfigDisableUserSettings();
-
-    // assert(!KDbgSetString("CLOUD"));
-    // KLogLevelSet( klogInfo );
-
-    // this makes messages from the test code appear
-    // (same as running the executable with "-l=message")
-    // TestEnv::verbosity = LogLevel::e_message;
 
     return CloudTestSuite(argc, argv);
 }

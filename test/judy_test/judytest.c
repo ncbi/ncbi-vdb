@@ -1813,20 +1813,23 @@ rc_t perform_test( const uint32_t count )
 
 int main ( int argc, char *argv [] )
 {
-    Args * args;
-    SetUsage( Usage );
-
-    rc_t rc = ArgsMakeAndHandle ( &args, argc, argv, 1,
-                JudyTestOptions, sizeof ( JudyTestOptions ) / sizeof ( OptDef ) );
+    rc_t rc = VdbInitialize(argc, argv, 0); // this may be not the first call to VdbInitialize, but should not be a problem.
     if ( rc == 0 )
     {
-        srand ( ( unsigned int ) time(NULL) );
-        rc = perform_test( get_int_option( args, OPTION_COUNT, 10000 ) );
+        Args * args;
+        SetUsage( Usage );
 
-        ArgsWhack ( args );
+        rc = ArgsMakeAndHandle ( &args, argc, argv, 1,
+                    JudyTestOptions, sizeof ( JudyTestOptions ) / sizeof ( OptDef ) );
+        if ( rc == 0 )
+        {
+            srand ( ( unsigned int ) time(NULL) );
+            rc = perform_test( get_int_option( args, OPTION_COUNT, 10000 ) );
+
+            ArgsWhack ( args );
+        }
+        else
+            OUTMSG( ( "ArgsMakeAndHandle() failed %R\n", rc ) );
     }
-    else
-        OUTMSG( ( "ArgsMakeAndHandle() failed %R\n", rc ) );
-
     return rc;
 }

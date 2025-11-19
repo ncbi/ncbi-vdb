@@ -29,7 +29,7 @@
 #include <kfg/config.h> /* KConfigDisableUserSettings */
 #include <klib/debug.h> /* KDbgSetString */
 #include <klib/text.h> /* CONST_STRING */
-#include <ktst/unit_test.hpp> 
+#include <ktst/unit_test.hpp>
 #include <vfs/manager.h> /* VFSManagerRelease */
 #include <vfs/manager-priv.h> /* VFSManagerMakeFromKfg */
 #include <vfs/path.h> /* VPathRelease */
@@ -190,11 +190,8 @@ FIXTURE_TEST_CASE ( ZZZZ99, Fixture ) {
     free ( const_cast < String * > ( uri ) );
 }
 
-int main( int argc, char * argv [] ) {
-#if _DEBUGGING
-    KDbgSetString ( "VFS" );
-#endif
-
+int main( int argc, char * argv [] )
+{
     KConfigDisableUserSettings ();
 
     rc_t rc = KConfigMake ( & KFG, NULL );

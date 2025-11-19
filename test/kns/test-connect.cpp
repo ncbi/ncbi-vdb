@@ -46,8 +46,7 @@
 
 #include "KNSManagerFixture.hpp"
 
-static rc_t argsHandler(int argc, char* argv[]);
-TEST_SUITE_WITH_ARGS_HANDLER(KnsTestSuite, argsHandler);
+TEST_SUITE(KnsTestSuite);
 
 using namespace std;
 using namespace ncbi::NK;
@@ -182,23 +181,8 @@ FIXTURE_TEST_CASE(Connect_CtrlC, ConnectFixture)
 
 //////////////////////////////////////////// Main
 
-#include <kapp/args.h> /* ArgsMakeAndHandle */
-
-static rc_t argsHandler(int argc, char * argv[]) {
-    Args * args = NULL;
-    rc_t rc = ArgsMakeAndHandle(&args, argc, argv, 0, NULL, 0);
-    ArgsWhack(args);
-    return rc;
-}
-
 int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
-
-#ifdef DEBUG
-    // to see messages from socket code
-    KDbgSetModConds ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), DBG_FLAG ( DBG_KNS_SOCKET ) );
-#endif
-
     return KnsTestSuite(argc, argv);
 }

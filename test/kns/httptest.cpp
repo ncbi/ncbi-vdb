@@ -1044,14 +1044,6 @@ int main ( int argc, char *argv [] )
     // make sure to use singleton, otherwise tests take forever and finally fail
     CloudMgrUseSingleton(true);
 
-    if ( 0 ) assert ( ! KDbgSetString ( "KNS" ) );
-    if ( 0 ) assert ( ! KDbgSetString ( "VFS" ) );
-
     KConfigDisableUserSettings();
-
-	// this makes messages from the test code appear
-	// (same as running the executable with "-l=message")
-	// TestEnv::verbosity = LogLevel::e_message;
-
     return HttpTestSuite(argc, argv);
 }

@@ -37,11 +37,7 @@
 
 #define ALL
 
-static rc_t argsHandler(int argc, char* argv[]) {
-    return ArgsMakeAndHandle(NULL, argc, argv, 0, NULL, 0);
-}
-
-TEST_SUITE_WITH_ARGS_HANDLER(TestVdbcache, argsHandler)
+TEST_SUITE(TestVdbcache)
 
 class TestHelper : protected ncbi::NK::TestCase {
     TestCase * dad;
@@ -292,7 +288,6 @@ TEST_CASE(MultipleVdbcache) {
 int main ( int argc, char * argv [] ) {
 #if 0
     VdbInitialize(argc, argv, 0);
-    KDbgSetString ( "VFS" );
 #endif
     KConfigDisableUserSettings ();
     return TestVdbcache(argc, argv);

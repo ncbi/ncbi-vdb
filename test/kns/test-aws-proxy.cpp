@@ -38,14 +38,7 @@
     #define PATH_MAX 4096
 #endif
 
-static rc_t argsHandler(int argc, char * argv[]) {
-    Args * args = NULL;
-    rc_t rc = ArgsMakeAndHandle(&args, argc, argv, 0, NULL, 0);
-    ArgsWhack(args);
-    return rc;
-}
-
-TEST_SUITE_WITH_ARGS_HANDLER ( AwsProxyTestSuite, argsHandler )
+TEST_SUITE( AwsProxyTestSuite )
 
 TEST_CASE ( AwsProxyTest ) {
     KNSManager * mgr = NULL;
@@ -94,9 +87,8 @@ TEST_CASE ( AwsProxyTest ) {
     REQUIRE_RC ( KNSManagerRelease ( mgr ) );
 }
 
-int main( int argc, char * argv [] ) {
-    if (
-0 ) assert ( ! KDbgSetString ( "KNS" ) );
+int main( int argc, char * argv [] )
+{
     KConfigDisableUserSettings ();
     return AwsProxyTestSuite(argc, argv);
 }

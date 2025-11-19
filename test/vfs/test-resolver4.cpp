@@ -204,11 +204,8 @@ TEST_CASE ( Test ) {
 }
 #endif
 
-int main ( int argc, char * argv [] ) {
+int main ( int argc, char * argv [] )
+{
     KConfigDisableUserSettings ();
-if (
-0 ) assert ( ! KDbgSetString ( "VFS-JSON" ) );
-if (
-0 ) assert ( ! KDbgSetString ( "VFS" ) );
     return TestResolver4 ( argc, argv );
 }

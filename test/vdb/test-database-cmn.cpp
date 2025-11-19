@@ -35,13 +35,6 @@
 
 #define ALL
 
-static rc_t argsHandler(int argc, char * argv[]) {
-    Args * args = NULL;
-    rc_t rc = ArgsMakeAndHandle(&args, argc, argv, 0, NULL, 0);
-    ArgsWhack(args);
-    return rc;
-}
-
 class Fixture{
 protected:
     String acc;
@@ -54,7 +47,7 @@ protected:
     }
 };
 
-TEST_SUITE_WITH_ARGS_HANDLER(DatabaseCmnTestSuite, argsHandler);
+TEST_SUITE(DatabaseCmnTestSuite);
 
 #ifdef ALL
 FIXTURE_TEST_CASE(FULL, Fixture){

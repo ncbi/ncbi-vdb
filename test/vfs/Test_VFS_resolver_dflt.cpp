@@ -62,11 +62,7 @@
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
     if (rc2 != 0 && rc == 0) { rc = rc2; } obj = NULL; } while (false)
 
-static rc_t argsHandler(int argc, char* argv[]) {
-    return ArgsMakeAndHandle ( NULL, argc, argv, 0, NULL, 0 );
-}
-
-TEST_SUITE_WITH_ARGS_HANDLER(VResolverTestSuite, argsHandler);
+TEST_SUITE(VResolverTestSuite);
 
 using namespace std;
 
@@ -523,9 +519,6 @@ static void clear_recorded_errors ( void )
 int main( int argc, char *argv [] )
 {
     putenv((char*)"NCBI_VDB_NO_CACHE_SDL_RESPONSE=1");
-
-    if (
-0) assert(!KDbgSetString("VFS"));
 
     KConfigDisableUserSettings ();
     int rc = VResolverTestSuite ( argc, argv );

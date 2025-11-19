@@ -47,8 +47,7 @@
 #define RELEASE( type, obj ) do { rc_t rc2 = type##Release ( obj ); \
     if (rc2 != 0 && rc == 0) { rc = rc2; } obj = NULL; } while ( false )
 
-static rc_t argsHandler(int argc, char* argv[]);
-TEST_SUITE_WITH_ARGS_HANDLER(TestProxySchemeSuite, argsHandler);
+TEST_SUITE(TestProxySchemeSuite);
 
 static bool EXPECTED_FAILURE = true;
 static char * PROXY = NULL;
@@ -164,10 +163,6 @@ int main ( int argc, char * argv [] ) {
     putenv((char*)"NCBI_VDB_NO_CACHE_SDL_RESPONSE=1");
     SetUsageSummary( UsageSummary );
 
-#if 0 && _DEBUGGING
-    KDbgSetString ( "VFS" );
-    KDbgSetString ( "KFG" );
-#endif
     int rc = TestProxySchemeSuite ( argc, argv );
 
     free ( PROXY );

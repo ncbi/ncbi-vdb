@@ -36,10 +36,7 @@
 #include "../../libs/kns/http-priv.h" /* MAX_HTTP_READ_LIMIT */
 #include "../../libs/kns/mgr-priv.h" /* KNSManager */
 
-static rc_t argsHandler ( int argc, char * argv [] )
-{   return ArgsMakeAndHandle ( NULL, argc, argv, 0, NULL, 0 ); }
-
-TEST_SUITE_WITH_ARGS_HANDLER ( TEST_TIMEOUTS, argsHandler )
+TEST_SUITE ( TEST_TIMEOUTS )
 
 TEST_CASE ( TestTimeouts ) {
     KConfig * kfg = NULL;

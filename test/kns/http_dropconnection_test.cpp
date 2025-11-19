@@ -437,10 +437,5 @@ FIXTURE_TEST_CASE(GET_Read_Failed_Reconnect_Failed, HttpFixture)
 int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
-
-	// this makes messages from the test code appear
-	// (same as running the executable with "-l=message")
-	// TestEnv::verbosity = LogLevel::e_message;
-
     return HttpTestSuite(argc, argv);
 }

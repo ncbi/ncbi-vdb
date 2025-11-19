@@ -67,8 +67,7 @@ using namespace std;
 
 #define ALL
 
-static rc_t argsHandler(int argc, char* argv[]);
-TEST_SUITE_WITH_ARGS_HANDLER(KfgTestSuite, argsHandler);
+TEST_SUITE(KfgTestSuite);
 
 #ifdef ALL
 FIXTURE_TEST_CASE(testKConfigPrint, KfgFixture)
@@ -1006,16 +1005,9 @@ TEST_CASE(DontSaveCustomUserKfg) {
 #endif
 
 //////////////////////////////////////////// Main
-static rc_t argsHandler(int argc, char* argv[]) {
-    Args* args = NULL;
-    rc_t rc = ArgsMakeAndHandle(&args, argc, argv, 0, NULL, 0);
-    ArgsWhack(args);
-    return rc;
-}
 
 int main( int argc, char *argv [] )
 {
-    VDB::Application app(argc, argv);
     KConfigDisableUserSettings();
     return KfgTestSuite(argc, argv);
 }

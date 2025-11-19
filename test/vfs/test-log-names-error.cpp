@@ -24,7 +24,7 @@
 
 #include <kfg/kfg-priv.h> /* KConfigMakeLocal */
 
-#include <ktst/unit_test.hpp> 
+#include <ktst/unit_test.hpp>
 
 #include <klib/debug.h> /* KDbgSetString */
 
@@ -188,11 +188,8 @@ FIXTURE_TEST_CASE(TestEnableInConfig, Fixture) {
 }
 #endif
 
-int main( int argc, char * argv [] ) {
+int main( int argc, char * argv [] )
+{
     KConfigDisableUserSettings(); // ignore ~/.ncbi/user-settings.mkfg
-
-    if (
-0) assert(!KDbgSetString("VFS"));
-
     return TestLogNames( argc, argv );
 }

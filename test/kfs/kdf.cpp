@@ -37,6 +37,9 @@
 
 #include <ktst/unit_test.hpp> // TEST_SUITE
 
+#include <kapp/vdbapp.h>
+#include <kfg/config.h>
+
 #include <cmath> // ceil
 #include <cstdio> // popen
 #ifdef WINDOWS
@@ -44,10 +47,8 @@
 #define pclose _pclose
 #endif
 
-
 static rc_t argsHandler ( int argc, char * argv [] );
-TEST_SUITE_WITH_ARGS_HANDLER ( DuSuite, argsHandler )
-static Args * args = NULL;
+TEST_SUITE_WITH_ARGS_HANDLER( DuSuite, argsHandler );
 static const char * s_path = NULL;
 
 
@@ -275,9 +276,11 @@ TEST_CASE ( testKDirectoryGetDiskFreeSpace ) {
     REPORT_ERROR ( "Cannot match KDirectoryGetDiskFreeSpace and df results" );
 }
 
-static rc_t argsHandler ( int argc, char * argv [] ) {
+static rc_t argsHandler ( int argc, char * argv [] )
+{
     uint32_t params = 0;
 
+    Args * args;
     rc_t rc = ArgsMakeAndHandle ( & args, argc, argv, 0, NULL, 0 );
 
     if ( rc == 0 )
@@ -287,17 +290,14 @@ static rc_t argsHandler ( int argc, char * argv [] ) {
         rc = ArgsParamValue ( args, 0,
                               reinterpret_cast < const void ** > ( & s_path ) );
 
+    ArgsWhack( args );
     return rc;
 }
 
-int main ( int argc, char * argv [] ) {
-ncbi::NK::TestEnv::SetVerbosity(ncbi::NK::LogLevel::e_all);
-    int rc = DuSuite ( argc, argv );
+int main ( int argc, char * argv [] )
+{
+    VdbInitialize( argc, argv, 0 );
+    KConfigDisableUserSettings();
 
-    s_path = NULL;
-
-    ArgsWhack ( args );
-    args = NULL;
-
-    return rc;
+    return DuSuite ( argc, argv );
 }

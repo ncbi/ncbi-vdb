@@ -39,11 +39,7 @@
 
 extern "C" { rc_t LegacyVPathMake(VPath ** new_path, const char * posix_path); }
 
-static rc_t argsHandler(int argc, char* argv[]) {
-    return ArgsMakeAndHandle(NULL, argc, argv, 0, NULL, 0);
-}
-
-TEST_SUITE_WITH_ARGS_HANDLER(TestResolveSuite, argsHandler);
+TEST_SUITE(TestResolveSuite);
 
 #ifdef ALL
 TEST_CASE(VPathTest) {
@@ -509,10 +505,6 @@ FIXTURE_TEST_CASE(ResolveTestLocalAdPath, Fixture) {
 
 int main(int argc, char * argv[]) {
     putenv((char*)"NCBI_VDB_NO_CACHE_SDL_RESPONSE=1");
-#if 0 
-    VdbInitialize(argc, argv, 0);
-    KDbgSetString("VFS");
-#endif
     KConfigDisableUserSettings();
     return TestResolveSuite(argc, argv);
 }

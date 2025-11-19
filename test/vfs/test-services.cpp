@@ -34,7 +34,7 @@
 
 #include <klib/debug.h> /* KDbgSetString */
 
-#include <ktst/unit_test.hpp> 
+#include <ktst/unit_test.hpp>
 
 #include <vfs/manager.h> /* VFSManagerRelease */
 #include <vfs/manager-priv.h> /* VFSManagerMakeLocal */
@@ -339,12 +339,9 @@ TEST_CASE(TestKSrvResponseGetLocationCacheInADLeak) {
 }
 #endif
 
-int main( int argc, char * argv [] ) {
+int main( int argc, char * argv [] )
+{
     KConfigDisableUserSettings(); // ignore ~/.ncbi/user-settings.mkfg
-
-    if (
-0) assert(!KDbgSetString("VFS"));
-
     setenv ( "NCBI_VDB_QUALITY", "R", 1 );
     return TestServices ( argc, argv );
 }

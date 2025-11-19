@@ -1478,23 +1478,13 @@ OptDef TestOptions[]
 
 int main ( int argc, char *argv[] )
 {
-    Args *args;
-
-    /* we are adding this dummy argument to enable commandline parsing for the
-     * verbose flag(s) -vvvvvvvv */
-    rc_t rc = ArgsMakeAndHandle ( &args, argc, argv, 1, TestOptions,
-                                  sizeof TestOptions / sizeof TestOptions[0] );
-    if ( rc == 0 )
-    {
-        srand ( time ( NULL ) );
-        KConfigDisableUserSettings ();
-        rc = CacheTee3Tests ( argc, argv );
-        if ( (rc_t)-1 != rc )
-            KOutMsg ( "and the result is: %R\n", rc );
-        else
-            KOutMsg ( "and the result is: %d\n", rc );
-        ArgsWhack ( args );
-    }
+    srand ( time ( NULL ) );
+    KConfigDisableUserSettings ();
+    rc_t rc = CacheTee3Tests ( argc, argv );
+    if ( (rc_t)-1 != rc )
+        KOutMsg ( "and the result is: %R\n", rc );
+    else
+        KOutMsg ( "and the result is: %d\n", rc );
     return rc;
 }
 

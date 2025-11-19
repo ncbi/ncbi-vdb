@@ -59,10 +59,7 @@
 
 #define ALL
 
-static rc_t argsHandler(int argc, char * argv[]) {
-    return ArgsMakeAndHandle(NULL, argc, argv, 0, NULL, 0);
-}
-TEST_SUITE_WITH_ARGS_HANDLER(Test_VFS_cache_sdlSuite, argsHandler)
+TEST_SUITE(Test_VFS_cache_sdlSuite)
 
 using std::string;
 
@@ -476,8 +473,8 @@ FIXTURE_TEST_CASE(ThreadsNotCaching, NotCachingFixture) {
 }
 #endif
 
-int main(int argc, char * argv[]) {
-if(0) { KDbgSetString("VFS"); }
+int main(int argc, char * argv[])
+{
     KConfigDisableUserSettings();
     return Test_VFS_cache_sdlSuite(argc, argv);
 }

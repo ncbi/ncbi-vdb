@@ -51,14 +51,6 @@ TEST_CASE(SignalNoHup_ignored)
     REQUIRE_RC( SignalNoHup() );
 }
 
-const ver_t AppVersion = 12;
-TEST_CASE(ReportInitialized)
-{   // main() initialized report module
-    ver_t version = 0;
-    ReportGetVersion( & version );
-    REQUIRE_EQ( AppVersion, version );
-}
-
 TEST_CASE(ProcMgrInitialized)
 {
     KProcMgr * mgr = nullptr;
@@ -115,6 +107,5 @@ TEST_CASE(WCharConversion_BadArgs)
 
 int main(int argc, char* argv[])
 {
-    VDB::Application app( argc, argv, AppVersion );
-    return VDBAppTestSuite(argc, app.getArgV());
+    return VDBAppTestSuite(argc, argv);
 }
