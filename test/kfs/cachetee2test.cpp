@@ -32,6 +32,7 @@
 #include <cstdlib>
 #include <ctime>
 #include <algorithm>
+#include <random>
 
 #include <ktst/unit_test.hpp>
 
@@ -392,7 +393,12 @@ static rc_t cache_access( int tid, int num_threads, const KFile * origfile, cons
     {
         chunk_pos[ i ] = i * chunk_size + data_offset;
     }
-    std::random_shuffle( &chunk_pos[ 0 ], &chunk_pos[ num_chunks ] );
+
+    // Initialize an RNG C++17-style
+    static std::random_device rd;
+    static std::mt19937 g(rd());
+    std::shuffle( &chunk_pos[ 0 ], &chunk_pos[ num_chunks ], g );    
+    
     for ( i = 0; i < num_chunks; ++i )
     {
         rc = compare_file_content( origfile, cacheteefile, chunk_pos[ i ], chunk_size );

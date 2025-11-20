@@ -1,2 +1,2 @@
 /vdb/schema/paths="$(PWD)/../../interfaces"
-/repository/remote/main/CGI/resolver-cgi = "https://www.ncbi.nlm.nih.gov/Traces/names/names.fcgi"
+/repository/remote/main/SDL.2/resolver-cgi = "https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve"

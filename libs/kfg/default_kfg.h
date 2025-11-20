@@ -24,6 +24,7 @@
  *
  */
 
+#include <klib/strings.h> /* SDL_CGI */
 
 #define DEFAUTL_KFG \
 "/config/default = \"true\"\n"                                                 \
@@ -47,7 +48,3 @@
 "/repository/remote/protected/SDL.2/resolver-cgi = \"$(strings/sdl)\"\n"       \
                                                                                \
 "/tools/ascp/max_rate = \"450m\"\n"
-
-// "strings/name s = \"" RESOLVER_CGI "\"\n"
-// "/repository/remote/main/CGI/resolver-cgi = \"$(strings/name s)\"\n"
-// "/repository/remote/protected/CGI/resolver-cgi = \"$(strings/name s)\"\n"
