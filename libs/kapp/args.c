@@ -80,8 +80,9 @@ static Usage_t Usage = DefaultUsage;
 static UsageSummary_t UsageSummary = DefaultUsageSummary;
 static ver_t KAppVersion = 0;
 
-rc_t DefaultUsage( const Args * )
+rc_t DefaultUsage( const Args * args )
 {
+    UNUSED( args );
     rc_t rc = UsageSummary ( UsageDefaultName );
     if (rc == 0)
     {

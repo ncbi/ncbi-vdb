@@ -83,21 +83,21 @@ namespace ncbi::NK
             "\tnothing                    do not report any information\n";
         return rc;
     }
-}
 
-rc_t
-::ncbi::NK::DefaultArgsHandler(int argc, char * argv[])
-{
-    rc_t rc = VdbInitialize(argc, argv, 0); // this may be not the first call to VdbInitialize, but should not be a problem.
-    if ( rc == 0 )
+    rc_t
+    DefaultArgsHandler(int argc, char * argv[])
     {
-        SetUsage( ncbi::NK::Usage );
-        SetUsageSummary( ncbi::NK::UsageSummary );
-        Args * args = nullptr;
-        rc = ArgsMakeAndHandle(&args, argc, argv, 0, nullptr, 0);
-        ArgsWhack(args);
+        rc_t rc = VdbInitialize(argc, argv, 0); // this may be not the first call to VdbInitialize, but should not be a problem.
+        if ( rc == 0 )
+        {
+            SetUsage( ncbi::NK::Usage );
+            SetUsageSummary( ncbi::NK::UsageSummary );
+            Args * args = nullptr;
+            rc = ArgsMakeAndHandle(&args, argc, argv, 0, nullptr, 0);
+            ArgsWhack(args);
+        }
+        return rc;
     }
-    return rc;
 }
 
 TestEnv::TestEnv(int argc, char* argv[], ArgsHandler* argsHandler)
