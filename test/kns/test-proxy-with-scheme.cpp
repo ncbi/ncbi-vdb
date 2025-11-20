@@ -47,7 +47,8 @@
 #define RELEASE( type, obj ) do { rc_t rc2 = type##Release ( obj ); \
     if (rc2 != 0 && rc == 0) { rc = rc2; } obj = NULL; } while ( false )
 
-TEST_SUITE(TestProxySchemeSuite);
+static rc_t argsHandler ( int argc, char * argv [] );
+TEST_SUITE_WITH_ARGS_HANDLER(TestProxySchemeSuite, argsHandler);
 
 static bool EXPECTED_FAILURE = true;
 static char * PROXY = NULL;
