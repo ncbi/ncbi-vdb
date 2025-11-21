@@ -56,7 +56,7 @@ extern "C" {
 #define ENV_VAR_PARAMETER_BITS "VDB_OPT_BITMAP"
 
 
-#define SDL_CGI "https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve"
+#define SDL_CGI "https://locate-ocp.ncbi.nlm.nih.gov/sdl/2/retrieve"
 
 #ifdef __cplusplus
 }

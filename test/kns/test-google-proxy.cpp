@@ -150,7 +150,7 @@ TEST_CASE ( KClientHttpRequestPOSTTest )
 
     KHttpRequest * req = NULL;
     REQUIRE_RC ( KNSManagerMakeClientRequest ( mgr, & req, 0x01000000,
-        NULL, "https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve" ) );
+        NULL, "https://locate-ocp.ncbi.nlm.nih.gov/sdl/2/retrieve" ) );
 
     REQUIRE_RC(KHttpRequestAddPostParam(req, "acc=AAAB01"));
     REQUIRE_RC(KHttpRequestAddPostParam(req, "accept-proto=https"));

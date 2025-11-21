@@ -429,7 +429,7 @@ TEST_CASE(Remote_vrAlwaysEnable_vs_not) {
     REQUIRE_RC(KConfigMakeLocal(&kfg, NULL));
     REQUIRE_RC(KConfigWriteString(kfg,
         "/repository/remote/main/SDL.2/resolver-cgi",
-        "https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve"));
+        "https://locate-ocp.ncbi.nlm.nih.gov/sdl/2/retrieve"));
 
     VFSManager * vfs = NULL;
     REQUIRE_RC(VFSManagerMakeLocal(&vfs, kfg));

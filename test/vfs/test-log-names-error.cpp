@@ -52,7 +52,7 @@ FIXTURE_TEST_CASE(TestAPI, Fixture) {
     REQUIRE_RC(KConfigMakeLocal(&kfg, NULL));
     REQUIRE_RC(KConfigWriteString(kfg,
         "/repository/remote/main/SDL.2/resolver-cgi",
-        "https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve"));
+        "https://locate-ocp.ncbi.nlm.nih.gov/sdl/2/retrieve"));
 
     VFSManager * vmgr = NULL;
     REQUIRE_RC(VFSManagerMakeLocal(&vmgr, kfg));
@@ -96,7 +96,7 @@ FIXTURE_TEST_CASE(TestDisableInConfig, Fixture) {
         "/name-resolver/log-names-service-errors", "false"));
     REQUIRE_RC(KConfigWriteString(kfg,
         "/repository/remote/main/SDL.2/resolver-cgi",
-        "https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve"));
+        "https://locate-ocp.ncbi.nlm.nih.gov/sdl/2/retrieve"));
 
     VFSManager * vmgr = NULL;
     REQUIRE_RC(VFSManagerMakeLocal(&vmgr, kfg));
@@ -147,7 +147,7 @@ FIXTURE_TEST_CASE(TestEnableInConfig, Fixture) {
         "/name-resolver/log-names-service-errors", "true"));
     REQUIRE_RC(KConfigWriteString(kfg,
         "/repository/remote/main/SDL.2/resolver-cgi",
-        "https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve"));
+        "https://locate-ocp.ncbi.nlm.nih.gov/sdl/2/retrieve"));
 
     VFSManager * vmgr = NULL;
     REQUIRE_RC(VFSManagerMakeLocal(&vmgr, kfg));

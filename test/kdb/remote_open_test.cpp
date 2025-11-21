@@ -162,7 +162,7 @@ public:
         m_configName = name+".kfg";
         std::ofstream f(m_configName.c_str());
         f   << "repository/remote/main/SDL.2/resolver-cgi "
-                  "= \"https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve\"\n"
+                  "= \"https://locate-ocp.ncbi.nlm.nih.gov/sdl/2/retrieve\"\n"
             << "repository/user/main/public/root=\"./root\"\n"
             << "repository/user/main/public/apps/sra/volumes/sraFlat=\"sra\"\n";
         f.close();

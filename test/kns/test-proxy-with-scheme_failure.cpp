@@ -59,7 +59,7 @@ TEST_CASE ( test ) {
     REQUIRE_RC ( KConfigMakeEmpty ( & kfg ) );
     REQUIRE_RC ( KConfigWriteString ( kfg,
                    "/repository/remote/main/SDL.2/resolver-cgi",
-                   "https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve" ) );
+                   "https://locate-ocp.ncbi.nlm.nih.gov/sdl/2/retrieve" ) );
 
     if ( PROXY != NULL )
         REQUIRE_RC ( KConfigWriteString ( kfg, "/http/proxy/path", PROXY ) );
