@@ -153,6 +153,5 @@ if ( i % 1000000 == 0 ) cout << i/1000000 <<endl;
 //////////////////////////////////////////// Main
 int main( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
     return WVdbSlowTestSuite(argc, argv);
 }

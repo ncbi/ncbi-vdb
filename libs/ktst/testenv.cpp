@@ -29,6 +29,7 @@
 #include <klib/rc.h>
 #include <klib/text.h>
 #include <kapp/vdbapp.h>
+#include <kfg/config.h>
 
 #include <sstream>
 #include <csignal>
@@ -266,6 +267,9 @@ rc_t TestEnv::process_args(int argc, char* argv[], ArgsHandler* argsHandler)
         if (argsHandler)
         {	rc = argsHandler(argc2, argv2); }
     }
+
+    // ignore ~/.ncbi/user-settings.mkfg
+    KConfigDisableUserSettings();
 
     return rc;
 }

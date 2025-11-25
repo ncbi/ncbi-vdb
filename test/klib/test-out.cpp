@@ -42,6 +42,7 @@ using namespace std;
 // Start using main(), never call KWrtInit() or KLogInit()
 // call all logging functions, make sure they do not crash
 
+// intercept args handling in order to bypass a call to VdbInitialize()
 static rc_t argsHandler ( int argc, char * argv [] ) { return 0; }
 TEST_SUITE_WITH_ARGS_HANDLER(KOutTestSuite, argsHandler);
 

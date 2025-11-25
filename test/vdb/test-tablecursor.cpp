@@ -689,6 +689,5 @@ FIXTURE_TEST_CASE( VTableCursor_ListReadableColumns, TableCursorFixture )
 //////////////////////////////////////////// Main
 int main( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
     return VdbTableCursorTestSuite_Read(argc, argv);
 }

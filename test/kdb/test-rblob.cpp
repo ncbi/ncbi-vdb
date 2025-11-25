@@ -228,6 +228,5 @@ FIXTURE_TEST_CASE ( ColumnBlobRead_insufficient_buffer, RColumnBlobFixture_API )
 //////////////////////////////////////////// Main
 int main( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
     return RBlobTestSuite(argc, argv);
 }

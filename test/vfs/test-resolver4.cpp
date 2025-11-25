@@ -23,7 +23,6 @@
 * ==============================================================================
 */
 
-#include <kfg/config.h> /* KConfigDisableUserSettings */
 #include <klib/debug.h> /* KDbgSetString */
 
 #include <ktst/unit_test.hpp> // TEST_SUITE
@@ -206,6 +205,5 @@ TEST_CASE ( Test ) {
 
 int main ( int argc, char * argv [] )
 {
-    KConfigDisableUserSettings ();
     return TestResolver4 ( argc, argv );
 }

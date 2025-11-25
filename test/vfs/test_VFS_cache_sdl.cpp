@@ -29,8 +29,6 @@
 #include <kdb/kdb-priv.h> /* KDBManagerMakeReadWithVFSManager */
 #include <kdb/manager.h> /* KDBManagerRelease */
 
-#include <kfg/config.h> /* KConfigDisableUserSettings */
-
 #include <kfs/directory.h> /* KDirectoryRelease */
 
 #include <klib/debug.h> /* KDbgSetString */
@@ -475,6 +473,5 @@ FIXTURE_TEST_CASE(ThreadsNotCaching, NotCachingFixture) {
 
 int main(int argc, char * argv[])
 {
-    KConfigDisableUserSettings();
     return Test_VFS_cache_sdlSuite(argc, argv);
 }

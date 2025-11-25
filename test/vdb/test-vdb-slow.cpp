@@ -65,6 +65,5 @@ FIXTURE_TEST_CASE(TestReadBitsDirect_vs_CellDataDirect, VDB_Fixture)
 
 int main( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
     return VdbSlowTestSuite(argc, argv);
 }

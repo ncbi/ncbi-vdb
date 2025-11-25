@@ -434,7 +434,6 @@ FIXTURE_TEST_CASE( GetSet_Telemetry, KfgFixture ) {
 //////////////////////////////////////////// Main
 int main ( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
     return PropertiesTestSuite(argc, argv);
 }
 

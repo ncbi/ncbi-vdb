@@ -30,7 +30,7 @@
 #include <kns/http.h> /* KNSManagerMakeHttpFile */
 #include <kns/manager.h> /* KNSManagerRelease */
 #include <kns/tls.h> /* KNSManagerRelease */
-#include <ktst/unit_test.hpp> /* TEST_SUITE_WITH_ARGS_HANDLER */
+#include <ktst/unit_test.hpp>
 
 #define RELEASE( type, obj ) do { rc_t rc2 = type##Release ( obj ); \
     if (rc2 != 0 && rc == 0) { rc = rc2; } obj = NULL; } while ( false )
@@ -122,9 +122,6 @@ KOutMsg ( "##[3] OK : Conf (false ) + SetAllow ( false ) = false\n" );
 
 int main( int argc, char * argv [] )
 {
-    KConfigDisableUserSettings ();
-
     // turn off certificate validation to download from storage.googleapis.com
-
     return ALLOW_ALL_CERTS ( argc, argv );
 }

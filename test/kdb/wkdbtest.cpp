@@ -174,6 +174,5 @@ FIXTURE_TEST_CASE ( ColumnMetadata, WKDB_Fixture )
 //////////////////////////////////////////// Main
 int main( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
     return KdbTestSuite(argc, argv);
 }

@@ -297,7 +297,5 @@ static rc_t argsHandler ( int argc, char * argv [] )
 int main ( int argc, char * argv [] )
 {
     VdbInitialize( argc, argv, 0 );
-    KConfigDisableUserSettings();
-
     return DuSuite ( argc, argv );
 }

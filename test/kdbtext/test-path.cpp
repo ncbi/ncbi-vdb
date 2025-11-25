@@ -103,6 +103,5 @@ TEST_CASE(KDBTextPath_fromVPath)
 //////////////////////////////////////////// Main
 int main( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
     return KDBTextPathTestSuite(argc, argv);
 }

@@ -274,6 +274,5 @@ FIXTURE_TEST_CASE(KGZipFile_Test, KGZipFileFixture)
 
 int main ( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
     return KGZipFileTestSuite(argc, argv);
 }

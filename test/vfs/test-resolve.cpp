@@ -25,7 +25,6 @@
 */
 
 #include <kapp/args.h> /* ArgsMakeAndHandle */
-#include <kfg/config.h> /* KConfigDisableUserSettings */
 #include <kfs/directory.h> /* KDirectoryRelease */
 #include <klib/debug.h> /* KDbgSetString */
 #include <kns/kns-mgr-priv.h> /* KNSManagerMakeLocal */
@@ -175,6 +174,5 @@ TEST_CASE(Protected) {
 
 int main( int argc, char * argv [] )
 {
-    KConfigDisableUserSettings ();
     return TestResolveSuite(argc, argv);
 }

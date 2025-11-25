@@ -30,7 +30,6 @@
 
 #include "../../libs/vdb/database-cmn.c"
 #include <kapp/args.h> /* Args */
-#include <kfg/config.h> /* KConfigDisableUserSettings */
 #include <ktst/unit_test.hpp> /* ver_t */
 
 #define ALL
@@ -142,7 +141,7 @@ FIXTURE_TEST_CASE(BAD_NUM_GAP_FULL, Fixture) {
 }
 #endif
 
-int main(int argc, char * argv[]) {
-    KConfigDisableUserSettings();
+int main(int argc, char * argv[])
+{
     return DatabaseCmnTestSuite(argc, argv);
 }

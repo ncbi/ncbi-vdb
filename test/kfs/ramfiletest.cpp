@@ -170,6 +170,5 @@ TEST_CASE(KRamFileWrite_shift_right)
 //////////////////////////////////////////// Main
 int main ( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
     return RamFileTestSuite(argc, argv);
 }

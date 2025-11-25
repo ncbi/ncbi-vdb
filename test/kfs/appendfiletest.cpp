@@ -367,6 +367,5 @@ TEST_CASE(KAppendFile_set_size)
 int
 main ( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
     return AppendFileTestSuite(argc, argv);
 }

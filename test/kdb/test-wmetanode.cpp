@@ -586,6 +586,5 @@ FIXTURE_TEST_CASE(KWRMDataNode_ListChildren, KWMDataNode_Fixture)
 //////////////////////////////////////////// Main
 int main ( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
     return KDBWMDataNodeTestSuite(argc, argv);
 }

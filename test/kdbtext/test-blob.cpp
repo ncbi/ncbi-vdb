@@ -493,6 +493,5 @@ FIXTURE_TEST_CASE(KTextColumnBlob_IdRange, KTextColumnBlob_ApiFixture)
 //////////////////////////////////////////// Main
 int main ( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
     return KTextColumnBlobTestSuite(argc, argv);
 }

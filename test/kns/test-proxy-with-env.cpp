@@ -91,8 +91,8 @@ TEST_CASE ( TEST_PROXY_FROM_ENV ) {
 
 #define TODO -1
 
-int main( int argc, char * argv [] )  {
-
+int main( int argc, char * argv [] )
+{
 #if 0
 const char name[] = "http_proxy"; char *e= getenv(name); ostringstream s;
 s << "getenv("<<name<<")="<<(e==NULL?"NULL":e)<<"\n";std::cerr <<s.str();
@@ -101,8 +101,6 @@ s << "getenv("<<name<<")="<<(e==NULL?"NULL":e)<<"\n";std::cerr <<s.str();
     if ( argc == 0 ) {
         return TODO;
     }
-
-    KConfigDisableUserSettings ();
 
     return ProxyWithEnvTestSuite ( argc, argv );
 }

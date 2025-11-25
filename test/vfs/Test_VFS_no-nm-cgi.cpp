@@ -231,7 +231,6 @@ int main(int argc, char* argv[]) {
     putenv((char*)"VDB_CONFIG=redirect-rejected-names-cgi-http-to-https");
 #endif
     unsetenv("VDB_ROOT"); // Ignore it. Probably it's not needed.
-    KConfigDisableUserSettings(); // ignore ~/.ncbi/user-settings.mkfg
 
     if (PRINT_SDL)
         KDbgSetString("VFS");

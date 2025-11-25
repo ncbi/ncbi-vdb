@@ -326,7 +326,6 @@ int main( int argc, char * argv [] ) {
     rc_t rc = 0;
     if (
 1)          VFSManagerLogNamesServiceErrors(0, false);
-    KConfigDisableUserSettings();
 #ifndef USE_SERVICES_CACHE
     return (int)rc;
 #else

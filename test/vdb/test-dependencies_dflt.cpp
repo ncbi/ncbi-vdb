@@ -467,7 +467,7 @@ FIXTURE_TEST_CASE(Test1LocalDep, EmptyFixture) {
     RELEASE(VPath, local);
 }
 
-int main(int argc, char *argv[]) {
-    KConfigDisableUserSettings();
+int main(int argc, char *argv[])
+{
     return TestDependenciesSuite(argc, argv);
 }

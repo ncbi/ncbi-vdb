@@ -370,8 +370,6 @@ TEST_CASE(GetLocation) {
 
 int main ( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
-
     rc_t rc = KConfigMakeEmpty(&KFG);
 
     if (rc == 0)

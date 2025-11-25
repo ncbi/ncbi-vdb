@@ -1479,7 +1479,6 @@ OptDef TestOptions[]
 int main ( int argc, char *argv[] )
 {
     srand ( time ( NULL ) );
-    KConfigDisableUserSettings ();
     rc_t rc = CacheTee3Tests ( argc, argv );
     if ( (rc_t)-1 != rc )
         KOutMsg ( "and the result is: %R\n", rc );

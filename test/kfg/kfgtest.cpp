@@ -1008,6 +1008,5 @@ TEST_CASE(DontSaveCustomUserKfg) {
 
 int main( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
     return KfgTestSuite(argc, argv);
 }

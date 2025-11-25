@@ -190,6 +190,5 @@ FIXTURE_TEST_CASE(TestEnableInConfig, Fixture) {
 
 int main( int argc, char * argv [] )
 {
-    KConfigDisableUserSettings(); // ignore ~/.ncbi/user-settings.mkfg
     return TestLogNames( argc, argv );
 }

@@ -25,8 +25,6 @@
 */
 
 #include <kapp/args.h> /* ArgsMakeAndHandle */
-#include <kapp/vdbapp.h> //  VdbInitialize
-#include <kfg/config.h> /* KConfigDisableUserSettings */
 #include <klib/debug.h> /* KDbgSetString */
 #include <ktst/unit_test.hpp>
 
@@ -503,8 +501,8 @@ FIXTURE_TEST_CASE(ResolveTestLocalAdPath, Fixture) {
     REQUIRE_RC(VPathRelease(p));
 }
 
-int main(int argc, char * argv[]) {
+int main(int argc, char * argv[])
+{
     putenv((char*)"NCBI_VDB_NO_CACHE_SDL_RESPONSE=1");
-    KConfigDisableUserSettings();
     return TestResolveSuite(argc, argv);
 }

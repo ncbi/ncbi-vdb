@@ -27,7 +27,6 @@
 #include <kapp/args.h> /* ArgsMakeAndHandle */
 #include <kapp/vdbapp.h> //  VdbInitialize
 
-#include <kfg/config.h> /* KConfigDisableUserSettings */
 #include <klib/debug.h> /* KDbgSetString */
 #include <kns/kns-mgr-priv.h> /* KNSManagerMakeLocal */
 #include <kns/manager.h> /* KNSManagerRelease */
@@ -285,10 +284,7 @@ TEST_CASE(MultipleVdbcache) {
 }
 #endif
 
-int main ( int argc, char * argv [] ) {
-#if 0
-    VdbInitialize(argc, argv, 0);
-#endif
-    KConfigDisableUserSettings ();
+int main ( int argc, char * argv [] )
+{
     return TestVdbcache(argc, argv);
 }

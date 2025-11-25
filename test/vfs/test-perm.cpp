@@ -217,9 +217,8 @@ TEST_CASE(TestJwtKartValidateStringWhiteSections) {
     REQUIRE_RC(JwtKartValidateString(&s, NULL));
 }
 
-int main(int argc, char *argv[]) {
-    KConfigDisableUserSettings(); // ignore ~/.ncbi/user-settings.mkfg
-
+int main(int argc, char *argv[])
+{
     return TestPermSuite(argc, argv);
 }
 

@@ -26,7 +26,7 @@
 
 #include <kapp/args.h> /* Args */
 #include <kfg/kfg-priv.h> /* KConfigMakeEmpty */
-#include <ktst/unit_test.hpp> /* TEST_SUITE_WITH_ARGS_HANDLER */
+#include <ktst/unit_test.hpp>
 
 #include <vdb/cursor.h> /* VCursorRelease */
 #include <vdb/database.h> /* VDatabaseRelease */
@@ -66,9 +66,8 @@ TEST_CASE(TestFormatSpotName) { // VDB-4097
     REQUIRE_RC(VDBManagerRelease(mgr));
 }
 
-int main(int argc, char *argv[]) {
-    KConfigDisableUserSettings(); // ignore ~/.ncbi/user-settings.mkfg
-
+int main(int argc, char *argv[])
+{
     return FormatSpotNameSuite(argc, argv);
 }
 

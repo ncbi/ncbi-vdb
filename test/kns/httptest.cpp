@@ -60,8 +60,7 @@
 
 #include <sstream>
 
-static rc_t argsHandler ( int argc, char * argv [] );
-TEST_SUITE_WITH_ARGS_HANDLER ( HttpTestSuite, argsHandler );
+TEST_SUITE ( HttpTestSuite );
 
 using namespace std;
 using namespace ncbi::NK;
@@ -1032,18 +1031,9 @@ FIXTURE_TEST_CASE(CONNECT_LOOP, HttpFixture) {
 
 //////////////////////////////////////////// Main
 
-static rc_t argsHandler ( int argc, char * argv [] ) {
-    Args * args = NULL;
-    rc_t rc = ArgsMakeAndHandle ( & args, argc, argv, 0, NULL, 0 );
-    ArgsWhack ( args );
-    return rc;
-}
-
 int main ( int argc, char *argv [] )
 {
     // make sure to use singleton, otherwise tests take forever and finally fail
     CloudMgrUseSingleton(true);
-
-    KConfigDisableUserSettings();
     return HttpTestSuite(argc, argv);
 }

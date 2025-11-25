@@ -26,8 +26,7 @@
  * ========================================================================== */
 
 #include <kapp/args.h> // ArgsWhack
-#include <kfg/config.h> /* KConfigDisableUserSettings */
-#include <ktst/unit_test.hpp> /* TEST_SUITE_WITH_ARGS_HANDLER */
+#include <ktst/unit_test.hpp>
 #include <vdb/database.h> /* VDatabaseRelease */
 #include <vdb/dependencies.h> /* VDBDependenciesRelease */
 #include <vdb/manager.h> // VDBManagerRelease
@@ -59,7 +58,7 @@ TEST_CASE(Test_VDB_dependencies_wgs) {
 }
 #endif
 
-int main(int argc, char *argv[]) {
-    KConfigDisableUserSettings();
+int main(int argc, char *argv[])
+{
     return Test_VDB_dependencies_wgsSuite(argc, argv);
 }

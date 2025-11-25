@@ -426,16 +426,11 @@ TEST_CASE ( VerifyConfig )
 
 rc_t ArgsHandler(int argc, char* argv[])
 {
-    rc_t rc = VdbInitialize(argc, argv, 0); // this may be not the first call to VdbInitialize, but should not be a problem.
-    if ( rc == 0 )
-    {
-        arguments = new CommandLine(argc, argv);
-    }
-    return rc;
+    arguments = new CommandLine(argc, argv);
+    return 0;
 }
 
 int main( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
     return LoaderTestSuite(argc, argv);
 }

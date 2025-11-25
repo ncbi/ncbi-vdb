@@ -1044,8 +1044,6 @@ PROCESS_FIXTURE_TEST_CASE(TimedWrite_NULL_Timeout, TimedWriteSocketFixture, 0, 2
 
 int main ( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
-
     KDirectory * dir = NULL;
     KDirectoryNativeDir(&dir);
     KPathType t = KDirectoryPathType ( dir, "%s/.ncbi", getenv ( "HOME" ) );

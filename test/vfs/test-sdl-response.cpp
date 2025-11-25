@@ -24,7 +24,6 @@
 *
 */
 
-#include <kfg/config.h> /* KConfigDisableUserSettings */
 #include <klib/debug.h> /* KDbgSetString */
 #include <ktst/unit_test.hpp> // TEST_SUITE
 #include <vfs/path.h> /* VPathRelease */
@@ -431,6 +430,5 @@ TEST_CASE(expiredNsg) {
 
 int main( int argc, char * argv [] )
 {
-    KConfigDisableUserSettings();
     return TestSdlResolver( argc, argv );
 }

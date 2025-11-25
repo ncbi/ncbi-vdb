@@ -25,7 +25,6 @@
 
 #include <kapp/args.h> // ArgsWhack
 #include <kapp/vdbapp.h> // ArgsWhack
-#include <kfg/config.h> /* KConfigDisableUserSettings */
 #include <klib/debug.h> /* KDbgSetString */
 #include <ktst/unit_test.hpp>
 #include <vdb/manager.h> // VDBManagerRelease
@@ -88,9 +87,7 @@ TEST_CASE(Test_VDBManagerGetObjVersion) {
     REQUIRE_RC(VDBManagerRelease(m));
 }
 
-int main(int argc, char *argv[]) {
-    VDB::Application app(argc, argv);
-    KConfigDisableUserSettings();
-
+int main(int argc, char *argv[])
+{
     return Test_VDBManagerGetObjVersionSuite(argc, argv);
 }

@@ -54,6 +54,5 @@ TEST_SUITE(KdbTestSuite);
 
 int main ( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
     return KdbTestSuite(argc, argv);
 }

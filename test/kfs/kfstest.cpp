@@ -109,6 +109,5 @@ TEST_CASE(Tar_Parse)
 //////////////////////////////////////////// Main
 int main ( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
     return KfsTestSuite(argc, argv);
 }

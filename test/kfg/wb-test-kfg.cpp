@@ -599,6 +599,5 @@ FIXTURE_TEST_CASE(KfgParseVarRefPath, KfgParseFixture)
 //////////////////////////////////////////// Main
 int main( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
     return KfgWbTestSuite(argc, argv);
 }

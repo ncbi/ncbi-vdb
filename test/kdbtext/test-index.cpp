@@ -635,6 +635,5 @@ FIXTURE_TEST_CASE(KIndex_SetMaxRowId, KTextIndex_ApiFixture)
 //////////////////////////////////////////// Main
 int main ( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
     return KDBTextIndexTestSuite(argc, argv);
 }

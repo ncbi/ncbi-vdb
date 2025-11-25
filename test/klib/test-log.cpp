@@ -51,6 +51,7 @@ rc_t CC TestWrtWriter( void * data, const char * buffer, size_t bufsize, size_t 
 // Start using main(), never call KWrtInit() or KLogInit()
 // call all logging functions, make sure they do not crash
 
+// intercept args handling in order to bypass a call to VdbInitialize()
 static rc_t argsHandler ( int argc, char * argv [] ) { return 0; }
 TEST_SUITE_WITH_ARGS_HANDLER(KLogTestSuite, argsHandler);
 

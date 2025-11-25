@@ -369,6 +369,5 @@ rc_t ParseAccessToken( const char * jsonResponse, char ** token, KTime_t * expir
 
 int main( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
     return GcpTestSuite(argc, argv);
 }

@@ -569,8 +569,6 @@ int main ( int argc, char *argv [] )
     if (rc == 0) // needed to use ceRequired on cloud
         rc = KConfig_Set_Report_Cloud_Instance_Identity(kfg, true);
 
-    KConfigDisableUserSettings();
-
     if (rc == 0)
         rc = (rc_t)HttpRequestVerifyURLSuite(argc, argv);
 

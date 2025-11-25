@@ -1002,8 +1002,5 @@ FIXTURE_TEST_CASE(GCP_Credentials_KfgCredentials, GcpFixture) {
 int main( int argc, char *argv [] )
 {
     setenv("HOME", ".", 1);
-
-    KConfigDisableUserSettings();
-
     return CloudTestSuite(argc, argv);
 }

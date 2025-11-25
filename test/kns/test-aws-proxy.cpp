@@ -23,7 +23,6 @@
 * ============================================================================*/
 
 #include <kapp/args.h> /* ArgsMakeAndHandle */
-#include <kfg/config.h> /* KConfigDisableUserSettings */
 #include <kfs/file.h> /* KFileRelease */
 #include <klib/debug.h> /* KDbgSetString */
 #include <kns/http.h> /* KNSManagerMakeHttpFile */
@@ -89,6 +88,5 @@ TEST_CASE ( AwsProxyTest ) {
 
 int main( int argc, char * argv [] )
 {
-    KConfigDisableUserSettings ();
     return AwsProxyTestSuite(argc, argv);
 }

@@ -31,7 +31,7 @@
 #include <kns/kns-mgr-priv.h> /* KNSManagerMakeConfig */
 #include <kns/manager.h> /* KNSManagerRelease */
 
-#include <ktst/unit_test.hpp> /* TEST_SUITE_WITH_ARGS_HANDLER */
+#include <ktst/unit_test.hpp>
 
 #include "../../libs/kns/http-priv.h" /* MAX_HTTP_READ_LIMIT */
 #include "../../libs/kns/mgr-priv.h" /* KNSManager */
@@ -371,7 +371,7 @@ TEST_CASE ( TestTimeouts ) {
     REQUIRE_RC(KConfigRelease(kfg));
 }
 
-int main( int argc, char * argv [] ) {
-    KConfigDisableUserSettings ();
+int main( int argc, char * argv [] )
+{
     return TEST_TIMEOUTS( argc, argv );
 }

@@ -91,9 +91,8 @@ TEST_CASE(TestFile) {
     REQUIRE_RC(KConfigRelease(kfg));
 }
 
-int main(int argc, char *argv[]) {
-    KConfigDisableUserSettings(); // ignore ~/.ncbi/user-settings.mkfg
-
+int main(int argc, char *argv[])
+{
     return TestHashInPwd(argc, argv);
 }
 

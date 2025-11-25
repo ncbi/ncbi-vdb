@@ -134,7 +134,7 @@ TEST_CASE(TestTelemetry) {
     REQUIRE_RC(KConfigRelease(kfg));
 }
 
-int main(int argc, char *argv[]) {
-    KConfigDisableUserSettings();
+int main(int argc, char *argv[])
+{
     return KNS_opt_bitmapTestSuite(argc, argv);
 }

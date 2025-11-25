@@ -535,8 +535,6 @@ FIXTURE_TEST_CASE( HttpRefreshTestSuite_HeadAsPost_ShortFile, CloudFixture )
 
 int main( int argc, char * argv [] )
 {
-    KConfigDisableUserSettings ();
-
     rc_t rc = KConfigMakeEmpty ( & kfg );
     // turn off certificate validation to download from storage.googleapis.com
     if ( rc == 0 )

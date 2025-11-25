@@ -102,6 +102,5 @@ TEST_CASE(getFrameContentSize)
 //////////////////////////////////////////// Main
 int main( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
     return ZstdTestSuite(argc, argv);
 }

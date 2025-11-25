@@ -341,7 +341,6 @@ TEST_CASE(TestKSrvResponseGetLocationCacheInADLeak) {
 
 int main( int argc, char * argv [] )
 {
-    KConfigDisableUserSettings(); // ignore ~/.ncbi/user-settings.mkfg
     setenv ( "NCBI_VDB_QUALITY", "R", 1 );
     return TestServices ( argc, argv );
 }

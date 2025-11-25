@@ -26,7 +26,7 @@
 
 /* tests of names service */
 
-#include <kfg/config.h> /* KConfigDisableUserSettings */
+#include <kfg/config.h>
 #include <klib/debug.h> /* KDbgSetString */
 #include <klib/text.h> /* CONST_STRING */
 #include <ktst/unit_test.hpp>
@@ -192,8 +192,6 @@ FIXTURE_TEST_CASE ( ZZZZ99, Fixture ) {
 
 int main( int argc, char * argv [] )
 {
-    KConfigDisableUserSettings ();
-
     rc_t rc = KConfigMake ( & KFG, NULL );
     if ( rc == 0 )
         rc = KConfigWriteString ( KFG,

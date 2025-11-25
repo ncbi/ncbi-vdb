@@ -988,6 +988,5 @@ FIXTURE_TEST_CASE(VDatabaseMemberType_Inherited, ViewFixture)
 //////////////////////////////////////////// Main
 int main( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
     return ViewTestSuite(argc, argv);
 }
