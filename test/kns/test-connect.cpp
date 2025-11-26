@@ -66,7 +66,7 @@ public:
     {
         TimeoutInit(&tm, timeoutMs);
         String url;
-        CONST_STRING(&url, p_url);
+        StringInitCString(&url, p_url);
         THROW_ON_RC(KNSManagerInitDNSEndpoint(m_mgr, &ep, &url, port));
     }
 
