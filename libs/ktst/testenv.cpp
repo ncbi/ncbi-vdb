@@ -126,6 +126,7 @@ TestEnv::~TestEnv ()
 char TestEnv::lastLocation[] = "<init>";
 LogLevel::E TestEnv::verbosity = LogLevel::e_error;
 bool TestEnv::verbositySet = false;
+bool TestEnv::useUserConfig = false;;
 
 void CC TestEnv::TermHandler() noexcept
 {
@@ -268,8 +269,10 @@ rc_t TestEnv::process_args(int argc, char* argv[], ArgsHandler* argsHandler)
         {	rc = argsHandler(argc2, argv2); }
     }
 
-    // ignore ~/.ncbi/user-settings.mkfg
-    KConfigDisableUserSettings();
+    if ( ! useUserConfig )
+    {   // ignore ~/.ncbi/user-settings.mkfg
+        KConfigDisableUserSettings();
+    }
 
     return rc;
 }

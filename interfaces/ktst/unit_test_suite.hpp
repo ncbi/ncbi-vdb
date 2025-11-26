@@ -136,6 +136,7 @@ public:
     static char lastLocation[];
     static LogLevel::E verbosity;
     static bool verbositySet;
+    static bool useUserConfig;
     bool catch_system_errors;
 
     static int RunProcessTestCase(TestCase&, void(TestCase::*)(), int);
