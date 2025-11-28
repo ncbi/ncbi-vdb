@@ -36,7 +36,7 @@ struct KGZipFile;
 #include <klib/out.h>
 #include <sysalloc.h>
 
-#include <zlib.h>      /* z_stream */
+#include "../ext/zlib/zlib.h" /* z_stream */
 #include <assert.h>
 #include <stdlib.h>    /* malloc */
 #include <string.h> /* memset */

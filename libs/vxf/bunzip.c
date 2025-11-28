@@ -37,7 +37,7 @@
 #include <endian.h>
 #include <byteswap.h>
 #include <string.h>
-#include <bzlib.h>
+#include "../ext/bzip2/bzlib.h"
 
 static rc_t invoke_bzip2 ( void *dst, size_t dsize, const void *src, size_t ssize )
 {

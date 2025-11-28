@@ -41,7 +41,7 @@
 #include <assert.h>
 #include <stdio.h>
 
-#include <zlib.h>
+#include "../ext/zlib/zlib.h"
 
 /* Page maps describe the layout of rows within a blob.
  * The data within a page map is run-length encoded.

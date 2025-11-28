@@ -34,7 +34,7 @@
 #include <sysalloc.h>
 
 #include <string.h>
-#include <bzlib.h>
+#include "../ext/bzip2/bzlib.h"
 #include <stdint.h>
 #include <stdlib.h>
 

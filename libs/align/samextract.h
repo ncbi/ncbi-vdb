@@ -33,7 +33,7 @@
 #include <klib/rc.h>
 #include <klib/vector.h>
 #include <sys/types.h>
-#include <zlib.h>
+#include "../ext/zlib/zlib.h"
 
 #define READBUF_SZ 65536
 
