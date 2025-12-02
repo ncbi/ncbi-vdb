@@ -30,7 +30,7 @@
 
 #include <klib/rc.h>
 #include <klib/debug.h>
-#include <kapp/args.h>
+#include <kapp/vdbapp.h>
 #include <vdb/manager.h>
 #include <vdb/database.h>
 #include <klib/printf.h>
@@ -59,7 +59,7 @@ struct ErrorCode {
         char buffer[1024];
         size_t n = 0;
         string_printf(buffer, sizeof(buffer), &n, "%#R", rc);
-        
+
         std::string ret;
         if (n < sizeof(buffer)) {
             ret.assign(buffer, n);
@@ -112,12 +112,6 @@ public:
 
 struct CommandLine {
     CommandLine(int argc, char *argv[])
-    : args_p(nullptr)
-    , opt_skip_verify(false)
-    , opt_only_verify(false)
-    , opt_config_file(nullptr)
-    , opt_fasta_file(nullptr)
-    , references(nullptr)
     {
         char const *skip_verify_help[] = { "skip verifying config", NULL };
         char const *only_verify_help[] = { "don't attempt to lookup references", NULL };
@@ -173,11 +167,11 @@ struct CommandLine {
     bool only_verify() const { return opt_only_verify; }
 
 private:
-    Args *args_p;
-    bool opt_skip_verify;
-    bool opt_only_verify;
-    char const *opt_config_file;
-    char const *opt_fasta_file;
+    Args *args_p = nullptr;
+    bool opt_skip_verify = false;
+    bool opt_only_verify = false;
+    char const *opt_config_file = nullptr;
+    char const *opt_fasta_file = nullptr;
 
     mutable std::ifstream *references = nullptr;
 };
@@ -348,7 +342,8 @@ private:
     }
 };
 
-TEST_SUITE(LoaderTestSuite);
+rc_t ArgsHandler(int argc, char* argv[]);
+TEST_SUITE_WITH_ARGS_HANDLER(LoaderTestSuite, ArgsHandler);
 
 TEST_CASE ( LoadNoConfig )
 {
@@ -429,12 +424,13 @@ TEST_CASE ( VerifyConfig )
 
 //////////////////////////////////////////// Main
 
+rc_t ArgsHandler(int argc, char* argv[])
+{
+    arguments = new CommandLine(argc, argv);
+    return 0;
+}
+
 int main( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
-    {
-        auto const args = CommandLine(argc, argv);
-        arguments = &args;
-        return LoaderTestSuite(argc, argv);
-    }
+    return LoaderTestSuite(argc, argv);
 }

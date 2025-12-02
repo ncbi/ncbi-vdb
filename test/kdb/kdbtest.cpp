@@ -47,25 +47,12 @@
 
 using namespace std;
 
-static rc_t argsHandler(int argc, char* argv[]);
-TEST_SUITE_WITH_ARGS_HANDLER(KdbTestSuite, argsHandler);
+TEST_SUITE(KdbTestSuite);
 
 #define KDB_MANAGER_MAKE(mgr, wd) KDBManagerMakeRead((const KDBManager **)mgr, (struct KDirectory const *)wd)
 #include "remote_open_test.cpp"
 
-//////////////////////////////////////////// Main
-static rc_t argsHandler(int argc, char* argv[]) {
-    Args* args = NULL;
-    rc_t rc = ArgsMakeAndHandle(&args, argc, argv, 0, NULL, 0);
-    ArgsWhack(args);
-    return rc;
-}
-
 int main ( int argc, char *argv [] )
 {
-    // assert(!KDbgSetString("KFG"));
-    // assert(!KDbgSetString("VFS"));
-    //KDbgSetModConds ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), DBG_FLAG ( DBG_KNS_SOCKET ) );
-    KConfigDisableUserSettings();
     return KdbTestSuite(argc, argv);
 }

@@ -26,8 +26,6 @@
 
 #include "observer-test.hpp" // ObserverTest
 
-#include <kfg/config.h> /* KConfigDisableUserSettings */
-
 TEST_SUITE(ReadObserverTestSuite)
 
 using std::string;
@@ -449,9 +447,8 @@ TEST_CASE(TimedReadExactlyTwicePartially) {
     t.Finish();
 }
 
-int main(int argc, char *argv[]) {
-    KConfigDisableUserSettings();
-
+int main(int argc, char *argv[])
+{
     rc_t rc(ObserverTest::Begin(eHttp));
 
     if (rc == 0)

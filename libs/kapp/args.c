@@ -72,10 +72,33 @@
 #define LEGACY_Q_ALIAS_ERROR      0
 #endif
 
+static rc_t DefaultUsage( const Args * );
+static rc_t DefaultUsageSummary( const char * );
+
 static const char * UsageDefaultName = "";
-static Usage_t Usage = NULL;
-static UsageSummary_t UsageSummary = NULL;
+static Usage_t Usage = DefaultUsage;
+static UsageSummary_t UsageSummary = DefaultUsageSummary;
 static ver_t KAppVersion = 0;
+
+rc_t DefaultUsage( const Args * args )
+{
+    UNUSED( args );
+    rc_t rc = UsageSummary ( UsageDefaultName );
+    if (rc == 0)
+    {
+        KOutMsg ("Options:\n");
+        HelpOptionsStandard();
+    }
+    return rc;
+}
+
+rc_t DefaultUsageSummary( const char * progname )
+{
+    return KOutMsg ("\n"
+                    "Usage:\n"
+                    "  %s [OPTIONS]\n",
+                    progname);
+}
 
 void SetUsageDefaultName( const char* str )
 {
@@ -733,7 +756,7 @@ static void openOptionDefs(char const *argv0) {
 static void closeOptionDefs(void) {
     if (dumpOptionDefs) {
         fprintf(dumpOptionDefs, "    TOOL_ARG(0, 0, 0)\n");
-        fprintf(dumpOptionDefs, "TOOL_ARGS_END\n\n"); 
+        fprintf(dumpOptionDefs, "TOOL_ARGS_END\n\n");
         fclose(dumpOptionDefs);
         exit(0);
     }

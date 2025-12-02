@@ -300,6 +300,5 @@ FIXTURE_TEST_CASE ( FindNext_Found, SymtabFixture )
 //////////////////////////////////////////////////// Main
 int main( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
     return KSymtabTestSuite(argc, argv);
 }

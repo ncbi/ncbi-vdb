@@ -758,8 +758,6 @@ int main(int argc, char* argv[])
     rc = KDirectoryCreateFile(DIR, &BACKING, true, 0600, kcmInit, fname);
     if (rc) return (int)rc;
 
-    KConfigDisableUserSettings();
-
     rc = (rc_t)KHashFileTestSuite(argc, argv);
     if (rc) return (int)rc;
 

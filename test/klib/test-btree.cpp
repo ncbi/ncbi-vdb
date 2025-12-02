@@ -630,6 +630,5 @@ FIXTURE_TEST_CASE( LotsaFixedSizeInserts, BtreeFixture )
 //////////////////////////////////////////////////// Main
 int main(int argc, char* argv[])
 {
-    KConfigDisableUserSettings();
     return BtreeTestSuite(argc, argv);
 }

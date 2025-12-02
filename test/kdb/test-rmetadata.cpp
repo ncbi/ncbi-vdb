@@ -148,6 +148,5 @@ FIXTURE_TEST_CASE(KRMetadata_OpenNodeRead, KMetadata_Fixture)
 //////////////////////////////////////////// Main
 int main ( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
     return KDBRMetadataTestSuite(argc, argv);
 }

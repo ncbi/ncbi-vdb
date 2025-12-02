@@ -26,14 +26,12 @@
 
 #include "../libs/vfs/SraDesc.c"
 
-#include <kfg/config.h> /* KConfigDisableUserSettings */
-
 #include <kfs/directory.h> /* KDirectoryRelease */
 #include <kfs/file.h> /* KFileRelease */
 
 #include <klib/printf.h> /* string_printf */
 
-#include <ktst/unit_test.hpp> 
+#include <ktst/unit_test.hpp>
 
 TEST_SUITE(SraDescTestSuite);
 
@@ -241,7 +239,7 @@ FIXTURE_TEST_CASE(LoalObsoleteQualityTest, SraDescTestFixture) {
 }
 #endif
 
-int main(int argc, char * argv[]) {
-    KConfigDisableUserSettings();
+int main(int argc, char * argv[])
+{
     return SraDescTestSuite(argc, argv);
 }

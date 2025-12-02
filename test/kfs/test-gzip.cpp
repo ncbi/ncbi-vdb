@@ -46,8 +46,7 @@
 #include <cstdlib>
 #include <sys/wait.h>
 
-static rc_t argsHandler(int argc, char* argv[]);
-TEST_SUITE_WITH_ARGS_HANDLER(KGZipFileTestSuite, argsHandler);
+TEST_SUITE(KGZipFileTestSuite);
 
 using namespace std;
 using namespace ncbi::NK;
@@ -273,20 +272,7 @@ FIXTURE_TEST_CASE(KGZipFile_Test, KGZipFileFixture)
     TestRead();
 }
 
-static rc_t argsHandler(int argc, char * argv[]) {
-    Args * args = NULL;
-    rc_t rc = ArgsMakeAndHandle(&args, argc, argv, 0, NULL, 0);
-    ArgsWhack(args);
-    return rc;
-}
-
 int main ( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
-
-	// this makes messages from the test code appear
-	// (same as running the executable with "-l=message")
-	//TestEnv::verbosity = LogLevel::e_message;
-
     return KGZipFileTestSuite(argc, argv);
 }

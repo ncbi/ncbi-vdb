@@ -7,18 +7,11 @@
 #include <kfg/kfg-priv.h> /* KConfigMakeEmpty */
 #include <kfs/directory.h> /* KDirectoryRelease */
 #include <kfs/file.h> /* KFileRelease */
-#include <ktst/unit_test.hpp> /* TEST_SUITE_WITH_ARGS_HANDLER */
+#include <ktst/unit_test.hpp>
 #include <vfs/services.h> /* KServiceRelease */
 #include "../../libs/vfs/jwt.h" /* JwtKartValidate */
 
-static rc_t argsHandler(int argc, char* argv[]) {
-    Args* args = NULL;
-    rc_t rc = ArgsMakeAndHandle(&args, argc, argv, 0, NULL, 0);
-    ArgsWhack(args);
-    return rc;
-}
-
-TEST_SUITE_WITH_ARGS_HANDLER(TestPermSuite, argsHandler)
+TEST_SUITE(TestPermSuite)
 
 TEST_CASE(TestService) {
     /* service is NULL */
@@ -224,9 +217,8 @@ TEST_CASE(TestJwtKartValidateStringWhiteSections) {
     REQUIRE_RC(JwtKartValidateString(&s, NULL));
 }
 
-int main(int argc, char *argv[]) {
-    KConfigDisableUserSettings(); // ignore ~/.ncbi/user-settings.mkfg
-
+int main(int argc, char *argv[])
+{
     return TestPermSuite(argc, argv);
 }
 

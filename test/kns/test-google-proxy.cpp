@@ -40,8 +40,7 @@
 
 #include <../../libs/kns/mgr-priv.h> /* KNSManager */
 
-static rc_t argsHandler(int argc, char * argv[]);
-TEST_SUITE_WITH_ARGS_HANDLER(GoogleProxyTestSuite, argsHandler)
+TEST_SUITE(GoogleProxyTestSuite)
 
 static KConfig * KFG = NULL;
 
@@ -175,12 +174,8 @@ static rc_t argsHandler(int argc, char * argv[]) {
     return rc;
 }
 
-int main ( int argc, char * argv [] ) {
-    if ( 0 ) assert ( ! KDbgSetString ( "KNS-DNS" ) );
-    if ( 0 ) assert ( ! KDbgSetString ( "KNS-HTTP" ) );
-    if ( 0 ) assert ( ! KDbgSetString ( "KNS-PROXY" ) );
-    if ( 0 ) ncbi::NK::TestEnv::verbosity = ncbi::NK::LogLevel::E::e_all;
-
+int main ( int argc, char * argv [] )
+{
 #if _DEBUGGING
     if ( 0 ) KStsLevelSet ( 5 );
 #endif

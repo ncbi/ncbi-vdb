@@ -27,19 +27,13 @@
 #include <kapp/args.h> // ArgsWhack
 #include <kfg/config.h> /* KConfigDisableUserSetting */
 #include <klib/vector.h> // VectorForEach
-#include <ktst/unit_test.hpp> /* TEST_SUITE_WITH_ARGS_HANDLER */
+#include <ktst/unit_test.hpp>
 #include <vdb/database.h> // VDatabaseRelease
 #include <vdb/manager.h> // VDBManagerRelease
 #include <vdb/schema.h> // VSchemaRelease
 #include <vdb/schema-priv.h> // VSchemaGetDb
 
-static rc_t argsHandler(int argc, char *argv[]) {
-    Args *args = NULL;
-    rc_t rc = ArgsMakeAndHandle(&args, argc, argv, 0, NULL, 0);
-    ArgsWhack(args);
-    return rc;
-}
-TEST_SUITE_WITH_ARGS_HANDLER(SchemaPrivSuite, argsHandler)
+TEST_SUITE(SchemaPrivSuite)
 
 static void OnDb(void *item, void *data) noexcept {
     assert(item && data);
@@ -168,7 +162,7 @@ TEST_CASE(TestSchemaPriv) {
     REQUIRE_RC(VDBManagerRelease(m));
 }
 
-int main(int argc, char *argv[]) {
-    KConfigDisableUserSettings();
+int main(int argc, char *argv[])
+{
     return SchemaPrivSuite(argc, argv);
 }

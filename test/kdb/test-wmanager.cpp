@@ -233,6 +233,5 @@ FIXTURE_TEST_CASE(KDBWManager_OpenColumnRead, KDBManager_Fixture)
 //////////////////////////////////////////// Main
 int main( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
     return KDBWManagerTestSuite(argc, argv);
 }

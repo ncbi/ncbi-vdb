@@ -55,8 +55,7 @@
 using namespace std;
 using namespace ncbi::NK;
 
-extern "C" { static rc_t argsHandler(int argc, char* argv[]); }
-TEST_SUITE_WITH_ARGS_HANDLER(KProcTestSuite, argsHandler);
+TEST_SUITE(KProcTestSuite);
 
 //TODO: KThread
 
@@ -66,7 +65,7 @@ TEST_CASE( KLock_NULL )
     REQUIRE_RC_FAIL(KLockMake(NULL));
 }
 
-static KLock *makeLock() 
+static KLock *makeLock()
 {
     KLock *lock = nullptr;
     if (KLockMake(&lock) != 0)
@@ -82,7 +81,7 @@ public:
     , lock(makeLock())
     , threadWaiting(false)
     {}
-    
+
     ~KLockFixture()
     {
         if (thread != 0 && KThreadRelease(thread) != 0)
@@ -114,7 +113,7 @@ protected:
     static rc_t ThreadFn ( KThread const *const thread, void *const data ) noexcept {
         return reinterpret_cast<KLockFixture *>(data)->runThread();
     }
-    
+
     rc_t startThread() {
         return KThreadMake(&thread, ThreadFn, reinterpret_cast<void *>(this));
     }
@@ -128,11 +127,11 @@ protected:
         if (rc) return rc;
 
         do { TestEnv::SleepMs(1); } while (!threadWaiting);
-        
+
         LOG(LogLevel::e_message, "KLockFixture::StartThread: threadWaiting == true" << endl);
         return 0;
     }
-    
+
     std::pair<rc_t, rc_t> waitThread() const {
         rc_t threadRc = 0, rc = KThreadWait(thread, &threadRc);
         return {rc, threadRc};
@@ -164,7 +163,7 @@ FIXTURE_TEST_CASE(KLock_Acquire, KLockFixture)
 
 ///////////////////////// KTimedLock
 
-static KTimedLock *makeTimedLock() 
+static KTimedLock *makeTimedLock()
 {
     KTimedLock *lock = nullptr;
     if (KTimedLockMake(&lock) != 0)
@@ -185,7 +184,7 @@ public:
     , lock(makeTimedLock())
     , threadWaiting(false)
     {}
-    
+
     ~KTimedLockFixture()
     {
         if (thread != 0 && KThreadRelease(thread) != 0)
@@ -199,11 +198,11 @@ protected:
         auto ltm = tm; ///< make a copy
         return KTimedLockAcquire(lock, &ltm); ///< modify the local copy, no sync needed;
     }
-    
+
     rc_t unlock() const {
         return KTimedLockUnlock(lock);
     }
-    
+
     rc_t runThread() {
         LOG(LogLevel::e_message, "KTimedLockFixture::runThread: acquiring lock, set threadWaiting to true, timeout = " << tm.mS << "ms" << endl);
         threadWaiting = true;
@@ -219,12 +218,12 @@ protected:
 
         if (rc == 0)
             rc = unlock();
-            
+
         LOG(LogLevel::e_message, "KTimedLockFixture::runThread: exiting" << endl);
-        
+
         return rc;
     }
-    
+
     static rc_t KLock_Timed_ThreadFn ( const KThread *thread, void *data ) noexcept {
         return reinterpret_cast<KTimedLockFixture *>(data)->runThread();
     }
@@ -237,7 +236,7 @@ protected:
     {
         auto rc = TimeoutInit( &tm, (uint32_t)timeout );
         if (rc) return rc;
-        
+
         threadWaiting = false;
         LOG(LogLevel::e_message, "KTimedLockFixture::StartThread: set threadWaiting to false" << endl);
 
@@ -245,11 +244,11 @@ protected:
         if (rc) return rc;
 
         do { TestEnv::SleepMs(1); } while (!threadWaiting);
-        
+
         LOG(LogLevel::e_message, "KTimedLockFixture::StartThread: threadWaiting == true" << endl);
         return 0;
     }
-    
+
     std::pair<rc_t, rc_t> waitThread() const {
         rc_t threadRc = 0, rc = KThreadWait(thread, &threadRc);
         return {rc, threadRc};
@@ -328,7 +327,7 @@ public:
     , lock(makeKRWLock())
     , threadWaiting(false)
     {}
-    
+
     ~KRWLockFixture()
     {
         if (thread != 0 && KThreadRelease(thread) != 0)
@@ -356,7 +355,7 @@ protected:
     rc_t startReaderThread() {
         return KThreadMake(&thread, Reader_ThreadFn, reinterpret_cast<void *>(this));
     }
-    
+
     rc_t runWriterThread() {
         threadWaiting = true;
 
@@ -378,7 +377,7 @@ protected:
     rc_t startWriterThread() {
         return KThreadMake(&thread, Writer_ThreadFn, reinterpret_cast<void *>(this));
     }
-    
+
     rc_t runReaderTimedThread() {
         threadWaiting = true;
 
@@ -397,7 +396,7 @@ protected:
     rc_t startReaderTimedThread() {
         return KThreadMake(&thread, ReaderTimed_ThreadFn, reinterpret_cast<void *>(this));
     }
-    
+
     rc_t runWriterTimedThread() {
         threadWaiting = true;
 
@@ -424,12 +423,12 @@ protected:
         do { TestEnv::SleepMs(1); } while (!threadWaiting);
         return 0;
     }
-    
+
     rc_t StartThread(bool writer, size_t timeout)
     {
         auto rc = TimeoutInit( &tm, (uint32_t)timeout );
         if (rc) return rc;
-        
+
         rc = writer ? startWriterTimedThread() : startReaderTimedThread();
         if (rc) return rc;
 
@@ -507,7 +506,7 @@ FIXTURE_TEST_CASE(KWRLock_Reader_TimedAcquire, KRWLockFixture)
 
     // unlock, see the thread finish
     REQUIRE_RC(KRWLockUnlock(lock));
-    
+
     auto const rcs = waitThread();
     REQUIRE_RC(rcs.first);
     REQUIRE_RC(rcs.second);
@@ -613,10 +612,10 @@ protected:
     rc_t runThread() {
         LOG(LogLevel::e_message, "KConditionFixture::runThread: sleeping" << endl);
         TestEnv::SleepMs(300);
-        
+
         LOG(LogLevel::e_message, "KConditionFixture::runThread: signaling condition" << endl);
         is_signaled = true;
-        
+
         auto const rc = do_broadcast ? KConditionBroadcast(cond) : KConditionSignal(cond);
 
         LOG(LogLevel::e_message, "KConditionFixture::runThread: exiting" << endl);
@@ -1009,18 +1008,7 @@ FIXTURE_TEST_CASE(KQueue_Single_Reader_Multi_Writer_Seal, KQueueFixture)
 //TODO: KBarrier (is it used anywhere? is there a Windows implementation?)
 
 //////////////////////////////////////////// Main
-static rc_t argsHandler(int argc, char* argv[]) {
-    Args* args = NULL;
-    rc_t rc = ArgsMakeAndHandle(&args, argc, argv, 0, NULL, 0);
-    ArgsWhack(args);
-    return rc;
-}
-
 int main ( int argc, char *argv [] )
 {
-	// this makes messages from the test code appear
-	// (same as running the executable with "-l=message")
-	//TestEnv::verbosity = LogLevel::e_message;
-
     return KProcTestSuite( argc, argv );
 }

@@ -53,8 +53,7 @@
 #include <atomic>
 #include <set>
 
-static rc_t argsHandler(int argc, char* argv[]);
-TEST_SUITE_WITH_ARGS_HANDLER(KnsIpcTestSuite, argsHandler);
+TEST_SUITE(KnsIpcTestSuite);
 
 using namespace std;
 using namespace ncbi::NK;
@@ -1043,24 +1042,8 @@ PROCESS_FIXTURE_TEST_CASE(TimedWrite_NULL_Timeout, TimedWriteSocketFixture, 0, 2
 
 //////////////////////////////////////////// Main
 
-static rc_t argsHandler(int argc, char * argv[]) {
-    Args * args = nullptr;
-    rc_t rc = ArgsMakeAndHandle(&args, argc, argv, 0, nullptr, 0);
-    ArgsWhack(args);
-    return rc;
-}
-
 int main ( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
-
-	// uncomment to see messages from socket code
-    // KDbgSetModConds ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), DBG_FLAG ( DBG_KNS_SOCKET ) );
-
-	// this makes messages from the test code appear
-	// (same as running the executable with "-l=message")
-	//TestEnv::verbosity = LogLevel::e_message;
-
     KDirectory * dir = NULL;
     KDirectoryNativeDir(&dir);
     KPathType t = KDirectoryPathType ( dir, "%s/.ncbi", getenv ( "HOME" ) );

@@ -159,6 +159,5 @@ FIXTURE_TEST_CASE ( BlobValidationEnabled, VDB_Fixture)
 //////////////////////////////////////////// Main
 int main ( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
     return BlobValidationTestSuite(argc, argv);
 }

@@ -121,6 +121,5 @@ FIXTURE_TEST_CASE(Buffer_TooShort, BZip2Fixture)
 //////////////////////////////////////////// Main
 int main ( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
     return Bzip2TestSuite(argc, argv);
 }

@@ -122,11 +122,13 @@ template<class T> const T abs(const T& a) { return a >= 0 ? a : -a; }
 
 class TestCase;
 
+extern rc_t DefaultArgsHandler(int argc, char **argv);
+
 class TestEnv {
 public:
     typedef rc_t ArgsHandler(int argc, char* argv[]);
 
-    TestEnv(int argc, char* argv[], ArgsHandler *argsHandler = NULL);
+    TestEnv(int argc, char* argv[], ArgsHandler *argsHandler = DefaultArgsHandler);
     ~TestEnv(void);
 
     static void set_handlers(void);
@@ -134,6 +136,7 @@ public:
     static char lastLocation[];
     static LogLevel::E verbosity;
     static bool verbositySet;
+    static bool useUserConfig;
     bool catch_system_errors;
 
     static int RunProcessTestCase(TestCase&, void(TestCase::*)(), int);
@@ -144,17 +147,6 @@ public:
 
     static const int TEST_CASE_TIMED_OUT=14;
     static const int TEST_CASE_FAILED=255;
-
-#if ALLOW_TESTING_CODE_TO_RELY_UPON_CODE_BEING_TESTED
-    static struct Args* GetArgs() { return args; }
-#endif
-
-    static rc_t UsageSummary(const char* progname);
-#if ALLOW_TESTING_CODE_TO_RELY_UPON_CODE_BEING_TESTED
-    static rc_t Usage(const Args* args);
-#else
-    static rc_t Usage(const char *progname);
-#endif
 
     static bool in_child_process;
     static std::string GetPidString();
@@ -470,7 +462,7 @@ protected:
 
 class TestInvoker {
 protected:
-    TestInvoker(const std::string& name) : _ec(0) 
+    TestInvoker(const std::string& name) : _ec(0)
     {
         strncpy( _name, name.c_str(), sizeof(_name) - 1 );
         _name[ sizeof(_name) - 1 ] = 0;

@@ -270,6 +270,5 @@ FIXTURE_TEST_CASE(KWDatabase_CreateIndex, KDatabase_Fixture)
 //////////////////////////////////////////// Main
 int main( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
     return KWDatabaseTestSuite(argc, argv);
 }

@@ -308,6 +308,5 @@ FIXTURE_TEST_CASE ( CopyColumn, KDB_ColumnCopyFixture )
 
 int main( int argc, char *argv[] )
 {
-    KConfigDisableUserSettings ();
     return KdbTestSuite ( argc, argv );
 }

@@ -314,6 +314,5 @@ FIXTURE_TEST_CASE(KMetadata_OpenNodeRead, KTextMetadata_ApiFixture)
 //////////////////////////////////////////// Main
 int main ( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
     return KDBTextMetadataTestSuite(argc, argv);
 }

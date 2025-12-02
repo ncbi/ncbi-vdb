@@ -447,6 +447,5 @@ FIXTURE_TEST_CASE(KDBRManager_PathContents_SRR, KDatabase_Fixture)
 //////////////////////////////////////////// Main
 int main( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
     return KRDatabaseTestSuite(argc, argv);
 }

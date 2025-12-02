@@ -241,6 +241,5 @@ TEST_CASE( CacheTee_v3_out_of_space )
 //////////////////////////////////////////// Main
 int main ( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
     return CacheTeeOutOfSpaceSuite( argc, argv );
 }

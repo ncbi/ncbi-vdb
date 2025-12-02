@@ -697,11 +697,7 @@ TEST_CASE( CacheTee_None_Promoting )
 //////////////////////////////////////////// Main
 int main ( int argc, char *argv [] )
 {
-    VDB::Application app(argc, argv);
-
     srand( (unsigned int) time( NULL ) );
-    KConfigDisableUserSettings();
-
 	rc_t rc = prepare_cachetee_tests();
 	if ( rc == 0 )
 	{

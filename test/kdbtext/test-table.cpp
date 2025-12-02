@@ -449,6 +449,5 @@ FIXTURE_TEST_CASE(KTextTable_MetaCompare, KTextTable_ApiFixture)
 //////////////////////////////////////////// Main
 int main ( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
     return KTextTableTestSuite(argc, argv);
 }

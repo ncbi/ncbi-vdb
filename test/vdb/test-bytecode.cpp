@@ -529,6 +529,5 @@ FIXTURE_TEST_CASE ( FunctionProdCallLegacyBlobFunc, ByteCodeFixture )
 //////////////////////////////////////////// Main
 int main( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
     return ByteCodeTestSuite(argc, argv);
 }

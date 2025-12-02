@@ -370,7 +370,6 @@ FIXTURE_TEST_CASE(KDBManager_getVFSManager, KDBTextManager_Fixture)
 //////////////////////////////////////////// Main
 int main ( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
     return KDBTextManagerTestSuite(argc, argv);
 }
 
