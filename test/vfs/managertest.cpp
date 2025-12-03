@@ -627,7 +627,6 @@ FIXTURE_TEST_CASE(TestVFSManagerCheckAd, MgrFixture) {
 //////////////////////////////////////////// Main
 int main ( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
     return VManagerTestSuite(argc, argv);
 }
 

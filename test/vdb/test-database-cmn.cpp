@@ -30,17 +30,9 @@
 
 #include "../../libs/vdb/database-cmn.c"
 #include <kapp/args.h> /* Args */
-#include <kfg/config.h> /* KConfigDisableUserSettings */
 #include <ktst/unit_test.hpp> /* ver_t */
 
 #define ALL
-
-static rc_t argsHandler(int argc, char * argv[]) {
-    Args * args = NULL;
-    rc_t rc = ArgsMakeAndHandle(&args, argc, argv, 0, NULL, 0);
-    ArgsWhack(args);
-    return rc;
-}
 
 class Fixture{
 protected:
@@ -54,7 +46,7 @@ protected:
     }
 };
 
-TEST_SUITE_WITH_ARGS_HANDLER(DatabaseCmnTestSuite, argsHandler);
+TEST_SUITE(DatabaseCmnTestSuite);
 
 #ifdef ALL
 FIXTURE_TEST_CASE(FULL, Fixture){
@@ -149,7 +141,7 @@ FIXTURE_TEST_CASE(BAD_NUM_GAP_FULL, Fixture) {
 }
 #endif
 
-int main(int argc, char * argv[]) {
-    KConfigDisableUserSettings();
+int main(int argc, char * argv[])
+{
     return DatabaseCmnTestSuite(argc, argv);
 }

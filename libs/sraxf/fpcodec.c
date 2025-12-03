@@ -38,7 +38,7 @@
 #include <endian.h>
 #include <byteswap.h>
 #include <string.h>
-#include <zlib.h>
+#include "../ext/zlib/zlib.h"
 #include <assert.h>
 #include <math.h>
 

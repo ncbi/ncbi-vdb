@@ -347,6 +347,5 @@ FIXTURE_TEST_CASE(Pack_fail, PackFixture)
 //////////////////////////////////////////////////// Main
 int main(int argc, char* argv[])
 {
-    KConfigDisableUserSettings();
     return KlibPackTestSuite(argc, argv);
 }

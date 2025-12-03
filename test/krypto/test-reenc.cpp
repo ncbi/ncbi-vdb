@@ -350,6 +350,5 @@ TEST_CASE(KReencryptZeroContentSizePtFile)
 
 int main( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
     return KReencTestSuite(argc, argv);
 }

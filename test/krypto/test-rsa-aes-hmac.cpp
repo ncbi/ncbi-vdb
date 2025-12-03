@@ -903,6 +903,5 @@ TEST_CASE ( KEncryptExtendedResultDecryptRoundTrip )
 
 int main( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings ();
     return KRsaAesHmacTestSuite ( argc, argv );
 }

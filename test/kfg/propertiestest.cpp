@@ -434,8 +434,6 @@ FIXTURE_TEST_CASE( GetSet_Telemetry, KfgFixture ) {
 //////////////////////////////////////////// Main
 int main ( int argc, char *argv [] )
 {
-    VDB::Application app(argc, argv);
-    KConfigDisableUserSettings();
     return PropertiesTestSuite(argc, argv);
 }
 

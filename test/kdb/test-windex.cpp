@@ -224,6 +224,5 @@ FIXTURE_TEST_CASE(KWIndex_SetMaxRowId, KIndex_Fixture)
 //////////////////////////////////////////// Main
 int main( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
     return KDBRIndexTestSuite(argc, argv);
 }

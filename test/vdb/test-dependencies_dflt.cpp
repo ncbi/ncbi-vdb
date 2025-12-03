@@ -154,8 +154,7 @@ public:
     RefseqFixture() : DepFixture(PATH) {}
 };
 
-static rc_t argsHandler(int argc, char* argv[]);
-TEST_SUITE_WITH_ARGS_HANDLER(TestDependenciesSuite, argsHandler);
+TEST_SUITE(TestDependenciesSuite);
 
 FIXTURE_TEST_CASE(TestNoDeps, RefseqFixture) {
     if (siteless) {
@@ -468,21 +467,7 @@ FIXTURE_TEST_CASE(Test1LocalDep, EmptyFixture) {
     RELEASE(VPath, local);
 }
 
-static rc_t argsHandler(int argc, char* argv[]) {
-    Args* args = NULL;
-    rc_t rc = ArgsMakeAndHandle(&args, argc, argv, 0, NULL, 0);
-    ArgsWhack(args);
-    return rc;
-}
-
-int main(int argc, char *argv[]) {
-    KConfigDisableUserSettings();
-
-if (
-0)      assert(!KDbgSetString("KFS-FILE"));
-
-if(
-0)      assert(!KDbgSetString("VFS"));
-
+int main(int argc, char *argv[])
+{
     return TestDependenciesSuite(argc, argv);
 }

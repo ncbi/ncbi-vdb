@@ -171,6 +171,5 @@ TEST_CASE(TestOUTMSG_c) {
 }
 
 int main(int argc, char *argv[]) {
-    KWrtInit(argv[0], 0);
     return KOutTestSuite(argc, argv);
 }

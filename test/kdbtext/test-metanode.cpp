@@ -666,6 +666,5 @@ FIXTURE_TEST_CASE(KMetanode_ListChildren, KTextMetanode_ApiFixture)
 //////////////////////////////////////////// Main
 int main ( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
     return KDBTextMetanodeTestSuite(argc, argv);
 }

@@ -367,7 +367,7 @@ const void *
 ASTBuilder :: SelectVersion ( ctx_t ctx,
                               const AST_FQN & p_fqn,
                               const KSymbol & p_ovl,
-                              int64_t ( CC * p_cmp ) ( const void *item, const void *n ) noexcept,
+                              int64_t ( CC * p_cmp ) ( const void *item, const void *n ),
                               uint32_t * p_version )
 {
     FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
@@ -447,7 +447,7 @@ ASTBuilder :: CreateOverload ( ctx_t ctx,
                                const KSymbol &  p_name,
                                const void *     p_object,
                                uint32_t         p_context_type,
-                               int64_t          (CC *p_sort)(const void *, const void *) noexcept,
+                               int64_t          (CC *p_sort)(const void *, const void *),
                                Vector &         p_objects,
                                Vector &         p_names,
                                uint32_t &       p_id )

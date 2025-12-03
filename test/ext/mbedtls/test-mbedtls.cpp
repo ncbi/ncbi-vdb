@@ -277,6 +277,5 @@ FIXTURE_TEST_CASE(WindowsRootStore, MbedTlsFixture)
 
 int main ( int argc, char *argv [] )
 {
-KDbgSetString ( "KNS-PROXY" );
     return MbedTlsTestSuite(argc, argv);
 }

@@ -113,7 +113,6 @@ TEST_CASE ( PageMap_AppendRows )
 //////////////////////////////////////////// Main
 int main( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
     return KdbPageMapTestSuite(argc, argv);
 }
 

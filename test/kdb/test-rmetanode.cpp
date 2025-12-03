@@ -590,6 +590,5 @@ FIXTURE_TEST_CASE(KRMDataNode_ListChildren, KRMDataNode_Fixture)
 //////////////////////////////////////////// Main
 int main( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
     return KDBRMDataNodeTestSuite(argc, argv);
 }

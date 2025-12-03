@@ -23,7 +23,6 @@
 * ==============================================================================
 */
 
-#include <kfg/config.h> /* KConfigDisableUserSettings */
 #include <klib/debug.h> /* KDbgSetString */
 
 #include <ktst/unit_test.hpp> // TEST_SUITE
@@ -204,11 +203,7 @@ TEST_CASE ( Test ) {
 }
 #endif
 
-int main ( int argc, char * argv [] ) {
-    KConfigDisableUserSettings ();
-if (
-0 ) assert ( ! KDbgSetString ( "VFS-JSON" ) );
-if (
-0 ) assert ( ! KDbgSetString ( "VFS" ) );
+int main ( int argc, char * argv [] )
+{
     return TestResolver4 ( argc, argv );
 }

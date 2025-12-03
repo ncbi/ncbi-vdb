@@ -622,6 +622,5 @@ FIXTURE_TEST_CASE( ViewCursor_Join_NullKey, ViewOnTableCursorFixture )
 //////////////////////////////////////////// Main
 int main( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
     return ViewCursorTestSuite(argc, argv);
 }

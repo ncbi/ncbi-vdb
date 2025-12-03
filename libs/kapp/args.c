@@ -72,10 +72,33 @@
 #define LEGACY_Q_ALIAS_ERROR      0
 #endif
 
+static rc_t DefaultUsage( const Args * );
+static rc_t DefaultUsageSummary( const char * );
+
 static const char * UsageDefaultName = "";
-static Usage_t Usage = NULL;
-static UsageSummary_t UsageSummary = NULL;
+static Usage_t Usage = DefaultUsage;
+static UsageSummary_t UsageSummary = DefaultUsageSummary;
 static ver_t KAppVersion = 0;
+
+rc_t DefaultUsage( const Args * args )
+{
+    UNUSED( args );
+    rc_t rc = UsageSummary ( UsageDefaultName );
+    if (rc == 0)
+    {
+        KOutMsg ("Options:\n");
+        HelpOptionsStandard();
+    }
+    return rc;
+}
+
+rc_t DefaultUsageSummary( const char * progname )
+{
+    return KOutMsg ("\n"
+                    "Usage:\n"
+                    "  %s [OPTIONS]\n",
+                    progname);
+}
 
 void SetUsageDefaultName( const char* str )
 {
@@ -640,6 +663,16 @@ rc_t CC ParamAddValue (Vector * param_values, uint32_t arg_index, const char * v
 
 static FILE *dumpOptionDefs = NULL;
 
+static void printOption(char const *const name, char const *const aliases, bool const hasArg)
+{
+    if (dumpOptionDefs) {
+        fprintf(dumpOptionDefs, "    TOOL_ARG(\"%s\", \"%s\", %s),\n"
+            , name
+            , aliases ? aliases : ""
+            , hasArg ? "true" : "false");
+    }
+}
+
 /**
  Print one option definition.
 
@@ -647,36 +680,10 @@ static FILE *dumpOptionDefs = NULL;
  */
 static void printOptionDefinition(OptDef const *const def)
 {
-    if (dumpOptionDefs) {
-        char const *const no_help[] = {NULL};
-        char const *const aliases = def->aliases ? def->aliases : "";
-        char const *const *const help = def->help ? def->help : no_help;
-        int i;
-        char buffer[4] = {'\\','\0','\0','\0'};
-
-        fprintf(dumpOptionDefs, "    TOOL_ARG(\"%s\", \"%s\", %s, TOOL_HELP(", def->name, aliases, def->needs_value ? "true" : "false");
-        for (i = 0; help[i]; ++i) {
-            char const *helptext = help[i];
-            if (helptext[0]) {
-                int j;
-
-                fprintf(dumpOptionDefs, "\"");
-                for (j = 0; helptext[j]; ++j) {
-                    int const ch = helptext[j];
-                    char const *const out = (ch == '\\' || ch == '"') ? buffer : (buffer + 1);
-
-                    buffer[1] = (char)ch;
-                    buffer[2] = '\0';
-                    fprintf(dumpOptionDefs, "%s", out);
-                }
-                fprintf(dumpOptionDefs, "\", ");
-            }
-        }
-        fprintf(dumpOptionDefs, "0)), \\\n");
-    }
+    printOption(def->name, def->aliases, def->needs_value);
 }
 
-static char const *base_name(char const *fullpath, size_t *outsize)
+static char const *base_name(char const *fullpath, size_t *const outsize)
 {
     char const *result = fullpath;
 
@@ -716,10 +723,11 @@ static bool cleaned(unsigned const max, char *result, char const *name)
 
  Example output:
  @code
- #define TOOL_ARGS_VDB_DUMP TOOL_ARGS ( \
-     TOOL_ARG("columns", "C", true, TOOL_HELP("columns (default = all)")), \
-     TOOL_ARG("row_id_on", "I", false, TOOL_HELP("print row id")),\
-     TOOL_ARG(0, 0, 0, TOOL_HELP(0)))
+TOOL_ARGS_BEGIN(VDB_DUMP, "vdb-dump")
+    TOOL_ARG("columns", "C", true),
+    TOOL_ARG("row_id_on", "I", false),
+    TOOL_ARG(0, 0, 0)
+TOOL_ARGS_END
  @endcode
  */
 static void openOptionDefs(char const *argv0) {
@@ -735,8 +743,7 @@ static void openOptionDefs(char const *argv0) {
         cleaned(sizeof(toolname), toolname, base);
 
         dumpOptionDefs = strcmp(enval, "-") ? fopen(enval, "a") : stdout;
-        fprintf(dumpOptionDefs, "#define TOOL_NAME_%s \"%s\" /* from argv[0] */\n", toolname, base);
-        fprintf(dumpOptionDefs, "#define TOOL_ARGS_%s TOOL_ARGS ( \\\n", toolname);
+        fprintf(dumpOptionDefs, "TOOL_ARGS_BEGIN(%s, \"%s\")\n", toolname, base);
     }
 #endif
 }
@@ -748,7 +755,8 @@ static void openOptionDefs(char const *argv0) {
  */
 static void closeOptionDefs(void) {
     if (dumpOptionDefs) {
-        fprintf(dumpOptionDefs, "    TOOL_ARG(0, 0, 0, TOOL_HELP(0)))\n\n");
+        fprintf(dumpOptionDefs, "    TOOL_ARG(0, 0, 0)\n");
+        fprintf(dumpOptionDefs, "TOOL_ARGS_END\n\n");
         fclose(dumpOptionDefs);
         exit(0);
     }

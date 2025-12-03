@@ -164,7 +164,5 @@ FIXTURE_TEST_CASE(ReadSomeAndClose, RR_Fixture)
 //////////////////////////////////////////// Main
 int main ( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
-    // KLogLevelSet(klogDebug);
     return RestoreReadSuite(argc, argv);
 }

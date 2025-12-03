@@ -389,6 +389,5 @@ TEST_CASE ( KBase64_decodeBase64_rfc7 )
 //////////////////////////////////////////////////// Main
 int main(int argc, char* argv[])
 {
-    KConfigDisableUserSettings();
     return KBase64TestSuite(argc, argv);
 }
