@@ -40,6 +40,8 @@
 #include <klib/rc.h>
 #include <klib/json.h>
 
+#include <kfg/config.h>
+
 using namespace std;
 using namespace KDBText;
 
@@ -311,40 +313,17 @@ FIXTURE_TEST_CASE(KColumn_OpenBlobRead_Int, KTextColumn_ApiFixture)
     // 1st byte: length = 1element (011), no extra bits (000), little endian (10)
     REQUIRE_EQ( 0b01100010, (int)buffer[0] );
     // bytes 3-5: data
-    REQUIRE_EQ( (uint32_t)12345, ((uint32_t*)(buffer + 1))[0] );
+    uint32_t temp;
+    memmove( &temp, buffer + 1, sizeof temp ); // avoid misaligned read
+    REQUIRE_EQ( (uint32_t)12345, temp );
 
     REQUIRE_RC( KColumnBlobRelease( blob ) );
 }
 
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kapp/args.h>
-#include <kfg/config.h>
-
-ver_t CC KAppVersion ( void )
-{
-    return 0x1000000;
-}
-rc_t CC UsageSummary (const char * progname)
-{
-    return 0;
-}
-
-rc_t CC Usage ( const Args * args )
-{
-    return 0;
-}
-
-const char UsageDefaultName[] = "Test_KDBText_Column";
-
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
-    rc_t rc=KTextColumnTestSuite(argc, argv);
-    return rc;
-}
-
+    return KTextColumnTestSuite(argc, argv);
 }

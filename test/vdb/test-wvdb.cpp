@@ -52,7 +52,6 @@
 
 #include <kfg/config.h>
 
-
 #include "WVDB_Fixture.hpp"
 
 using namespace std;
@@ -702,7 +701,6 @@ FIXTURE_TEST_CASE ( VSchema_Version2_Fail, WVDB_Fixture )
     string schemaText = "version 2; table table1 #1.0.0 { column ascii column1; };"
                         "database root_database #1 { table table1 #1 TABLE1; } ; "
                         "view V#1 < table1 t > {};";
-    REQUIRE_RC ( VDBManagerMakeUpdate ( & m_mgr, NULL ) );
     REQUIRE_RC ( VDBManagerMakeSchema ( m_mgr, & m_schema ) );
 
     // this is expected to log "expected 'include, typedef, typeset, fmtdef, function, schema, database or table' but found 'view'"
@@ -864,7 +862,7 @@ FIXTURE_TEST_CASE ( VCursor_Use_cut_ToAccessArrayElement, WVDB_Fixture )
 }
 
 FIXTURE_TEST_CASE ( KDBManager_Leak, WVDB_Fixture )
-{   // use valgrind to detect the leak
+{   // use valgrind or asan to detect the leak
     string schemaText = "table table1 #1.0.0 { column ascii column1; };"
                         "database root_database #1 { table table1 #1 TABLE1; } ;";
 
@@ -982,33 +980,9 @@ FIXTURE_TEST_CASE ( BlobChecksumOFF, WVDB_Fixture)
 }
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kapp/args.h>
-#include <kfg/config.h>
-
-ver_t CC KAppVersion ( void )
-{
-    return 0x1000000;
-}
-rc_t CC UsageSummary (const char * progname)
-{
-    return 0;
-}
-
-rc_t CC Usage ( const Args * args )
-{
-    return 0;
-}
-
-const char UsageDefaultName[] = "test-wvdb";
-
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
-    rc_t rc=WVdbTestSuite(argc, argv);
-    return rc;
+    return WVdbTestSuite(argc, argv);
 }
 
-}

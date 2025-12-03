@@ -170,12 +170,7 @@ TEST_CASE(TestOUTMSG_c) {
     REQUIRE_EQ(output, string("c."));
 }
 
-extern "C" {
-#ifdef WINDOWS
-    #define main wmain
-#endif
-    int main(int argc, char *argv[]) {
-        KWrtInit(argv[0], 0);
-        return KOutTestSuite(argc, argv);
-    }
+int main(int argc, char *argv[]) {
+    KWrtInit(argv[0], 0);
+    return KOutTestSuite(argc, argv);
 }

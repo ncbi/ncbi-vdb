@@ -35,7 +35,7 @@
  */
 #define COMPARE_EQ_INV_CIPHER 1
 
-#include <kapp/main.h>
+#include <kapp/vdbapp.h>
 #include <kapp/args.h>
 
 #include <krypto/ciphermgr.h>
@@ -270,8 +270,8 @@ bool CipherExample (KCipher * cipher)
 {
     uint8_t cipher_text [16];
     rc_t rc;
-    bool passed_key;
-    bool passed_block;
+    bool passed_key = false;
+    bool passed_block = false;
 
     memset (cipher_text, 0, sizeof cipher_text);
 
@@ -513,10 +513,10 @@ bool ExampleVector (KCipher * cipher, const example_vectors * ev)
     uint8_t plain_text [16];
     uint32_t Nk;
     rc_t rc;
-    bool passed_enckey;
-    bool passed_deckey;
-    bool passed_enc;
-    bool passed_dec;
+    bool passed_enckey = false;
+    bool passed_deckey = false;
+    bool passed_enc = false;
+    bool passed_dec = false;
 
     switch (ev->key_enc.rounds)
     {
@@ -735,12 +735,6 @@ rc_t run ()
 }
 
 
-rc_t CC UsageSummary  (const char * progname)
-{
-    return 0;
-}
-
-
 const char UsageDefaultName[] = "test-aes_ciphers";
 rc_t CC Usage (const Args * args)
 {
@@ -755,16 +749,12 @@ rc_t CC Usage (const Args * args)
                     UsageDefaultName);
 }
 
-
-ver_t CC KAppVersion (void)
-{
-    return 0;
-}
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     Args * args;
     rc_t rc;
 
+    SetUsage( Usage );
 
     rc = ArgsMakeAndHandle (&args, argc, argv, 0);
     if (rc == 0)
@@ -781,5 +771,7 @@ rc_t CC KMain ( int argc, char *argv [] )
         STSMSG (0, ("Passed %d tests out of 28 possible\n", test_count));
     if (rc)
         LOGERR (klogErr, rc, "Exiting with a failure status");
-    exit (error_count);
+
+    ArgsRelease( args );
+    return error_count;
 }

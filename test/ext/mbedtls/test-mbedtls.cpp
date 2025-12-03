@@ -275,32 +275,8 @@ FIXTURE_TEST_CASE(WindowsRootStore, MbedTlsFixture)
 
 #endif
 
-extern "C"
-{
-
-#include <kapp/args.h>
-
-ver_t CC KAppVersion ( void )
-{
-    return 0x1000000;
-}
-rc_t CC UsageSummary (const char * progname)
-{
-    return 0;
-}
-
-rc_t CC Usage ( const Args * args )
-{
-    return 0;
-}
-
-const char UsageDefaultName[] = "test-mmbedtls";
-
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
 KDbgSetString ( "KNS-PROXY" );
-    rc_t rc=MbedTlsTestSuite(argc, argv);
-    return rc;
-}
-
+    return MbedTlsTestSuite(argc, argv);
 }

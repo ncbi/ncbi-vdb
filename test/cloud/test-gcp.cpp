@@ -36,6 +36,7 @@
 #include <klib/data-buffer.h>
 
 #include <kapp/args.h> /* ArgsMakeAndHandle */
+#include <kapp/vdbapp.h> /* ArgsMakeAndHandle */
 
 #include <kfg/kfg-priv.h> /* KConfigMakeLocal */
 
@@ -349,6 +350,7 @@ TEST_CASE( Parse_Access_Token )
     char * token;
     KTime_t expiration;
     REQUIRE_RC( ParseAccessToken( json, & token, & expiration ) );
+    free( token );
 }
 TEST_CASE( Parse_Access_Token_Bad )
 {// VDB-5300, check protection against truncated json
@@ -373,26 +375,9 @@ static rc_t argsHandler(int argc, char * argv[]) {
     return rc;
 }
 
-extern "C"
+int main( int argc, char *argv [] )
 {
-
-ver_t CC KAppVersion ( void )
-{
-    return 0x1000000;
-}
-rc_t CC UsageSummary (const char * progname)
-{
-    return 0;
-}
-
-rc_t CC Usage ( const Args * args )
-{
-    return 0;
-}
-const char UsageDefaultName[] = "test-gcp";
-
-rc_t CC KMain ( int argc, char *argv [] )
-{
+    VDB::Application app(argc,argv);
     KConfigDisableUserSettings();
 
     // this makes messages from the test code appear
@@ -403,8 +388,5 @@ rc_t CC KMain ( int argc, char *argv [] )
     assert(!KDbgSetString("KNS"));
 #endif
 
-    rc_t rc = GcpTestSuite(argc, argv);
-    return rc;
-}
-
+    return GcpTestSuite(argc, argv);
 }

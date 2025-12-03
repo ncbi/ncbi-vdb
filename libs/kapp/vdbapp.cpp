@@ -24,43 +24,44 @@
 *
 */
 
-#ifndef _h_kfs_teefile_
-#define _h_kfs_teefile_
+#include <kapp/vdbapp.h>
 
-#ifndef _h_kfs_extern_
-#include <kfs/extern.h>
-#endif
+using namespace VDB;
 
-#ifndef _h_klib_defs_
-#include <klib/defs.h>
-#endif
+Application::Application(int argc, char* argv[], ver_t vers)
+    : m_argc( argc ), m_argv( argv ), m_argvOwned ( false )
+{
+    m_rc = VdbInitialize(argc, argv, vers);
+}
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-struct KFile;
-
-typedef struct KTeeFile KTeeFile;
-
-/* -----
- * Copy can be a serialized type KFile for a KTeeFile opened for Read but
- * not when opened for write.
- *
- * Specifically this means copy can be a KMD5File for read but not for write
- * other KFile subtypes might have the same restriction.
- *
- * A seekless update KTeefile can be created but does not now exist.
- */
-KFS_EXTERN rc_t CC KFileMakeTeeRead (const struct KFile ** self, 
-                                     const struct KFile * original,
-                                     struct KFile * copy);
-KFS_EXTERN rc_t CC KFileMakeTeeUpdate (struct KFile ** self,
-                                       struct KFile * original,
-                                       struct KFile * copy);
-
-#ifdef __cplusplus
+#if WINDOWS && UNICODE
+#include <kapp/win/main-priv-win.h>
+Application::Application(int argc, wchar_t* argv[], ver_t vers)
+    : m_argc( argc ), m_argvOwned ( false )
+{
+    int status = ConvertWArgsToUtf8(argc, argv, &m_argv, true);
+    if (status != 0)
+    {
+        m_rc = RC(rcApp, rcArgv, rcParsing, rcParam, rcFailed);
+    }
+    else
+    {
+        m_argvOwned = true;
+        m_rc = VdbInitialize(argc, m_argv, vers);
+    }
 }
 #endif
 
-#endif /* _h_kfs_teefile_ */
+Application::~Application()
+{
+    VdbTerminate(m_rc);
+    if (m_argvOwned)
+    {
+        int i = m_argc;
+        while ( -- i >= 0 )
+        {
+            free ( m_argv [ i ] );
+        }
+        free ( m_argv );
+    }
+}

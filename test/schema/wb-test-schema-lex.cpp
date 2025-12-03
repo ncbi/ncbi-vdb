@@ -31,6 +31,9 @@
 #include <sstream>
 
 #include <ktst/unit_test.hpp>
+#include <kapp/args.h>
+#include <kfg/config.h>
+#include <klib/out.h>
 
 #include "../../libs/schema/SchemaScanner.hpp"
 
@@ -289,34 +292,8 @@ TEST_CASE ( Version_2_0 )
 }
 
 //////////////////////////////////////////// Main
-#include <kapp/args.h>
-#include <kfg/config.h>
-#include <klib/out.h>
 
-extern "C"
-{
-
-ver_t CC KAppVersion ( void )
-{
-    return 0x1000000;
-}
-
-const char UsageDefaultName[] = "wb-test-schema-lex";
-
-rc_t CC UsageSummary (const char * progname)
-{
-    return KOutMsg ( "Usage:\n" "\t%s [options] -o path\n\n", progname );
-}
-
-rc_t CC Usage( const Args* args )
-{
-    return 0;
-}
-
-rc_t CC KMain ( int argc, char *argv [] )
+int main( int argc, char *argv [] )
 {
     return SchemaLexTestSuite(argc, argv);
 }
-
-}
-

@@ -38,6 +38,8 @@
 #include <klib/rc.h>
 #include <klib/json.h>
 
+#include <kfg/config.h>
+
 using namespace std;
 using namespace KDBText;
 
@@ -254,7 +256,7 @@ FIXTURE_TEST_CASE(KMetadata_GetSequence_SeqNull, KTextMetadata_ApiFixture)
 FIXTURE_TEST_CASE(KMetadata_GetSequence_ValNull, KTextMetadata_ApiFixture)
 {
     Setup(R"({"name":"md","revision":1})");
-    const char * seq;
+    const char * seq = nullptr;
     REQUIRE_RC_FAIL( KMetadataGetSequence( m_md, seq, nullptr ) );
 }
 
@@ -310,33 +312,8 @@ FIXTURE_TEST_CASE(KMetadata_OpenNodeRead, KTextMetadata_ApiFixture)
 }
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kapp/args.h>
-#include <kfg/config.h>
-
-ver_t CC KAppVersion ( void )
-{
-    return 0x1000000;
-}
-rc_t CC UsageSummary (const char * progname)
-{
-    return 0;
-}
-
-rc_t CC Usage ( const Args * args )
-{
-    return 0;
-}
-
-const char UsageDefaultName[] = "Test_KDBText_Metadata";
-
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
-    rc_t rc=KDBTextMetadataTestSuite(argc, argv);
-    return rc;
-}
-
+    return KDBTextMetadataTestSuite(argc, argv);
 }

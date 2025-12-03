@@ -37,6 +37,7 @@
 #include <klib/data-buffer.h>
 #include <klib/rc.h>
 #include <klib/json.h>
+#include <kfg/config.h>
 
 using namespace std;
 using namespace KDBText;
@@ -251,7 +252,7 @@ public:
     }
     ~KTextColumnBlob_ApiFixture()
     {
-        KColumnBlobRelease( m_blob );
+        delete (ColumnBlob*) m_blob;
         KJsonValueWhack( m_json );
     }
     void Setup( const string & data )
@@ -490,33 +491,8 @@ FIXTURE_TEST_CASE(KTextColumnBlob_IdRange, KTextColumnBlob_ApiFixture)
 }
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kapp/args.h>
-#include <kfg/config.h>
-
-ver_t CC KAppVersion ( void )
-{
-    return 0x1000000;
-}
-rc_t CC UsageSummary (const char * progname)
-{
-    return 0;
-}
-
-rc_t CC Usage ( const Args * args )
-{
-    return 0;
-}
-
-const char UsageDefaultName[] = "Test_KDBText_Column";
-
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
-    rc_t rc=KTextColumnBlobTestSuite(argc, argv);
-    return rc;
-}
-
+    return KTextColumnBlobTestSuite(argc, argv);
 }

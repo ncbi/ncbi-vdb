@@ -25,11 +25,13 @@
 */
 
 #include <kapp/args.h> /* ArgsMakeAndHandle */
+#include <kapp/vdbapp.h> //  VdbInitialize
+
 #include <kfg/config.h> /* KConfigDisableUserSettings */
 #include <klib/debug.h> /* KDbgSetString */
 #include <kns/kns-mgr-priv.h> /* KNSManagerMakeLocal */
 #include <kns/manager.h> /* KNSManagerRelease */
-#include <ktst/unit_test.hpp> /* KMain */
+#include <ktst/unit_test.hpp>
 #include <vfs/path.h> /* VPathRelease */
 #include <vfs/services-priv.h> /* KServiceMakeWithMgr */
 
@@ -135,11 +137,10 @@ public:
     void LastPath() { NextPath(0, 0, true); }
 };
 
-#define ACC "SRR1219879"
 #ifdef ALL
 /* Single vdbcache is attached to all sra-s */
 TEST_CASE(SingleVdbcache) {
-    putenv((char*)ACC "="
+    putenv((char*)"SRR1219879="
 "{"
 "    \"result\": ["
 "        {"
@@ -178,7 +179,7 @@ TEST_CASE(SingleVdbcache) {
 "        }"
 "    ]"
 "}");
-    TestHelper x(this, ACC, NULL, "prj_phs710EA_test.ngc");
+    TestHelper x(this, "SRR1219879", NULL, "prj_phs710EA_test.ngc");
 
     String e;
     String ev;
@@ -206,11 +207,11 @@ TEST_CASE(SingleVdbcache) {
 #ifdef ALL
 /* > 1 vdbcache-s are attached corresponding to service */
 TEST_CASE(MultipleVdbcache) {
-    putenv((char*)ACC "="
+    putenv((char*)"SRR1219878="
 "{"
 "    \"result\": ["
 "        {"
-"            \"bundle\": \"SRR1219879\","
+"            \"bundle\": \"SRR1219878\","
 "            \"files\": ["
 "                {"
 "                    \"type\": \"vdbcache\","
@@ -252,7 +253,7 @@ TEST_CASE(MultipleVdbcache) {
 "        }"
 "    ]"
 "}");
-    TestHelper x(this, ACC, NULL, "prj_phs710EA_test.ngc");
+    TestHelper x(this, "SRR1219878", NULL, "prj_phs710EA_test.ngc");
 
     String e;
     String ev;
@@ -288,16 +289,11 @@ TEST_CASE(MultipleVdbcache) {
 }
 #endif
 
-extern "C" {
-    const char UsageDefaultName[] = "test-resolve";
-    rc_t CC UsageSummary(const char * progname) { return 0; }
-    rc_t CC Usage(const struct Args * args) { return 0; }
-    ver_t CC KAppVersion ( void ) { return 0; }
-    rc_t CC KMain ( int argc, char * argv [] ) {
+int main ( int argc, char * argv [] ) {
 #if 0
-        KDbgSetString ( "VFS" );
+    VdbInitialize(argc, argv, 0);
+    KDbgSetString ( "VFS" );
 #endif
-        KConfigDisableUserSettings ();
-        return TestVdbcache(argc, argv);
-    }
+    KConfigDisableUserSettings ();
+    return TestVdbcache(argc, argv);
 }

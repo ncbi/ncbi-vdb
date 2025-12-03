@@ -30,7 +30,7 @@
 
 #include <vfs/manager.h> /* VFSManagerRelease */
 #include <vfs/manager-priv.h> /* VFSManagerMakeFromKfg */
- 
+
 #include <ktst/unit_test.hpp> /* TEST_SUITE_WITH_ARGS_HANDLER */
 
 static rc_t argsHandler(int argc, char * argv[]) {
@@ -98,21 +98,10 @@ TEST_CASE(TestFile) {
     REQUIRE_RC(KConfigRelease(kfg));
 }
 
-const char UsageDefaultName[] = "test-hash-in-pwd";
-rc_t CC UsageSummary(const char * progname) { return 0; }
-rc_t CC Usage(const Args * args) { return 0; }
+int main(int argc, char *argv[]) {
+    KConfigDisableUserSettings(); // ignore ~/.ncbi/user-settings.mkfg
 
-extern "C" {
-
-    ver_t CC KAppVersion(void) { return 0; }
-
-    int KMain(int argc, char *argv[]) {
-        KConfigDisableUserSettings(); // ignore ~/.ncbi/user-settings.mkfg
-
-        rc_t rc = TestHashInPwd(argc, argv);
-        return rc;
-    }
-
+    return TestHashInPwd(argc, argv);
 }
 
 /******************************************************************************/

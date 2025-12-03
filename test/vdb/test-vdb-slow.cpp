@@ -26,6 +26,7 @@
 
 #include <ktst/unit_test.hpp> // TEST_CASE
 #include <kfg/config.h>
+#include <kapp/args.h>
 
 // #include <sysalloc.h>
 // #include <cstdlib>
@@ -62,8 +63,6 @@ FIXTURE_TEST_CASE(TestReadBitsDirect_vs_CellDataDirect, VDB_Fixture)
     REQUIRE_EQ( remaining_count_ReadBits, remaining_count_CellData );
 }
 //////////////////////////////////////////// Main
-#include <kapp/args.h>
-
 static rc_t argsHandler ( int argc, char * argv [] ) {
     Args * args = NULL;
     rc_t rc = ArgsMakeAndHandle ( & args, argc, argv, 0, NULL, 0 );
@@ -71,30 +70,8 @@ static rc_t argsHandler ( int argc, char * argv [] ) {
     return rc;
 }
 
-extern "C"
-{
-
-ver_t CC KAppVersion ( void )
-{
-    return 0x1000000;
-}
-rc_t CC UsageSummary (const char * progname)
-{
-    return 0;
-}
-
-rc_t CC Usage ( const Args * args )
-{
-    return 0;
-}
-
-const char UsageDefaultName[] = "test-vdb";
-
-rc_t CC KMain ( int argc, char *argv [] )
+int main( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
-    rc_t rc=VdbSlowTestSuite(argc, argv);
-    return rc;
-}
-
+    return VdbSlowTestSuite(argc, argv);
 }

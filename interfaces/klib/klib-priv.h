@@ -101,6 +101,10 @@ KLIB_EXTERN rc_t CC ReportInitVDB(
  */
 KLIB_EXTERN void CC ReportRecordZombieFile ( void );
 
+/* ReportGet
+ */
+KLIB_EXTERN rc_t ReportGetVersion( ver_t * version );
+
 #ifdef __cplusplus
 }
 #endif

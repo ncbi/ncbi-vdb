@@ -31,6 +31,7 @@
 #include <ktst/unit_test.hpp>
 
 #include <kapp/args.h> /* Args */
+#include <kapp/vdbapp.h>
 
 #include <kfg/config.h>
 #include <kfg/kfg-priv.h>
@@ -81,9 +82,9 @@ FIXTURE_TEST_CASE(testKConfigPrint, KfgFixture)
 #ifdef ALL
 FIXTURE_TEST_CASE(KConfigLoadFile_should_report_null_inputs, KfgFixture)
 {
-    KFile file;
-    memset(&file, 0, sizeof file);
-    REQUIRE_RC_FAIL(KConfigLoadFile ( 0, "qweert", &file));
+    KFile f;
+    memset(&f, 0, sizeof f);
+    REQUIRE_RC_FAIL(KConfigLoadFile ( 0, "qweert", &f));
     REQUIRE_RC_FAIL(KConfigLoadFile ( kfg, "qweert", 0));
 }
 
@@ -204,12 +205,12 @@ FIXTURE_TEST_CASE(long_key, KfgFixture)
 
 FIXTURE_TEST_CASE(long_path, KfgFixture)
 {
-    string path=string(4097, 'v');
+    string p=string(4097, 'v');
     string line("k='");
-    line+=path;
+    line+=p;
     line+="'";
     CreateAndLoad(GetName(), line.c_str());
-    REQUIRE(ValueMatches("k", path.c_str()));
+    REQUIRE(ValueMatches("k", p.c_str()));
 }
 
 FIXTURE_TEST_CASE(KConfigParse_SelfNull, KfgFixture)
@@ -1069,7 +1070,7 @@ TEST_CASE(DontSaveCustomUserKfg) {
     size_t num_read = 0;
     REQUIRE_RC(KFileRead(r, 0, b, sizeof b, &num_read));
     REQUIRE_EQ(strlen(contents), num_read);
-    REQUIRE_EQ(string_cmp(contents, num_read, b, num_read, num_read), 0);
+    REQUIRE_EQ(string_cmp(contents, num_read, b, num_read, (uint32_t)num_read), 0);
     REQUIRE_RC(KFileRelease(r));
 
     REQUIRE_RC(KConfigRelease(kfg));
@@ -1081,7 +1082,7 @@ TEST_CASE(DontSaveCustomUserKfg) {
     REQUIRE_RC(KDirectoryOpenFileRead(d, &r, NAME));
     REQUIRE_RC(KFileRead(r, 0, b, sizeof b, &num_read));
     REQUIRE_EQ(strlen(contents), num_read);
-    REQUIRE_EQ(string_cmp(contents, num_read, b, num_read, num_read), 0);
+    REQUIRE_EQ(string_cmp(contents, num_read, b, num_read, (uint32_t)num_read), 0);
     REQUIRE_RC(KFileRelease(r));
 
     REQUIRE_RC(KConfigRelease(kfg));
@@ -1100,32 +1101,9 @@ static rc_t argsHandler(int argc, char* argv[]) {
     return rc;
 }
 
-extern "C"
+int main( int argc, char *argv [] )
 {
-
-#include <kapp/args.h>
-
-ver_t CC KAppVersion ( void )
-{
-    return 0x1000000;
-}
-rc_t CC UsageSummary (const char * progname)
-{
-    return 0;
-}
-
-rc_t CC Usage ( const Args * args )
-{
-    return 0;
-}
-
-const char UsageDefaultName[] = "test-kfg";
-
-rc_t CC KMain ( int argc, char *argv [] )
-{
+    VDB::Application app(argc, argv);
     KConfigDisableUserSettings();
-    rc_t rc=KfgTestSuite(argc, argv);
-    return rc;
-}
-
+    return KfgTestSuite(argc, argv);
 }

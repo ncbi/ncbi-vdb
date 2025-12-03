@@ -40,19 +40,11 @@ TEST_CASE(Report_InitFini)
 {
     char * argv[] = { (char*)"exe" };
     ReportInit( 1, argv, (ver_t)0 );
-    REQUIRE_RC( ReportFinalize(0 ) );
+    REQUIRE_RC( ReportFinalize( 0 ) );
 }
 
 //////////////////////////////////////////////////// Main
-extern "C"
-{
-#ifdef WINDOWS
-#define main wmain
-#endif
 int main ( int argc, char *argv [] )
 {
-    rc_t rc=KReportTestSuite(argc, argv);
-    return rc;
-}
-
+    return KReportTestSuite(argc, argv);
 }

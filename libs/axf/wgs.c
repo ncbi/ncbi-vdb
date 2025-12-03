@@ -117,7 +117,7 @@ static rc_t init(Object *self, VPath const *url, VDatabase const *db)
     return rc;
 }
 
-static 
+static
 unsigned locked_getBases(Object *self, uint8_t *dst, unsigned start, unsigned len, int64_t row)
 {
     void const *value = NULL;
@@ -140,10 +140,10 @@ unsigned WGS_getBases(Object *self, uint8_t *dst, unsigned start, unsigned len, 
     unsigned const result = locked_getBases(self, dst, start, len, row);
 
     assert(rc == 0);
-    
+
     rc = KLockUnlock(self->lock);
     assert(rc == 0);
-    
+    UNUSED( rc );
     return result;
 }
 

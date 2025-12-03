@@ -24,6 +24,7 @@
  * ========================================================================== */
 
 #include <kapp/args.h> // ArgsWhack
+#include <kapp/vdbapp.h> // ArgsWhack
 #include <kfg/config.h> /* KConfigDisableUserSettings */
 #include <klib/debug.h> /* KDbgSetString */
 #include <ktst/unit_test.hpp> /* TEST_SUITE_WITH_ARGS_HANDLER */
@@ -93,18 +94,12 @@ TEST_CASE(Test_VDBManagerGetObjVersion) {
     REQUIRE_RC(VDBManagerRelease(m));
 }
 
-extern "C" {
-    ver_t CC KAppVersion(void) { return 0; }
-    const char UsageDefaultName[]("Test_VDBManagerGetObjVersion");
-    rc_t CC UsageSummary(const char *progname) { return 0; }
-    rc_t CC Usage(const Args *args) { return 0; }
+int main(int argc, char *argv[]) {
+    VDB::Application app(argc, argv);
+    if (0)
+        KDbgSetString("VFS");
 
-    rc_t CC KMain(int argc, char *argv[]) {
-        if (0)
-            KDbgSetString("VFS");
+    KConfigDisableUserSettings();
 
-        KConfigDisableUserSettings();
-
-        return Test_VDBManagerGetObjVersionSuite(argc, argv);
-    }
+    return Test_VDBManagerGetObjVersionSuite(argc, argv);
 }

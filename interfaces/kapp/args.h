@@ -65,12 +65,12 @@ typedef struct Args Args;
  * Structure to define a command line option
  *
  * these are fed in one by one or through arrays to build up the
- * tables used to parse the caommand line argc/argv
+ * tables used to parse the command line argc/argv
  */
 
 typedef void (CC * WhackParamFnP) (void * object);
 typedef rc_t (CC * ConvertParamFnP) (const Args * self, uint32_t arg_index, const char * arg, size_t arg_len, void ** result, WhackParamFnP * whack);
-    
+
 typedef struct OptDef
 {
     const char *  name;           	/* UTF8/ASCII NUL terminated long name */
@@ -83,7 +83,7 @@ typedef struct OptDef
     bool          required;             /* is this a required parameter?  Not supported yet. */
     ConvertParamFnP convert_fn;   /* function to convert option. can perform binary conversions. may be NULL */
 } OptDef;
-    
+
 typedef struct ParamDef ParamDef;
 struct ParamDef
 {
@@ -197,9 +197,9 @@ rc_t CC ArgsAddStandardOptions ( Args * self );
 
 
 /* Parse
- *  parse the argc/argv as presented to KMain using the Args structure as built up
+ *  parse the argc/argv as presented to main() using the Args structure as built up
  */
-rc_t CC ArgsParse ( Args * self, int argc, char *argv[] );
+rc_t CC ArgsParse ( Args * self, int argc, const char *argv[] );
 
 
 /* tokenizes a file into an user supplied argv array ( not the one from main() ! )
@@ -293,7 +293,7 @@ rc_t CC ArgsArgvValue (const Args * self, uint32_t iteration, const char ** valu
  * MakeStandardOptions
  *  Calls both Make() and AddStandardOptions()
  *
- * This is probably the first thing to do in KMain(), then add other Options
+ * This is probably the first thing to do in main(), then add other Options
  * via OptDef arracys and structures.  Then call parse.
  */
 rc_t CC ArgsMakeStandardOptions (Args** pself);
@@ -358,14 +358,15 @@ rc_t CC ArgsCheckRequired (Args * args);
  *
  * More than one example line can be present if desired.
  */
-rc_t CC UsageSummary (const char * prog_name);
+typedef rc_t (CC *UsageSummary_t) (const char * prog_name);
+UsageSummary_t SetUsageSummary ( UsageSummary_t func );
 
 /*
  * A program should define this which will be used only of the actual
  * program name as called is somehow irretrievable
  */
-extern const char UsageDefaultName[];
-
+//extern const char UsageDefaultName[];
+void SetUsageDefaultName( const char* );
 
 /*
  * Version
@@ -387,17 +388,13 @@ void CC HelpOptionsStandard (void);
 
 
 /*
- * This Macro creates a default short form usage output typically
+ * Default short form usage output typically
  * used when no options/parameters are given for a program
  *
- * It requires 'void summary (const char * program_name)' that is also
- * used in 'rc_t Usage (const Args* args)' that is the usage function
- * called when -? -h or --help is given as an option on the command line
+ * It calls 'void UsageSummary (const char * program_name)' if it was set with SetUsageSummary()
  */
 
 rc_t CC MiniUsage ( const Args * args );
-rc_t CC Usage ( const Args * args );
-
 
 uint32_t CC ArgsGetGlobalTries(bool *isSet);
 

@@ -58,7 +58,7 @@ rc_t write_some_data( VTable * t, bool full ) {
         const uint32_t data32[ 5 ] = { 10, 20, 30, 40, 50 };
         for ( uint32_t i = 0; 0 == rc && i < 10; ++i ) {
             rc = VCursorOpenRow( c );
-            uint32_t n = full ? 5 : 4;
+            uint32_t n = full ? 5u : 4u;
             if ( 0 == rc ) { rc = VCursorWrite( c, col_ids_1[ 0 ], 8, data8, 0, n ); }
             if ( 0 == rc ) { rc = VCursorWrite( c, col_ids_1[ 1 ], 32, data32, 0, n ); }
             if ( 0 == rc ) { rc = VCursorCommitRow( c ); }
@@ -90,16 +90,16 @@ rc_t append_some_metadata( VTable * t ) {
 
 class Test_Meta_Fixture {
 public:
-    typedef std::map< std::string, const VTable * > t_tables;    
+    typedef std::map< std::string, const VTable * > t_tables;
     typedef std::map< std::string, const VDatabase * > t_dbs;
-    
+
     KDirectory * dir;
     VDBManager * mgr;
     VSchema * schema;
     bool remove_in_destructor;
     t_tables tables;
     t_dbs dbs;
-    
+
     Test_Meta_Fixture() : dir( nullptr ), mgr( nullptr ), schema( nullptr ),
                          remove_in_destructor( true ) {
         if ( 0 != KDirectoryNativeDir( &dir ) ) {
@@ -126,7 +126,7 @@ public:
                 throw std :: logic_error ( "Test_Meta_Fixture: VDatabaseCreateTable failed" );
             }
         }
-        tables . insert( { name, tbl } ); 
+        tables . insert( { name, tbl } );
         return tbl;
     }
 
@@ -136,7 +136,7 @@ public:
                                        name.c_str() ) ) {
             throw std :: logic_error ( "Test_Meta_Fixture: VDBManagerCreateDB failed" );
         }
-        dbs . insert( { name, db } ); 
+        dbs . insert( { name, db } );
         return db;
     }
 
@@ -151,7 +151,7 @@ public:
                 throw std :: logic_error ( "Test_Meta_Fixture: VDatabaseOpenTableRead failed" );
             }
         }
-        tables . insert( { name, tbl } ); 
+        tables . insert( { name, tbl } );
         return tbl;
     }
 
@@ -160,7 +160,7 @@ public:
         if ( 0 != VDBManagerOpenDBRead( mgr, &db, nullptr, name . c_str() ) ) {
             throw std :: logic_error ( "Test_Meta_Fixture: VDBManagerOpenDBRead failed" );
         }
-        dbs . insert( { name, db } ); 
+        dbs . insert( { name, db } );
         return db;
     }
 
@@ -175,7 +175,7 @@ public:
                 throw std :: logic_error ( "Test_Meta_Fixture: VDatabaseOpenTableRead failed" );
             }
         }
-        tables . insert( { name, tbl } ); 
+        tables . insert( { name, tbl } );
         return tbl;
     }
 
@@ -184,7 +184,7 @@ public:
         if ( 0 != VDBManagerOpenDBUpdate( mgr, &db, nullptr, name .  c_str() ) ) {
             throw std :: logic_error ( "Test_Meta_Fixture: VDBManagerOpenDBUpdate failed" );
         }
-        dbs . insert( { name, db } ); 
+        dbs . insert( { name, db } );
         return db;
     }
 
@@ -240,7 +240,7 @@ FIXTURE_TEST_CASE( Compare_Table_Meta_Equal, Test_Meta_Fixture ) {
     /*
      * very important: we cannot compare tables that are still open after
      * beeing written into them.
-     * 
+     *
      * these tables have to be closed, then reopened in read-only mode!
      * --- the write_some_data() - function does that...
      */
@@ -273,7 +273,7 @@ FIXTURE_TEST_CASE( Compare_Table_Meta_Not_Equal, Test_Meta_Fixture ) {
     //
     // very important: we cannot compare tables that are still open after
     // beeing written into them.
-    // 
+    //
     // these tables have to be closed, then reopened in read-only mode!
     // --- the write_some_data() - function does that...
 
@@ -458,11 +458,7 @@ FIXTURE_TEST_CASE( Copy_DB_Meta, Test_Meta_Fixture ) {
 }
 
 //////////////////////////////////////////// Main
-extern "C" {
-    #include <kapp/args.h>
-    ver_t CC KAppVersion( void ) { return 0x1000000; }
-    rc_t CC UsageSummary(const char * progname) { return 0; }
-    rc_t CC Usage( const Args * args ) { return 0; }
-    const char UsageDefaultName[] = "test-vdb-meta-cmp-copy";
-    rc_t CC KMain( int argc, char *argv [] ) { return VDB_META_CMP_COPY_Suite( argc, argv ); }
+int main( int argc, char *argv [] ) 
+{
+    return VDB_META_CMP_COPY_Suite( argc, argv ); 
 }

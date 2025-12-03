@@ -24,53 +24,57 @@
 *
 */
 
-#ifndef _h_main_priv_
-#define _h_main_priv_
+#include "../vdbapp-priv.h"
 
-#ifndef _h_klib_defs_
-#include <klib/defs.h>
-#endif
+#include <klib/rc.h>
+#include <klib/text.h>
 
-#ifndef _h_kapp_extern_
- #include <kapp/extern.h>
-#endif
+#include <WINDOWS.H>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-    
-/*--------------------------------------------------------------------------
- * KMane
- *  invoked by platform specific "main" entrypoint
+/* SignalQuit
+ *  tell the program to quit
  */
-
-/* KMane
- *  executable entrypoint "main" is implemented by
- *  an OS-specific wrapper that takes care of establishing
- *  signal handlers, logging, etc.
- *
- *  in turn, OS-specific "main" will invoke "KMain" as
- *  platform independent main entrypoint.
- *
- *  "argc" [ IN ] - the number of textual parameters in "argv"
- *  should never be < 0, but has been left as a signed int
- *  for reasons of tradition.
- *
- *  "argv" [ IN ] - array of NUL terminated strings expected
- *  to be in the shell-native character set: ASCII or UTF-8
- *  element 0 is expected to be executable identity or path.
- */
-rc_t KMane ( int argc, char *argv [] );
-
-/*KAppGetTotalRam
- * returns total physical RAM installed in the system
- * in bytes
- */
-rc_t KAppGetTotalRam ( uint64_t * totalRam );
-
-#ifdef __cplusplus
+rc_t CC SignalQuit ( void )
+{
+    return RC ( rcExe, rcProcess, rcSignaling, rcNoObj, rcUnknown );
 }
-#endif
 
-#endif /* _h_main_priv_ */
+/* SignalHup
+ *  send the program a SIGHUP
+ */
+rc_t CC SignalHup ( void )
+{
+    return RC ( rcExe, rcProcess, rcSignaling, rcNoObj, rcUnknown );
+}
+
+BOOL CC Our_HandlerRoutine(DWORD dwCtrlType)
+{
+    BOOL res = FALSE;
+    switch (dwCtrlType)
+    {
+    case CTRL_C_EVENT: SetQuitting();
+        res = TRUE;
+        break;
+    }
+    return res;
+}
+
+int
+VdbInitializeSystem()
+{
+    /* must initialize COM... must initialize COM... */
+    /* CoInitializeEx ( NULL, COINIT_MULTITHREADED ); */
+    CoInitialize(NULL);
+
+    SetConsoleCtrlHandler((PHANDLER_ROUTINE)Our_HandlerRoutine, TRUE);
+
+    return 0;
+}
+
+void
+VdbTerminateSystem()
+{
+    /* balance the COM initialization */
+    CoUninitialize();
+}
+

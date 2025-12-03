@@ -27,6 +27,8 @@
 #include <kfs/file.h> /* KFileRelease */
 #include <kfg/kfg-priv.h> /* KConfigMakeEmpty */
 
+#include <kapp/args.h> // Args
+
 #include <klib/debug.h> /* KDbgSetString */
 
 #include <kns/endpoint.h> /* KNSManagerInitDNSEndpoint */
@@ -105,7 +107,7 @@ TEST_CASE ( GoogleProxyTest ) {
     if (http_proxy != NULL)
     {
         REQUIRE_RC ( KNSManagerMakeHttpFile ( mgr, & file, NULL, 0x01010000,
-            "https://www.nlm.nih.gov/" ) );
+            "https://usa.gov/" ) );
 
         char buffer [ 256 ] = "";
         size_t num_read = 0;
@@ -167,7 +169,6 @@ TEST_CASE ( KClientHttpRequestPOSTTest )
     REQUIRE_RC ( KNSManagerRelease ( mgr ) );
 }
 
-#include <kapp/args.h> // Args
 static rc_t argsHandler(int argc, char * argv[]) {
     Args * args = NULL;
     rc_t rc = ArgsMakeAndHandle(&args, argc, argv, 0, NULL, 0);
@@ -175,32 +176,25 @@ static rc_t argsHandler(int argc, char * argv[]) {
     return rc;
 }
 
-extern "C" {
-    const char UsageDefaultName[] = "test-google-proxy";
-    rc_t CC UsageSummary(const char     * progname) { return 0; }
-    rc_t CC Usage(const struct Args * args) { return 0; }
-
-    ver_t CC KAppVersion ( void ) { return 0; }
-
-    rc_t CC KMain ( int argc, char * argv [] ) { if (
-0 ) assert ( ! KDbgSetString ( "KNS-DNS"   ) );   if (
-0 ) assert ( ! KDbgSetString ( "KNS-HTTP"  ) );   if (
-0 ) assert ( ! KDbgSetString ( "KNS-PROXY" ) );   if (
-0 )     ncbi::NK::TestEnv::verbosity = ncbi::NK::LogLevel::E::e_all;
+int main ( int argc, char * argv [] ) {
+    if ( 0 ) assert ( ! KDbgSetString ( "KNS-DNS" ) );
+    if ( 0 ) assert ( ! KDbgSetString ( "KNS-HTTP" ) );
+    if ( 0 ) assert ( ! KDbgSetString ( "KNS-PROXY" ) );
+    if ( 0 ) ncbi::NK::TestEnv::verbosity = ncbi::NK::LogLevel::E::e_all;
 
 #if _DEBUGGING
-        if ( 0 )     KStsLevelSet ( 5 );
+    if ( 0 ) KStsLevelSet ( 5 );
 #endif
 
-        rc_t rc = KConfigMakeEmpty ( & KFG );
+    rc_t rc = KConfigMakeEmpty ( & KFG );
 
-        if ( rc == 0 )
-            rc = GoogleProxyTestSuite(argc, argv);
+    if ( rc == 0 )
+        rc = (rc_t)GoogleProxyTestSuite(argc, argv);
 
-        rc_t r = KConfigRelease ( KFG );
-        if ( r != 0 && rc == 0 )
-            rc = r;
+    rc_t r = KConfigRelease ( KFG );
+    if ( r != 0 && rc == 0 )
+        rc = r;
 
-        return rc;
-    }
+    return (int)rc;
 }
+

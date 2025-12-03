@@ -25,8 +25,7 @@
 add_compile_definitions( __mod__="test/align" )
 
 if (NOT WIN32)
-	add_executable( Test_Align_Config_Tool test-config.cpp )
-	target_link_libraries( Test_Align_Config_Tool ${COMMON_LIBS_WRITE} )
+	AddExecutableTest( Test_Align_Config_Tool test-config.cpp "${COMMON_LIBS_WRITE}" )
 
 	add_test( NAME Test_Align_Config
 		COMMAND
@@ -36,19 +35,31 @@ if (NOT WIN32)
 
 	add_test( NAME Test_Align_Config_2
 		COMMAND
-			Test_Align_Config_Tool 
-				--config db/valid.config 
-				--ref-list db/valid.references 
+			Test_Align_Config_Tool
+				--config db/valid.config
+				--ref-list db/valid.references
 				--ref-file db/ref.fasta
 		WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 	)
 
 	add_test( NAME Test_Align_Config_3
 	COMMAND
-		Test_Align_Config_Tool 
-			--config db/VDB-3698.config 
-			--ref-list db/VDB-3698.references 
+		Test_Align_Config_Tool
+			--config db/VDB-3698.config
+			--ref-list db/VDB-3698.references
 			--ref-file db/VDB-3698.fasta
-	WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-)
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+
+	add_test( NAME Test_Align_Config_Empty_Sequence
+	COMMAND
+		Test_Align_Config_Tool
+			--config db/VDB-5931.config
+			--ref-list db/VDB-5931.references
+			--ref-file db/VDB-5931.fasta
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+    set_property(TEST Test_Align_Config_Empty_Sequence PROPERTY
+        PASS_REGULAR_EXPRESSION "data empty while reading file within alignment module"
+    )
 endif()

@@ -35,6 +35,8 @@
 #include <klib/debug.h>
 #include <klib/rc.h>
 
+#include <kfg/config.h>
+
 #include <kns/manager.h>
 #include <kns/http.h>
 
@@ -432,29 +434,7 @@ FIXTURE_TEST_CASE(GET_Read_Failed_Reconnect_Failed, HttpFixture)
 #endif
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kapp/args.h>
-#include <kfg/config.h>
-#include <klib/debug.h>
-
-ver_t CC KAppVersion ( void )
-{
-    return 0x1000000;
-}
-rc_t CC UsageSummary (const char * progname)
-{
-    return 0;
-}
-
-rc_t CC Usage ( const Args * args )
-{
-    return 0;
-}
-const char UsageDefaultName[] = "test-http-dropconn";
-
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
 
@@ -462,8 +442,5 @@ rc_t CC KMain ( int argc, char *argv [] )
 	// (same as running the executable with "-l=message")
 	// TestEnv::verbosity = LogLevel::e_message;
 
-    rc_t rc=HttpTestSuite(argc, argv);
-    return rc;
-}
-
+    return HttpTestSuite(argc, argv);
 }

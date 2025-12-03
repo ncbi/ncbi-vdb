@@ -350,7 +350,7 @@ ASTBuilder :: EvalConstExpr ( ctx_t ctx, const AST_Expr & p_expr )
             {
                 SConstExpr* cexpr = reinterpret_cast < SConstExpr* > ( expr );
                 // this may change as more kinds of const expressions are supported
-                assert ( cexpr -> td . type_id = IntrinsicTypeId ( "U64" ) );
+                assert ( cexpr -> td . type_id == IntrinsicTypeId ( "U64" ) );
                 ret = cexpr -> u . u64 [ 0 ];
             }
             break;

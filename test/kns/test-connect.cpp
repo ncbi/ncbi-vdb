@@ -30,10 +30,13 @@
 
 #include <ktst/unit_test.hpp>
 
+#include <kfg/config.h>
+
 #include <errno.h>
 
 #include <klib/rc.h>
 #include <klib/text.h>
+#include <klib/debug.h>
 #include <kproc/timeout.h>
 #include <kns/manager.h>
 #include <kns/endpoint.h>
@@ -63,7 +66,7 @@ public:
     {
         TimeoutInit(&tm, timeoutMs);
         String url;
-        CONST_STRING(&url, p_url);
+        StringInitCString(&url, p_url);
         THROW_ON_RC(KNSManagerInitDNSEndpoint(m_mgr, &ep, &url, port));
     }
 
@@ -104,7 +107,7 @@ FIXTURE_TEST_CASE(Connect_OK, ConnectFixture)
 
     LogLevel::E l(LogLevel::e_error);
     l = LogLevel::e_warning;
-    for (auto i = 0; i < sizeof hh / sizeof hh[0]; ++i) {
+    for (auto i = 0; i < (int) ( sizeof hh / sizeof hh[0] ); ++i) {
         string& h(hh[i]);
         return_val = 1; /* epoll_wait: success */
         LOG(l, "Trying " << h << "...\n");
@@ -188,30 +191,7 @@ static rc_t argsHandler(int argc, char * argv[]) {
     return rc;
 }
 
-extern "C"
-{
-
-#include <kapp/args.h>
-#include <kfg/config.h>
-#include <klib/debug.h>
-
-ver_t CC KAppVersion ( void )
-{
-    return 0x1000000;
-}
-rc_t CC UsageSummary (const char * progname)
-{
-    return 0;
-}
-
-rc_t CC Usage ( const Args * args )
-{
-    return 0;
-}
-
-const char UsageDefaultName[] = "test-connect";
-
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
 
@@ -220,8 +200,5 @@ rc_t CC KMain ( int argc, char *argv [] )
     KDbgSetModConds ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), DBG_FLAG ( DBG_KNS_SOCKET ) );
 #endif
 
-    rc_t rc=KnsTestSuite(argc, argv);
-    return rc;
-}
-
+    return KnsTestSuite(argc, argv);
 }

@@ -27,7 +27,7 @@
 #define UNICODE 1
 #define _UNICODE 1
 
-#include "../main-priv.h"
+#include "../vdbapp-priv.h"
 #include <klib/log.h>
 #include <klib/rc.h>
 

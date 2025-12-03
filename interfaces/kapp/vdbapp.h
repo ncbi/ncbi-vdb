@@ -24,26 +24,37 @@
 *
 */
 
-#ifndef _h_kapp_main_
-#define _h_kapp_main_
+#pragma once
 
-#ifndef _h_klib_defs_
-#include <klib/defs.h>
-#endif
+#include <kapp/extern.h>
 
-#ifndef _h_kapp_args_
+#include <klib/rc.h>
 #include <kapp/args.h>
-#endif
+
+/*--------------------------------------------------------------------------
+ * Vdb initialization/termination API
+ */
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+/* Initialize the VDB environment
+*/
+KAPP_EXTERN rc_t VdbInitialize( int argc, char *argv [], ver_t vers );
 
-/*--------------------------------------------------------------------------
- * KMain
- *  invoked by platform specific "main" entrypoint
- */
+#if WINDOWS
+    KAPP_EXTERN rc_t wVdbInitialize(int argc, wchar_t* wargv[], char*** argv);
+#endif
+
+/* Recommended exit code (return from main) if VdbInitialize fails */
+#define VDB_INIT_FAILED 3
+
+/* Terminate the VDB environment
+ *  "rc" [ IN ] - result code as reported by VDB
+ *  return recommended exit code for main()
+*/
+KAPP_EXTERN int VdbTerminate( rc_t rc );
 
 /* Quitting
  *  is the program supposed to exit
@@ -75,40 +86,24 @@ rc_t CC SignalNoHup ( void );
  *      MM = major release
  *      mm = minor release
  *    rrrr = bug-fix release
+ * default 0
  */
-ver_t CC KAppVersion ( void );
-    
-/* KMain - EXTERN
- *  executable entrypoint "main" is implemented by
- *  an OS-specific wrapper that takes care of establishing
- *  signal handlers, logging, etc.
- *
- *  in turn, OS-specific "main" will invoke "KMain" as
- *  platform independent main entrypoint.
- *
- *  "argc" [ IN ] - the number of textual parameters in "argv"
- *  should never be < 0, but has been left as a signed int
- *  for reasons of tradition.
- *
- *  "argv" [ IN ] - array of NUL terminated strings expected
- *  to be in the shell-native character set: ASCII or UTF-8
- *  element 0 is expected to be executable identity or path.
- */
-rc_t CC KMain ( int argc, char *argv [] );
-
+//ver_t CC KAppVersion ( void );
+ver_t GetKAppVersion ();
+ver_t SetKAppVersion ( ver_t ver );
 
 /* Usage - EXTERN
  *  This function is called when the command line argument
  *  handling sees -? -h or --help
  */
-rc_t CC Usage ( struct Args const * args );
-
+typedef rc_t (CC *Usage_t) ( const Args * args );
+Usage_t SetUsage ( Usage_t func );
 
 /* Version - EXTERN
  *  Obsolete: formerly called when the command line option handler
  *  saw -V or --version
  */
-rc_t CC Version ( struct Args const * args );
+//rc_t CC Version ( struct Args const * args );
 
 
 /* Usage - EXTERN
@@ -152,7 +147,7 @@ uint64_t CC AsciiToU64 ( const char *arg,
  * legal values for the parameter are:
  * 1. a sequence of + or - characters that each bump the current log level
  *    up or down one.
- * 2. an integer with a decimal value from 0 to 13 (octal and hex with the 
+ * 2. an integer with a decimal value from 0 to 13 (octal and hex with the
  *    same range are accepted.
  * 3. fatal, err, warn, info, debug1, debug3, debug3, debug4, debug5, debug6
  *    debug7, debug8, debug9, debug10
@@ -168,7 +163,38 @@ void CC NextLogLevelh ( int *ip, int argc, char *argv [],
 rc_t CC NextLogLevelCommon ( const char * level_parameter );
 
 #ifdef __cplusplus
+
+    namespace VDB
+    {
+
+        class Application
+        {
+        public:
+            Application(int argc, char* argv[], ver_t vers = 0);
+#if WINDOWS && UNICODE
+            Application( int argc, wchar_t* argv[], ver_t vers = 0);
+#endif
+            ~Application();
+
+            operator bool() const { return m_rc == 0; }
+            rc_t getRc() const { return m_rc; }
+            void setRc( rc_t p_rc ) { m_rc = p_rc; }
+
+            // recommended exit code for main() based on reported rc
+            int getExitCode() const { return m_rc == 0 ? 0 : IF_EXITCODE( m_rc, 3 ); }
+
+            int getArgC() const { return m_argc; }
+            char** getArgV() { return m_argv; }
+            const char** getArgV() const { return (const char**)m_argv; }
+
+        private:
+            int m_argc;
+            char** m_argv;
+            bool m_argvOwned; // true if args have been rewritten
+            rc_t m_rc = 0;
+        };
+
+    }
 }
 #endif
 
-#endif /* _h_kapp_main_ */

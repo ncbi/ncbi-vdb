@@ -33,6 +33,7 @@
 
 #include <klib/time.h> /* KSleep */
 #include <klib/rc.h>
+#include <klib/debug.h>
 
 #include <kfg/config.h>
 #include <kfg/kfg-priv.h>
@@ -187,7 +188,7 @@ struct ReadThreadData
 #ifdef ALL
 static rc_t CC read_thread_func( const KThread *self, void *data ) noexcept
 {
-    rc_t rc;
+    rc_t rc = 0;
     ReadThreadData * td = ( ReadThreadData * ) data;
     char buf[1024];
     size_t num_read;
@@ -195,7 +196,7 @@ static rc_t CC read_thread_func( const KThread *self, void *data ) noexcept
 
     for ( int i = 0; i < td->num_requests; ++i )
     {
-        rc = KFileTimedRead ( td->kHttpFile, 0, buf, td->content_length, &num_read, NULL );
+        rc = KFileTimedRead ( td->kHttpFile, 0, buf, (size_t) td->content_length, &num_read, NULL );
         if ( rc != 0 || num_read == 0 )
         {
             LOG(LogLevel::e_fatal_error, "read_thread_func: KFileTimedRead failed on kHttpFile\n");
@@ -444,7 +445,7 @@ public:
             throw logic_error ( "RetrierFixture::Configure KNSManagerMakeConfig failed" );
 
         m_mgr -> maxNumberOfRetriesOnFailureForReliableURLs = max_retries;
-        m_mgr -> maxTotalWaitForReliableURLs_ms = max_total_wait;
+        m_mgr -> maxTotalWaitForReliableURLs_ms = (int32_t) max_total_wait;
 
         if ( KHttpRetrierInit ( & m_retrier, kfg_name, m_mgr ) != 0 )
             throw logic_error ( "RetrierFixture::Configure KHttpRetrierInit failed" );
@@ -879,6 +880,7 @@ FIXTURE_TEST_CASE( KClientHttpResult_FormatMsg, HttpFixture)
     REQUIRE_RC ( KClientHttpResultFormatMsg ( rslt, & buffer, "->", "\n" ) );
     REQUIRE_EQ ( expected, string ((char*)buffer.base) );
     REQUIRE_RC ( KClientHttpResultRelease ( rslt ) );
+    KDataBufferWhack( & buffer );
 }
 #endif
 
@@ -1037,29 +1039,7 @@ static rc_t argsHandler ( int argc, char * argv [] ) {
     return rc;
 }
 
-extern "C"
-{
-
-#include <kapp/args.h>
-#include <kfg/config.h>
-#include <klib/debug.h>
-
-ver_t CC KAppVersion ( void )
-{
-    return 0x1000000;
-}
-rc_t CC UsageSummary (const char * progname)
-{
-    return 0;
-}
-
-rc_t CC Usage ( const Args * args )
-{
-    return 0;
-}
-const char UsageDefaultName[] = "test-http";
-
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     // make sure to use singleton, otherwise tests take forever and finally fail
     CloudMgrUseSingleton(true);
@@ -1073,8 +1053,5 @@ rc_t CC KMain ( int argc, char *argv [] )
 	// (same as running the executable with "-l=message")
 	// TestEnv::verbosity = LogLevel::e_message;
 
-    rc_t rc=HttpTestSuite(argc, argv);
-    return rc;
-}
-
+    return HttpTestSuite(argc, argv);
 }

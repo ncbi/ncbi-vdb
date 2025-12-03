@@ -262,6 +262,119 @@ rc_t CC KWMDataNodeAuxFunc ( void *param, const void *node, size_t *num_writ,
 }
 
 static
+rc_t KWMetadataFlushToMem(KWMetadata* self, KMDFlushData* pb)
+{
+    rc_t rc = 0;
+
+    /* write header */
+    KDBHdr* hdr = (KDBHdr*)pb->buffer;
+    hdr->endian = eByteOrderTag;
+    hdr->version = KMETADATAVERS;
+    pb->marker = sizeof * hdr;
+
+    /* persist root node */
+    rc = BSTreePersist(&self->root->child, NULL,
+        KMDWriteFunc, pb, KWMDataNodeAuxFunc, NULL);
+
+    return rc;
+}
+
+static
+rc_t
+MetadataPopulateFromMem(
+    KMetadata* bself, bool read_only, const void* addr, size_t size)
+{
+    rc_t rc = 0;
+
+    CAST();
+
+    union
+    {
+        KDBHdr v1;
+        KDBHdr v2;
+    } hdrs;
+
+    const KDBHdr* hdr = (const KDBHdr*)addr;
+    const void* pbstree_src = hdr + 1;
+
+    rc = KDBHdrValidate(hdr, size, 1, KMETADATAVERS);
+    if (self->read_only
+        && GetRCState(rc) == rcIncorrect && GetRCObject(rc) == rcByteOrder)
+    {
+        hdrs.v1.endian = bswap_32(hdr->endian);
+        hdrs.v1.version = bswap_32(hdr->version);
+        rc = KDBHdrValidate(&hdrs.v1, size, 1, KMETADATAVERS);
+        if (rc == 0)
+        {
+            self->byteswap = true;
+            switch (hdrs.v1.version)
+            {
+            case 1:
+                hdr = &hdrs.v1;
+                break;
+            case 2:
+                hdr = &hdrs.v2;
+                break;
+            }
+        }
+    }
+    if (rc == 0)
+    {
+        PBSTree* bst;
+        rc = PBSTreeMake(
+            &bst, pbstree_src, size - sizeof * hdr, self->byteswap);
+        if (rc != 0)
+            rc = RC(rcDB, rcMetadata, rcConstructing, rcData, rcCorrupt);
+        else
+        {
+            KWMDataNodeInflateData pb;
+
+            pb.meta = self;
+            pb.par = self->root;
+            pb.bst = &self->root->child;
+            pb.node_size_limit = read_only ? NODE_SIZE_LIMIT : 0;
+            pb.node_child_limit = read_only ? NODE_CHILD_LIMIT : 0;
+            pb.rc = 0;
+            pb.byteswap = self->byteswap;
+
+            if (hdr->version == 1)
+                PBSTreeDoUntil(bst, false, KWMDataNodeInflate_v1, &pb);
+            else
+                PBSTreeDoUntil(bst, false, KWMDataNodeInflate, &pb);
+            rc = pb.rc;
+
+            self->vers = hdr->version;
+
+            PBSTreeWhack(bst);
+        }
+    }
+
+    return rc;
+}
+
+/* Verify that we will be able to load the P_BSTree that we are going to save */
+static
+rc_t
+KWMetadataCheckPBSTree ( const void *addr, size_t size )
+{
+    bool read_only = false;
+
+    KWMetadata* self = NULL;
+    rc_t rc = KWMetadataMake(&self, NULL, "", 0, false, read_only);
+    
+    if (rc == 0)
+        assert(self);
+    
+    if (rc == 0)
+        rc = MetadataPopulateFromMem ( & self -> dad, read_only, addr, size );
+    
+    if (rc == 0)
+        rc = KMetadataRelease ( & self -> dad );
+    
+    return rc;
+}
+
+static
 rc_t KWMetadataFlush ( KWMetadata *self )
 {
     rc_t rc;
@@ -280,23 +393,26 @@ rc_t KWMetadataFlush ( KWMetadata *self )
         /* ZZZZ do we need a "KMD5FileReset ( pb -> fmd5 )" ? I don't think so */
         if ( rc == 0 )
         {
-            /* write header */
-            KDBHdr *hdr = ( KDBHdr* ) pb . buffer;
-            hdr -> endian = eByteOrderTag;
-            hdr -> version = KMETADATAVERS;
-            pb . marker = sizeof * hdr;
-
-            /* persist root node */
-            rc = BSTreePersist ( & self -> root -> child, NULL,
-                KMDWriteFunc, & pb, KWMDataNodeAuxFunc, NULL );
+            // This function writes KWMetadata to pb.buffer.
+            // However if the amount of data is > pb . bsize
+            // then pb.buffer is flushed to disk, pb . pos becomes > 0
+            // and pb.buffer will contain remaining data
+            rc = KWMetadataFlushToMem ( self, & pb );
             if ( rc == 0 && pb . marker != 0 )
             {
+              // if (pb.pos > 0) then we cannot validate pb . buffer
+              if (pb.pos == 0)
+                rc = KWMetadataCheckPBSTree ( pb . buffer, pb . marker );
+              
+              if ( rc == 0 ) {
                 size_t num_flushed;
                 rc = KFileWrite ( pb . f, pb . pos,
                                   pb . buffer, pb . marker, & num_flushed );
                 if ( rc == 0 && num_flushed != pb . marker )
                     rc = RC ( rcDB, rcMetadata, rcPersisting, rcTransfer, rcIncomplete );
+              }
             }
+
             pb . rc = KFileRelease ( pb . f );
             if ( pb . rc  ==  0 )
                 pb . fmd5 = NULL;
@@ -329,7 +445,6 @@ KWMetadataWhack ( KMetadata *bself )
     rc_t rc = 0;
     KSymbol * symb;
     KDBManager *mgr = self -> mgr;
-    assert ( mgr != NULL );
 
     if ( self -> dirty )
     {
@@ -379,10 +494,12 @@ KWMetadataWhack ( KMetadata *bself )
 	self -> md5 = NULL;
     }
 
-    /* remove from mgr */
-    symb = KDBManagerOpenObjectFind (mgr, self->path);
-    if (symb != NULL)
-    {
+    /* mgr can we NULL when called from KWMetadataCheckPBSTree */
+    if ( mgr != NULL ) {
+      /* remove from mgr */
+      symb = KDBManagerOpenObjectFind (mgr, self->path);
+      if (symb != NULL)
+      {
         rc = KDBManagerOpenObjectDelete (mgr, symb);
         if (rc == 0)
         {
@@ -391,14 +508,16 @@ KWMetadataWhack ( KMetadata *bself )
             rc = KDBManagerSever ( mgr );
             if ( rc != 0 )
                 KDBManagerOpenObjectAdd (mgr, symb);
-            else
-            {
+        }
+      }
+    }
+
+    if ( rc == 0 )
+    {
                 /* complete */
                 KDirectoryRelease ( self -> dir );
                 KMDataNodeRelease ( & self -> root -> dad );
                 return KMetadataBaseWhack( bself );
-            }
-        }
     }
 
     KRefcountInit ( & self -> dad . refcount, 1, "KMetadata", "whack", "kmeta" );
@@ -445,8 +564,6 @@ static
 rc_t
 KMetadataPopulate ( KMetadata *bself, const KDirectory *dir, const char *path, bool read_only )
 {
-    CAST();
-
     const KFile *f;
     rc_t rc = KDirectoryOpenFileRead ( dir, & f, "%s", path );
     if ( rc == 0 )
@@ -463,64 +580,7 @@ KMetadataPopulate ( KMetadata *bself, const KDirectory *dir, const char *path, b
 
             if ( rc == 0 )
             {
-                union
-                {
-                    KDBHdr v1;
-                    KDBHdr v2;
-                } hdrs;
-
-                const KDBHdr *hdr = ( const KDBHdr* ) addr;
-                const void *pbstree_src = hdr + 1;
-
-                rc = KDBHdrValidate ( hdr, size, 1, KMETADATAVERS );
-                if ( self -> read_only && GetRCState ( rc ) == rcIncorrect && GetRCObject ( rc ) == rcByteOrder )
-                {
-                    hdrs . v1 . endian = bswap_32 ( hdr -> endian );
-                    hdrs . v1 . version = bswap_32 ( hdr -> version );
-                    rc = KDBHdrValidate ( & hdrs . v1, size, 1, KMETADATAVERS );
-                    if ( rc == 0 )
-                    {
-                        self -> byteswap = true;
-                        switch ( hdrs . v1 . version )
-                        {
-                        case 1:
-                            hdr = & hdrs . v1;
-                            break;
-                        case 2:
-                            hdr = & hdrs . v2;
-                            break;
-                        }
-                    }
-                }
-                if ( rc == 0 )
-                {
-                    PBSTree *bst;
-                    rc = PBSTreeMake ( & bst, pbstree_src, size - sizeof * hdr, self -> byteswap );
-                    if ( rc != 0 )
-                        rc = RC ( rcDB, rcMetadata, rcConstructing, rcData, rcCorrupt );
-                    else
-                    {
-                        KWMDataNodeInflateData pb;
-
-                        pb . meta = self;
-                        pb . par = self -> root;
-                        pb . bst = & self -> root -> child;
-                        pb . node_size_limit = read_only ? NODE_SIZE_LIMIT : 0;
-                        pb . node_child_limit = read_only ? NODE_CHILD_LIMIT : 0;
-                        pb . rc = 0;
-                        pb . byteswap = self -> byteswap;
-
-                        if ( hdr -> version == 1 )
-                            PBSTreeDoUntil ( bst, false, KWMDataNodeInflate_v1, & pb );
-                        else
-                            PBSTreeDoUntil ( bst, false, KWMDataNodeInflate, & pb );
-                        rc = pb . rc;
-
-                        self -> vers = hdr -> version;
-
-                        PBSTreeWhack ( bst );
-                    }
-                }
+                rc = MetadataPopulateFromMem ( bself, read_only, addr, size );
             }
 
             KMMapRelease ( mm );

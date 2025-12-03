@@ -28,7 +28,7 @@
 * Unit tests for Kfg interface
 */
 
-#include <kfg/extern.h>
+#include <kfg/config.h>
 
 #include <map>
 #include <string>
@@ -597,32 +597,8 @@ FIXTURE_TEST_CASE(KfgParseVarRefPath, KfgParseFixture)
 }
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-#include <kapp/args.h>
-#include <kfg/config.h>
-
-ver_t CC KAppVersion ( void )
-{
-    return 0x1000000;
-}
-rc_t CC UsageSummary (const char * progname)
-{
-    return 0;
-}
-
-rc_t CC Usage ( const Args * args )
-{
-    return 0;
-}
-
-const char UsageDefaultName[] = "wb-test-kfg";
-
-rc_t CC KMain ( int argc, char *argv [] )
+int main( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
-    rc_t rc = KfgWbTestSuite(argc, argv);
-    return rc;
-}
-
+    return KfgWbTestSuite(argc, argv);
 }

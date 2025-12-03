@@ -98,7 +98,7 @@ _Thread_local char kns_manager_sessionid [ KNSMANAGER_STRING_MAX ] = { 0 };
 _Thread_local char kns_manager_pagehitid [ KNSMANAGER_STRING_MAX ] = { 0 };
 _Thread_local char kns_manager_ua_suffix [ KNSMANAGER_STRING_MAX ] = { 0 };
 
-quitting_t quitting;
+quitting_t quitting = NULL;
 
 static atomic_ptr_t kns_singleton;
 

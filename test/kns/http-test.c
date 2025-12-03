@@ -369,64 +369,6 @@ rc_t PreHttpsTest ( void )
     return rc;
 }
 
-/* Version  EXTERN
- *  return 4-part version code: 0xMMmmrrrr, where
- *      MM = major release
- *      mm = minor release
- *    rrrr = bug-fix release
- */
-ver_t CC KAppVersion ( void )
-{
-    return 0;
-}
-
-
-/* Usage
- *  This function is called when the command line argument
- *  handling sees -? -h or --help
- */
-rc_t CC UsageSummary ( const char *progname )
-{
-    /*    return KOutMsg (
-        "\n"
-        "Usage:\n"
-        "  %s [Options]\n"
-        "\n"
-        "Summary:\n"
-        "  Simple test of printf.\n"
-        , progname );
-    */
-    return 0;
-}
-
-const char UsageDefaultName[] = "time-test";
-
-rc_t CC Usage ( const Args *args )
-{
-    /*
-    const char * progname = UsageDefaultName;
-    const char * fullpath = UsageDefaultName;
-    rc_t rc;
-
-    if (args == NULL)
-        rc = RC (rcApp, rcArgv, rcAccessing, rcSelf, rcNull);
-    else
-        rc = ArgsProgram (args, &fullpath, &progname);
-
-    UsageSummary (progname);
-
-    KOutMsg ("Options:\n");
-
-    HelpOptionsStandard();
-
-    HelpVersion (fullpath, KAppVersion());
-
-    return rc;
-    */
-    return 0;
-}
-
-
 static
 rc_t run ( const char *progname )
 {
@@ -439,9 +381,7 @@ rc_t run ( const char *progname )
     return 1;
 }
 
-/* KMain
- */
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     Args *args;
     rc_t rc = ArgsMakeAndHandle ( & args, argc, argv, 0 );
@@ -452,6 +392,6 @@ rc_t CC KMain ( int argc, char *argv [] )
         ArgsWhack ( args );
     }
 
-    return rc;
+    return (int)rc;
 }
 

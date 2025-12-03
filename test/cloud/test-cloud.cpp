@@ -146,7 +146,7 @@ public:
     {
         CreateFile(p_name, p_content, p_content2, p_content3, true);
     }
-    
+
     CloudMgr * m_mgr;
     CloudProviderId m_id;
     Cloud * m_cloud;
@@ -1011,34 +1011,18 @@ static rc_t argsHandler(int argc, char * argv[]) {
 #include <klib/debug.h>
 #include <klib/log.h> /* KLogLevelSet */
 
-extern "C" {
-    ver_t CC KAppVersion ( void )
-    {
-        return 0x1000000;
-    }
-    rc_t CC UsageSummary (const char * progname)
-    {
-        return 0;
-    }
-    rc_t CC Usage ( const Args * args )
-    {
-        return 0;
-    }
-    const char UsageDefaultName[] = "test-kns";
-    rc_t CC KMain ( int argc, char *argv [] )
-    {
-        setenv("HOME", ".", 1);
+int main( int argc, char *argv [] )
+{
+    setenv("HOME", ".", 1);
 
-        KConfigDisableUserSettings();
+    KConfigDisableUserSettings();
 
-     // assert(!KDbgSetString("CLOUD"));
-     // KLogLevelSet( klogInfo );
+    // assert(!KDbgSetString("CLOUD"));
+    // KLogLevelSet( klogInfo );
 
-     // this makes messages from the test code appear
-     // (same as running the executable with "-l=message")
-     // TestEnv::verbosity = LogLevel::e_message;
+    // this makes messages from the test code appear
+    // (same as running the executable with "-l=message")
+    // TestEnv::verbosity = LogLevel::e_message;
 
-        rc_t rc=CloudTestSuite(argc, argv);
-        return rc;
-    }
+    return CloudTestSuite(argc, argv);
 }

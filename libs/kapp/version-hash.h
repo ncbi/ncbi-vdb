@@ -24,31 +24,5 @@
 *
 */
 
-#include <kapp/main.h>
-#include <klib/rc.h>
-
-#include <stdio.h>
-#include <sysexits.h>
-
-ver_t CC KAppVersion ( void )
-{
-    return 0x01020003;
-}
-
-rc_t CC UsageSummary ( const char *progname )
-{
-    return 0;
-}
-
-rc_t CC Usage ( const Args *args )
-{
-    return 0;
-}
-
-
-rc_t CC KMain ( int argc, char *argv [] )
-{
-    rc_t rc = RC_EXITCODE(EX_TEMPFAIL);
-
-    return rc;
-}
+#define HASH_NCBI_VDB ""
+#define HASH_SRA_TOOLS ""

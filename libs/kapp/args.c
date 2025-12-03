@@ -40,11 +40,12 @@
 #include <klib/vector.h>
 
 #include <kfg/config.h>
-#include <kapp/main.h>
+#include <kapp/vdbapp.h>
 #include <kapp/args.h>
 #include <kapp/args-conv.h>
 
 #include "args_debug.h"
+#include "version-hash.h" /* HASH_SRA_TOOLS */
 
 #include <assert.h>
 #include <ctype.h>
@@ -70,6 +71,45 @@
 #define LEGACY_Q_ALIAS_DEPRECATED 1
 #define LEGACY_Q_ALIAS_ERROR      0
 #endif
+
+static const char * UsageDefaultName = "";
+static Usage_t Usage = NULL;
+static UsageSummary_t UsageSummary = NULL;
+static ver_t KAppVersion = 0;
+
+void SetUsageDefaultName( const char* str )
+{
+    if ( str != NULL  )
+    {
+        UsageDefaultName = str;
+    }
+}
+
+Usage_t SetUsage ( Usage_t func )
+{
+    Usage_t ret = Usage;
+    Usage = func;
+    return ret;
+}
+
+UsageSummary_t SetUsageSummary ( UsageSummary_t func )
+{
+    UsageSummary_t ret = UsageSummary;
+    UsageSummary = func;
+    return ret;
+}
+
+ver_t SetKAppVersion ( ver_t ver )
+{
+    ver_t ret = KAppVersion;
+    KAppVersion = ver;
+    return ret;
+}
+
+ver_t GetKAppVersion ()
+{
+    return KAppVersion;
+}
 
 bool CC is_valid_name (const char * string)
 {
@@ -1130,7 +1170,7 @@ rc_t CC ProcessArgsConversion(Args * self)
 }
 
 static
-rc_t ArgsParseInt (Args * self, int argc, char *argv[])
+rc_t ArgsParseInt (Args * self, int argc, const char *argv[])
 {
     rc_t rc = 0;        /* hard fail - quit processing */
     rc_t orc = 0;       /* soft fail - keep processing but we'll fail in the end */
@@ -1464,7 +1504,7 @@ rc_t ArgsParseInt (Args * self, int argc, char *argv[])
     return rc;
 }
 
-rc_t CC ArgsParse_int (Args * self, int argc, char *argv[])
+rc_t CC ArgsParse_int (Args * self, int argc, const char *argv[])
 {
     KLogLevel lvl = KLogLevelGet ();
     rc_t rc = KLogLevelSet ( klogWarn );
@@ -1474,7 +1514,7 @@ rc_t CC ArgsParse_int (Args * self, int argc, char *argv[])
 }
 
 /** Process `argv` using the options that have been defined. */
-rc_t CC ArgsParse (Args * self, int argc, char *argv[])
+rc_t CC ArgsParse (Args * self, int argc, const char *argv[])
 {
     /*
      This function is called AFTER all options have been defined,
@@ -1822,7 +1862,10 @@ rc_t CC ArgsHandleHelp (Args * self)
         if (count)
         {
             /* this is a call into the main program code */
-            Usage(self);
+            if ( Usage )
+            {
+                Usage(self);
+            }
             ArgsWhack (self);
             exit (0);
         }
@@ -1858,7 +1901,7 @@ rc_t CC ArgsHandleVersion (Args * self)
             if (self)
                 rc = ArgsProgram (self, &fullpath, &progname);
 
-            HelpVersion (fullpath, KAppVersion());
+            HelpVersion (fullpath, KAppVersion);
 
             ArgsWhack (self);
             exit (0);
@@ -2021,7 +2064,7 @@ rc_t CC ArgsHandleStandardOptions (Args * self)
 /* if pself == NULL
    then process / initialize standard arguments and release Args */
 static
-rc_t ArgsMakeAndHandleInt ( Args ** pself, int argc, char ** argv,
+rc_t ArgsMakeAndHandleInt ( Args ** pself, int argc, const char ** argv,
     const ParamDef *params, uint32_t param_count, uint32_t optdef_count, va_list ap )
 {
     rc_t rc;
@@ -2112,7 +2155,7 @@ rc_t CC ArgsMakeAndHandle (Args ** pself, int argc, char ** argv, uint32_t table
     rc_t rc;
     va_list args;
     va_start ( args, table_count );
-    rc = ArgsMakeAndHandleInt ( pself, argc, argv, NULL, 0, table_count, args );
+    rc = ArgsMakeAndHandleInt ( pself, argc, (const char**)argv, NULL, 0, table_count, args );
     va_end ( args );
     return rc;
 }
@@ -2123,7 +2166,7 @@ rc_t CC ArgsMakeAndHandle2 (Args ** pself, int argc, char ** argv,
     rc_t rc;
     va_list args;
     va_start ( args, table_count );
-    rc = ArgsMakeAndHandleInt ( pself, argc, argv, params, param_count, table_count, args );
+    rc = ArgsMakeAndHandleInt ( pself, argc, (const char**)argv, params, param_count, table_count, args );
     va_end ( args );
     return rc;
 }
@@ -2195,10 +2238,11 @@ void CC HelpVersion (const char * fullpath, ver_t version)
         (sraVersion.version == version && sraVersion.revision == 0 &&
          sraVersion.type == eSraReleaseVersionTypeFinal))
     {
-        OUTMSG (("\n%s : %.3V\n\n", fullpath, version));
+        OUTMSG (("%s : %.3V\n\n", fullpath, version));
     }
     else {
-        OUTMSG (("\n%s : %.3V ( %s )\n\n", fullpath, version, cSra));
+        OUTMSG (("%s : %.3V%s ( %s%s )\n\n",
+            fullpath, version, HASH_SRA_TOOLS, cSra, HASH_NCBI_VDB));
     }
 }
 
@@ -2385,7 +2429,10 @@ rc_t CC MiniUsage (const Args * args)
     if (rc)
         progname = UsageDefaultName;
     KOutHandlerSetStdErr();
-    UsageSummary (progname);
+    if ( UsageSummary )
+    {
+        UsageSummary (progname);
+    }
     KOutMsg ("\nUse option --help for more information.\n\n");
 
     KOutHandlerSet (w,d);

@@ -394,14 +394,14 @@ TEST_CASE(invalidMsg) {
 #ifdef ALL
 TEST_CASE(expired) {
     Response4 * response = NULL;
-    
+
     std::cerr << "vvvvvvvvvvvvvv expect to see error message vvvvvvvvvvvvvvv\n";
     REQUIRE_RC(Response4MakeSdl(&response,
         "{"
         "    \"status\": 440,"
         "    \"message\" : \"Claims have expired\""
         "}"));
-    
+
     rc_t rc = 0;
     REQUIRE_RC(Response4GetRc(response, &rc));
     REQUIRE_RC_FAIL(rc);
@@ -429,18 +429,13 @@ TEST_CASE(expiredNsg) {
 }
 #endif
 
-TEST_SUITE ( TestResolverSdl )
-
-extern "C" {
-    ver_t CC KAppVersion ( void ) { return 0; }
-    rc_t CC KMain ( int argc, char * argv [] ) {
-        if (
+int main( int argc, char * argv [] ) {
+    if (
 0 )
-            assert ( ! KDbgSetString ( "VFS" ) );
-        if (
+        assert ( ! KDbgSetString ( "VFS" ) );
+    if (
 0 )
-            assert ( ! KDbgSetString ( "VFS-JSON" ) );
+        assert ( ! KDbgSetString ( "VFS-JSON" ) );
     KConfigDisableUserSettings();
     return TestSdlResolver( argc, argv );
-    }
 }

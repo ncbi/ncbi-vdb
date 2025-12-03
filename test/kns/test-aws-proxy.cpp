@@ -94,16 +94,9 @@ TEST_CASE ( AwsProxyTest ) {
     REQUIRE_RC ( KNSManagerRelease ( mgr ) );
 }
 
-extern "C" {
-    ver_t CC KAppVersion ( void ) { return 0; }
-    const char UsageDefaultName[] = "test-aws-proxy";
-    rc_t CC UsageSummary(const char * progname) { return 0; }
-    rc_t CC Usage(const struct Args * args) { return 0; }
-
-    rc_t CC KMain ( int argc, char * argv [] ) {
-        if (
+int main( int argc, char * argv [] ) {
+    if (
 0 ) assert ( ! KDbgSetString ( "KNS" ) );
-        KConfigDisableUserSettings ();
-        return AwsProxyTestSuite(argc, argv);
-    }
+    KConfigDisableUserSettings ();
+    return AwsProxyTestSuite(argc, argv);
 }

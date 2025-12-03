@@ -1061,6 +1061,8 @@ rc_t CC KCacheTeeFileTimedReadImpl ( const KCacheTeeFile_v3 *cself,
 
     uint64_t cur_thread_id = CUR_THREAD_ID ();
 
+    assert ( num_read );
+
     /* 1. limit request to file dimensions */
     if ( pos >= self -> source_size || bsize == 0 )
     {
@@ -1184,6 +1186,10 @@ rc_t CC KCacheTeeFileTimedReadImpl ( const KCacheTeeFile_v3 *cself,
             rc = KCacheTeeFileReadFromFile ( self, pos, buffer, bsize, num_read, initial_page_idx );
         }
 
+        if ( self -> dad . read_observer_update != NULL )
+            ( * self -> dad . read_observer_update )
+                ( self -> dad . read_observer, rc, pos, buffer, *num_read );
+
         /* 9. release lock */
         STATUS ( STAT_PRG, "%lu: %s - releasing cache mutex\n", cur_thread_id, __func__ );
         KLockUnlock ( self -> cache_lock );
@@ -1283,7 +1289,7 @@ rc_t CC KCacheTeeFileReadChunked ( const KCacheTeeFile_v3 *self, uint64_t pos,
     KChunkReader * chunks, size_t bsize, size_t * total_read )
 {
     rc_t rc = 0;
-    size_t total, num_read;
+    size_t total, num_read = 0;
 
     assert ( chunks != NULL );
 
@@ -1332,7 +1338,7 @@ rc_t CC KCacheTeeFileTimedReadChunked ( const KCacheTeeFile_v3 *self, uint64_t p
     KChunkReader * chunks, size_t bsize, size_t * total_read, struct timeout_t * tm )
 {
     rc_t rc = 0;
-    size_t total, num_read;
+    size_t total, num_read = 0;
 
     assert ( chunks != NULL );
 
@@ -2103,6 +2109,8 @@ rc_t KCacheTeeFileOpen ( KCacheTeeFile_v3 * self, KDirectory * dir, const KFile 
                     KFileRelease ( self -> cache_file );
                     self -> cache_file = NULL;
                 }
+                else
+                    STATUS (STAT_PWR, "Use '%s' as cache file\n", self -> path);
             }
 
             /* always break */

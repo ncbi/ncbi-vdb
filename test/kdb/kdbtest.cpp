@@ -39,6 +39,10 @@
 #include <kdb/index.h>
 #include <kdb/table.h>
 
+#include <kfg/config.h>
+
+#include <klib/debug.h> // KDbgSetString
+
 #include <vfs/manager.h>
 
 using namespace std;
@@ -56,37 +60,12 @@ static rc_t argsHandler(int argc, char* argv[]) {
     ArgsWhack(args);
     return rc;
 }
-extern "C"
-{
 
-#include <kapp/args.h>
-#include <kfg/config.h>
-#include <klib/debug.h> // KDbgSetString
-
-ver_t CC KAppVersion ( void )
-{
-    return 0x1000000;
-}
-rc_t CC UsageSummary (const char * progname)
-{
-    return 0;
-}
-
-rc_t CC Usage ( const Args * args )
-{
-    return 0;
-}
-
-const char UsageDefaultName[] = "test-kdb";
-
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     // assert(!KDbgSetString("KFG"));
     // assert(!KDbgSetString("VFS"));
     //KDbgSetModConds ( DBG_KNS, DBG_FLAG ( DBG_KNS_SOCKET ), DBG_FLAG ( DBG_KNS_SOCKET ) );
     KConfigDisableUserSettings();
-    rc_t rc=KdbTestSuite(argc, argv);
-    return rc;
-}
-
+    return KdbTestSuite(argc, argv);
 }

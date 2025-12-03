@@ -37,7 +37,7 @@
 #include <vfs/manager.h> /* VFSManagerRelease */
 #include <vfs/path-priv.h> /* VPathGetDirectory */
 #include <vfs/resolver.h> /* VRevolverRelease */
-#include <ktst/unit_test.hpp> /* KMain */
+#include <ktst/unit_test.hpp>
 #include "../../libs/vfs/path-priv.h" /* VPathSetDirectory */
 #include <limits.h> /* PATH_MAX */
 #ifndef PATH_MAX
@@ -479,7 +479,7 @@ FIXTURE_TEST_CASE(TestKDBManagerOpenTable_FUNC_VPath, Fixture) {
     REQUIRE_RC(KDBManagerOpenTable_FUNC_VPath(kdb, &t, pathR));
     REQUIRE_RC(Compare(pathR, tbRPath));
     REQUIRE_RC(KTableRelease(t));
- 
+
     // open remote table as table: cached dir
     REQUIRE_RC(KDBManagerOpenTable_FUNC_VPath(kdb, &t, pathR));
     REQUIRE_RC(Compare(pathR, tbRPath));
@@ -587,7 +587,7 @@ FIXTURE_TEST_CASE(TestKDBManagerPathTypeVP, Fixture) {
     REQUIRE_RC(LegacyVPathMake(&pathL, AccTPath));
     REQUIRE_RC(VPathGetDirectory(pathL, &dirLoc));
     REQUIRE_NULL(dirLoc);
-    
+
     REQUIRE(KDBManagerPathTypeVP(kdb, pathL) == kptTable);
     REQUIRE_RC(Compare(pathL, tbLPath));
 
@@ -597,7 +597,7 @@ FIXTURE_TEST_CASE(TestKDBManagerPathTypeVP, Fixture) {
 
     REQUIRE_RC_FAIL(VPathGetDirectory(pathL, 0));
     REQUIRE_RC_FAIL(VPathGetDirectory(0, &dirLoc));
-    
+
     // PathType of an sra file: cached dir
     REQUIRE(KDBManagerPathTypeVP(kdb, pathL) == kptTable);
     REQUIRE_RC(Compare(pathL, tbLPath, &dirLoc));
@@ -634,7 +634,7 @@ FIXTURE_TEST_CASE(TestKDBManagerPathTypeVP, Fixture) {
     // remote DB
     VPath * pathDb(0);
     REQUIRE_RC(LegacyVPathMake(&pathDb, AccDR));
-   
+
     // PathType of a remote DB
     REQUIRE(KDBManagerPathTypeVP(kdb, pathDb) == kptDatabase);
     REQUIRE_RC(Compare(pathDb, dbRPath));
@@ -723,16 +723,16 @@ and use of VDBManagerOpenDBReadVPath.
 FIXTURE_TEST_CASE(TestVDBManagerOpenDB_FUNC_VPath, Fixture) {
     VPath * pathL(0);
     REQUIRE_RC(LegacyVPathMake(&pathL, AccTPath));
- 
+
     const KDirectory * dirLoc(0);
     REQUIRE_RC(VPathGetDirectory(pathL, &dirLoc));
     REQUIRE_NULL(dirLoc);
-  
+
     const VDatabase * d(0);
     // try to open sra file table as DB
     REQUIRE_RC_FAIL(VDBManagerOpenDB_FUNC_VPath(vdb, &d, 0, pathL));
     REQUIRE_RC(Compare(pathL, tbLPath, &dirLoc));
-    
+
     // try to open sra file table as DB: cached dir
     REQUIRE_RC_FAIL(VDBManagerOpenDB_FUNC_VPath(vdb, &d, 0, pathL));
     REQUIRE_RC(Compare(pathL, tbLPath));
@@ -749,14 +749,14 @@ FIXTURE_TEST_CASE(TestVDBManagerOpenDB_FUNC_VPath, Fixture) {
     // open remote run table as DB: cached dir
     REQUIRE_RC_FAIL(VDBManagerOpenDB_FUNC_VPath(vdb, &d, 0, pathR));
     REQUIRE_RC(Compare(pathR, tbRPath));
-    
+
     // Set sra file's directory for remote run
     REQUIRE_RC(VPathSetDirectory(pathR, dirLoc));
     const VTable * t(0);
     REQUIRE_RC(VDBManagerOpenTable_FUNC_VPath(vdb, &t, 0, pathR));
     REQUIRE_RC(Compare(pathR, tbLPath));
     REQUIRE_RC(VTableRelease(t));
-    
+
     REQUIRE(KDBManagerPathTypeVP(kdb, pathR) == kptTable);
     REQUIRE_RC(Compare(pathR, tbLPath));
 /**/
@@ -836,18 +836,18 @@ FIXTURE_TEST_CASE(TestVDBManagerOpenTable_FUNC_VPath, Fixture) {
 
     REQUIRE_RC(VDBManagerOpenTable_FUNC_VPath(vdb, &t, 0, pathL));
     REQUIRE_RC(Compare(pathL, tbLPath));
-    REQUIRE_RC(VTableRelease(t)); 
-    
+    REQUIRE_RC(VTableRelease(t));
+
     // open sra file table as table: cached dir
     REQUIRE_RC(VDBManagerOpenTable_FUNC_VPath(vdb, &t, 0, pathL));
     REQUIRE_RC(Compare(pathL, tbLPath, &dirLoc));
     REQUIRE_RC(VTableRelease(t));
-    
-    REQUIRE_RC(VPathRelease(pathL)); 
+
+    REQUIRE_RC(VPathRelease(pathL));
 
     VPath * pathR(0);
     REQUIRE_RC(LegacyVPathMake(&pathR, AccTR));
-    
+
     // open remote run table as table
     REQUIRE_RC(VDBManagerOpenTable_FUNC_VPath(vdb, &t, 0, pathR));
     REQUIRE_RC(Compare(pathR, tbRPath));
@@ -877,7 +877,7 @@ FIXTURE_TEST_CASE(TestVDBManagerOpenTable_FUNC_VPath, Fixture) {
     REQUIRE_RC(KDirectoryRelease(dirLoc));
 
     VPath * path(0);
-    
+
     ////////////////////////////////////////////////////////////////////////////
     REQUIRE_RC(LegacyVPathMake(&path, AccTL));
 
@@ -943,7 +943,7 @@ FIXTURE_TEST_CASE(TestVDBManagerPathType, Fixture) {
 
     VPath * pathL(0);
     REQUIRE_RC(LegacyVPathMake(&pathL, AccTPath));
-  
+
     REQUIRE(VDBManagerPathTypeVP(0, pathL) == kptBadPath);
     const KDirectory * dirLoc(0);
     REQUIRE_RC(VPathGetDirectory(pathL, &dirLoc));
@@ -975,7 +975,7 @@ FIXTURE_TEST_CASE(TestVDBManagerPathType, Fixture) {
 
     REQUIRE_RC(KDirectoryRelease(dirLoc));
     REQUIRE_RC(VPathRelease(pathL));
-    
+
     // reuse path for VDBManagerOpenTable_FUNC_VPath
     const VTable * vt(0);
     REQUIRE_RC(VDBManagerOpenTable_FUNC_VPath(vdb, &vt, 0, pathR));
@@ -991,7 +991,7 @@ FIXTURE_TEST_CASE(TestVDBManagerPathType, Fixture) {
     REQUIRE_RC(KTableRelease(kt));
 
     REQUIRE_RC(VPathRelease(pathR));
-    
+
     VPath * path(0);
 
     ////////////////////////////////////////////////////////////////////////////
@@ -1048,17 +1048,11 @@ FIXTURE_TEST_CASE(TestVDBManagerPathType, Fixture) {
 }
 #endif
 
-extern "C" {
-    ver_t CC KAppVersion(void) { return 0; }
-    const char UsageDefaultName[] = "test-vpath-open";
-    rc_t CC UsageSummary(const char * progname) { return 0; }
-    rc_t CC Usage(const struct Args * args) { return 0; }
-    rc_t CC KMain(int argc, char * argv[]) {
+int main(int argc, char * argv[]) {
 #if 0
-        KDbgSetString("VFS");
+    KDbgSetString("VFS");
 #endif
-        return TestVpathOpenSuite(argc, argv);
-    }
+    return TestVpathOpenSuite(argc, argv);
 }
 
 /*

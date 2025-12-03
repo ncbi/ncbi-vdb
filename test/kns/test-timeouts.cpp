@@ -374,14 +374,7 @@ TEST_CASE ( TestTimeouts ) {
     REQUIRE_RC(KConfigRelease(kfg));
 }
 
-extern "C" {
-    const char UsageDefaultName[] = "test-timeouts";
-    rc_t CC UsageSummary ( const char     * progname) { return 0; }
-    rc_t CC Usage        ( const struct Args * args ) { return 0; }
-    ver_t CC KAppVersion ( void ) { return 0; }
-
-    rc_t CC KMain ( int argc, char * argv [] ) {
-        KConfigDisableUserSettings ();
-        return TEST_TIMEOUTS( argc, argv );
-    }
+int main( int argc, char * argv [] ) {
+    KConfigDisableUserSettings ();
+    return TEST_TIMEOUTS( argc, argv );
 }

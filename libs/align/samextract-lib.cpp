@@ -35,7 +35,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <kapp/args.h>
-#include <kapp/main.h>
+//#include <kapp/main.h>
 #include <kfs/file.h>
 #include <klib/defs.h>
 #include <klib/rc.h>
@@ -553,6 +553,7 @@ LIB_EXPORT rc_t CC SAMExtractorMake( SAMExtractor ** state, const KFile * fin,
     pool_init();
 
     s->infile  = fin;
+    KFileAddRef(s->infile);
     fname_desc = string_dup_measure( fname->addr, NULL );
 //    s->fname = fname_desc;
 
@@ -618,6 +619,7 @@ LIB_EXPORT rc_t CC SAMExtractorRelease( SAMExtractor * s )
     KQueueRelease( s->inflatequeue );
     KQueueRelease( s->parsequeue );
     VectorWhack( &s->threads, NULL, NULL );
+    KFileRelease(s->infile);
     free( s->readbuf );
     free( s->filter_rname );
     free( fname_desc );

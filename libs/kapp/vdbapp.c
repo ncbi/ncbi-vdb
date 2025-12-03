@@ -25,31 +25,225 @@
 */
 
 #include <kapp/extern.h>
-#include "main-priv.h"
-#include <sysalloc.h>
-#include <kapp/main.h>
-#include <kfg/config.h>
-#include <kproc/procmgr.h>
-#include <klib/report.h>
-#include <klib/writer.h>
-#include <klib/log.h>
-#include <klib/text.h>
-#include <klib/status.h>
-#include <klib/rc.h>
-#include <kns/manager.h>
 
 #if ! NO_KRSRC
 #include <kfc/except.h>
-#include <kfc/rsrc.h>
 #include <kfc/rsrc-global.h>
 #include <kfc/ctx.h>
 #endif
 
+#include "vdbapp-priv.h"
+#include <kapp/vdbapp.h>
+#include <kapp/args-conv.h>
+
+#if WINDOWS
+#include <kapp/win/main-priv-win.h>
+#endif
+
+#include <klib/log.h>
+#include <klib/debug.h>
+#include <klib/rc.h>
+#include <klib/report.h>
+#include <klib/status.h> /* KStsLibHandlerSetStdOut */
+#include <klib/text.h>
+#include <klib/sra-release-version.h>
+
+#include <kns/manager.h>
+#include <kproc/procmgr.h>
+
+#include <atomic32.h>
 #include <strtol.h>
 
-#include <stdlib.h>
-#include <assert.h>
-#include <string.h>
+static atomic32_t hangup;
+static atomic32_t quitting;
+
+/* Hangup
+ *  has the program received a SIGHUP
+ */
+rc_t Hangup ( void )
+{
+    if ( atomic32_read ( & hangup ) == 0 )
+        return 0;
+    LOGMSG ( klogInfo, "HANGUP...\n" );
+    return RC ( rcExe, rcProcess, rcExecuting, rcProcess, rcIncomplete );
+}
+
+/* SignalNoHup
+ *  tell the program to stay alive even after SIGHUP
+ */
+rc_t CC SignalNoHup ( void )
+{   // not implemented
+    return 0;
+}
+
+/* Quitting
+ *  is the program supposed to exit
+ */
+rc_t CC Quitting ( void )
+{
+    if ( atomic32_read ( & quitting ) == 0 )
+        return 0;
+    LOGMSG ( klogInfo, "EXITING..." );
+    return RC ( rcExe, rcProcess, rcExecuting, rcProcess, rcCanceled );
+}
+
+/* SetQuitting
+ *  set the quitting flag (for internal use in this library)
+ */
+void SetQuitting()
+{
+    ReportSilence ();
+    atomic32_inc ( & quitting );
+}
+
+static KNSManager * kns = NULL;
+#if ! NO_KRSRC
+static KCtx local_ctx, * ctx = & local_ctx;
+#else
+void CC atexit_task ( void )
+{
+    KProcMgrWhack ();
+}
+#endif
+
+LIB_EXPORT
+rc_t
+VdbInitialize( int argc, char *argv [], ver_t vers )
+{
+    int ret = VdbInitializeSystem();
+    if ( ret != 0 )
+    {
+        return RC( rcExe, rcProcess, rcInitializing, rcLibrary, rcFailed );
+    }
+
+#if NO_KRSRC
+    int status;
+#else
+    DECLARE_FUNC_LOC ( rcExe, rcProcess, rcExecuting );
+    //UNUSED(s_func_loc);
+#endif
+
+    rc_t rc = 0;
+
+    if ( vers == 0 )
+    {   // by default, use the version # of the library
+        SraReleaseVersion v;
+        memset(&v, 0, sizeof v);
+        SraReleaseVersionGet( &v );
+        SetKAppVersion( v . version );
+        vers = v . version;
+    }
+    else
+    {
+        SetKAppVersion( vers );
+    }
+
+    /* initialize error reporting */
+    ReportInit ( argc, argv, vers );
+
+#if NO_KRSRC
+    /* initialize cleanup tasks */
+    status = atexit ( atexit_task );
+    if ( status != 0 )
+        return SILENT_RC ( rcApp, rcNoTarg, rcInitializing, rcFunction, rcNotAvailable );
+
+    /* initialize proc mgr */
+    rc = KProcMgrInit ();
+    if ( rc != 0 )
+        return rc;
+
+    kns = NULL;
+#else
+    ON_FAIL ( KRsrcGlobalInit ( & local_ctx, & s_func_loc, false ) )
+    {
+        assert ( ctx -> rc != 0 );
+        return ctx -> rc;
+    }
+
+    kns = ctx -> rsrc -> kns;
+#endif
+
+    /* initialize the default User-Agent in the kns-manager to default value - using "vers" and argv[0] above strrchr '/' */
+    {
+        char * path;
+
+        rc = ArgsConvFilepath(NULL, 0, argv[0], string_size(argv[0]), (void**)&path, NULL);
+
+        size_t tool_size = string_size (path);
+        const char* tool = path;
+
+        const char * sep = string_rchr ( tool, tool_size, '/' );
+        if ( sep ++ == NULL )
+            sep = tool;
+        else
+            tool_size -= sep - tool;
+
+        sep = string_chr ( tool = sep, tool_size, '.' );
+        if ( sep != NULL )
+#if WINDOWS
+          if (strcmp(sep, ".exe") != 0)
+#endif
+            tool_size = sep - tool;
+
+        KNSManagerSetUserAgent ( kns, PKGNAMESTR " sra-toolkit %.*s.%.3V", ( uint32_t ) tool_size, tool, vers );
+
+        free(path);
+    }
+
+    KNSManagerSetQuitting ( kns, Quitting );
+
+    /* initialize logging */
+    rc = KWrtInit(argv[0], vers);
+    if ( rc == 0 )
+        rc = KLogLibHandlerSetStdErr ();
+    if ( rc == 0 )
+        rc = KStsLibHandlerSetStdOut ();
+
+    return rc;
+}
+
+#if WINDOWS
+LIB_EXPORT 
+rc_t 
+wVdbInitialize(int argc, wchar_t* wargv[], char*** argv)
+{
+    rc_t rc = ConvertWArgsToUtf8(argc, wargv, argv, true);
+    if (rc != 0)
+    {
+        return rc;
+    }
+
+    return VdbInitialize( argc, *argv, 0 );
+}
+#endif
+
+LIB_EXPORT
+int
+VdbTerminate( rc_t rc )
+{
+    {
+        rc_t r2 = 0;
+        if ( kns != NULL )
+            r2 = KNSManagerRelease ( kns );
+        else
+            r2 = KNSManagerSetUserAgent ( kns, NULL );
+        if ( rc == 0 && r2 != 0 )
+            rc = r2;
+        kns = NULL;
+    }
+
+    /* finalize error reporting */
+    ReportSilence ();
+    ReportFinalize ( rc );
+
+#if ! NO_KRSRC
+    KRsrcGlobalWhack ( ctx );
+#endif
+
+    VdbTerminateSystem();
+    return rc ? 3 : 0;
+}
+
 
 #ifdef WINDOWS
 #pragma warning(disable:4127)
@@ -81,11 +275,12 @@ rc_t CC KAppCheckEnvironment ( bool require64Bits, uint64_t requireRamSize )
     if ( requireRamSize && totalRam < requireRamSize )
     {
         rc = RC ( rcApp, rcNoTarg, rcInitializing, rcResources, rcUnsupported );
-        PLOGERR ( klogFatal, ( klogFatal, rc,  "there is not enough RAM in the system." 
+     /* PLOGERR ( klogFatal, - to eliminate Windows warning: <=: is always true (for klogFatal)*/
+        pLogLibErr ( klogFatal, rc,  "there is not enough RAM in the system."
                                            " required size: $(REQUIRED) B, present: $(PRESENT) B"
                               , "REQUIRED=%lu,PRESENT=%lu"
                               , requireRamSize
-                              , totalRam ) );
+                              , totalRam ) /* ) */;
         return rc;
     }
 
@@ -120,7 +315,8 @@ void CC HandleAsciiToIntError ( const char *arg, void *ignore )
     else
         rc = RC ( rcApp, rcNumeral, rcConverting, rcString, rcInvalid );
 
-    LOGERR ( klogFatal, rc, "expected numeral" );
+ /* LOGERR - to eliminate Windows warning: <=: is always true  (for klogFatal)*/
+    LogLibErr ( klogFatal, rc, "expected numeral" );
     exit ( 10 );
 }
 
@@ -233,8 +429,9 @@ void CC logLevelFromString ( const char * str, void *data )
     }
 
     /* this RC should reflect an invalid string parameter to set the log level */
-    PLOGERR ( klogFatal, ( klogFatal, RC ( rcApp, rcArgv, rcParsing, rcRange, rcInvalid ),
-                           "log level '$(lvl)' is unrecognized", "lvl=%s", str ));
+ /* PLOGERR ( klogFatal, -to eliminate Windows warning: <= is always true for klogFatal*/
+    pLogLibErr ( klogFatal, RC ( rcApp, rcArgv, rcParsing, rcRange, rcInvalid ),
+                           "log level '$(lvl)' is unrecognized", "lvl=%s", str ) /* ) */;
     exit ( 10 );
 }
 
@@ -263,11 +460,11 @@ rc_t LogLevelRelative ( const char * string )
         case '+':
             ++ adjust;
             break;
-            
+
         case '-':
             -- adjust;
             break;
-            
+
         default:
             return RC ( rcApp, rcArgv, rcParsing, rcToken, rcUnrecognized );
         }
@@ -285,150 +482,4 @@ rc_t CC NextLogLevelCommon ( const char * level_parameter )
         return LogLevelRelative ( level_parameter );
 
     return LogLevelAbsolute ( level_parameter );
-}
-
-/* KMane
- *  executable entrypoint "main" is implemented by
- *  an OS-specific wrapper that takes care of establishing
- *  signal handlers, logging, etc.
- *
- *  in turn, OS-specific "main" will invoke "KMain" as
- *  platform independent main entrypoint.
- *
- *  "argc" [ IN ] - the number of textual parameters in "argv"
- *  should never be < 0, but has been left as a signed int
- *  for reasons of tradition.
- *
- *  "argv" [ IN ] - array of NUL terminated strings expected
- *  to be in the shell-native character set: ASCII or UTF-8
- *  element 0 is expected to be executable identity or path.
- */
-#if NO_KRSRC
-static
-void CC atexit_task ( void )
-{
-    KProcMgrWhack ();
-}
-#endif
-
-rc_t KMane ( int argc, char *argv [] )
-{
-    rc_t rc = 0;
-    KNSManager * kns = NULL;
-#if NO_KRSRC
-    int status;
-#else
-    KCtx local_ctx, * ctx = & local_ctx;
-    DECLARE_FUNC_LOC ( rcExe, rcProcess, rcExecuting );
-#endif
-
-    /* get application version */
-    ver_t vers = KAppVersion ();
-
-    /* initialize error reporting */
-    ReportInit ( argc, argv, vers );
-
-#if NO_KRSRC
-    /* initialize cleanup tasks */
-    status = atexit ( atexit_task );
-    if ( status != 0 )
-        return SILENT_RC ( rcApp, rcNoTarg, rcInitializing, rcFunction, rcNotAvailable );
-
-    /* initialize proc mgr */
-    rc = KProcMgrInit ();
-    if ( rc != 0 )
-        return rc;
-
-    kns = NULL;
-#else
-    ON_FAIL ( KRsrcGlobalInit ( & local_ctx, & s_func_loc, false ) )
-    {
-        assert ( ctx -> rc != 0 );
-        return ctx -> rc;
-    }
-
-    kns = ctx -> rsrc -> kns;
-#endif
-
-    /* initialize the default User-Agent in the kns-manager to default value - using "vers" and argv[0] above strrchr '/' */
-    {
-        const char * tool = argv[ 0 ];
-        size_t tool_size = string_size ( tool );
-
-        const char * sep = string_rchr ( tool, tool_size, '/' );
-        if ( sep ++ == NULL )
-            sep = tool;
-        else
-            tool_size -= sep - tool;
-
-        sep = string_chr ( tool = sep, tool_size, '.' );
-        if ( sep != NULL )
-            tool_size = sep - tool;
-
-        KNSManagerSetUserAgent ( kns, PKGNAMESTR " sra-toolkit %.*s.%.3V",
-            ( uint32_t ) tool_size, tool, vers );
-    }
-
-    KNSManagerSetQuitting ( kns, Quitting );
-
-    /* initialize logging */
-    rc = KWrtInit(argv[0], vers);
-    if ( rc == 0 )
-        rc = KLogLibHandlerSetStdErr ();
-    if ( rc == 0 )
-        rc = KStsLibHandlerSetStdOut ();
-
-    if ( rc == 0 )
-    {
-#if KFG_COMMON_CREATION
-        KConfig *kfg;
-        rc = KConfigMake ( & kfg );
-        if ( rc == 0 )
-        {
-#endif
-            rc = KMain ( argc, argv );
-            if ( rc != 0 )
-            {
-
-#if _DEBUGGING
-                rc_t rc2;
-                uint32_t lineno;
-                const char *filename, *function;
-                while ( GetUnreadRCInfo ( & rc2, & filename, & function, & lineno ) )
-                {
-                    pLogErr ( klogWarn, rc2, "$(filename):$(lineno) within $(function)"
-                              , "filename=%s,lineno=%u,function=%s"
-                              , filename
-                              , lineno
-                              , function
-                        );
-                }
-#endif
-
-            }
-            {
-                rc_t r2 = 0;
-                if ( kns != NULL )
-                    r2 = KNSManagerRelease ( kns );
-                else
-                    r2 = KNSManagerSetUserAgent ( kns, NULL );
-                if ( rc == 0 && r2 != 0 )
-                    rc = r2;
-                kns = NULL;
-            }
-#if KFG_COMMON_CREATION
-            KConfigRelease ( kfg );
-        }
-#endif
-    }
-
-    /* finalize error reporting */
-    ReportSilence ();
-    ReportFinalize ( rc );
-
-#if ! NO_KRSRC
-    KRsrcGlobalWhack ( ctx );
-#endif
-
-    return rc;
 }

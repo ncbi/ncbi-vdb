@@ -37,6 +37,8 @@
 #include <klib/rc.h>
 #include <klib/json.h>
 
+#include <kfg/config.h>
+
 using namespace std;
 using namespace KDBText;
 
@@ -361,7 +363,7 @@ FIXTURE_TEST_CASE(KIndex_FindText_Found, KTextIndex_ApiFixture)
     REQUIRE_EQ( (uint64_t)2, m_id_count );
 }
 
-int CC Compare ( const void *item, struct PBSTNode const *n, void *data )
+int CC Compare ( const void *item, struct PBSTNode const *n, void *data ) noexcept
 {
     return 0;
 }
@@ -631,33 +633,8 @@ FIXTURE_TEST_CASE(KIndex_SetMaxRowId, KTextIndex_ApiFixture)
 }
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kapp/args.h>
-#include <kfg/config.h>
-
-ver_t CC KAppVersion ( void )
-{
-    return 0x1000000;
-}
-rc_t CC UsageSummary (const char * progname)
-{
-    return 0;
-}
-
-rc_t CC Usage ( const Args * args )
-{
-    return 0;
-}
-
-const char UsageDefaultName[] = "Test_KDBText_Index";
-
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
-    rc_t rc=KDBTextIndexTestSuite(argc, argv);
-    return rc;
-}
-
+    return KDBTextIndexTestSuite(argc, argv);
 }

@@ -950,15 +950,7 @@ FIXTURE_TEST_CASE(KJson_ToJsonString_PrettyPrint, KJsonFixture)
 }
 
 //////////////////////////////////////////////////// Main
-extern "C"
-{
-#ifdef WINDOWS
-#define main wmain
-#endif
 int main ( int argc, char *argv [] )
 {
-    rc_t rc=KJsonTestSuite(argc, argv);
-    return rc;
-}
-
+    return KJsonTestSuite(argc, argv);
 }

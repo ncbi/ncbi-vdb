@@ -30,6 +30,8 @@
 
 #include <ktst/unit_test.hpp>
 
+#include <kfg/config.h>
+
 extern "C"
 {
     #include <../libs/kdb/rcolumnblob.h>
@@ -150,33 +152,8 @@ FIXTURE_TEST_CASE(KRColumn_OpenBlobRead, KColumn_Fixture)
 }
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kapp/args.h>
-#include <kfg/config.h>
-
-ver_t CC KAppVersion ( void )
-{
-    return 0x1000000;
-}
-rc_t CC UsageSummary (const char * progname)
-{
-    return 0;
-}
-
-rc_t CC Usage ( const Args * args )
-{
-    return 0;
-}
-
-const char UsageDefaultName[] = "Test_KDB_KRColumn";
-
-rc_t CC KMain ( int argc, char *argv [] )
+int main( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
-    rc_t rc=KRColumnTestSuite(argc, argv);
-    return rc;
-}
-
+    return KRColumnTestSuite(argc, argv);
 }

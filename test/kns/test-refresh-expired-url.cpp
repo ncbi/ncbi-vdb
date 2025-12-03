@@ -28,10 +28,14 @@
 
 #include <ktst/unit_test.hpp>
 
+#include <kapp/args.h> // Args
+
+#include <kfg/config.h>
 #include <kfg/kfg-priv.h>
 #include <kns/kns-mgr-priv.h>
 #include <kfs/file.h>
 #include <klib/time.h>
+#include <klib/debug.h>
 #include <kproc/timeout.h>
 #include <cloud/manager.h>
 #include <cloud/impl.h>
@@ -530,10 +534,6 @@ FIXTURE_TEST_CASE( HttpRefreshTestSuite_HeadAsPost_ShortFile, CloudFixture )
 
 //////////////////////////////////////////// Main
 
-#include <kapp/args.h> // Args
-#include <klib/debug.h>
-#include <kfg/config.h>
-
 static rc_t argsHandler ( int argc, char * argv [] ) {
     Args * args = NULL;
     rc_t rc = ArgsMakeAndHandle ( & args, argc, argv, 0, NULL, 0 );
@@ -541,32 +541,25 @@ static rc_t argsHandler ( int argc, char * argv [] ) {
     return rc;
 }
 
-extern "C" {
-    const char UsageDefaultName[] = "test-refresh-expired";
-    rc_t CC UsageSummary ( const char     * progname) { return 0; }
-    rc_t CC Usage        ( const struct Args * args ) { return 0; }
-    ver_t CC KAppVersion ( void ) { return 0; }
+int main( int argc, char * argv [] )
+{
+    //if ( 1 ) assert ( ! KDbgSetString ( "KNS-HTTP" ) );
+    KConfigDisableUserSettings ();
 
-    rc_t CC KMain ( int argc, char * argv [] )
-    {
-        //if ( 1 ) assert ( ! KDbgSetString ( "KNS-HTTP" ) );
-        KConfigDisableUserSettings ();
+    rc_t rc = KConfigMakeEmpty ( & kfg );
+    // turn off certificate validation to download from storage.googleapis.com
+    if ( rc == 0 )
+        rc = KConfigWriteString ( kfg, "/tls/allow-all-certs", "true" );
 
-        rc_t rc = KConfigMakeEmpty ( & kfg );
-        // turn off certificate validation to download from storage.googleapis.com
-        if ( rc == 0 )
-            rc = KConfigWriteString ( kfg, "/tls/allow-all-certs", "true" );
+    // in order to run in a cloud, give permission to submit computing environment
+    if (rc == 0)
+        rc = KConfigWriteString(kfg, "/libs/cloud/report_instance_identity", "true");
 
-        // in order to run in a cloud, give permission to submit computing environment
-        if (rc == 0)
-            rc = KConfigWriteString(kfg, "/libs/cloud/report_instance_identity", "true");
+    if ( rc == 0 )
+        rc = (rc_t)HttpRefreshTestSuite ( argc, argv );
 
-        if ( rc == 0 )
-            rc = HttpRefreshTestSuite ( argc, argv );
+    RELEASE ( KConfig, kfg );
 
-        RELEASE ( KConfig, kfg );
-
-        return rc;
-    }
+    return (int)rc;
 }
 

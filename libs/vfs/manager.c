@@ -78,6 +78,7 @@
 #include <klib/out.h>
 #include <klib/printf.h>
 #include <klib/rc.h>
+#include <klib/status.h> /* STATUS */
 #include <klib/strings.h> /* ENV_VDB_REMOTE_NEED_CE */
 #include <klib/time.h>
 #include <klib/vector.h>
@@ -375,7 +376,8 @@ static void CC BstCount(BSTNode * n, void * data) {
 }
 
 uint32_t
-VFSManagerSdlCacheCount(const VFSManager * self, ESdlCacheState * state)
+VFSManagerSdlCacheCount(const VFSManager * self,
+    /* ESdlCacheState */ uint32_t * state)
 {
     uint32_t count = 0;
 
@@ -734,10 +736,18 @@ static rc_t wrap_in_rr_cache( KDirectory * dir,
 
 const char * get_fallback_cache_location( void )
 {
+    static bool reported = false;
+
     const char * c = getenv ( "TMPDIR" );
-    if ( c != NULL )
-        return c;
-    return fallback_cache_location;
+    if ( c == NULL )
+        c = fallback_cache_location;
+
+    if ( ! reported ) {
+        STATUS ( STAT_USR, "Using '%s' as cache directory\n", c );
+        reported = true;
+    }
+
+    return c;
 }
 
 
@@ -845,31 +855,34 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
 
         /* if we have been given a location, we use it. CacheTeeV3 can deal with invalid/unreachable ones! */
         if ( NULL != cache_loc && NULL == definitve_cache_location ) {
+            STATUS ( STAT_PWR, "Using '%s' as cache file\n", cache_loc );
             rc = KDirectoryResolvePath ( dir, true, location, sizeof location,
                                          "%s", cache_loc );
         } else {
         /* if we have no given location or it does not exist or it is not read/writable for us */
             const String * id = make_id( path );
             if ( NULL != id ) {
+                const char * root = NULL;
+
                 remove_on_close = true;
                 promote = false;
 
                 if ( NULL != definitve_cache_location ) {
                     /* use definitve location ( do not try promotion, remove-on-close ) */
-                    rc = KDirectoryResolvePath ( dir, true, location, sizeof location,
-                                                 "%s/%s.sra",
-                                                 definitve_cache_location, id -> addr );
+                    root = definitve_cache_location;
                 }
                 else if ( cps -> temp_cache[ 0 ] != 0 ) {
                     /* we have user given temp cache - location ( do not try promotion, remove-on-close ) */
-                    rc = KDirectoryResolvePath ( dir, true, location, sizeof location,
-                                                 "%s/%s.sra", cps -> temp_cache, id -> addr );
+                    root = cps -> temp_cache;
                 } else {
                     /* fallback to hardcoded path location ( do not try promotion, remove-on-close ) */
-                    rc = KDirectoryResolvePath ( dir, true, location, sizeof location,
-                                                 "%s/%s.sra",
-                                                 get_fallback_cache_location(), id -> addr );
+                    root = get_fallback_cache_location();
                 }
+                STATUS ( STAT_PWR, "Using '%s' as cache directory\n", root );
+                rc = KDirectoryResolvePath ( dir, true, location, sizeof location,
+                                                 "%s/%s.sra",
+                                                 root, id -> addr );
+
                 StringWhack ( id );
             } else {
                 rc = SILENT_RC( rcVFS, rcPath, rcReading, rcFormat, rcInvalid );
@@ -4721,6 +4734,8 @@ static bool VFSManagerCheckEnvAndAdImplNoqual(const VFSManager * self,
             rc = VPathAttachVdbcache((VPath*)(*outPath), vdbcache);
 
         RELEASE(VPath, vdbcache);
+
+        ((VPath*)(*outPath))->highly_reliable = inPath->highly_reliable;
     }
 
     RELEASE(KNgcObj, ngc);

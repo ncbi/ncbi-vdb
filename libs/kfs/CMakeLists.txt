@@ -66,7 +66,6 @@ set( KFS_CMN
     tocfile
     sra
     tar
-    teefile
     buffile
     buffile-read
     buffile-write
@@ -98,6 +97,11 @@ set( KFS_CMN
     mmap
     ${OS_SPECIFIC_SRC}
 )
+
+if ( "GNU" STREQUAL "${CMAKE_C_COMPILER_ID}")
+    set_source_files_properties( md5 crc32
+        PROPERTIES COMPILE_FLAGS -Wno-array-bounds )
+endif()
 
 set( KFS_SRC
     ${KFS_CMN}

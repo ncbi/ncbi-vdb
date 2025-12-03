@@ -121,9 +121,6 @@ TEST_CASE ( test ) {
     REQUIRE_RC ( rc );
 }
 
-rc_t CC Usage ( const Args * args ) { return 0; }
-const char UsageDefaultName [] = "test-proxy-with-scheme";
-
 rc_t CC UsageSummary ( const char * prog_name ) {
     return KOutMsg (
 "Usage:"
@@ -163,21 +160,18 @@ static rc_t argsHandler ( int argc, char * argv [] ) {
     return rc;
 }
 
-extern "C" {
-    ver_t CC KAppVersion ( void ) { return 0; }
-
-    rc_t CC KMain ( int argc, char * argv [] ) {
-        putenv((char*)"NCBI_VDB_NO_CACHE_SDL_RESPONSE=1");
+int main ( int argc, char * argv [] ) {
+    putenv((char*)"NCBI_VDB_NO_CACHE_SDL_RESPONSE=1");
+    SetUsageSummary( UsageSummary );
 
 #if 0 && _DEBUGGING
-        KDbgSetString ( "VFS" );
-        KDbgSetString ( "KFG" );
+    KDbgSetString ( "VFS" );
+    KDbgSetString ( "KFG" );
 #endif
-        rc_t rc = TestProxySchemeSuite ( argc, argv );
+    int rc = TestProxySchemeSuite ( argc, argv );
 
-        free ( PROXY );
-        PROXY = NULL;
+    free ( PROXY );
+    PROXY = NULL;
 
-        return rc;
-    }
+    return rc;
 }

@@ -26,9 +26,14 @@
 #define NOMINMAX 1
 #include "WVDB_Fixture.hpp"
 
+#include <kfg/config.h>
+
 using namespace std;
 
 TEST_SUITE( WVdbSlowTestSuite );
+
+// on hosts with less memory or lower quota these tests get the process killed
+#ifdef  TEAMCITY_SH
 
 FIXTURE_TEST_CASE ( VCursorCommit_BufferOverflow, WVDB_Fixture )
 {   // VDB-4341
@@ -105,6 +110,10 @@ FIXTURE_TEST_CASE ( VCursorCommit_BufferOverflow, WVDB_Fixture )
 
 FIXTURE_TEST_CASE ( VCursor_PageMapOverflow, WVDB_Fixture )
 {   // VDB-4897
+    //NB: this test case consumes a lot of memory;
+    // if this process gets killed by the kernel,
+    // consider a host with more memory
+
     m_databaseName = ScratchDir + GetName();
     RemoveDatabase();
 
@@ -139,34 +148,11 @@ if ( i % 1000000 == 0 ) cout << i/1000000 <<endl;
     }
 }
 
+#endif
+
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kapp/args.h>
-#include <kfg/config.h>
-
-ver_t CC KAppVersion ( void )
-{
-    return 0x1000000;
-}
-rc_t CC UsageSummary (const char * progname)
-{
-    return 0;
-}
-
-rc_t CC Usage ( const Args * args )
-{
-    return 0;
-}
-
-const char UsageDefaultName[] = "test-wvdb";
-
-rc_t CC KMain ( int argc, char *argv [] )
+int main( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
-    rc_t rc=WVdbSlowTestSuite(argc, argv);
-    return rc;
-}
-
+    return WVdbSlowTestSuite(argc, argv);
 }

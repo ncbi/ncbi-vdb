@@ -168,32 +168,8 @@ TEST_CASE(KRamFileWrite_shift_right)
 }
 
 //////////////////////////////////////////// Main
-
-extern "C"
-{
-
-ver_t CC KAppVersion ( void )
-{
-    return 0x1000000;
-}
-
-rc_t CC UsageSummary (const char * prog_name)
-{
-    return 0;
-}
-
-rc_t CC Usage ( const Args * args)
-{
-    return 0;
-}
-
-const char UsageDefaultName[] = "test-kfg";
-
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
-    rc_t rc=RamFileTestSuite(argc, argv);
-    return rc;
-}
-
+    return RamFileTestSuite(argc, argv);
 }

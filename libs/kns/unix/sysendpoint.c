@@ -31,13 +31,19 @@
 #include <klib/rc.h>
 #include <klib/status.h> /* STATUS */
 #include <klib/data-buffer.h>
+#include <klib/debug.h> /* DBGMSG */
 
 #include "stream-priv.h"
 
-#include <string.h>
+#ifndef __USE_GNU
+    #define __USE_GNU
+#endif
+#include <netinet/in.h>
+#include <sys/socket.h>
 #include <netdb.h>
 #include <arpa/inet.h>
-#include <assert.h>
+
+#include <errno.h>  /* ERANGE definition */
 
 #include <sysalloc.h>
 
@@ -96,43 +102,50 @@ rc_t CC KNSManagerInitDNSEndpoint ( struct KNSManager const *self,
 
                 if ( rc ==  0 )
                 {
-                    struct hostent *remote = gethostbyname ( hostname );
-                    if ( remote != NULL )
-                    { 
-                        struct in_addr ** addr_list
-                            = ( struct in_addr ** ) remote -> h_addr_list;
+                    struct addrinfo hints;
+                    memset(&hints, 0, sizeof hints);
+                    hints.ai_family = AF_INET; // IPv4
+
+                    char port_s [ 6 ];
+                    rc = string_printf ( port_s, sizeof( port_s ), NULL, "%u", port );
+
+                    struct addrinfo * res = NULL;
+                    int ret = getaddrinfo ( hostname, port_s, & hints, & res );
+                    if ( ret == 0 && res != NULL )
+                    {
+                        struct sockaddr_in * ipv4
+                            = ( struct sockaddr_in * ) res -> ai_addr;
                         string_copy_measure ( ep -> ip_address,
                             sizeof ep -> ip_address,
-                            inet_ntoa ( * addr_list [ 0 ] ));
+                            inet_ntoa ( ipv4->sin_addr ) );
                         STATUS ( STAT_PRG, "%s resolved to %s\n",
-                                           hostname , ep -> ip_address );
+                                    hostname , ep -> ip_address );
 
                         ep -> type = epIPV4;
-                        memmove ( & ep -> u . ipv4 . addr, remote -> h_addr_list [ 0 ], sizeof ep -> u . ipv4 . addr );
-                        ep -> u . ipv4 . addr = htonl ( ep -> u . ipv4 . addr );
+                        ep -> u . ipv4 . addr = htonl ( ipv4 ->sin_addr.s_addr );
                         ep -> u . ipv4 . port = ( uint16_t ) port;
+
+                        freeaddrinfo( res );
                     }
-                    else switch ( h_errno )
+                    else switch ( ret )
                     {
-                    case HOST_NOT_FOUND: /* The specified host is unknown */
+                    case EAI_NONAME: /* The specified host is unknown */
                         rc = RC ( rcNS, rcNoTarg, rcValidating, rcConnection, rcNotFound );
                         break;
-                    case NO_ADDRESS: /* The requested names valid but does not have an IP address */
+                    case EAI_NODATA: /* The requested names valid but does not have an IP address */
                         rc = RC ( rcNS, rcNoTarg, rcValidating, rcConnection, rcInconsistent );
                         break;
-#if ! defined NO_ADDRESS || ! defined NO_DATA || NO_ADDRESS != NO_DATA
-                    case NO_DATA: /* The requested name s valid but does not have an IP address */
+                    case EAI_ADDRFAMILY: /* The requested name is valid but does not have an IPv4 address */
                         rc = RC ( rcNS, rcNoTarg, rcValidating, rcConnection, rcEmpty );
                         break;
-#endif
-                    case NO_RECOVERY: /* A nonrecoverable name server error occured */
+                    case EAI_FAIL: /* A nonrecoverable name server error occured */
                         rc = RC ( rcNS, rcNoTarg, rcValidating, rcConnection, rcDestroyed );
                         break;
-                    case TRY_AGAIN: /* A temporary error occured on an authoritative name server. Try again later */
+                    case EAI_AGAIN: /* A temporary error occured on an authoritative name server. Try again later */
                         rc = RC ( rcNS, rcNoTarg, rcValidating, rcConnection, rcBusy );
                         break;
                     default :
-                        rc = RC ( rcNS, rcNoTarg, rcValidating, rcError, rcUnknown );
+                        rc = RC ( rcNS, rcNoTarg, rcValidating, rcConnection, rcUnknown );
                     }
                 }
             }
@@ -142,7 +155,7 @@ rc_t CC KNSManagerInitDNSEndpoint ( struct KNSManager const *self,
         }
 
         if ( rc != 0 )
-            memset ( ep, 0, sizeof * ep );        
+            memset ( ep, 0, sizeof * ep );
     }
 
     return rc;

@@ -156,15 +156,15 @@ TEST_CASE(ParseTree_Location)
     REQUIRE_EQ ( 0u, source -> GetLocation() . m_column );
 
     // add a real token, make sure its location is used as the tree's location
-    SchemaToken st1 = { KW_view, "view", 4, 0, 0, "file", 1, 2 };
-    source -> AddChild ( ctx, ParseTree :: Make ( ctx, st1 ) );
+    SchemaToken st_1 = { KW_view, "view", 4, 0, 0, "file", 1, 2 };
+    source -> AddChild ( ctx, ParseTree :: Make ( ctx, st_1 ) );
     REQUIRE_EQ ( string ( "file" ), string ( source -> GetLocation() . m_file ) ); // first real token
     REQUIRE_EQ ( 1u, source -> GetLocation() . m_line );
     REQUIRE_EQ ( 2u, source -> GetLocation() . m_column );
 
     // add more real tokens, make sure the location does not change
-    SchemaToken st2 = { KW_view, "view", 4, 0, 0, "file", 2, 3 };
-    source -> AddChild ( ctx, ParseTree :: Make ( ctx, st2 ) );
+    SchemaToken st_2 = { KW_view, "view", 4, 0, 0, "file", 2, 3 };
+    source -> AddChild ( ctx, ParseTree :: Make ( ctx, st_2 ) );
     REQUIRE_EQ ( 1u, source -> GetLocation() . m_line );
     REQUIRE_EQ ( 2u, source -> GetLocation() . m_column );
 
@@ -787,34 +787,8 @@ TEST_CASE ( View_JoinExpressionLikePhysicalIdent )
 }
 
 //////////////////////////////////////////// Main
-#include <kapp/args.h>
-#include <kfg/config.h>
-#include <klib/out.h>
 
-extern "C"
-{
-
-ver_t CC KAppVersion ( void )
-{
-    return 0x1000000;
-}
-
-const char UsageDefaultName[] = "wb-test-schema-parser";
-
-rc_t CC UsageSummary (const char * progname)
-{
-    return KOutMsg ( "Usage:\n" "\t%s [options] -o path\n\n", progname );
-}
-
-rc_t CC Usage( const Args* args )
-{
-    return 0;
-}
-
-rc_t CC KMain ( int argc, char *argv [] )
+int main( int argc, char *argv [] )
 {
     return SchemaParserTestSuite(argc, argv);
 }
-
-}
-

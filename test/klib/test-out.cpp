@@ -200,7 +200,7 @@ TEST_CASE(KOutMsgUriProvider)
 TEST_CASE(KOutMsgInvalidRC)
 {
     string const expected = string("INVALID,INVALID,INVALID,INVALID,INVALID)");
-    rc_t invalid_rc = -1;
+    rc_t invalid_rc = (rc_t) - 1;
     string output;
     REQUIRE_RC(KOutHandlerSet(writerFn, &output));
     REQUIRE_RC(KOutMsg("%R", invalid_rc));
@@ -209,15 +209,8 @@ TEST_CASE(KOutMsgInvalidRC)
 
 
 //////////////////////////////////////////////////// Main
-extern "C"
-{
-#ifdef WINDOWS
-#define main wmain
-#endif
 int main ( int argc, char *argv [] )
-{
-    rc_t rc=KOutTestSuite(argc, argv);
-    return rc;
-}
-
+{   
+    // NB do not use VdbApplication; we need VDB to be in an unitialized state (see the top 4 tests in this file)
+    return KOutTestSuite(argc, argv);
 }

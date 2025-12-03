@@ -59,7 +59,7 @@ typedef enum {
     eSCSFound,
 } ESdlCacheState;
 uint32_t VFSManagerSdlCacheCount
-(const struct VFSManager * self, ESdlCacheState * state);
+(const struct VFSManager * self, uint32_t * state);
 rc_t VFSManagerSdlCacheClear(struct VFSManager * self);
 /******************************************************************************/
 
@@ -89,7 +89,7 @@ struct VFSManager
     /**************************************************************************/
     /* Cache of names resolve results / SDL responses */
     bool notCachingSdlResponse;
-    ESdlCacheState trSdlState;
+    /* ESdlCacheState */ uint32_t trSdlState;
     BSTree trSdl;
     struct KLock * trSdlMutex;
     /**************************************************************************/

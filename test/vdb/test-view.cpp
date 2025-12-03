@@ -24,6 +24,8 @@
 
 #include "WVDB_Fixture.hpp"
 
+#include <kfg/config.h>
+
 #include <sysalloc.h>
 
 #include <klib/symbol.h>
@@ -68,7 +70,6 @@ const string CompactSchemaText =
 
 FIXTURE_TEST_CASE ( ViewAlias_DumpSchema_Compact, WVDB_v2_Fixture )
 {
-    REQUIRE_RC ( VDBManagerMakeUpdate ( & m_mgr, NULL ) );
     REQUIRE_RC ( VDBManagerMakeSchema ( m_mgr, & m_schema ) );
     ParseSchema ( m_schema, CompactSchemaText );
     string d = DumpSchema( * m_schema );
@@ -105,7 +106,6 @@ FIXTURE_TEST_CASE ( ViewAlias_DumpSchema_Full, WVDB_v2_Fixture )
         "}\n"
     ;
 
-    REQUIRE_RC ( VDBManagerMakeUpdate ( & m_mgr, NULL ) );
     REQUIRE_RC ( VDBManagerMakeSchema ( m_mgr, & m_schema ) );
     ParseSchema ( m_schema, FullSchemaText );
     string d = DumpSchema( * m_schema, false );
@@ -986,33 +986,8 @@ FIXTURE_TEST_CASE(VDatabaseMemberType_Inherited, ViewFixture)
 //TODO: break these tests out to test-database.c
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kapp/args.h>
-#include <kfg/config.h>
-
-ver_t CC KAppVersion ( void )
-{
-    return 0x1000000;
-}
-rc_t CC UsageSummary (const char * progname)
-{
-    return 0;
-}
-
-rc_t CC Usage ( const Args * args )
-{
-    return 0;
-}
-
-const char UsageDefaultName[] = "test-view";
-
-rc_t CC KMain ( int argc, char *argv [] )
+int main( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
-    rc_t rc=ViewTestSuite(argc, argv);
-    return rc;
-}
-
+    return ViewTestSuite(argc, argv);
 }

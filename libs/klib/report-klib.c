@@ -441,7 +441,7 @@ static void CC reportError3Str(uint32_t indent, rc_t rc, const char* function,
 #ifdef WINDOWS
         sprintf_s(buffer, buffer_size, "%s%s%s", v1, v2, v3);
 #else
-        sprintf(buffer, "%s%s%s", v1, v2, v3);
+        snprintf(buffer, buffer_size, "%s%s%s", v1, v2, v3);
 #endif
         reportErrorStrImpl(indent, rc, function, name, buffer, eol);
         free(buffer);
@@ -884,6 +884,25 @@ LIB_EXPORT void CC ReportInit(int argc, char* argv[], ver_t tool_version)
 
         latch = true;
     }
+}
+
+LIB_EXPORT
+rc_t
+ReportGetVersion( ver_t * version )
+{
+    rc_t rc = 0;
+    Report* self = NULL;
+    ReportGet(&self);
+    if ( self == NULL )
+    {
+        rc = RC(rcApp, rcQuery, rcAccessing, rcData, rcUndefined);
+    }
+    else
+    {
+        *version = self -> tool_ver;
+        return 0;
+    }
+    return rc;
 }
 
 

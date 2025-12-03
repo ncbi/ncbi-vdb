@@ -600,12 +600,17 @@ LIB_EXPORT bool KHashFileFind( const KHashFile * self, const void * key,
     u8 **          table = hashtable->table;
     const uint64_t mask  = hashtable->table_sz - 1;
 
+    KLockAcquire( seg->seglock );
+
+    bool ret = false;
     while ( 1 )
     {
         bucket &= mask;
         const u8 * kv = table[bucket];
         if ( kv == BUCKET_INVALID )
-            return false;
+        {
+            break;
+        }
 
         if ( kv != BUCKET_INVISIBLE )
         {
@@ -632,7 +637,8 @@ LIB_EXPORT bool KHashFileFind( const KHashFile * self, const void * key,
                     memcpy( value, bkv.value, bkv.value_size );
                 if ( value_size )
                     *value_size = bkv.value_size;
-                return true;
+                ret = true;
+                break;
             }
         }
 
@@ -644,6 +650,9 @@ LIB_EXPORT bool KHashFileFind( const KHashFile * self, const void * key,
         ++triangle;
         bucket += ( triangle * ( triangle + 1 ) / 2 );
     }
+
+    KLockUnlock( seg->seglock );
+    return ret;
 }
 
 LIB_EXPORT rc_t KHashFileAdd( KHashFile * self, const void * key,

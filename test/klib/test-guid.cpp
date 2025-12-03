@@ -52,11 +52,11 @@ static uint8_t fromxdigit( unsigned char ch )
     if ( ch < '0' )
         return '?';
     if ( ch <= '9' )
-        return ch - '0';
+        return (uint8_t) ( ch - '0' );
     if ( ch < 'a' )
         return '?';
     if ( ch <= 'f' )
-        return ch - 'a' + 10;
+        return (uint8_t) ( ch - 'a' + 10 );
     return '?';
 }
 
@@ -91,7 +91,7 @@ TEST_CASE(Make_Success)
 
     // 0b10xx, variant 1 in the 2 msb
     REQUIRE ( isxdigit ( buf[19] ) );
-    REQUIRE_EQ ( 2, fromxdigit( buf[ 19 ] ) >> 2 );
+    REQUIRE_EQ ( 2, fromxdigit( (unsigned char)  buf[ 19 ] ) >> 2 );
 
     REQUIRE ( isxdigit ( buf[20] ) );
     REQUIRE ( isxdigit ( buf[21] ) );
@@ -114,15 +114,7 @@ TEST_CASE(Make_Success)
 }
 
 //////////////////////////////////////////////////// Main
-extern "C"
-{
-#ifdef WINDOWS
-#define main wmain
-#endif
 int main ( int argc, char *argv [] )
 {
-    rc_t rc=GUIDTestSuite(argc, argv);
-    return rc;
-}
-
+    return GUIDTestSuite(argc, argv);
 }

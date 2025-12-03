@@ -41,6 +41,8 @@
 #include <klib/json.h>
 #include <klib/namelist.h>
 
+#include <kfg/config.h>
+
 #include <arch-impl.h>
 
 using namespace std;
@@ -662,33 +664,8 @@ FIXTURE_TEST_CASE(KMetanode_ListChildren, KTextMetanode_ApiFixture)
 }
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kapp/args.h>
-#include <kfg/config.h>
-
-ver_t CC KAppVersion ( void )
-{
-    return 0x1000000;
-}
-rc_t CC UsageSummary (const char * progname)
-{
-    return 0;
-}
-
-rc_t CC Usage ( const Args * args )
-{
-    return 0;
-}
-
-const char UsageDefaultName[] = "Test_KDBText_Metanode";
-
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
-    rc_t rc=KDBTextMetanodeTestSuite(argc, argv);
-    return rc;
-}
-
+    return KDBTextMetanodeTestSuite(argc, argv);
 }

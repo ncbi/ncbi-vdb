@@ -41,7 +41,7 @@ static rc_t argsHandler(int argc, char *argv[]) {
 }
 TEST_SUITE_WITH_ARGS_HANDLER(SchemaPrivSuite, argsHandler)
 
-static void OnDb(void *item, void *data) {
+static void OnDb(void *item, void *data) noexcept {
     assert(item && data);
     const struct SDatabase *self(static_cast<const struct SDatabase*>(item));
     rc_t *aRc = static_cast<rc_t*>(data);
@@ -90,7 +90,7 @@ static void OnDb(void *item, void *data) {
         *aRc = rc;
 }
 
-static void OnTbl(void *item, void *data) {
+static void OnTbl(void *item, void *data) noexcept {
     assert(item && data);
     const struct STable *self(static_cast<const struct STable*>(item));
     rc_t *aRc = static_cast<rc_t*>(data);
@@ -113,23 +113,31 @@ static void OnTbl(void *item, void *data) {
         *aRc = 20;
         return;
     }
+
 #ifdef SHOW_RESULTS
     else
         std::cerr << "TABLE-NAME: " <<
            std::string(sn->name->name->addr, sn->name->name->size) << std::endl;
 #endif
+
+    KSymbolNameWhack( sn );
+}
+
+static void WhackTbl(void *item, void *data) noexcept
+{
+
 }
 
 TEST_CASE(TestSchemaPriv) {
     const VDBManager *m(NULL);
     REQUIRE_RC(VDBManagerMakeRead(&m, NULL));
-  
+
     const VDatabase *db(NULL);
     REQUIRE_RC(VDBManagerOpenDBRead(m, &db, NULL, "db/VDB-3418.sra"));
-    
+
     const VSchema *schema(NULL);
     REQUIRE_RC(VDatabaseOpenSchema(db, &schema));
-   
+
     // VSchemaGetDb
     const Vector *v(NULL);
     REQUIRE_RC(VSchemaGetDb(schema, &v));
@@ -150,23 +158,17 @@ TEST_CASE(TestSchemaPriv) {
     REQUIRE_RC(VSchemaGetTbl(schema, &v));
     REQUIRE_NOT_NULL(v);
     VectorForEach(v, false, OnTbl, &rc);
- 
+
     REQUIRE_RC(rc);
-   
+
     REQUIRE_RC(VSchemaRelease(schema));
-   
+
     REQUIRE_RC(VDatabaseRelease(db));
-   
+
     REQUIRE_RC(VDBManagerRelease(m));
 }
 
-extern "C" {
-    rc_t CC KMain(int argc, char *argv[]) {
-        KConfigDisableUserSettings();
-        return SchemaPrivSuite(argc, argv);
-    }
-    ver_t CC KAppVersion(void) { return 0; }
-    const char UsageDefaultName[]("Test_VDB_schema_priv");
-    rc_t CC Usage(const Args *args) { return 0; }
-    rc_t CC UsageSummary(const char *progname) { return 0; }
+int main(int argc, char *argv[]) {
+    KConfigDisableUserSettings();
+    return SchemaPrivSuite(argc, argv);
 }

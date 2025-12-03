@@ -30,11 +30,11 @@
 #include <ktst/unit_test.hpp> // TEST_CASE
 #include <vfs/path.h>
 #include <vfs/manager.h>
-#include <klib/text.h> 
-#include <klib/out.h> 
-#include <klib/printf.h> 
-#include <kfs/directory.h> 
-#include <kfg/config.h> 
+#include <klib/text.h>
+#include <klib/out.h>
+#include <klib/printf.h>
+#include <kfs/directory.h>
+#include <kfg/config.h>
 
 #include <sysalloc.h>
 #include <cstdlib>
@@ -79,7 +79,7 @@ TEST_CASE( SetCacheRoot_1 )
     rc_t rc = VFSManagerMakePath( vfs_mgr, &vpath, other_path );
     if ( rc != 0 )
         FAIL( "FAIL: VFSManagerMakePath() failed" );
-        
+
     rc = VDBManagerSetCacheRoot( vdb_mgr, vpath );
     if ( rc != 0 )
         FAIL( "FAIL: VDBManagerSetCacheRoot( mgr, vpath ) failed" );
@@ -111,7 +111,7 @@ rc_t prepare_test( const char * sub )
         if ( rc == 0 )
         {
             KOutMsg( "%s\n", new_home );
-            
+
             rc = KDirectoryCreateDir( dir, 0775, ( kcmInit | kcmParents ) , "%s/.ncbi", new_home );
             KDirectoryRelease( dir );
         }
@@ -132,17 +132,7 @@ void finish_test( void )
 }
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kapp/args.h>
-
-ver_t CC KAppVersion ( void ) { return 0x1000000; }
-rc_t CC UsageSummary ( const char * progname ) { return 0; }
-rc_t CC Usage ( const Args * args ) { return 0; }
-const char UsageDefaultName[] = "test-VDB-3305";
-
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     rc_t rc = prepare_test( HomeSub );
     if ( rc == 0 )
@@ -150,12 +140,10 @@ rc_t CC KMain ( int argc, char *argv [] )
         rc = make_global_managers();
         if ( rc == 0 )
         {
-            rc = VDB_3305( argc, argv );
+            rc = (rc_t)VDB_3305( argc, argv );
             release_global_managers();
         }
     }
     //finish_test();
-    return rc;
-}
-
+    return (int)rc;
 }

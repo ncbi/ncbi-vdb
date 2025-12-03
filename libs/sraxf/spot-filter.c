@@ -80,7 +80,7 @@ rc_t CC make_spot_filter(void *const self
     assert(SAME_COUNT(COL_READ_START, COL_READ_LEN));
     assert(SAME_COUNT(COL_READ_START, COL_READ_TYPE));
     assert(SAFE_COUNT(COL_SPOT_FILTER) == 1);
-    
+
     rslt->data->elem_bits = 8;
     rslt->elem_bits = rslt->data->elem_bits;
     rslt->elem_count = 1;
@@ -93,6 +93,8 @@ rc_t CC make_spot_filter(void *const self
  #if USE_BASE_FILTER
             if (cause == notRejected)
                 cause = SPOT_FILTER(self, nreads, start, len, type, read);
+ #else
+            UNUSED( read );
  #endif
             result = cause == notRejected ? SRA_SPOT_FILTER_PASS : SRA_SPOT_FILTER_REJECT;
         }
@@ -155,7 +157,7 @@ VTRANSFACT_IMPL( NCBI_SRA_make_spot_filter, 1, 0, 0 ) ( const void *Self, const 
                     self->no_quality = cp->argv[2].data.u8[0];
                 }
             }
-        }        
+        }
         self->spot_filter = func;
         rslt->self = self;
         rslt->whack = free;
@@ -204,15 +206,15 @@ static INSDC_SRA_spot_filter bitset_to_spot_filter(unsigned const bits)
     // *    1) REJECT, if any are REJECT
     if ((bits & (1u << SRA_READ_FILTER_REJECT)) != 0)
         return SRA_SPOT_FILTER_REJECT;
-    
+
     // *    2) REDACTED, if any are REDACTED
     if ((bits & (1u << SRA_READ_FILTER_REDACTED)) != 0)
         return SRA_SPOT_FILTER_REDACTED;
-    
+
     // *    3) CRITERIA, if any are CRITERIA
     if ((bits & (1u << SRA_READ_FILTER_CRITERIA)) != 0)
         return SRA_SPOT_FILTER_CRITERIA;
-    
+
     return SRA_SPOT_FILTER_PASS;
 }
 #endif
@@ -253,13 +255,13 @@ rc_t CC read2spot_filter(  void *const self
     unsigned const nfilt = (unsigned)SAFE_COUNT(COL_READ_FILTER);
     BIND_COLUMN(COL_READ_FILTER, INSDC_read_filter, filter);
     rc_t rc = 0;
-    
+
     rslt->data->elem_bits = 8;
     rc = KDataBufferResize( rslt->data, 1 );
     if ( rc == 0 )
     {
         uint8_t *const dst = (uint8_t *)rslt->data->base;
-        
+
         rslt->elem_bits = rslt->data->elem_bits;
         rslt->elem_count = 1;
         dst[0] = spot_filter_from_read_filter(nfilt, filter);
@@ -294,7 +296,7 @@ VTRANSFACT_IMPL( INSDC_SRA_read2spot_filter, 1, 0, 0 ) ( const void *Self, const
 static void fill_array(unsigned const count, INSDC_read_filter result[], INSDC_read_filter const value)
 {
     unsigned i;
-    
+
     for (i = 0; i < count; ++i) {
         result[i] = value;
     }
@@ -318,7 +320,7 @@ rc_t CC spot2read_filter(  void *const self
     INSDC_SRA_spot_filter const spot_value = (nfilt && filter) ? filter[0] : SRA_SPOT_FILTER_PASS;
     INSDC_SRA_read_filter const read_value = (INSDC_SRA_read_filter)spot_value;
     rc_t rc = 0;
-    
+
     rslt->data->elem_bits = 8;
     rc = KDataBufferResize( rslt->data, nreads );
     if ( rc == 0 )

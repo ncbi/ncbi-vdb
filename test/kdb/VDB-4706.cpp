@@ -34,6 +34,8 @@
 
 #include <kapp/args.h>
 
+#include <kfg/config.h>
+
 #include <ktst/unit_test.hpp>
 
 #include <memory>
@@ -57,8 +59,6 @@
 using namespace std;
 
 TEST_SUITE ( KdbTestSuite );
-
-const char UsageDefaultName[] = "VDB-4706";
 
 class KDB_ColumnCopyFixture {
 public:
@@ -327,20 +327,9 @@ FIXTURE_TEST_CASE ( CopyMeta, KDB_ColumnCopyFixture )
     checkTable ( tableName2 );
 }
 
-extern "C" {
-
-#include <kapp/args.h>
-#include <kfg/config.h>
-#include <klib/debug.h> // KDbgSetString
-
-ver_t CC KAppVersion ( void ) { return 0x1000000; }
-rc_t CC UsageSummary ( const char *progname ) { return 0; }
-
-rc_t CC Usage ( const Args *args ) { return 0; }
-
-rc_t CC KMain ( int argc, char *argv[] )
+int main ( int argc, char *argv[] )
 {
     KConfigDisableUserSettings ();
     return KdbTestSuite ( argc, argv );
 }
-}
+

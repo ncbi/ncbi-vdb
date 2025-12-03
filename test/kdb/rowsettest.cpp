@@ -761,60 +761,8 @@ FIXTURE_TEST_CASE ( KRowSetUnionNormalTest, RowSetFixture )
 }
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kapp/main.h>
-#include <kapp/args.h>
-
-ver_t CC KAppVersion ( void )
-{
-    return 0;
-}
-
-
-const char UsageDefaultName[] = "test-rowset";
-
-rc_t CC UsageSummary ( const char *progname )
-{
-    return KOutMsg ( "\n"
-                     "Usage:\n"
-                     "  %s [Options] <target>\n"
-                     "\n"
-                     "Summary:\n"
-                     "  test the rowset.\n"
-                     , progname
-        );
-}
-
-rc_t CC Usage ( const Args *args )
-{
-    const char * progname = UsageDefaultName;
-    const char * fullpath = UsageDefaultName;
-    rc_t rc;
-
-    if (args == NULL)
-        rc = RC (rcApp, rcArgv, rcAccessing, rcSelf, rcNull);
-    else
-        rc = ArgsProgram (args, &fullpath, &progname);
-    if (rc)
-        progname = fullpath = UsageDefaultName;
-
-    UsageSummary (progname);
-
-    KOutMsg ("Options:\n");
-
-    HelpOptionsStandard ();
-
-    HelpVersion (fullpath, KAppVersion());
-
-    return rc;
-}
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     srand ( time(NULL) );
     return KRowSetTestSuite(argc, argv);
 }
-
-}
-

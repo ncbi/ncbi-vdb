@@ -25,7 +25,7 @@
  */
 
 #include <ktst/unit_test.hpp> /* TEST_SUITE */
-#include <kapp/main.h> /* KAppVersion */
+#include <kapp/vdbapp.h> /* KAppVersion */
 
 #include <kfs/directory.h>
 #include <vdb/manager.h>
@@ -34,18 +34,13 @@
 #include <insdc/insdc.h>
 
 /*****************************************************************************
-    This test 
+    This test
 *****************************************************************************/
 
 extern "C" {
     #define UNIT_TEST_FUNCTION 1
     #include "../../libs/sraxf/syn_quality.c"
 }
-
-ver_t CC KAppVersion( void ) { return 0; }
-rc_t CC Usage( const Args * args ) { return 0; }
-const char UsageDefaultName[] = "";
-rc_t UsageSummary( const char * progname ) { return 0; }
 
 TEST_SUITE( SynQualityTestSuite );
 
@@ -71,7 +66,7 @@ TEST_CASE( TwoRead_Fail ) {
     REQUIRE(UnitTest_2Read_Fail() == 0);
 }
 
-rc_t CC KMain ( int argc, char *argv [] )
+int main( int argc, char *argv [] )
 {
     return SynQualityTestSuite( argc, argv );
 }

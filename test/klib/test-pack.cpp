@@ -30,6 +30,8 @@
 
 #include <klib/pack.h>
 
+#include <kfg/config.h>
+
 #include <ktst/unit_test.hpp>
 
 #include <array>
@@ -70,7 +72,7 @@ public:
         THROW_ON_FALSE( (bitsz_t)packed == m_packedBits );
         if ( debug )
         {
-            int i = 0;
+            Buffer::size_type i = 0;
             bitsz_t bits = m_packedBits;
             while ( true )
             {
@@ -114,7 +116,7 @@ public:
 
         if ( debug )
         {
-            int i = 0;
+            Buffer::size_type i = 0;
             bitsz_t bits = m_packedBits;
             while ( true )
             {
@@ -343,22 +345,8 @@ FIXTURE_TEST_CASE(Pack_fail, PackFixture)
 }
 
 //////////////////////////////////////////////////// Main
-extern "C" {
-
-#include <kapp/args.h>
-#include <kfg/config.h>
-
-ver_t CC KAppVersion(void) { return 0x1000000; }
-rc_t CC UsageSummary(const char* progname) { return 0; }
-
-rc_t CC Usage(const Args* args) { return 0; }
-
-const char UsageDefaultName[] = "Test_KLIB_pack";
-
-rc_t CC KMain(int argc, char* argv[])
+int main(int argc, char* argv[])
 {
     KConfigDisableUserSettings();
-    rc_t rc = KlibPackTestSuite(argc, argv);
-    return rc;
-}
+    return KlibPackTestSuite(argc, argv);
 }

@@ -33,6 +33,8 @@
 
 #include <ktst/unit_test.hpp>
 
+#include <kfg/config.h>
+
 #include <klib/out.h>
 #include <klib/rc.h>
 #include <klib/time.h>
@@ -54,7 +56,7 @@ class TOFixture
 {
     public:
         timeout_t to;
-    
+
         TOFixture ()
         {
             timeout_init ( timeout_milliseconds );
@@ -69,16 +71,16 @@ class TOFixture
 class SQFixture : public TOFixture
 {
     public:
-        KQueue * q;    
+        KQueue * q;
         int values[ num_values ];
-        
+
         SQFixture () : TOFixture(), q( NULL )
         {
             for ( int i = 0; i < num_values; ++i ) values[ i ] = i + 1;
         }
-        
+
         ~SQFixture () {}
-        
+
         rc_t push_some( KQueue * q, int count, timeout_t * tm )
         {
             rc_t rc = 0;
@@ -115,7 +117,7 @@ FIXTURE_TEST_CASE( SimpleQ_3, SQFixture )
         REQUIRE_RC( KQueuePop ( q, ( void ** )&value, NULL ) );
         REQUIRE_EQ( * value, values[ i ] );
     }
-    
+
     REQUIRE_RC( KQueueRelease ( q ) );
 }
 
@@ -131,7 +133,7 @@ FIXTURE_TEST_CASE( SimpleQ_4, SQFixture )
         REQUIRE_RC( KQueuePop ( q, ( void ** )&value, &to ) );
         REQUIRE_EQ( * value, values[ i ] );
     }
-    
+
     REQUIRE_RC( KQueueRelease ( q ) );
 }
 
@@ -143,7 +145,7 @@ FIXTURE_TEST_CASE( SimpleQ_5, SQFixture )
 
     REQUIRE_RC_FAIL( KQueuePush ( q, &( values[ 0 ] ), &to ) );
     REQUIRE_EQ( ( uint32_t )0, TimeoutRemaining ( &to ) );
-    
+
     REQUIRE_RC( KQueueRelease ( q ) );
 }
 
@@ -153,16 +155,16 @@ FIXTURE_TEST_CASE( SimpleQ_6, SQFixture )
     REQUIRE_RC( KQueueMake ( &q, num_values ) );
     REQUIRE_RC( push_some( q, num_values, &to ) );
 
-    int * value;    
+    int * value;
     for ( int i = 0; i < num_values; ++i )
     {
         REQUIRE_RC( KQueuePop ( q, ( void ** )&value, &to ) );
         REQUIRE_EQ( * value, values[ i ] );
     }
-    
+
     REQUIRE_RC_FAIL( KQueuePop ( q, ( void ** )&value, &to ) );
     REQUIRE_EQ( ( uint32_t )0, TimeoutRemaining ( &to ) );
-    
+
     REQUIRE_RC( KQueueRelease ( q ) );
 }
 
@@ -170,7 +172,7 @@ class CONDFixture : public TOFixture
 {
     public:
         KCondition * cond;
-        
+
         CONDFixture () : TOFixture(), cond( NULL )
         {
         }
@@ -192,52 +194,29 @@ static rc_t CC thread_func_2( const KThread *self, void *data )
 FIXTURE_TEST_CASE( SimpleCOND_2, CONDFixture )
 {
     REQUIRE_RC( KConditionMake ( &cond ) );
-    
+
     KLock * lock;
     REQUIRE_RC( KLockMake ( &lock ) );
-    
+
     KThread * t;
     REQUIRE_RC( KThreadMake ( &t, thread_func_2, cond ) );
     KOutMsg( "COND2: Thread started\n" );
 
-    REQUIRE_RC( KLockAcquire ( lock ) );    
+    REQUIRE_RC( KLockAcquire ( lock ) );
     REQUIRE_RC( KConditionWait ( cond, lock ) );
-    KOutMsg( "COND2: condition received\n" );    
+    KOutMsg( "COND2: condition received\n" );
     REQUIRE_RC( KLockUnlock ( lock ) );
 
     rc_t rc_thread;
     REQUIRE_RC( KThreadWait ( t, &rc_thread ) );
     REQUIRE_RC( rc_thread );
     REQUIRE_RC( KThreadRelease ( t ) );
-    
-    REQUIRE_RC( KLockRelease ( lock ) );    
+
+    REQUIRE_RC( KLockRelease ( lock ) );
     REQUIRE_RC( KConditionRelease ( cond ) );
 }
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kapp/args.h>
-#include <kfg/config.h>
-
-ver_t CC KAppVersion ( void )
-{
-    return 0x1000000;
-}
-
-rc_t CC UsageSummary ( const char * progname )
-{
-    return 0;
-}
-
-rc_t CC Usage ( const Args * args )
-{
-    return 0;
-}
-
-const char UsageDefaultName[] = "simple_q";
-
 #define OPTION_DUMMY    "dummy"
 #define ALIAS_DUMMY     "d"
 
@@ -248,7 +227,7 @@ OptDef TestOptions[] =
     { OPTION_DUMMY, ALIAS_DUMMY, NULL, dummy_usage, 1, false,  false }
 };
 
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     Args * args;
     rc_t rc = ArgsMakeAndHandle( &args, argc, argv,
@@ -258,6 +237,4 @@ rc_t CC KMain ( int argc, char *argv [] )
         rc = SimpleQTests( argc, argv );
     }
     return rc;
-}
-
 }

@@ -29,6 +29,10 @@
 #include <klib/rc.h>
 #include <klib/symbol.h>
 
+#include <kfg/config.h>
+
+#include <kapp/args.h>
+
 #include <vdb/table.h>
 #include <vdb/manager.h>
 #include <vdb/database.h>
@@ -524,6 +528,13 @@ FIXTURE_TEST_CASE( VTableCursor_LinkedCursorSet, TableCursorFixture )
     REQUIRE_RC ( VCursorRelease ( curs ) );
 }
 
+FIXTURE_TEST_CASE( VTableCursor_LinkedCursorSet_NameTooLong, TableCursorFixture )
+{
+    MakeReadCursorAddColumnOpen ( Accession, Column );
+
+    REQUIRE_RC_FAIL ( VCursorLinkedCursorSet ( m_cur, string(64, 'A').c_str(), m_cur ) );
+}
+
 FIXTURE_TEST_CASE( VTableCursor_GetCacheCapacity, TableCursorFixture )
 {
     MakeReadCursor ( Accession );
@@ -645,7 +656,7 @@ FIXTURE_TEST_CASE( VTableCursor_InstallTrigger, TableCursorFixture )
     REQUIRE_RC_FAIL ( VCursorInstallTrigger ( (VCursor*)m_cur, & prod ) ); // write side only
 }
 
-void CC incrementUint32 ( BSTNode *n, void *data )
+void CC incrementUint32 ( BSTNode *n, void *data ) noexcept
 {
     uint32_t * count = reinterpret_cast<uint32_t *> ( data );
     ++ * count;
@@ -677,10 +688,6 @@ FIXTURE_TEST_CASE( VTableCursor_ListReadableColumns, TableCursorFixture )
 }
 
 //////////////////////////////////////////// Main
-#include <kfg/config.h>
-
-#include <kapp/args.h>
-
 static rc_t argsHandler ( int argc, char * argv [] ) {
     Args * args = NULL;
     rc_t rc = ArgsMakeAndHandle ( & args, argc, argv, 0, NULL, 0 );
@@ -688,30 +695,8 @@ static rc_t argsHandler ( int argc, char * argv [] ) {
     return rc;
 }
 
-extern "C"
-{
-
-ver_t CC KAppVersion ( void )
-{
-    return 0x1000000;
-}
-rc_t CC UsageSummary (const char * progname)
-{
-    return 0;
-}
-
-rc_t CC Usage ( const Args * args )
-{
-    return 0;
-}
-
-const char UsageDefaultName[] = "test-tablecursor";
-
-rc_t CC KMain ( int argc, char *argv [] )
+int main( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
-    rc_t rc=VdbTableCursorTestSuite_Read(argc, argv);
-    return rc;
-}
-
+    return VdbTableCursorTestSuite_Read(argc, argv);
 }

@@ -35,6 +35,7 @@
 
 #include <klib/out.h>
 #include <kapp/args.h>
+#include <kapp/vdbapp.h>
 #include <kfg/config.h>
 
 using namespace std;
@@ -69,7 +70,7 @@ checkWriteFile ( KFile * File, size_t Pos, size_t Size )
         }
 
         RCt =  KFileWrite (
-                            File, 
+                            File,
                             Offset + Pos,
                             StringOne,
                             ToWr,
@@ -109,7 +110,7 @@ checkReadFile ( KFile * File, size_t Pos, size_t Size )
     }
 
     RCt =  KFileReadAll (
-                        File, 
+                        File,
                         Pos,
                         Buf,
                         Size,
@@ -146,7 +147,7 @@ checkMakeFile ( const char * Name, size_t Size )
 
     RCt = KDirectoryNativeDir ( & Dir );
     if ( RCt == 0 ) {
-        RCt = KDirectoryCreateFile ( 
+        RCt = KDirectoryCreateFile (
                                     Dir,
                                     & File,
                                     true,
@@ -183,7 +184,7 @@ checkOpenFile ( KFile ** File, const char * Name, bool Write )
     RCt = KDirectoryNativeDir ( & Dir );
     if ( RCt == 0 ) {
         RCt = Write
-                    ? KDirectoryOpenFileWrite ( Dir, File, "%s", Name )
+                    ? KDirectoryOpenFileWrite ( Dir, File, true, "%s", Name )
                     : KDirectoryOpenFileRead ( Dir, ( const KFile ** ) File, "%s", Name )
                     ;
         KDirectoryRelease ( Dir );
@@ -363,30 +364,9 @@ TEST_CASE(KAppendFile_set_size)
 
 //////////////////////////////////////////// Main
 
-extern "C"
+int 
+main ( int argc, char *argv [] )
 {
-
-ver_t CC KAppVersion ( void )
-{
-    return 0x1000000;
-}
-
-rc_t CC UsageSummary (const char * prog_name)
-{
-    return 0;
-}
-
-rc_t CC Usage ( const Args * args)
-{
-    return 0;
-}
-
-const char UsageDefaultName[] = "test-appendfile";
-
-rc_t CC KMain ( int argc, char *argv [] )
-{
-    rc_t rc=AppendFileTestSuite(argc, argv);
-    return rc;
-}
-
+    VDB::Application app(argc, argv);
+    return AppendFileTestSuite(argc, argv);
 }

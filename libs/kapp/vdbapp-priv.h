@@ -24,35 +24,35 @@
 *
 */
 
-#include <kapp/main.h>
-#include <kns/manager.h>
+#pragma once
 
-#include <stdio.h>
+#include <kapp/vdbapp.h>
 
-ver_t CC KAppVersion ( void )
-{
-    return 0x01020003;
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/*KAppGetTotalRam
+ * returns total physical RAM installed in the system
+ * in bytes
+ */
+rc_t KAppGetTotalRam ( uint64_t * totalRam );
+
+/* VdbInitializeSystem
+ *  OS-specific VDB initialization
+ */
+int VdbInitializeSystem();
+
+/* VdbTerminateSystem
+ *  OS-specific VDB termination
+ */
+void VdbTerminateSystem();
+
+/* SetQuitting
+ *  set the quitting flag (for internal use in this library)
+ */
+void SetQuitting();
+
+#ifdef __cplusplus
 }
-
-rc_t CC UsageSummary ( const char *progname )
-{
-    return 0;
-}
-
-rc_t CC Usage ( const Args *args )
-{
-    return 0;
-}
-
-
-rc_t CC KMain ( int argc, char *argv [] )
-{
-    rc_t rc;
-    const char * user_agent;
-
-    rc = KNSManagerGetUserAgent ( &user_agent );
-    if ( rc == 0 )
-        printf("%s\n", user_agent);
-
-    return rc;
-}
+#endif

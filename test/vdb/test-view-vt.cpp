@@ -25,7 +25,6 @@
 // this file is included into test-view-cursor.cpp
 
 ///////////////////////////// View-attached VCursor, tests covering virtual table functions
-
 FIXTURE_TEST_CASE ( ViewCursor_AddRef, ViewOnTableCursorFixture )
 {
     CreateCursor ( GetName(), ViewOnTableName );
@@ -230,7 +229,6 @@ FIXTURE_TEST_CASE( ViewCursor_IdRange_SameAsPrimaryTable, ViewOnTableCursorFixtu
         "{  column INSDC:SRA:spotid_t spot_id = t . SPOT_ID; }";
         // the view's id range is t's row_id range
 
-    REQUIRE_RC ( VDBManagerMakeUpdate ( & m_mgr, NULL ) );
     const VDatabase * db;
     REQUIRE_RC ( VDBManagerOpenDBRead ( m_mgr, & db, NULL, "SRR1063272" ) );
     VSchema * schema = NULL;
@@ -576,10 +574,10 @@ FIXTURE_TEST_CASE ( ViewCursor_CelLData, ViewOnTableCursorFixture )
 FIXTURE_TEST_CASE ( ViewCursor_CellDataDirect_CursorNotOpen, ViewOnTableCursorFixture )
 {
     CreateCursorAddColumn ( GetName(), ViewOnTableName, ViewColumnName );
-    uint32_t m_elemBits = 0;
-    uint32_t m_boff;
-    uint32_t m_rowLen;
-    REQUIRE_RC_FAIL ( VCursorCellDataDirect ( m_cur, 2, m_columnIdx, & m_elemBits, & m_base, & m_boff, & m_rowLen ) );
+    uint32_t elemBits = 0;
+    uint32_t boff;
+    uint32_t rowLen;
+    REQUIRE_RC_FAIL ( VCursorCellDataDirect ( m_cur, 2, m_columnIdx, & elemBits, & m_base, & boff, & rowLen ) );
 }
 FIXTURE_TEST_CASE ( ViewCursor_CelLDataDirect, ViewOnTableCursorFixture )
 {
@@ -646,7 +644,7 @@ FIXTURE_TEST_CASE ( ViewCursor_SetUserData_NoDestructor, ViewOnTableCursorFixtur
 }
 
 static void * UserDestroyCalledWith = 0;
-static void CC UserDestroy(void* p_param)
+static void CC UserDestroy(void* p_param) noexcept
 {
     UserDestroyCalledWith = p_param;
 }

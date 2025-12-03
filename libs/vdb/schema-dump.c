@@ -254,23 +254,23 @@ rc_t SDumperVPrint ( SDumper *self, const char *fmt, va_list args )
             switch ( * ( ++ end ) )
             {
             case 'd':
-                len = sprintf ( buffer, "%d", va_arg ( args, int ) );
+                len = snprintf ( buffer, sizeof(buffer), "%d", va_arg ( args, int ) );
                 rc = SDumperWrite ( self, buffer, len );
                 break;
             case 'u':
-                len = sprintf ( buffer, "%u", va_arg ( args, unsigned int ) );
+                len = snprintf ( buffer, sizeof(buffer), "%u", va_arg ( args, unsigned int ) );
                 rc = SDumperWrite ( self, buffer, len );
                 break;
             case 'x':
-                len = sprintf ( buffer, "%x", va_arg ( args, unsigned int ) );
+                len = snprintf ( buffer, sizeof(buffer), "%x", va_arg ( args, unsigned int ) );
                 rc = SDumperWrite ( self, buffer, len );
                 break;
             case 'X':
-                len = sprintf ( buffer, "%X", va_arg ( args, unsigned int ) );
+                len = snprintf ( buffer, sizeof(buffer), "%X", va_arg ( args, unsigned int ) );
                 rc = SDumperWrite ( self, buffer, len );
                 break;
             case 'f':
-                len = sprintf ( buffer, "%f", va_arg ( args, double ) );
+                len = snprintf ( buffer, sizeof(buffer), "%f", va_arg ( args, double ) );
                 rc = SDumperWrite ( self, buffer, len );
                 break;
             case 'l':
@@ -324,7 +324,7 @@ rc_t SDumperVPrint ( SDumper *self, const char *fmt, va_list args )
                         rc = RC ( rcVDB, rcSchema, rcWriting, rcString, rcExcessive );
                     else
                     {
-                        len = sprintf ( buffer, "%.*s", len, va_arg ( args, const char* ) );
+                        len = snprintf ( buffer, sizeof(buffer), "%.*s", len, va_arg ( args, const char* ) );
                         rc = SDumperWrite ( self, buffer, len );
                     }
                     break;

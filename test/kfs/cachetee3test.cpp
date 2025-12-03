@@ -37,8 +37,14 @@
 #include <mutex>
 #include <thread>
 #include <chrono>
+#include <atomic>
 
 #include <ktst/unit_test.hpp>
+
+#include <kapp/args.h>
+
+#include <kfg/config.h>
+
 
 #include <klib/out.h>
 #include <klib/rc.h>
@@ -988,9 +994,9 @@ rc_t CC MakeCallBackFile ( struct KFile **callback_file,
 
 struct CallBackCounter
 {
-    uint64_t events;
-    uint64_t bytes;
-    uint64_t pos;
+    atomic<uint64_t> events;
+    atomic<uint64_t> bytes;
+    atomic<uint64_t> pos;
 
     CallBackCounter( void ) : events( 0 ), bytes( 0 ), pos( 0 ) {}
     void count( uint64_t a_pos, uint64_t n ) { events++; bytes += n; pos = a_pos; }
@@ -1059,9 +1065,9 @@ FIXTURE_TEST_CASE ( CacheTee3_request_count, CT3Fixture )
         REQUIRE_RC( compare_file_content_3 ( org2, tee_counted, pos, len, NULL ) );
     }
 
-    KOutMsg ( "requested  = %,lu, bytes = %,lu\n", cbc2 . events, cbc2 . bytes );
-    KOutMsg ( "orig. file = %,lu, bytes = %,lu\n", cbc1 . events, cbc1 . bytes );
-    REQUIRE( cbc1 . events < cbc2 . events );
+    KOutMsg ( "requested  = %,lu, bytes = %,lu\n", cbc2 . events.load(), cbc2 . bytes.load() );
+    KOutMsg ( "orig. file = %,lu, bytes = %,lu\n", cbc1 . events.load(), cbc1 . bytes.load() );
+    REQUIRE( cbc1 . events.load() < cbc2 . events.load() );
 
     // after reading the whole thing - no read-request should be made via orig...
     KOutMsg ( "requesting whole file\n" );
@@ -1081,8 +1087,8 @@ FIXTURE_TEST_CASE ( CacheTee3_request_count, CT3Fixture )
     }
     REQUIRE_RC( compare_file_content_3 ( org2, tee_counted, DATAFILESIZE - 1000, 2000, NULL ) );
 
-    KOutMsg ( "requested  = %,lu, bytes = %,lu\n", cbc2 . events, cbc2 . bytes );
-    KOutMsg ( "orig. file = %,lu, bytes = %,lu\n", cbc1 . events, cbc1 . bytes );
+    KOutMsg ( "requested  = %,lu, bytes = %,lu\n", cbc2 . events.load(), cbc2 . bytes.load() );
+    KOutMsg ( "orig. file = %,lu, bytes = %,lu\n", cbc1 . events.load(), cbc1 . bytes.load() );
 
     REQUIRE( cbc1 . events == 0 );
     REQUIRE( cbc1 . bytes == 0 );
@@ -1462,19 +1468,6 @@ TEST_CASE( concurrent_reads_from_different_files )
 }
 
 //////////////////////////////////////////// Main
-extern "C" {
-
-#include <kapp/args.h>
-#include <kfg/config.h>
-
-ver_t CC KAppVersion ( void ) { return 0x1000000; }
-
-rc_t CC UsageSummary ( const char *progname ) { return 0; }
-
-rc_t CC Usage ( const Args *args ) { return 0; }
-
-const char UsageDefaultName[] = "cachetee3-test";
-
 #define OPTION_DUMMY "dummy"
 #define ALIAS_DUMMY "d"
 
@@ -1483,7 +1476,7 @@ static const char *dummy_usage[] = {"dummy argument", NULL};
 OptDef TestOptions[]
     = {{OPTION_DUMMY, ALIAS_DUMMY, NULL, dummy_usage, 1, false, false}};
 
-rc_t CC KMain ( int argc, char *argv[] )
+int main ( int argc, char *argv[] )
 {
     Args *args;
 
@@ -1505,4 +1498,3 @@ rc_t CC KMain ( int argc, char *argv[] )
     return rc;
 }
 
-} /* extern "C" */

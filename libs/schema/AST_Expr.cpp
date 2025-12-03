@@ -473,7 +473,12 @@ AST_Expr :: MakeBool ( ctx_t ctx, ASTBuilder & p_builder ) const
     SConstExpr * x = p_builder . Alloc < SConstExpr > ( ctx, sizeof * x - sizeof x -> u + sizeof x -> u . b [ 0 ] );
     if ( x != 0 )
     {
-        x -> u . b [ 0 ] = GetTokenType () == KW_true;
+        // VDB-6150: g++ 13.3 generates a needless warning on this:
+        //      x -> u . b [ 0 ] = GetTokenType () == KW_true;
+        // go through a temp reference to avoid it:
+        bool & b = x -> u . b [0];
+        b = ( GetTokenType () == KW_true );
+
         x -> dad . var = eConstExpr;
         atomic32_set ( & x -> dad . refcount, 1 );
         x -> td . type_id = p_builder . IntrinsicTypeId ( "bool" );

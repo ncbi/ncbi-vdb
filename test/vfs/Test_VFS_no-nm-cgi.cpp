@@ -237,21 +237,17 @@ FIXTURE_TEST_CASE(ResolverSucceedsWithCustomSdl, Fixture) {
 }
 #endif
 
-extern "C" {
-    ver_t CC KAppVersion(void) { return 0; }
-
-    rc_t CC KMain(int argc, char* argv[]) {
-        putenv((char*)"NCBI_VDB_NO_ETC_NCBI_KFG=1"); // ignore /etc/ncbi
+int main(int argc, char* argv[]) {
+    putenv((char*)"NCBI_VDB_NO_ETC_NCBI_KFG=1"); // ignore /etc/ncbi
 #ifndef NEED_TO_TRACK_DOWN_CONFIG_REFCOUNT
-     // Currently make sure we start with an emty config when we create it here.
-        putenv((char*)"VDB_CONFIG=redirect-rejected-names-cgi-http-to-https");
+    // Currently make sure we start with an emty config when we create it here.
+    putenv((char*)"VDB_CONFIG=redirect-rejected-names-cgi-http-to-https");
 #endif
-        unsetenv("VDB_ROOT"); // Ignore it. Probably it's not needed.
-        KConfigDisableUserSettings(); // ignore ~/.ncbi/user-settings.mkfg
+    unsetenv("VDB_ROOT"); // Ignore it. Probably it's not needed.
+    KConfigDisableUserSettings(); // ignore ~/.ncbi/user-settings.mkfg
 
-        if (PRINT_SDL)
-            KDbgSetString("VFS");
+    if (PRINT_SDL)
+        KDbgSetString("VFS");
 
-        return Resolver3TestSuite(argc, argv);
-    }
+    return Resolver3TestSuite(argc, argv);
 }

@@ -30,11 +30,11 @@
 #include <ktst/unit_test.hpp> // TEST_CASE
 #include <vfs/path.h>
 #include <vfs/manager.h>
-#include <klib/text.h> 
-#include <klib/out.h> 
-#include <klib/printf.h> 
-#include <kfs/directory.h> 
-#include <kfg/config.h> 
+#include <klib/text.h>
+#include <klib/out.h>
+#include <klib/printf.h>
+#include <kfs/directory.h>
+#include <kfg/config.h>
 
 #include <sysalloc.h>
 #include <cstdlib>
@@ -94,10 +94,10 @@ TEST_CASE( GetCacheRoot_1 )
     rc = VPathMakeString ( vpath, &spath );
     if ( rc != 0 )
         FAIL( "FAIL: VPathMakeString( vpath, &spatch ) failed" );
-    
+
     original_value = std::string( spath->addr, spath->size );
     std::cout << "original value: " << original_value << std::endl;
-    
+
     if ( spath != NULL )
         StringWhack( spath );
 
@@ -121,11 +121,11 @@ TEST_CASE( SetCacheRoot_1 )
     rc = VFSManagerMakePath ( vfs_mgr, &vpath, other_path );
     if ( rc != 0 )
         FAIL( "FAIL: VFSManagerMakePath() failed" );
-        
+
     rc = VDBManagerSetCacheRoot( NULL, vpath );
     if ( rc == 0 )
         FAIL( "FAIL: VDBManagerSetCacheRoot( NULL, vpath ) succeed" );
-        
+
     rc = VDBManagerSetCacheRoot( vdb_mgr, vpath );
     if ( rc != 0 )
         FAIL( "FAIL: VDBManagerSetCacheRoot( mgr, vpath ) failed" );
@@ -152,7 +152,7 @@ TEST_CASE( GetCacheRoot_2 )
     rc = VPathMakeString ( vpath, &spath );
     if ( rc != 0 )
         FAIL( "FAIL: VPathMakeString( vpath, &spatch ) failed" );
-    
+
     std::string s1 = std::string( spath->addr, spath->size );
     std::string s2 = std::string( other_path );
     std::cout << "after setting different value: " << s1;
@@ -163,7 +163,7 @@ TEST_CASE( GetCacheRoot_2 )
         std::cout << " - we did not expected this!" << std::endl;
         FAIL( "FAIL: unexpected value after setting a new cache-root" );
     }
-    
+
     if ( spath != NULL )
         StringWhack( spath );
 
@@ -181,7 +181,7 @@ TEST_CASE( SetCacheRoot_2 )
     rc_t rc = VFSManagerMakePath ( vfs_mgr, &vpath, original_value.c_str() );
     if ( rc != 0 )
         FAIL( "FAIL: VFSManagerMakePath() failed" );
-        
+
     rc = VDBManagerSetCacheRoot( vdb_mgr, vpath );
     if ( rc != 0 )
         FAIL( "FAIL: VDBManagerSetCacheRoot( mgr, vpath ) failed" );
@@ -207,13 +207,13 @@ TEST_CASE( GetCacheRoot_3 )
     rc = VPathMakeString ( vpath, &spath );
     if ( rc != 0 )
         FAIL( "FAIL: VPathMakeString( vpath, &spath ) failed" );
-    
+
     std::string s = std::string( spath->addr, spath->size );
     std::cout << "reverted to original value of: " << s << std::endl;
 
     if ( s != original_value )
         FAIL( "FAIL: did not restore original value" );
-        
+
     if ( spath != NULL )
         StringWhack( spath );
 
@@ -230,7 +230,7 @@ TEST_CASE( two_managers )
     String const * spath1 = NULL;
     String const * spath2 = NULL;
     rc_t rc;
-    
+
     rc = VFSManagerMakePath ( vfs_mgr, &vpath_new, "something_different" );
     if ( rc != 0 )
         FAIL( "FAIL: VFSManagerMakePath( vpath_new ) failed" );
@@ -265,10 +265,10 @@ TEST_CASE( two_managers )
         FAIL( "FAIL: cache-root values do not match" );
     else
         std::cout << "cache-root values are the same" << std::endl;
-        
+
     if ( spath1 != NULL ) StringWhack( spath1 );
     if ( spath2 != NULL ) StringWhack( spath2 );
-    if ( vpath_new != NULL ) VPathRelease( vpath_new );    
+    if ( vpath_new != NULL ) VPathRelease( vpath_new );
     if ( vpath1 != NULL ) VPathRelease( vpath1 );
     if ( vpath2 != NULL ) VPathRelease( vpath2 );
     if ( vdb_mgr2 != NULL ) VDBManagerRelease ( vdb_mgr2 );
@@ -287,12 +287,12 @@ TEST_CASE( root_tmp )
     rc = KDBManagerGetVFSManager( kdb_mgr, &vfs_mgr_1 );
     if ( rc != 0 )
         FAIL( "FAIL: KDBManagerGetVFSManager() failed" );
-    
+
     VPath * vpath = NULL;
     rc = VFSManagerMakeSysPath( vfs_mgr_1, &vpath, "/tmp1" );
     if ( rc != 0 )
         FAIL( "FAIL: VFSManagerMakeSysPath() failed" );
-        
+
     rc = VDBManagerSetCacheRoot( vdb_mgr, vpath );
     if ( rc != 0 )
         FAIL( "FAIL: VDBManagerSetCacheRoot( mgr, vpath ) failed" );
@@ -363,7 +363,7 @@ rc_t prepare_test( const char * sub )
     if ( rc == 0 )
         rc = string_printf ( new_home_buffer, sizeof new_home_buffer, &num_writ, "HOME=%s", new_home );
     if ( rc == 0 )
-        rc = putenv( new_home_buffer );
+        rc = (rc_t)putenv( new_home_buffer );
     if ( rc == 0 )
         rc = create_test_config( org_home );
     return rc;
@@ -382,17 +382,7 @@ void finish_test()
 }
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kapp/args.h>
-
-ver_t CC KAppVersion ( void ) { return 0x1000000; }
-rc_t CC UsageSummary ( const char * progname ) { return 0; }
-rc_t CC Usage ( const Args * args ) { return 0; }
-const char UsageDefaultName[] = "test-VDB-3060";
-
-rc_t CC KMain ( int argc, char *argv [] )
+int main( int argc, char *argv [] )
 {
     rc_t rc = prepare_test( HomeSub );
     if ( rc == 0 )
@@ -400,12 +390,10 @@ rc_t CC KMain ( int argc, char *argv [] )
         rc = make_global_managers();
         if ( rc == 0 )
         {
-            rc = VDB_3060( argc, argv );
+            rc = (rc_t)VDB_3060( argc, argv );
             release_global_managers();
         }
     }
     finish_test();
-    return rc;
-}
-
+    return (int)rc;
 }

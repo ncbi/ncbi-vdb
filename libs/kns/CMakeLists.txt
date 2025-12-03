@@ -22,10 +22,10 @@
 #
 # ===========================================================================
 
-set ( UNIX_SRC unix/sysmgr.c unix/syssock.c unix/sysstream.c )
-set ( BSD_SRC ${UNIX_SRC} mac/sysendpoint.c mac/syspoll.c )
-set ( LINUX_SRC ${UNIX_SRC} linux/sysendpoint.c linux/syspoll.c )
-set ( MAC_SRC ${UNIX_SRC} mac/sysendpoint.c mac/syspoll.c )
+set ( UNIX_SRC unix/sysmgr.c unix/syssock.c unix/sysstream.c unix/sysendpoint.c )
+set ( BSD_SRC ${UNIX_SRC} mac/syspoll.c )
+set ( LINUX_SRC ${UNIX_SRC} linux/syspoll.c )
+set ( MAC_SRC ${UNIX_SRC} mac/syspoll.c )
 set ( WIN_SRC win/sysendpoint.c win/sysmgr.c win/syssock.c win/sysstream.c )
 
 if( "bsd" STREQUAL ${OS} )

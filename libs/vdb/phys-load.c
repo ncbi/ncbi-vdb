@@ -130,16 +130,17 @@ rc_t CC VPhysicalLoadV1Schema ( VPhysical *self,
                             {
 #endif
                                 /* build sphysical name */
-                                sprintf ( sphysical_name, "%s_only", decoding_expr );
+                                snprintf ( sphysical_name, sizeof(sphysical_name), "%s_only", decoding_expr );
 
                                 /* build physical decl */
-                                pb . pos = sprintf ( pb . buff, "version 1;"
-                                                     "physical %s %s:phys#1"
-                                                     "{decode{%s k=@;return %s(k);}}"
-                                                     , type_expr
-                                                     , sphysical_name
-                                                     , enc_type
-                                                     , decoding_expr
+                                pb . pos = snprintf(pb . buff, sizeof(pb.buff)
+                                                    , "version 1;"
+                                                      "physical %s %s:phys#1"
+                                                      "{decode{%s k=@;return %s(k);}}"
+                                                    , type_expr
+                                                    , sphysical_name
+                                                    , enc_type
+                                                    , decoding_expr
                                     );
 #if ALLOW_V1_UPDATE
                             }
@@ -156,7 +157,7 @@ rc_t CC VPhysicalLoadV1Schema ( VPhysical *self,
                                 }
 
                                 /* build sphysical name */
-                                sprintf ( sphysical_name, "%s_%s", decoding_expr, & encoding_expr [ ns_size ] );
+                                snprintf ( sphysical_name, sizeof(sphysical_name), "%s_%s", decoding_expr, & encoding_expr [ ns_size ] );
                                 for ( i = ns_size; sphysical_name [ i ] != 0; ++ i )
                                 {
                                     if ( sphysical_name [ i ] == ':' )
@@ -164,15 +165,16 @@ rc_t CC VPhysicalLoadV1Schema ( VPhysical *self,
                                 }
 
                                 /* build physical decl */
-                                pb . pos = sprintf ( pb . buff, "version 1;"
-                                                     "physical %s %s:phys#1"
-                                                     "{encode{return %s(@);}"
-                                                     "decode{%s k=@;return %s(k);}}"
-                                                     , type_expr
-                                                     , sphysical_name
-                                                     , encoding_expr
-                                                     , enc_type
-                                                     , decoding_expr
+                                pb . pos = snprintf( pb . buff, sizeof(pb.buff)
+                                                    , "version 1;"
+                                                      "physical %s %s:phys#1"
+                                                      "{encode{return %s(@);}"
+                                                      "decode{%s k=@;return %s(k);}}"
+                                                    , type_expr
+                                                    , sphysical_name
+                                                    , encoding_expr
+                                                    , enc_type
+                                                    , decoding_expr
                                     );
                             }
 #endif
@@ -184,15 +186,16 @@ rc_t CC VPhysicalLoadV1Schema ( VPhysical *self,
                 else if ( GetRCState ( rc ) == rcNotFound )
                 {
                     /* build sphysical name */
-                    sprintf ( sphysical_name, "%s_only", decoding_expr );
+                    snprintf( sphysical_name, sizeof(sphysical_name), "%s_only", decoding_expr );
 
                     /* build decode-only physical decl */
-                    pb . pos = sprintf ( pb . buff, "version 1;"
-                                         "physical %s %s:phys#1"
-                                         "{decode{opaque k=@;return %s(k);}}"
-                                         , type_expr
-                                         , sphysical_name
-                                         , decoding_expr
+                    pb . pos = snprintf( pb . buff, sizeof(pb.buff)
+                                        , "version 1;"
+                                          "physical %s %s:phys#1"
+                                          "{decode{opaque k=@;return %s(k);}}"
+                                        , type_expr
+                                        , sphysical_name
+                                        , decoding_expr
                         );
                     rc = 0;
                 }
@@ -206,7 +209,7 @@ rc_t CC VPhysicalLoadV1Schema ( VPhysical *self,
                         VTypedecl etd;
 
                         /* create a new expression object */
-                        sprintf ( pb . buff, "%s:phys#1", sphysical_name );
+                        snprintf ( pb . buff, sizeof(pb.buff), "%s:phys#1", sphysical_name );
                         rc = VSchemaImplicitPhysEncExpr ( schema, & etd,
                             & self -> enc, pb . buff, "VPhysicalLoadV1Schema" );
                         if ( rc != 0 )

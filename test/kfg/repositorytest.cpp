@@ -58,7 +58,7 @@ public:
         VectorInit(&repos, 0, 0); // in order to be able to whack it when we are done, even if not used by the test case
         ClearRepositories();
     }
-    ~RepositoryFixture() 
+    ~RepositoryFixture()
     {
         if (repo && KRepositoryRelease(repo) != 0)
             cerr << "~RepositoryFixture: KRepositoryRelease failed" << endl;
@@ -69,7 +69,7 @@ public:
         if (KConfigRelease(kfg) != 0)
             cerr << "~RepositoryFixture: KConfigRelease failed" << endl;
     }
-    
+
     void UpdateNode(const char* key, const char* value)
     {
         KConfigNode *node;
@@ -79,8 +79,8 @@ public:
             throw logic_error("UpdateNode: KConfigNodeWrite failed");
         if (KConfigNodeRelease(node) != 0)
             throw logic_error("UpdateNode: KConfigNodeRelease failed");
-    }    
-    
+    }
+
     void ClearRepositories()
     {
         KConfigNode *node;
@@ -91,7 +91,7 @@ public:
         if (KConfigNodeRelease(node) != 0)
             throw logic_error("ClearRepositories: KConfigNodeRelease failed");
     }
-    
+
     bool ValidateRepository(const KRepository* r, KRepCategory cat, KRepSubCategory subcat, const char* name)
     {
         if (KRepositoryCategory( r ) != cat)
@@ -104,12 +104,12 @@ public:
             return false;
         return true;
     }
-    
+
     KConfig* kfg;
     KRepositoryMgr* mgr;
     KRepositoryVector repos;
     const KRepository* repo;
-    
+
     static const int BufSize = 1024;
     char buf[BufSize];
     size_t num_writ;
@@ -136,7 +136,7 @@ FIXTURE_TEST_CASE(Mgr_UserRepositoriesEmpty, RepositoryFixture)
 {
     KRepositoryVector v; // using a local vector to make sure it is initialized by the call
     UpdateNode("/repository/user", "");
-    
+
     REQUIRE_RC(KRepositoryMgrUserRepositories(mgr, &v));
     REQUIRE_EQ(VectorLength(&v), (uint32_t)0);
 
@@ -156,7 +156,7 @@ FIXTURE_TEST_CASE(Mgr_UserRepositories, RepositoryFixture)
 
     REQUIRE_RC(KRepositoryMgrUserRepositories(mgr, &repos));
     REQUIRE_EQ(VectorLength(&repos), (uint32_t)4);
-    
+
     // verify the values and that the vector has been sorted on: subcategory(main<aux<protected), name
     REQUIRE(ValidateRepository(( const KRepository* ) VectorGet ( & repos, 0 ), krepUserCategory, (uint32_t)krepMainSubCategory, "repo1"));
     REQUIRE(ValidateRepository(( const KRepository* ) VectorGet ( & repos, 3 ), krepUserCategory, (uint32_t)krepAuxSubCategory, "repo6"));
@@ -175,7 +175,7 @@ FIXTURE_TEST_CASE(Mgr_SiteRepositories, RepositoryFixture)
 
     REQUIRE_RC(KRepositoryMgrSiteRepositories(mgr, &repos));
     REQUIRE_EQ(VectorLength(&repos), (uint32_t)6);
-    
+
     // verify the values and that the vector has been sorted on: subcategory(main<aux<protected), name
     REQUIRE(ValidateRepository(( const KRepository* ) VectorGet ( & repos, 0 ), krepSiteCategory, (uint32_t)krepMainSubCategory, "repo1"));
     REQUIRE(ValidateRepository(( const KRepository* ) VectorGet ( & repos, 3 ), krepSiteCategory, (uint32_t)krepAuxSubCategory, "repo6"));
@@ -194,7 +194,7 @@ FIXTURE_TEST_CASE(Mgr_RemoteRepositories, RepositoryFixture)
 
     REQUIRE_RC(KRepositoryMgrRemoteRepositories(mgr, &repos));
     REQUIRE_EQ(VectorLength(&repos), (uint32_t)6);
-    
+
     // verify the values and that the vector has been sorted on: subcategory(main<aux<protected), name
     REQUIRE(ValidateRepository(( const KRepository* ) VectorGet ( & repos, 0 ), krepRemoteCategory, (uint32_t)krepMainSubCategory, "repo1"));
     REQUIRE(ValidateRepository(( const KRepository* ) VectorGet ( & repos, 3 ), krepRemoteCategory, (uint32_t)krepAuxSubCategory, "repo6"));
@@ -204,10 +204,10 @@ FIXTURE_TEST_CASE(Mgr_GetProtectedRepository_OldSpelling, RepositoryFixture)
 {
     // only repositories from /repository/user/protected/ are looked at
     UpdateNode("/repository/user/protected/dbGap-123/", "");
-    UpdateNode("/repository/user/main/dbGap-321/", ""); 
+    UpdateNode("/repository/user/main/dbGap-321/", "");
     UpdateNode("/repository/site/protected/dbGap-321/", "");
     UpdateNode("/repository/user/protected/dbGap-321/", "");
-    
+
     REQUIRE_RC_FAIL(KRepositoryMgrGetProtectedRepository(mgr, 321, &repo));
 //  REQUIRE(ValidateRepository(repo, krepUserCategory, (uint32_t)krepProtectedSubCategory, "dbGap-321"));
 }
@@ -215,10 +215,10 @@ FIXTURE_TEST_CASE(Mgr_GetProtectedRepository, RepositoryFixture)
 {
     // only repositories from /repository/user/protected/ are looked at
     UpdateNode("/repository/user/protected/dbGaP-123/", "");
-    UpdateNode("/repository/user/main/dbGaP-321/", ""); 
+    UpdateNode("/repository/user/main/dbGaP-321/", "");
     UpdateNode("/repository/site/protected/dbGaP-321/", "");
     UpdateNode("/repository/user/protected/dbGaP-321/", "");
-    
+
     REQUIRE_RC_FAIL(KRepositoryMgrGetProtectedRepository(mgr, 321, &repo));
 //  REQUIRE(ValidateRepository(repo, krepUserCategory, (uint32_t)krepProtectedSubCategory, "dbGaP-321"));
 }
@@ -247,34 +247,8 @@ FIXTURE_TEST_CASE(Mgr_RemoteOff, RepositoryFixture)
 
 
 //////////////////////////////////////////// Main
-
-extern "C"
-{
-
-#include <kapp/args.h>
-#include <kfg/config.h>
-
-ver_t CC KAppVersion ( void )
-{
-    return 0x1000000;
-}
-rc_t CC UsageSummary (const char * progname)
-{
-    return 0;
-}
-
-rc_t CC Usage ( const Args * args )
-{
-    return 0;
-}
-
-const char UsageDefaultName[] = "test-kfg";
-
-rc_t CC KMain ( int argc, char *argv [] )
+int main( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
-    rc_t rc=RepositoryTestSuite(argc, argv);
-    return rc;
-}
-
+    return RepositoryTestSuite(argc, argv);
 }

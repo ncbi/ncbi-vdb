@@ -77,6 +77,11 @@ set( VDBCMN_SRC
     cursor-table
 )
 
+if ( "GNU" STREQUAL "${CMAKE_C_COMPILER_ID}")
+    set_source_files_properties( schema-expr prod-func
+        PROPERTIES COMPILE_FLAGS -Wno-array-bounds )
+endif()
+
 set( VDB_SRC
     ${VDBCMN_SRC}
     dbmgr

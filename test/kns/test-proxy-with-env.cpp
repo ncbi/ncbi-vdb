@@ -54,9 +54,9 @@ TEST_CASE ( TEST_PROXY_FROM_ENV ) {
         ifstream myfile ( s . str () . c_str () );
         string line;
         while ( getline ( myfile, line) ) {
-            istringstream s ( line );
+            istringstream is ( line );
             string path, value;
-            s >> path >> value;
+            is >> path >> value;
             if ( c == NULL ) {
                 c = new C ( path, value );
             } else {
@@ -71,10 +71,10 @@ TEST_CASE ( TEST_PROXY_FROM_ENV ) {
         ifstream myfile ( s . str () . c_str () );
         string line;
         while ( getline ( myfile, line) ) {
-            istringstream s ( line );
+            istringstream is ( line );
             string host;
             uint16_t port;
-            s >> host >> port;
+            is >> host >> port;
             if ( e == NULL ) {
                 e = new E ( host, port );
             } else {
@@ -89,24 +89,20 @@ TEST_CASE ( TEST_PROXY_FROM_ENV ) {
     c = NULL;
 }
 
-extern "C" {
-    ver_t CC KAppVersion ( void ) { return 0; }
-
 #define TODO -1
 
-    rc_t CC KMain ( int argc, char * argv [] )  {
+int main( int argc, char * argv [] )  {
 
 #if 0
 const char name[] = "http_proxy"; char *e= getenv(name); ostringstream s;
 s << "getenv("<<name<<")="<<(e==NULL?"NULL":e)<<"\n";std::cerr <<s.str();
 #endif
 
-        if ( argc == 0 ) {
-            return TODO;
-        }
-
-        KConfigDisableUserSettings ();
-
-        return ProxyWithEnvTestSuite ( argc, argv );
+    if ( argc == 0 ) {
+        return TODO;
     }
+
+    KConfigDisableUserSettings ();
+
+    return ProxyWithEnvTestSuite ( argc, argv );
 }

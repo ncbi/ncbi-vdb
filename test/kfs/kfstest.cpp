@@ -31,6 +31,9 @@
 #include <cstring>
 
 #include <ktst/unit_test.hpp>
+
+#include <kfg/config.h>
+
 #include <kfs/mmap.h>
 #include <kfs/directory.h>
 #include <kfs/impl.h>
@@ -83,7 +86,7 @@ TEST_CASE(Tar_Parse)
     REQUIRE_RC(KDirectoryNativeDir(&dir));
 
     const KDirectory *tarDir;
-    REQUIRE_RC(KDirectoryOpenTarArchiveRead(dir, &tarDir, false, "test.tar"));
+    REQUIRE_EQ(0, KDirectoryOpenTarArchiveRead(dir, &tarDir, false, "test.tar"));
 
     struct KNamelist *list;
     REQUIRE_RC(KDirectoryList(tarDir, &list, NULL, NULL, NULL));
@@ -104,33 +107,8 @@ TEST_CASE(Tar_Parse)
 }
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kapp/args.h>
-#include <kfg/config.h>
-
-ver_t CC KAppVersion ( void )
-{
-    return 0x1000000;
-}
-rc_t CC UsageSummary (const char * progname)
-{
-    return 0;
-}
-
-rc_t CC Usage ( const Args * args )
-{
-    return 0;
-}
-
-const char UsageDefaultName[] = "test-kfs";
-
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
-    rc_t rc=KfsTestSuite(argc, argv);
-    return rc;
-}
-
+    return KfsTestSuite(argc, argv);
 }

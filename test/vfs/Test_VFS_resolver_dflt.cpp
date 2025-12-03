@@ -32,6 +32,7 @@
 
 #include <klib/debug.h> /* KDbgSetString */
 #include <klib/text.h>
+#include <klib/rc.h>
 
 #include <ktst/unit_test.hpp>
 
@@ -183,7 +184,7 @@ FIXTURE_TEST_CASE ( VDB_2936_resolve_local_WGS_with_version, ResolverFixture )
             REQUIRE_RC(VPathEqual(local, pc2, &notequal));
             REQUIRE(notequal == 0);
             REQUIRE_RC(VPathRelease(pc2));
-            
+
             try
             {
                 String path;
@@ -508,53 +509,28 @@ FIXTURE_TEST_CASE(noqual_vdbcache, ResolverFixture) {
 
 //////////////////////////////////////////// Main
 
-extern "C"
+static void clear_recorded_errors ( void )
 {
-
-#include <kapp/args.h>
-#include <klib/rc.h>
-
-    ver_t CC KAppVersion ( void )
+    rc_t rc;
+    const char * filename;
+    const char * funcname;
+    uint32_t line_nr;
+    while ( GetUnreadRCInfo ( &rc, &filename, &funcname, &line_nr ) )
     {
-        return 0x1000000;
     }
+}
 
-    rc_t CC UsageSummary (const char * progname)
-    {
-        return 0;
-    }
+int main( int argc, char *argv [] )
+{
+    putenv((char*)"NCBI_VDB_NO_CACHE_SDL_RESPONSE=1");
 
-    rc_t CC Usage ( const Args * args )
-    {
-        return 0;
-    }
-
-    const char UsageDefaultName[] = "test-resolver";
-
-    static void clear_recorded_errors ( void )
-    {
-        rc_t rc;
-        const char * filename;
-        const char * funcname;
-        uint32_t line_nr;
-        while ( GetUnreadRCInfo ( &rc, &filename, &funcname, &line_nr ) )
-        {
-        }
-    }
-
-    rc_t CC KMain ( int argc, char *argv [] )
-    {
-        putenv((char*)"NCBI_VDB_NO_CACHE_SDL_RESPONSE=1");
-
-        if (
+    if (
 0) assert(!KDbgSetString("VFS"));
 
-        KConfigDisableUserSettings ();
-        rc_t rc = VResolverTestSuite ( argc, argv );
+    KConfigDisableUserSettings ();
+    int rc = VResolverTestSuite ( argc, argv );
 
-        clear_recorded_errors();
+    clear_recorded_errors();
 
-        return rc;
-    }
-
+    return rc;
 }

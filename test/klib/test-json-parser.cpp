@@ -40,27 +40,7 @@
 
 using namespace std;
 
-extern "C"
-{
-
-ver_t CC KAppVersion ( void )
-{
-    return 0x1000000;
-}
-
-const char UsageDefaultName[] = "test-json-parser";
-
-rc_t CC UsageSummary (const char * progname)
-{
-    return KOutMsg ( "Usage:\n" "\t%s [options] json-file ... \n\n", progname );
-}
-
-rc_t CC Usage( const Args* args )
-{
-    return 0;
-}
-
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     int failed = 0;
     if ( argc < 2 )
@@ -122,6 +102,3 @@ rc_t CC KMain ( int argc, char *argv [] )
     }
     return failed == 0 ? 0 : 4;
 }
-
-}
-

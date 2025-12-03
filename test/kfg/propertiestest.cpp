@@ -30,6 +30,9 @@
 
 #include <ktst/unit_test.hpp>
 
+#include <kfg/config.h>
+
+#include <kapp/vdbapp.h>
 #include "kfg-fixture.hpp"
 
 #include <kfg/properties.h>
@@ -429,34 +432,10 @@ FIXTURE_TEST_CASE( GetSet_Telemetry, KfgFixture ) {
 #endif
 
 //////////////////////////////////////////// Main
-
-extern "C"
+int main ( int argc, char *argv [] )
 {
-
-#include <kapp/args.h>
-#include <kfg/config.h>
-
-ver_t CC KAppVersion ( void )
-{
-    return 0x1000000;
-}
-rc_t CC UsageSummary (const char * progname)
-{
-    return 0;
-}
-
-rc_t CC Usage ( const Args * args )
-{
-    return 0;
-}
-
-const char UsageDefaultName[] = "test-properties";
-
-rc_t CC KMain ( int argc, char *argv [] )
-{
+    VDB::Application app(argc, argv);
     KConfigDisableUserSettings();
-    rc_t rc=PropertiesTestSuite(argc, argv);
-    return rc;
+    return PropertiesTestSuite(argc, argv);
 }
 
-}

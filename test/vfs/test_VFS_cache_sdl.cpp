@@ -38,7 +38,7 @@
 
 #include <kproc/thread.h> // KThread
 
-#include <ktst/unit_test.hpp> /* KMain */
+#include <ktst/unit_test.hpp>
 
 #include <vfs/path-priv.h> /* VPathGetDirectory */
 #include <vfs/manager.h> /* VFSManager */
@@ -49,7 +49,8 @@
 #include "../../libs/vdb/dbmgr-priv.h" // VDBManagerWhackStatic
 #include "../../libs/vfs/manager-priv.h" // VFSManagerSdlCacheEmpty
 
-#include<string>
+#include <mutex>
+#include <string>
 
 #include <limits.h> /* PATH_MAX */
 #ifndef PATH_MAX
@@ -130,10 +131,10 @@ protected:
     }
 
     rc_t RemoteEquals(const char * path_str) const {
-        char path[4096]("");
-        rc_t rc(VPathReadUri(remote, path, sizeof path, NULL));
+        char p[4096]("");
+        rc_t rc(VPathReadUri(remote, p, sizeof p, NULL));
         if (rc == 0)
-            if (strcmp(path, path_str) != 0)
+            if (strcmp(p, path_str) != 0)
                 rc = 115;
 
         return rc;
@@ -190,17 +191,20 @@ FIXTURE_TEST_CASE(CountCaching, CachingFixture) {
     REQUIRE_NOT_NULL(remote);
     REQUIRE(VFSManagerSdlCacheCount(mgr, NULL) == 1);
 
-    const KDirectory * dir(0);
-    REQUIRE_RC(VPathGetDirectory(query, &dir));
-    REQUIRE_NULL(dir);
-    const KDBManager * kdb(0);
-    REQUIRE_RC(KDBManagerMakeReadWithVFSManager(&kdb, 0, mgr));
-    REQUIRE(KDBManagerPathTypeVPath(kdb, query) == kptTable);
-    REQUIRE_RC(VPathGetDirectory(query, &dir));
-    REQUIRE_NOT_NULL(dir);
-    REQUIRE_RC(VPathGetDirectory(query, &dir));
-    REQUIRE_RC(KDirectoryRelease(dir));
-    REQUIRE_RC(KDBManagerRelease(kdb));
+    {
+        const KDirectory * dir(0);
+        REQUIRE_RC(VPathGetDirectory(query, &dir));
+        REQUIRE_NULL(dir);
+
+        const KDBManager * kdb(0);
+        REQUIRE_RC(KDBManagerMakeReadWithVFSManager(&kdb, 0, mgr));
+        REQUIRE(KDBManagerPathTypeVPath(kdb, query) == kptTable);
+        REQUIRE_RC(VPathGetDirectory(query, &dir));
+        REQUIRE_NOT_NULL(dir);
+
+        REQUIRE_RC(KDirectoryRelease(dir));
+        REQUIRE_RC(KDBManagerRelease(kdb));
+    }
 
     REQUIRE_RC(QueryRemote(acc2));
     REQUIRE(VFSManagerSdlCacheCount(mgr, NULL) == 2);
@@ -275,10 +279,10 @@ FIXTURE_TEST_CASE(ExpirationNotCaching, NotCachingFixture) {
 
     string json(MkSdlJson(acc, "http://a1/", 99)); // will expire in 99 seconds
     putenv((char*)json.c_str());
-    
+
     REQUIRE(VFSManagerSdlCacheCount(mgr, NULL) == 0);
     REQUIRE_NULL(remote);
-    
+
     REQUIRE_RC(QueryRemote(acc));
     REQUIRE_RC(RemoteEquals("http://a1/"));
     REQUIRE(VFSManagerSdlCacheCount(mgr, NULL) == 0);
@@ -303,11 +307,11 @@ FIXTURE_TEST_CASE(ExpirationCaching, CachingFixture) {
 
     REQUIRE(VFSManagerSdlCacheCount(mgr, NULL) == 0);
     REQUIRE_NULL(remote);
-    
+
     REQUIRE_RC(QueryRemote(acc));
     // not expired
     REQUIRE_RC(RemoteEquals("https://sra-pub-run-odp.s3.amazonaws.com/sra/SRR053325/SRR053325"));
-    
+
     REQUIRE(VFSManagerSdlCacheCount(mgr, NULL) == 1);
     json = MkSdlJson(acc, "https://ncbi.nlm.nih.gov/sos5/sra/SRR000/SRR000002");
     putenv((char*)json.c_str());
@@ -349,14 +353,14 @@ FIXTURE_TEST_CASE(WgsNotCaching, NotCachingFixture) {
 
     REQUIRE(VFSManagerSdlCacheCount(mgr, NULL) == 0);
     REQUIRE_NULL(remote);
-    
+
     REQUIRE_RC(QueryRemote(acc));
     REQUIRE_RC(RemoteEquals("http://a1/"));
-    
+
     // use 2 SDL calls for the same WGS file when not caching
     REQUIRE_RC(QueryRemote(acc2));
     REQUIRE_RC(RemoteEquals("http://a2/"));
-    
+
     REQUIRE(VFSManagerSdlCacheCount(mgr, NULL) == 0);
 }
 
@@ -383,14 +387,16 @@ FIXTURE_TEST_CASE(WgsCaching, CachingFixture) {
     REQUIRE(VFSManagerSdlCacheCount(mgr, NULL) == 1);
 }
 
-static rc_t DefaultWorkerThreadFn(const KThread * self, void * data) {
+std::mutex mtx;
+static rc_t DefaultWorkerThreadFn(const KThread * self, void * data) noexcept {
     CachingFixture * f((CachingFixture*)data);
     assert(f);
 
     rc_t rc(0);
-
     for (int i = 0; i < 50 && rc == 0; ++i) {
         const VPath * remote(NULL);
+
+        mtx.lock();
         rc = VResolverRemote(f->resolver, 0, f->query, &remote);
 //      if (rc != 0) int i = 0;
 
@@ -399,11 +405,13 @@ static rc_t DefaultWorkerThreadFn(const KThread * self, void * data) {
             rc = VPathReadUri(remote, path, sizeof path, NULL);
 
         rc_t r2(VPathRelease(remote));
+        mtx.unlock();
+
         remote = NULL;
         if (r2 != 0 && rc == 0)
             rc = r2;
 
-        ESdlCacheState state(eSCSEmpty);
+        uint32_t state(eSCSEmpty);
         VFSManagerSdlCacheCount(f->mgr, &state);
         if (state > eSCSFound)
             VFSManagerSdlCacheClear(f->mgr);
@@ -468,15 +476,8 @@ FIXTURE_TEST_CASE(ThreadsNotCaching, NotCachingFixture) {
 }
 #endif
 
-extern "C" {
-    const char UsageDefaultName[] = "Test_VFS_cache_sdl";
-    rc_t CC UsageSummary(const char * progname) { return 0; }
-    rc_t CC Usage(const struct Args * args) { return 0; }
-    ver_t CC KAppVersion(void) { return 0; }
- 
-    rc_t CC KMain(int argc, char * argv[]) {
+int main(int argc, char * argv[]) {
 if(0) { KDbgSetString("VFS"); }
-        KConfigDisableUserSettings();
-        return Test_VFS_cache_sdlSuite(argc, argv);
-    }
+    KConfigDisableUserSettings();
+    return Test_VFS_cache_sdlSuite(argc, argv);
 }

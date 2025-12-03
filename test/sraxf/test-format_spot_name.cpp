@@ -74,21 +74,10 @@ TEST_CASE(TestFormatSpotName) { // VDB-4097
     REQUIRE_RC(VDBManagerRelease(mgr));
 }
 
-const char UsageDefaultName[] = "test-format-spot-name";
-rc_t CC UsageSummary(const char * progname) { return 0; }
-rc_t CC Usage(const Args * args) { return 0; }
+int main(int argc, char *argv[]) {
+    KConfigDisableUserSettings(); // ignore ~/.ncbi/user-settings.mkfg
 
-extern "C" {
-
-    ver_t CC KAppVersion(void) { return 0; }
-
-    int KMain(int argc, char *argv[]) {
-        KConfigDisableUserSettings(); // ignore ~/.ncbi/user-settings.mkfg
-
-        rc_t rc = FormatSpotNameSuite(argc, argv);
-        return rc;
-    }
-
+    return FormatSpotNameSuite(argc, argv);
 }
 
 /******************************************************************************/

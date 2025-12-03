@@ -111,12 +111,18 @@ rc_t CC VDatabaseWhack ( VDatabase *self )
     if ( rc == 0 )
     {
         /* complete */
-        KMetadataRelease ( self -> meta );
-        KDatabaseRelease ( self -> kdb );
-        VSchemaRelease ( self -> schema );
+        rc_t r2 = KMetadataRelease ( self -> meta );
+        if (rc == 0 && r2 != 0)
+            rc = r2;
+        r2 = KDatabaseRelease ( self -> kdb );
+        if (rc == 0 && r2 != 0)
+            rc = r2;
+        r2 = VSchemaRelease ( self -> schema );
+        if (rc == 0 && r2 != 0)
+            rc = r2;
 
         free ( self );
-        return 0;
+        return rc;
     }
 
     KRefcountInit ( & self -> refcount, 1, "VDatabase", "whack", "vdb" );
@@ -1513,6 +1519,7 @@ VDatabaseMemberType(const struct VDatabase * self, const char * name, uint32_t *
     {
         const SDatabase * db_schema = self -> sdb;
         assert( db_schema );
+        UNUSED( db_schema );
 
         const SNameOverload * mem_name;
         uint32_t mem_type;

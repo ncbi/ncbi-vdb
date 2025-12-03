@@ -30,6 +30,8 @@
 
 #include <ktst/unit_test.hpp>
 
+#include <kfg/config.h>
+
 #include <kfs/directory.h>
 #include <kfs/file.h>
 #include <kfs/lockfile.h>
@@ -83,16 +85,16 @@ public:
         if (KConfigRelease(kfg) != 0)
            cerr << "~KeyStoreFixture: KConfigRelease failed" << endl;
     }
-    void KfgUpdateNode(const char* key, const char* value)
+    void KfgUpdateNode(const char* p_key, const char* p_value)
     {
         KConfigNode *node;
-        if (KConfigOpenNodeUpdate(kfg, &node, key) != 0)
+        if (KConfigOpenNodeUpdate(kfg, &node, p_key) != 0)
             throw logic_error("KfgUpdateNode: KConfigOpenNodeUpdate failed");
-        if (KConfigNodeWrite(node, value, string_measure(value, NULL)) != 0)
+        if (KConfigNodeWrite(node, p_value, string_measure(p_value, NULL)) != 0)
             throw logic_error("KfgUpdateNode: KConfigNodeWrite failed");
         if (KConfigNodeRelease(node) != 0)
             throw logic_error("KfgUpdateNode: KConfigNodeRelease failed");
-    }    
+    }
 
     KConfig* kfg;
     KKeyStore* ks;
@@ -112,17 +114,17 @@ FIXTURE_TEST_CASE(KeyStoreGetKey_TempFile, KeyStoreFixture)
 
     const KFile* file;
     REQUIRE_RC(KDirectoryOpenFileRead(wd, &file, GetName()));
-    
+
     REQUIRE_RC(KKeyStoreSetTemporaryKeyFromFile(ks, file));
-    
-    REQUIRE_RC(KKeyStoreGetKey(ks, "boohoo i am ignored here", &key)); 
+
+    REQUIRE_RC(KKeyStoreGetKey(ks, "boohoo i am ignored here", &key));
     REQUIRE_NOT_NULL(key);
     REQUIRE_EQ(string(tempKey), string(key->value.addr, key->value.len));
-    
+
     // now. ask to forget
     REQUIRE_RC(KKeyStoreSetTemporaryKeyFromFile(ks, NULL));
-    REQUIRE_RC_FAIL(KKeyStoreGetKey(ks, "boohoo i am ignored here", &key)); 
-    
+    REQUIRE_RC_FAIL(KKeyStoreGetKey(ks, "boohoo i am ignored here", &key));
+
     REQUIRE_RC(KFileRelease(file));
     REQUIRE_RC(KDirectoryRemove(wd, true, GetName()));
 }
@@ -139,15 +141,15 @@ FIXTURE_TEST_CASE(KeyStoreGetKey_Kfg, KeyStoreFixture)
         ofstream f(GetName());
         f << tempKey << endl;
     }
-    
+
     KfgUpdateNode(KFG_KRYPTO_PWFILE, GetName());
-    
+
     REQUIRE_RC(KKeyStoreSetConfig(ks, kfg));
-    
+
     REQUIRE_RC(KKeyStoreGetKey(ks, NULL, &key));
     REQUIRE_NOT_NULL(key);
     REQUIRE_EQ(string(tempKey), string(key->value.addr, key->value.len));
-    
+
     REQUIRE_RC(KDirectoryRemove(wd, true, GetName()));
 }
 
@@ -158,17 +160,17 @@ FIXTURE_TEST_CASE(KeyStoreGetKey_Protected, KeyStoreFixture)
         ofstream f(GetName());
         f << tempKey << endl;
     }
-    
+
     KfgUpdateNode("/repository/user/protected/dbGaP-2956/root", ".");
     KfgUpdateNode("/repository/user/protected/dbGaP-2956/encryption-key-path", GetName());
 
     REQUIRE_RC(KKeyStoreSetConfig(ks, kfg));
-    
+
     // VDB-4394: protected repos are ignored
     REQUIRE_RC_FAIL(KKeyStoreGetKey(ks, "just give us the current repo's key", &key));
     REQUIRE_NULL(key);
 //  REQUIRE_EQ(string(tempKey), string(key->value.addr, key->value.len));
-    
+
     REQUIRE_RC(KDirectoryRemove(wd, true, GetName()));
 }
 
@@ -179,7 +181,7 @@ FIXTURE_TEST_CASE(KeyStoreGetKeyById_Protected, KeyStoreFixture)
         ofstream f(GetName());
         f << tempKey << endl;
     }
-    
+
     KfgUpdateNode("/repository/user/protected/dbGaP-2956/root", ".");
     KfgUpdateNode("/repository/user/protected/dbGaP-2956/encryption-key-path",
         "wrong file!");
@@ -188,12 +190,12 @@ FIXTURE_TEST_CASE(KeyStoreGetKeyById_Protected, KeyStoreFixture)
         GetName());
 
     REQUIRE_RC(KKeyStoreSetConfig(ks, kfg));
-    
+
     REQUIRE_RC_FAIL(KKeyStoreGetKeyByProjectId(ks,
         "give us the key for 2957", &key, 2957));
     REQUIRE_NULL(key);
  // REQUIRE_EQ(string(tempKey), string(key->value.addr, key->value.len));
-    
+
     REQUIRE_RC(KDirectoryRemove(wd, true, GetName()));
 }
 
@@ -201,7 +203,7 @@ FIXTURE_TEST_CASE(KeyStoreGetKeyById_Protected, KeyStoreFixture)
 //  Object Id / Object name bindings
 //
 
-class ObjIdBindingFixture : public KeyStoreFixture 
+class ObjIdBindingFixture : public KeyStoreFixture
 {
 public:
     ObjIdBindingFixture()
@@ -210,27 +212,27 @@ public:
     ~ObjIdBindingFixture()
     {
         if (bindings.length() != 0 && KDirectoryRemove(wd, true, bindings.c_str()) != 0)
-           cerr << "ObjIdBindingFixture::TearDown: KDirectoryRemove failed" << endl;   
+           cerr << "ObjIdBindingFixture::TearDown: KDirectoryRemove failed" << endl;
     }
     void SetUp(const string& bindingsFileName)
     {
         bindings = string("./") + bindingsFileName;
         if (KKeyStoreSetBindingsFile(ks, bindings.c_str()) != 0)
-           throw logic_error("ObjIdBindingFixture::SetUp: KeyStoreSetBindingsFile failed");   
+           throw logic_error("ObjIdBindingFixture::SetUp: KeyStoreSetBindingsFile failed");
         KDirectoryRemove(wd, true, bindings.c_str());  // does not have to exist
     }
-    
+
     string bindings;
 };
 
 FIXTURE_TEST_CASE(ObjIdRegister, ObjIdBindingFixture)
 {
     SetUp(GetName());
-    
+
     String name1;
     CONST_STRING(&name1, "name1");
     REQUIRE_RC(KKeyStoreRegisterObject(ks, 1, &name1));
-    
+
     String name2;
     CONST_STRING(&name2, "name2");
     REQUIRE_RC(KKeyStoreRegisterObject(ks, 2, &name2));
@@ -239,30 +241,30 @@ FIXTURE_TEST_CASE(ObjIdRegister, ObjIdBindingFixture)
 FIXTURE_TEST_CASE(ObjIdRegister_Found_Same, ObjIdBindingFixture)
 {
     SetUp(GetName());
-    
+
     String name1;
     CONST_STRING(&name1, "name1");
     REQUIRE_RC(KKeyStoreRegisterObject(ks, 1, &name1));
-    
+
     String name2;
     CONST_STRING(&name2, "name2");
     REQUIRE_RC(KKeyStoreRegisterObject(ks, 2, &name2));
-    
+
     REQUIRE_RC(KKeyStoreRegisterObject(ks, 1, &name1)); // same name, no problem
 }
 
 FIXTURE_TEST_CASE(ObjIdRegister_Found_Different, ObjIdBindingFixture)
 {
     SetUp(GetName());
-    
+
     String name1;
     CONST_STRING(&name1, "name1");
     REQUIRE_RC(KKeyStoreRegisterObject(ks, 1, &name1));
-    
+
     String name2;
     CONST_STRING(&name2, "name2");
     REQUIRE_RC(KKeyStoreRegisterObject(ks, 2, &name2));
-    
+
     REQUIRE_RC_FAIL(KKeyStoreRegisterObject(ks, 1, &name2)); // name differs
 }
 
@@ -273,27 +275,27 @@ FIXTURE_TEST_CASE(ObjIdById_Found, ObjIdBindingFixture)
     String name123;
     CONST_STRING(&name123, "name123");
     REQUIRE_RC(KKeyStoreRegisterObject(ks, 123, &name123));
-    
+
     String name12;
     CONST_STRING(&name12, "name12");
     REQUIRE_RC(KKeyStoreRegisterObject(ks, 12, &name12));
-    
+
     String name1;
     CONST_STRING(&name1, "name1");
     REQUIRE_RC(KKeyStoreRegisterObject(ks, 1, &name1));
-    
+
     const String* res;
-    
+
     REQUIRE_RC(KKeyStoreGetObjectName(ks, 123, &res));
     REQUIRE_NOT_NULL(res);
     REQUIRE_EQ(StringCompare(res, &name123), 0);
     StringWhack(res);
-    
+
     REQUIRE_RC(KKeyStoreGetObjectName(ks, 12, &res));
     REQUIRE_NOT_NULL(res);
     REQUIRE_EQ(StringCompare(res, &name12), 0);
     StringWhack(res);
-    
+
     REQUIRE_RC(KKeyStoreGetObjectName(ks, 1, &res));
     REQUIRE_NOT_NULL(res);
     REQUIRE_EQ(StringCompare(res, &name1), 0);
@@ -303,15 +305,15 @@ FIXTURE_TEST_CASE(ObjIdById_Found, ObjIdBindingFixture)
 FIXTURE_TEST_CASE(ObjIdById_NotFound, ObjIdBindingFixture)
 {
     SetUp(GetName());
-    
+
     String name100;
     CONST_STRING(&name100, "name100");
     REQUIRE_RC(KKeyStoreRegisterObject(ks, 100, &name100));
-    
+
     String name200;
     CONST_STRING(&name200, "name200");
     REQUIRE_RC(KKeyStoreRegisterObject(ks, 200, &name200));
-    
+
     const String* res;
     REQUIRE_RC_FAIL(KKeyStoreGetObjectName(ks, 100200, &res));
 }
@@ -320,62 +322,62 @@ FIXTURE_TEST_CASE(ObjId_DefaultLocation, ObjIdBindingFixture)
 {
     const String* res;
     REQUIRE_RC_FAIL(KKeyStoreGetObjectName(ks, 1, &res)); // this will fail but set location to default
-    
+
     // verify default location
     String* home;
     REQUIRE_RC(KConfigReadString(kfg, "NCBI_HOME", &home));
     REQUIRE_NOT_NULL(home);
-    
+
     const char* loc = KKeyStoreGetBindingsFile(ks);
     REQUIRE_NOT_NULL(loc);
-    REQUIRE_EQ(string(loc), string(home->addr, home->size) + "/objid.mapping"); 
+    REQUIRE_EQ(string(loc), string(home->addr, home->size) + "/objid.mapping");
     StringWhack(home);
 }
 
 FIXTURE_TEST_CASE(ObjIdByName_Found, ObjIdBindingFixture)
 {
     SetUp(GetName());
-    
+
     String name11;
     CONST_STRING(&name11, "name11");
     REQUIRE_RC(KKeyStoreRegisterObject(ks, 11, &name11));
-    
+
     String name21;
     CONST_STRING(&name21, "name21");
     REQUIRE_RC(KKeyStoreRegisterObject(ks, 21, &name21));
-    
+
     String name1;
     CONST_STRING(&name1, "name1");
     REQUIRE_RC(KKeyStoreRegisterObject(ks, 1, &name1));
-    
+
     uint32_t id;
-    
+
     REQUIRE_RC(VKKeyStoreGetObjectId(ks, &name11, &id));
     REQUIRE_EQ((uint32_t)11, id);
 
     REQUIRE_RC(VKKeyStoreGetObjectId(ks, &name21, &id));
     REQUIRE_EQ((uint32_t)21, id);
-    
+
     REQUIRE_RC(VKKeyStoreGetObjectId(ks, &name1, &id));
     REQUIRE_EQ((uint32_t)1, id);
 }
 FIXTURE_TEST_CASE(ObjIdByName_NotFound, ObjIdBindingFixture)
 {
     SetUp(GetName());
-    
+
     String name11;
     CONST_STRING(&name11, "name11");
     REQUIRE_RC(KKeyStoreRegisterObject(ks, 11, &name11));
-    
+
     String name21;
     CONST_STRING(&name21, "name21");
     REQUIRE_RC(KKeyStoreRegisterObject(ks, 21, &name21));
-    
+
     String name1;
     CONST_STRING(&name1, "name1");
-    
+
     uint32_t id;
-    
+
     REQUIRE_RC_FAIL(VKKeyStoreGetObjectId(ks, &name1, &id));
 }
 
@@ -385,46 +387,20 @@ FIXTURE_TEST_CASE(ObjIdRegister_Lock, ObjIdBindingFixture)
 
     KFile* lockedFile;
     REQUIRE_RC(KDirectoryCreateExclusiveAccessFile(wd, &lockedFile, true, 0600, kcmOpen, GetName()));
-    
+
     String name11;
     CONST_STRING(&name11, "name11");
     REQUIRE_RC_FAIL(KKeyStoreRegisterObject(ks, 11, &name11));
-    
+
     REQUIRE_RC(KFileRelease(lockedFile));
-    
+
     // now, will work
     REQUIRE_RC(KKeyStoreRegisterObject(ks, 11, &name11));
 }
 
 //////////////////////////////////////////// Main
-
-extern "C"
-{
-
-#include <kapp/args.h>
-#include <kfg/config.h>
-
-ver_t CC KAppVersion ( void )
-{
-    return 0x1000000;
-}
-rc_t CC UsageSummary (const char * progname)
-{
-    return 0;
-}
-
-rc_t CC Usage ( const Args * args )
-{
-    return 0;
-}
-
-const char UsageDefaultName[] = "test-keystore";
-
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
-    rc_t rc=KeyStoreTestSuite(argc, argv);
-    return rc;
-}
-
+    return KeyStoreTestSuite(argc, argv);
 }

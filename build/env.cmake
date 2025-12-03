@@ -73,23 +73,33 @@ set(CMAKE_CXX_STANDARD ${C_STANDARD})
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# determine OS
-if ( ${CMAKE_SYSTEM_NAME} STREQUAL  "Darwin" )
+if ( ${CMAKE_HOST_SYSTEM_NAME} STREQUAL  "Darwin" )
     set(OS "mac")
+    set(LIBPFX "lib")
     set(SHLX "dylib")
-elseif ( ${CMAKE_SYSTEM_NAME} STREQUAL  "FreeBSD" )
+    set(STLX "a")
+elseif ( ${CMAKE_HOST_SYSTEM_NAME} STREQUAL  "FreeBSD" )
     set(OS "bsd")
+    set(LIBPFX "lib")
     set(SHLX "so")
-elseif ( ${CMAKE_SYSTEM_NAME} STREQUAL  "Linux" )
+    set(STLX "a")
+elseif ( ${CMAKE_HOST_SYSTEM_NAME} STREQUAL  "Linux" )
     set(OS "linux")
+    set(LIBPFX "lib")
     set(SHLX "so")
-elseif ( ${CMAKE_SYSTEM_NAME} STREQUAL  "NetBSD" )
+    set(STLX "a")
+elseif ( ${CMAKE_HOST_SYSTEM_NAME} STREQUAL  "NetBSD" )
     set(OS "bsd")
+    set(LIBPFX "lib")
     set(SHLX "so")
-elseif ( ${CMAKE_SYSTEM_NAME} STREQUAL  "Windows" )
+    set(STLX "a")
+elseif ( ${CMAKE_HOST_SYSTEM_NAME} STREQUAL  "Windows" )
     set(OS "windows")
+    set(LIBPFX "")
+    set(SHLX "lib")
+    set(STLX "lib")
 else()
-    message ( FATAL_ERROR "unknown OS " ${CMAKE_SYSTEM_NAME})
+    message ( FATAL_ERROR "unknown OS " ${CMAKE_HOST_SYSTEM_NAME})
 endif()
 
 # determine architecture
@@ -227,6 +237,9 @@ endif()
 if ( SINGLE_CONFIG )
     message("CMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}")
 endif()
+
+# link tests statically by default
+set(DYNAMIC_LINK "OFF" CACHE STRING "If set to ON, use dynamic linking for test projects")
 
 #message( "OS=" ${OS} " ARCH=" ${ARCH} " CXX=" ${CMAKE_CXX_COMPILER} " LMCHECK=" ${LMCHECK} " BITS=" ${BITS} " CMAKE_C_COMPILER_ID=" ${CMAKE_C_COMPILER_ID} " CMAKE_CXX_COMPILER_ID=" ${CMAKE_CXX_COMPILER_ID} )
 
@@ -389,31 +402,51 @@ if ( SINGLE_CONFIG )
     )
 endif()
 
-if( NOT SINGLE_CONFIG )
-	if( RUN_SANITIZER_TESTS )
-		message( "RUN_SANITIZER_TESTS (${RUN_SANITIZER_TESTS}) cannot be turned on in a non single config mode - overriding to OFF" )
-	endif()
-	set( RUN_SANITIZER_TESTS OFF )
-endif()
+execute_process( COMMAND sh -c "${CMAKE_CXX_COMPILER} -fsanitize=address test.cpp && ./a.out"
+    RESULT_VARIABLE ASAN_WORKS
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/build  )
+execute_process( COMMAND sh -c "${CMAKE_CXX_COMPILER} -fsanitize=thread test.cpp && ./a.out"
+    RESULT_VARIABLE TSAN_WORKS
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/build  )
 
-if( RUN_SANITIZER_TESTS )
-	find_program(LSB_RELEASE_EXEC lsb_release)
-	execute_process(COMMAND ${LSB_RELEASE_EXEC} -is
-		OUTPUT_VARIABLE LSB_RELEASE_ID_SHORT
-		OUTPUT_STRIP_TRAILING_WHITESPACE
-	)
-	message("LSB_RELEASE_ID_SHORT: ${LSB_RELEASE_ID_SHORT}")
-	if( LSB_RELEASE_ID_SHORT STREQUAL "Ubuntu" )
-		message("Disabling sanitizer tests on Ubuntu...")
-		set( RUN_SANITIZER_TESTS OFF )
-	endif()
-endif()
+if( ASAN_WORKS EQUAL 0 AND TSAN_WORKS EQUAL 0 )
 
-if( RUN_SANITIZER_TESTS_OVERRIDE )
-	message("Overriding sanitizer tests due to RUN_SANITIZER_TESTS_OVERRIDE: ${RUN_SANITIZER_TESTS_OVERRIDE}")
-	set( RUN_SANITIZER_TESTS ON )
+    if( NOT SINGLE_CONFIG AND RUN_SANITIZER_TESTS )
+        message( "RUN_SANITIZER_TESTS (${RUN_SANITIZER_TESTS}) cannot be turned on in a non single config mode - overriding to OFF" )
+        set( RUN_SANITIZER_TESTS OFF )
+    endif()
+
+    if( RUN_SANITIZER_TESTS_OVERRIDE )
+        message("Overriding sanitizer tests due to RUN_SANITIZER_TESTS_OVERRIDE: ${RUN_SANITIZER_TESTS_OVERRIDE}")
+        set( RUN_SANITIZER_TESTS ON )
+    endif()
+
+    #
+    # TSAN-instrumented programs used to crash on starup with certain version of Ubuntu kernel. Seems to be not thecase anymore, so disabling this section.
+    #
+    # if( RUN_SANITIZER_TESTS )
+    #     find_program(LSB_RELEASE_EXEC lsb_release)
+    #     execute_process(COMMAND ${LSB_RELEASE_EXEC} -is
+    #         OUTPUT_VARIABLE LSB_RELEASE_ID_SHORT
+    #         OUTPUT_STRIP_TRAILING_WHITESPACE
+    #     )
+    #     message("LSB_RELEASE_ID_SHORT: ${LSB_RELEASE_ID_SHORT}")
+    #     if( LSB_RELEASE_ID_SHORT STREQUAL "Ubuntu" )
+    #         message("Disabling sanitizer tests on Ubuntu...")
+    #         set( RUN_SANITIZER_TESTS OFF )
+    #     endif()
+    # endif()
+
+else()
+
+    message("ASAN suport is not detected. Disabling sanitizer tests.")
+    set( RUN_SANITIZER_TESTS OFF )
+    set( RUN_SANITIZER_TESTS_OVERRIDE OFF )
+
 endif()
 message( "RUN_SANITIZER_TESTS: ${RUN_SANITIZER_TESTS}" )
+
+
 endif(NOT _NCBIVDB_CFG_PACKAGING)
 
 if( NOT HAVE_MBEDTLS_F )

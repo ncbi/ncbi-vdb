@@ -129,20 +129,12 @@ KOutMsg ( "##[6] OK : Conf (true ) + SetAllow ( true ) = true\n" );
     RELEASE ( KConfig, kfg );
 }
 
-extern "C" {
-    const char UsageDefaultName[] = "test200for-whole-file";
-    rc_t CC UsageSummary ( const char     * progname) { return 0; }
-    rc_t CC Usage        ( const struct Args * args ) { return 0; }
-    ver_t CC KAppVersion ( void ) { return 0; }
+int main( int argc, char * argv [] ) {
+    if ( 0 ) assert ( ! KDbgSetString ( "KNS-HTTP" ) );
 
-    rc_t CC KMain ( int argc, char * argv [] ) { if (
-0 ) assert ( ! KDbgSetString ( "KNS-HTTP" ) );
-        KConfigDisableUserSettings ();
+    KConfigDisableUserSettings ();
 
-     // turn off certificate validation to download from storage.googleapis.com
+    // turn off certificate validation to download from storage.googleapis.com
 
-     rc_t rc = ALLOW_ALL_CERTS ( argc, argv );
-
-     return rc;
-    }
+    return ALLOW_ALL_CERTS ( argc, argv );
 }

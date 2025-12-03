@@ -32,6 +32,9 @@
 #include <klib/data-buffer.h>
 #include <klib/printf.h> // string_printf
 #include <klib/vdb_release_version.h> // VDB_RELEASE_VERSION
+#include <klib/debug.h>
+
+#include <kfg/config.h>
 
 #include <kns/http.h>
 #include <kns/http-priv.h>
@@ -559,29 +562,7 @@ static rc_t argsHandler ( int argc, char * argv [] ) {
     return rc;
 }
 
-extern "C"
-{
-
-#include <kapp/args.h>
-#include <kfg/config.h>
-#include <klib/debug.h>
-
-ver_t CC KAppVersion ( void )
-{
-    return 0x1000000;
-}
-rc_t CC UsageSummary (const char * progname)
-{
-    return 0;
-}
-
-rc_t CC Usage ( const Args * args )
-{
-    return 0;
-}
-const char UsageDefaultName[] = "test-http";
-
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     KConfig * kfg = NULL;
     rc_t rc = KConfigMake(&kfg, NULL);
@@ -599,13 +580,11 @@ rc_t CC KMain ( int argc, char *argv [] )
 	// TestEnv::verbosity = LogLevel::e_message;
 
     if (rc == 0)
-        rc = HttpRequestVerifyURLSuite(argc, argv);
+        rc = (rc_t)HttpRequestVerifyURLSuite(argc, argv);
 
     rc_t r2 = KConfigRelease(kfg);
     if (rc == 0 && r2 != 0)
         rc = r2;
 
-    return rc;
-}
-
+    return (int)rc;
 }

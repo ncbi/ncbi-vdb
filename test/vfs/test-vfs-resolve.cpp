@@ -25,14 +25,17 @@
 */
 
 #include <kapp/args.h> /* ArgsMakeAndHandle */
+#include <kapp/vdbapp.h> //  VdbInitialize
 #include <kfg/config.h> /* KConfigDisableUserSettings */
 #include <klib/debug.h> /* KDbgSetString */
-#include <ktst/unit_test.hpp> /* KMain */
+#include <ktst/unit_test.hpp>
 
 #include <vfs/manager.h> /* VFSManagerRelease */
 #include <vfs/path.h> /* VPathRelease */
 
 #include "../../libs/vfs/path-priv.h" // VPathEqual
+
+#define ALL
 
 extern "C" { rc_t LegacyVPathMake(VPath ** new_path, const char * posix_path); }
 
@@ -42,6 +45,7 @@ static rc_t argsHandler(int argc, char* argv[]) {
 
 TEST_SUITE_WITH_ARGS_HANDLER(TestResolveSuite, argsHandler);
 
+#ifdef ALL
 TEST_CASE(VPathTest) {
     const String * ps(NULL);
     String s;
@@ -159,6 +163,7 @@ TEST_CASE(VPathTest) {
     REQUIRE(!VPathIsRemote(out));
     REQUIRE_RC(VPathRelease(out));
 }
+#endif
 
 class Fixture {
 protected:
@@ -171,6 +176,7 @@ protected:
     VFSManager * mgr;
 };
 
+#ifdef ALL
 FIXTURE_TEST_CASE(ResolveTestFailures, Fixture) {
     const char in[]("SRR000001");
     VPath * p(NULL);
@@ -292,18 +298,19 @@ FIXTURE_TEST_CASE(ResolveTestRemote, Fixture) {
     REQUIRE_NULL(cache);
     REQUIRE_RC(VPathEqual(outP, remote, &notequal));
     REQUIRE(notequal == 0);
-    REQUIRE_RC(VPathRelease(out));
+    REQUIRE_RC(VPathRelease(remote));
 
     REQUIRE_RC(VFSManagerResolveVPathAll(mgr, p, &out, &remote, &cache));
     REQUIRE_NULL(out);
     REQUIRE_NULL(cache);
     REQUIRE_RC(VPathEqual(outP, remote, &notequal));
     REQUIRE(notequal == 0);
-    REQUIRE_RC(VPathRelease(out));
+    REQUIRE_RC(VPathRelease(remote));
 
     REQUIRE_RC(VPathRelease(outP));
     REQUIRE_RC(VPathRelease(p));
 }
+#endif
 
 FIXTURE_TEST_CASE(ResolveTestLocal, Fixture) {
     const char in[]("SRR045450");
@@ -440,17 +447,72 @@ FIXTURE_TEST_CASE(ResolveTestLocalPath, Fixture) {
     REQUIRE_RC(VPathRelease(p));
 }
 
-extern "C" {
-    const char UsageDefaultName[] = "vfs-test-resolve";
-    rc_t CC UsageSummary(const char * progname) { return 0; }
-    rc_t CC Usage(const struct Args * args) { return 0; }
-    ver_t CC KAppVersion(void) { return 0; }
-    rc_t CC KMain(int argc, char * argv[]) {
-        putenv((char*)"NCBI_VDB_NO_CACHE_SDL_RESPONSE=1");
-#if 0
-        KDbgSetString("VFS");
+FIXTURE_TEST_CASE(ResolveTestLocalAdPath, Fixture) {
+    const char in[]("SRR045450/");
+    VPath* p(NULL);
+    REQUIRE_RC(LegacyVPathMake(&p, in));
+
+    const VPath* out(NULL), * outP(NULL), * remote(NULL), * cache(NULL);
+
+    REQUIRE_RC(VFSManagerResolve(mgr, in, &out));
+    REQUIRE(!VPathFromUri(out));
+    REQUIRE(VPathIsFSCompatible(out));
+    REQUIRE(!VPathIsRemote(out));
+
+    REQUIRE_RC(VFSManagerResolveVPath(mgr, p, &outP));
+    REQUIRE(!VPathIsRemote(outP));
+    int notequal(-1);
+    REQUIRE_RC(VPathEqual(out, outP, &notequal));
+    REQUIRE(notequal == 0);
+    REQUIRE_RC(VPathRelease(out));
+
+    REQUIRE_RC_FAIL(VFSManagerResolveRemote(mgr, in, &out, &cache));
+    REQUIRE_NULL(out);
+    REQUIRE_RC_FAIL(VFSManagerResolveVPathRemote(mgr, p, &remote, &cache));
+    REQUIRE_NULL(remote);
+
+    REQUIRE_RC(VFSManagerResolveLocal(mgr, in, &out));
+    REQUIRE_RC(VPathEqual(outP, out, &notequal));
+    REQUIRE(notequal == 0);
+    REQUIRE_RC(VPathRelease(out));
+
+    REQUIRE_RC(VFSManagerResolveVPathLocal(mgr, p, &out));
+    REQUIRE_RC(VPathEqual(outP, out, &notequal));
+    REQUIRE(notequal == 0);
+    REQUIRE_RC(VPathRelease(out));
+
+    REQUIRE_RC(VFSManagerResolveWithCache(mgr, in, &out, &cache));
+    REQUIRE_RC(VPathEqual(outP, out, &notequal));
+    REQUIRE(notequal == 0);
+    REQUIRE_RC(VPathRelease(out));
+
+    REQUIRE_RC(VFSManagerResolveVPathWithCache(mgr, p, &out, &cache));
+    REQUIRE_RC(VPathEqual(outP, out, &notequal));
+    REQUIRE(notequal == 0);
+    REQUIRE_RC(VPathRelease(out));
+
+    REQUIRE_RC(VFSManagerResolveAll(mgr, in, &out, &remote, &cache));
+    REQUIRE_NULL(remote);
+    REQUIRE_RC(VPathEqual(outP, out, &notequal));
+    REQUIRE(notequal == 0);
+    REQUIRE_RC(VPathRelease(out));
+
+    REQUIRE_RC(VFSManagerResolveVPathAll(mgr, p, &out, &remote, &cache));
+    REQUIRE_NULL(remote);
+    REQUIRE_RC(VPathEqual(outP, out, &notequal));
+    REQUIRE(notequal == 0);
+    REQUIRE_RC(VPathRelease(out));
+
+    REQUIRE_RC(VPathRelease(outP));
+    REQUIRE_RC(VPathRelease(p));
+}
+
+int main(int argc, char * argv[]) {
+    putenv((char*)"NCBI_VDB_NO_CACHE_SDL_RESPONSE=1");
+#if 0 
+    VdbInitialize(argc, argv, 0);
+    KDbgSetString("VFS");
 #endif
-        KConfigDisableUserSettings();
-        return TestResolveSuite(argc, argv);
-    }
+    KConfigDisableUserSettings();
+    return TestResolveSuite(argc, argv);
 }

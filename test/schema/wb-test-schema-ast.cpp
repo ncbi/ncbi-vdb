@@ -326,21 +326,18 @@ FIXTURE_TEST_CASE(Typedef_FQN_OneScalar, AST_Fixture)
 
 FIXTURE_TEST_CASE(LocationInErrorMessages, AST_Fixture)
 {
-    if ( m_newParse )
-    {
-        HYBRID_FUNC_ENTRY( rcSRA, rcSchema, rcParsing );
-        REQUIRE ( m_parser . ParseString ( ctx, "\n\ntypedef a:zz t;" ) );
-        m_parseTree = m_parser . MoveParseTree ();
-        REQUIRE_NOT_NULL ( m_parseTree );
-        ParseTree :: Destroy ( m_builder -> Build ( ctx, * m_parseTree ) );
-        const ErrorReport & errors = m_builder -> GetErrors ();
-        REQUIRE_EQ ( 1u, errors . GetCount () );
-        const ErrorReport :: Error * err = errors . GetError ( 0 );
-        REQUIRE_EQ ( string ( "Undeclared identifier: 'zz'" ), string ( err -> m_message ) );
-        REQUIRE_EQ ( 3u, err -> m_line );
-        REQUIRE_EQ ( 11u, err -> m_column );
-        REQUIRE_EQ ( string ( "<unknown>" ), string ( err -> m_file ) );
-    }
+    HYBRID_FUNC_ENTRY( rcSRA, rcSchema, rcParsing );
+    REQUIRE ( m_parser . ParseString ( ctx, "\n\ntypedef a:zz t;" ) );
+    m_parseTree = m_parser . MoveParseTree ();
+    REQUIRE_NOT_NULL ( m_parseTree );
+    ParseTree :: Destroy ( m_builder -> Build ( ctx, * m_parseTree ) );
+    const ErrorReport & errors = m_builder -> GetErrors ();
+    REQUIRE_EQ ( 1u, errors . GetCount () );
+    const ErrorReport :: Error * err = errors . GetError ( 0 );
+    REQUIRE_EQ ( string ( "Undeclared identifier: 'zz'" ), string ( err -> m_message ) );
+    REQUIRE_EQ ( 3u, err -> m_line );
+    REQUIRE_EQ ( 11u, err -> m_column );
+    REQUIRE_EQ ( string ( "<unknown>" ), string ( err -> m_file ) );
 }
 
 FIXTURE_TEST_CASE(Resolve_UndefinedNameInNamespace, AST_Fixture)
@@ -530,8 +527,6 @@ class ConstFixture : public AST_Fixture
 public:
     ConstFixture ()
     {
-        // uncomment to run all const tests through the old parser
-        //m_newParse = false;
     }
 
     const SExpression * VerifyConst ( const char * p_input, const char * p_id, uint32_t p_type )
@@ -948,12 +943,8 @@ FIXTURE_TEST_CASE(FuncCall_FactoryParams, AST_Fixture)
 
 FIXTURE_TEST_CASE(FuncCall_FunctionAsFactoryParam, AST_Fixture)
 {
-    if ( m_newParse )
-    {
-        VerifyErrorMessage ( "function U8 g(); function U8 f <U16 i> (); table t#1 { column U8 i = f <g> (); } ",
-                             "Function expressions are not yet implemented", 1, 73 );
-    }
-    // the old parser accepts but errors out at run time
+    VerifyErrorMessage ( "function U8 g(); function U8 f <U16 i> (); table t#1 { column U8 i = f <g> (); } ",
+                            "Function expressions are not yet implemented", 1, 73 );
 }
 
 FIXTURE_TEST_CASE(FuncCall_BadFactoryParam, AST_Fixture)
@@ -1122,34 +1113,7 @@ FIXTURE_TEST_CASE(CondExpr, AST_Fixture)
 //TODO: eCondExpr
 
 //////////////////////////////////////////// Main
-#include <kapp/args.h>
-#include <kfg/config.h>
-#include <klib/out.h>
-
-extern "C"
-{
-
-ver_t CC KAppVersion ( void )
-{
-    return 0x1000000;
-}
-
-const char UsageDefaultName[] = "wb-test-schema-ast";
-
-rc_t CC UsageSummary (const char * progname)
-{
-    return KOutMsg ( "Usage:\n" "\t%s [options] -o path\n\n", progname );
-}
-
-rc_t CC Usage( const Args* args )
-{
-    return 0;
-}
-
-rc_t CC KMain ( int argc, char *argv [] )
+int main( int argc, char *argv [] )
 {
     return SchemaASTTestSuite(argc, argv);
 }
-
-}
-

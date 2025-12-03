@@ -24,6 +24,8 @@
 
 #include "WVDB_Fixture.hpp"
 
+#include <kfg/config.h>
+
 #include <sysalloc.h>
 #include <cstdlib>
 #include <stdexcept>
@@ -525,33 +527,8 @@ FIXTURE_TEST_CASE ( FunctionProdCallLegacyBlobFunc, ByteCodeFixture )
 // bcReturn - remove ?
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kapp/args.h>
-#include <kfg/config.h>
-
-ver_t CC KAppVersion ( void )
-{
-    return 0x1000000;
-}
-rc_t CC UsageSummary (const char * progname)
-{
-    return 0;
-}
-
-rc_t CC Usage ( const Args * args )
-{
-    return 0;
-}
-
-const char UsageDefaultName[] = "test-bytecode";
-
-rc_t CC KMain ( int argc, char *argv [] )
+int main( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
-    rc_t rc=ByteCodeTestSuite(argc, argv);
-    return rc;
-}
-
+    return ByteCodeTestSuite(argc, argv);
 }

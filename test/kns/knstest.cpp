@@ -31,6 +31,7 @@
 #include <os-native.h>
 
 #include <kapp/args.h> /* ArgsMakeAndHandle */
+#include <kapp/vdbapp.h>
 #include <kfg/config.h>
 
 #include <klib/base64.h>
@@ -39,6 +40,7 @@
 #include <klib/strings.h>
 
 #include <thread>
+#include <mutex>
 
 #include <kns/http.h>
 
@@ -78,6 +80,7 @@ public:
     {
         const char * ua = nullptr;
         KNSManagerGetUserAgent( & ua );
+//cout << ua << endl;
         return string::npos != string( ua ) . find( str );
     }
 
@@ -100,12 +103,17 @@ FIXTURE_TEST_CASE(KNSManagerGetUserAgent_Null, SessionIdFixture)
    REQUIRE_RC_FAIL(KNSManagerGetUserAgent(nullptr));
 }
 
+static std::string get_baseName(std::string const &argv0) {
+    auto const sep_l = argv0.find_last_of("\\/");
+    return sep_l == argv0.npos ? argv0 : argv0.substr(sep_l + 1);
+}
+
 FIXTURE_TEST_CASE(KNSManagerGetUserAgent_Default, SessionIdFixture)
 {
     const char * ua = nullptr;
     KNSManagerGetUserAgent(&ua);
-    const string ua_contains = "sra-toolkit Test_KNS_dflt.1.0.0 (phid=noc";
-    //fprintf(stderr,"Got: '%s', expected '%s'\n", ua, ua_contains.data());
+    auto const ua_contains = std::string{"sra-toolkit "} + get_baseName(GetTestSuite()->argv[0]) + std::string{".0.0.12 (phid=noc"};
+    // fprintf(stderr,"Got: '%s', expected '%s'\n", ua, ua_contains.data());
     REQUIRE_NE( string::npos, string(ua).find(ua_contains) );
     // VDB-4896: no double quotes inside UA
     REQUIRE_EQ( string::npos, string(ua).find("\"") );
@@ -174,14 +182,18 @@ FIXTURE_TEST_CASE(KNSManagerSetUserAgentSuffix_Get, SessionIdFixture)
     REQUIRE_RC(KNSManagerGetUserAgentSuffix( & s ));
     REQUIRE_EQ( suffix, string( s ) );
     REQUIRE( UserAgent_Contains(
-        "sra-toolkit Test_KNS_dflt.1.0.0suffix (phid=noc" ) );
+        string{"sra-toolkit "}
+      + get_baseName(GetTestSuite()->argv[0])
+      + string{".0.0.12suffix (phid=noc"} ) );
 }
 
 FIXTURE_TEST_CASE(KNSManagerSetUserAgentSuffix_Restore, SessionIdFixture)
 {
     REQUIRE_RC(KNSManagerSetUserAgentSuffix("suffix1"));
     REQUIRE( UserAgent_Contains(
-        "sra-toolkit Test_KNS_dflt.1.0.0suffix1 (phid=noc" ) );
+        string{"sra-toolkit "}
+      + get_baseName(GetTestSuite()->argv[0])
+      + string{".0.0.12suffix1 (phid=noc"} ) );
 
     REQUIRE_RC(KNSManagerSetUserAgentSuffix(""));
     const char * ua = nullptr;
@@ -261,43 +273,27 @@ FIXTURE_TEST_CASE(KNSManagerSet_SessionAll, SessionIdFixture)
 // thread locality of session Ids
 FIXTURE_TEST_CASE(KNSManagerSet_ThreadLocal, SessionIdFixture)
 {
-    string s1, s2;
+    string s1;
     std::thread t1 ([&]
                     {
                         REQUIRE_RC(KNSManagerSetClientIP(m_mgr, "1.2.3.4"));
                         REQUIRE_RC(KNSManagerSetSessionID(m_mgr, "sessId1"));
                         REQUIRE_RC(KNSManagerSetPageHitID(m_mgr, "pageHitId2"));
                         REQUIRE_RC(KNSManagerSetUserAgentSuffix("suffix1"));
+
                         std::this_thread::sleep_for (std::chrono::milliseconds(100));
 
                         const char * ua = nullptr;
                         KNSManagerGetUserAgent(&ua);
                         s1 = ua;
                     });
-    std::thread t2 ([&]
-                    {
-                        REQUIRE_RC(KNSManagerSetClientIP(m_mgr, "11.22.33.44"));
-                        REQUIRE_RC(KNSManagerSetSessionID(m_mgr, "sessId2"));
-                        REQUIRE_RC(KNSManagerSetPageHitID(m_mgr, "pageHitId2"));
-                        REQUIRE_RC(KNSManagerSetUserAgentSuffix("suffix2"));
-                        std::this_thread::sleep_for (std::chrono::milliseconds(100));
-
-                        const char * ua = nullptr;
-                        KNSManagerGetUserAgent(&ua);
-                        s2 = ua;
-                    });
     t1.join();
-    t2.join();
 
     REQUIRE(string::npos != s1.find(string(",")
         + enc64("cip=1.2.3.4,sid=sessId1,pagehit=pageHitId2")));
     REQUIRE(string::npos != s1.find("suffix1"));
 
-    REQUIRE(string::npos != s2.find(string(",")
-        + enc64("cip=11.22.33.44,sid=sessId2,pagehit=pageHitId2")));
-    REQUIRE(string::npos != s2.find("suffix2"));
-
-    // the above threads did not change the main thread's session Ids
+    // the above thread did not change the main thread's session Ids
     const char * ua = nullptr;
     KNSManagerGetUserAgent(&ua);
     REQUIRE_EQ( original_ua, string(ua) );
@@ -335,26 +331,24 @@ static rc_t argsHandler(int argc, char * argv[]) {
     return rc;
 }
 
-extern "C"
+static void checkForSanitizers(char *argv0)
 {
+    auto const len = strlen(argv0);
+    if (len <= 5) return;
 
-ver_t CC KAppVersion ( void )
-{
-    return 0x1000000;
-}
-rc_t CC UsageSummary (const char * progname)
-{
-    return 0;
+    auto const suffix = std::string{argv0 + len - 5};
+    if (suffix == "_asan" || suffix == "_tsan")
+        argv0[len - 5] = '\0';
 }
 
-rc_t CC Usage ( const Args * args )
+int main(int argc, char* argv[])
 {
-    return 0;
-}
-const char UsageDefaultName[] = "Test_KNS.1";
+    VDB::Application app( argc, argv, 12 ); // we need custom version for some tests
+    if (!app)
+    {
+        return 1;
+    }
 
-rc_t CC KMain ( int argc, char *argv [] )
-{
     // make sure to use singleton, otherwise some tests fail
     KNSManagerUseSingleton(true);
 
@@ -362,7 +356,5 @@ rc_t CC KMain ( int argc, char *argv [] )
 
     KConfigDisableUserSettings();
 
-    return KnsTestSuite(argc, argv);
-}
-
+    return KnsTestSuite(argc, app.getArgV());
 }

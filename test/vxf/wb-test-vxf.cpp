@@ -26,6 +26,8 @@
 
 #include <ktst/unit_test.hpp>
 
+#include <kfg/config.h>
+
 TEST_SUITE(VxfTestSuite);
 
 #include "wb-irzip-impl.h"
@@ -65,15 +67,15 @@ public:
 FIXTURE_TEST_CASE(IRZIP_u64_assert1, EncoderFixture)
 {
     uint64_t y[]={
-        UINT64_C(353878216), 
-        UINT64_C(353878152), 
-        UINT64_C(353877873), 
-        UINT64_C(353877162), 
-        UINT64_C(353876785), 
-        UINT64_C(353875727), 
-        UINT64_C(353874605), 
-        UINT64_C(353873979), 
-        UINT64_C(353873604), 
+        UINT64_C(353878216),
+        UINT64_C(353878152),
+        UINT64_C(353877873),
+        UINT64_C(353877162),
+        UINT64_C(353876785),
+        UINT64_C(353875727),
+        UINT64_C(353874605),
+        UINT64_C(353873979),
+        UINT64_C(353873604),
         UINT64_C(353872503)
     };
     uint64_t decoded[ARR_SIZE(y)];
@@ -86,15 +88,15 @@ FIXTURE_TEST_CASE(IRZIP_u64_assert1, EncoderFixture)
 FIXTURE_TEST_CASE(IRZIP_u64_assert2, EncoderFixture)
 {
     uint64_t y[]={
-        UINT64_C(353878216), 
-        UINT64_C(353878152), 
-        UINT64_C(        0), 
-        UINT64_C(        0), 
-        UINT64_C(        0), 
-        UINT64_C(        0), 
-        UINT64_C(        0), 
-        UINT64_C(        0), 
-        UINT64_C(        0), 
+        UINT64_C(353878216),
+        UINT64_C(353878152),
+        UINT64_C(        0),
+        UINT64_C(        0),
+        UINT64_C(        0),
+        UINT64_C(        0),
+        UINT64_C(        0),
+        UINT64_C(        0),
+        UINT64_C(        0),
         UINT64_C(        0)
     };
     uint64_t decoded[ARR_SIZE(y)];
@@ -107,15 +109,15 @@ FIXTURE_TEST_CASE(IRZIP_u64_assert2, EncoderFixture)
 FIXTURE_TEST_CASE(IRZIP_u32_assert1, EncoderFixture)
 {
     uint32_t y[]={
-        78216, 
-        78152, 
-        77873, 
-        77162, 
-        76785, 
-        75727, 
-        74605, 
-        73979, 
-        73604, 
+        78216,
+        78152,
+        77873,
+        77162,
+        76785,
+        75727,
+        74605,
+        73979,
+        73604,
         72503
     };
     uint32_t decoded[ARR_SIZE(y)];
@@ -128,15 +130,15 @@ FIXTURE_TEST_CASE(IRZIP_u32_assert1, EncoderFixture)
 FIXTURE_TEST_CASE(IRZIP_u32_assert2, EncoderFixture)
 {
     uint32_t y[]={
-        78216, 
-        78152, 
-        0, 
-        0, 
-        0, 
-        0, 
-        0, 
-        0, 
-        0, 
+        78216,
+        78152,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
         0
     };
     uint32_t decoded[ARR_SIZE(y)];
@@ -197,15 +199,15 @@ FIXTURE_TEST_CASE(IRZIP_u64_assert4, EncoderFixture)
 FIXTURE_TEST_CASE(IRZIP_i64_assert1, EncoderFixture)
 {
     int64_t y[]={
-        INT64_C( 353878216), 
-        INT64_C(-353878152), 
-        INT64_C( 353877873), 
-        INT64_C(-353877162), 
-        INT64_C(-353876785), 
-        INT64_C( 353875727), 
-        INT64_C(-353874605), 
-        INT64_C( 353873979), 
-        INT64_C(-353873604), 
+        INT64_C( 353878216),
+        INT64_C(-353878152),
+        INT64_C( 353877873),
+        INT64_C(-353877162),
+        INT64_C(-353876785),
+        INT64_C( 353875727),
+        INT64_C(-353874605),
+        INT64_C( 353873979),
+        INT64_C(-353873604),
         INT64_C( 353872503)
     };
     int64_t decoded[ARR_SIZE(y)];
@@ -218,15 +220,15 @@ FIXTURE_TEST_CASE(IRZIP_i64_assert1, EncoderFixture)
 FIXTURE_TEST_CASE(IRZIP_i32_assert1, EncoderFixture)
 {
     int32_t y[]={
-        78216, 
-        78152, 
-        -77873, 
-        -77162, 
-        -76785, 
-        75727, 
-        74605, 
-        -73979, 
-        -73604, 
+        78216,
+        78152,
+        -77873,
+        -77162,
+        -76785,
+        75727,
+        74605,
+        -73979,
+        -73604,
         72503
     };
     int32_t decoded[ARR_SIZE(y)];
@@ -236,33 +238,8 @@ FIXTURE_TEST_CASE(IRZIP_i32_assert1, EncoderFixture)
 }
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kapp/args.h>
-#include <kfg/config.h>
-
-ver_t CC KAppVersion ( void )
-{
-    return 0x1000000;
-}
-rc_t CC UsageSummary (const char * progname)
-{
-    return 0;
-}
-
-rc_t CC Usage ( const Args * args )
-{
-    return 0;
-}
-
-const char UsageDefaultName[] = "wb-test-vxf";
-
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
-    rc_t rc=VxfTestSuite(argc, argv);
-    return rc;
-}
-
+    return VxfTestSuite(argc, argv);
 }

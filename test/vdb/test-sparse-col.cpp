@@ -24,6 +24,8 @@
 
 #include <cmath>
 
+#include <kfg/config.h>
+
 #include <vdb/manager.h> // VDBManager
 #include <vdb/database.h>
 #include <vdb/table.h>
@@ -191,7 +193,7 @@ public:
                                               "%s",
                                               m_databaseName . c_str () ) );
             }
-            catch (std::logic_error & e)
+            catch (std::logic_error &)
             {
                 VDBManagerRelease ( mgr );
                 throw;
@@ -341,33 +343,8 @@ FIXTURE_TEST_CASE ( SparseColEmpty, VDB_Fixture)
 
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kapp/args.h>
-#include <kfg/config.h>
-
-ver_t CC KAppVersion ( void )
-{
-    return 0x1000000;
-}
-rc_t CC UsageSummary (const char * progname)
-{
-    return 0;
-}
-
-rc_t CC Usage ( const Args * args )
-{
-    return 0;
-}
-
-const char UsageDefaultName[] = "test-sparse-col";
-
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
-    rc_t rc=SparseColTestSuite(argc, argv);
-    return rc;
-}
-
+    return SparseColTestSuite(argc, argv);
 }

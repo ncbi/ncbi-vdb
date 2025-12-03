@@ -30,6 +30,8 @@
 
 #include <ktst/unit_test.hpp>
 
+#include <kapp/args.h>
+
 #include <klib/rc.h>
 #include <kfg/config.h>
 #include <kfs/directory.h>
@@ -271,8 +273,6 @@ FIXTURE_TEST_CASE(KGZipFile_Test, KGZipFileFixture)
     TestRead();
 }
 
-#include <kapp/args.h>
-
 static rc_t argsHandler(int argc, char * argv[]) {
     Args * args = NULL;
     rc_t rc = ArgsMakeAndHandle(&args, argc, argv, 0, NULL, 0);
@@ -280,27 +280,7 @@ static rc_t argsHandler(int argc, char * argv[]) {
     return rc;
 }
 
-#include <kfg/config.h>
-#include <klib/debug.h>
-
-extern "C"
-{
-ver_t CC KAppVersion ( void )
-{
-    return 0x1000000;
-}
-rc_t CC UsageSummary (const char * progname)
-{
-    return 0;
-}
-
-rc_t CC Usage ( const Args * args )
-{
-    return 0;
-}
-const char UsageDefaultName[] = "test-gzip-file";
-
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
 
@@ -308,8 +288,5 @@ rc_t CC KMain ( int argc, char *argv [] )
 	// (same as running the executable with "-l=message")
 	//TestEnv::verbosity = LogLevel::e_message;
 
-    rc_t rc = KGZipFileTestSuite(argc, argv);
-    return rc;
-}
-
+    return KGZipFileTestSuite(argc, argv);
 }

@@ -32,6 +32,9 @@
 
 #include <klib/rc.h>
 #include <klib/printf.h>
+#include <klib/debug.h>
+
+#include <kfg/config.h>
 
 #include <kns/endpoint.h>
 #include <kns/stream.h>
@@ -47,6 +50,8 @@
 #include <kproc/timeout.h>
 
 #include <algorithm>
+#include <atomic>
+#include <set>
 
 static rc_t argsHandler(int argc, char* argv[]);
 TEST_SUITE_WITH_ARGS_HANDLER(KnsIpcTestSuite, argsHandler);
@@ -216,12 +221,17 @@ public:
                 KThreadCancel(server);
                 KThreadWait(server, nullptr);
                 KThreadRelease(server);
-                KThreadRelease(server);/* for some reason KThread is initialized with refcout = 2 */
+                KThreadRelease(server);/* for some reason this KThread is initialized with refcount = 2 */
 
                 if (listener)
                 {   /* shutdown the (possibly blocked) listener */
                     LOG(LogLevel::e_message, "server releasing the listener" << endl);
                     KListenerRelease(listener);
+                }
+
+                for( auto t = workers.begin(); t != workers.end(); ++t )
+                {
+                    KThreadRelease( *t );
                 }
             }
         }
@@ -267,9 +277,10 @@ public:
                     THROW_ON_RC ( KSocketRelease ( socket ) );
 
                     LOG(LogLevel::e_message, "server detected connection, starting worker" << endl);
-                    KThread* worker;
-                    if (KThreadMake ( &worker, threadWorker == 0 ? DefaultWorkerThreadFn : threadWorker, stream) != 0 || worker == 0)
+                    KThread * worker;
+                    if (KThreadMake ( &worker, threadWorker.load() == 0 ? DefaultWorkerThreadFn : threadWorker.load(), stream) != 0 || worker == 0)
                         throw logic_error ( "SocketFixture: KThreadMake failed" );
+                    workers.insert( worker);
                 }
             }
             LOG(LogLevel::e_message, "server  exiting" << endl);
@@ -292,7 +303,7 @@ public:
             LOG(LogLevel::e_message, "worker "  << (void*)self << " after KStreamRead(" << string(localBuf, num) << ")" << endl);
 
             for (size_t i = 0 ; i < num; ++i)
-                localBuf[i] = toupper(localBuf[i]);
+                localBuf[i] = (char)toupper(localBuf[i]);
 
             THROW_ON_RC ( KStreamWrite(stream, localBuf, num, &num) );
             LOG(LogLevel::e_message, "worker "  << (void*)self << " after KStreamWrite" << endl);
@@ -316,7 +327,7 @@ public:
             throw;
         }
         LOG(LogLevel::e_message, "worker "  << (void*)self << " exiting" << endl);
-        return KThreadRelease(self);
+        return 0;
     }
 
     void CloseClientStream(KStream* p_stream)
@@ -325,8 +336,8 @@ public:
         {
             // signal to server to shut down the connection
             string done("done");
-            size_t num;
-            THROW_ON_RC ( KStreamTimedWrite(p_stream, done.c_str(), done.length(), &num, nullptr) );
+            size_t nm;
+            THROW_ON_RC ( KStreamTimedWrite(p_stream, done.c_str(), done.length(), &nm, nullptr) );
             THROW_ON_RC ( KStreamRelease(p_stream) );
         }
     }
@@ -334,7 +345,7 @@ public:
     KStream* MakeStream( int32_t p_retryTimeout )
     {
         timeout_t tm;
-        TimeoutInit ( & tm, p_retryTimeout );
+        TimeoutInit ( & tm, (uint32_t)p_retryTimeout );
 
         KSocket* socket;
         THROW_ON_RC ( KNSManagerMakeRetryConnection(m_mgr, &socket, &tm, nullptr, &ep) );
@@ -356,7 +367,8 @@ public:
     KListener* listener;
 
     // may be set by subclasses
-    WorkerThreadFn threadWorker;
+    atomic<WorkerThreadFn> threadWorker;
+    set<KThread*> workers; // make thread safe?
 
     // for use in test cases
     size_t num;
@@ -413,6 +425,7 @@ PROCESS_FIXTURE_TEST_CASE(IPCEndpoint_MultipleListeners, SocketFixture, 0, 100)
     CloseClientStream(stream);
     CloseClientStream(stream2);
 }
+
 
 PROCESS_FIXTURE_TEST_CASE(IPCEndpoint_ReadAll, SocketFixture, 0, 5)
 {   // call ReadAll requesting more bytes than available, see it return only what is available
@@ -491,7 +504,7 @@ public:
             LOG(LogLevel::e_message, "worker "  << (void*)self << " after KStreamRead(" << string(localBuf, localNumRead) << ")" << endl);
 
             for (size_t i = 0 ; i < localNumRead; ++i)
-                localBuf[i] = toupper(localBuf[i]);
+                localBuf[i] = (char)toupper(localBuf[i]);
 
             // send outgoing message after a pause for SERVER_WRITE_DELAY_MS
             LOG(LogLevel::e_message, "worker "  << (void*)self << " sleeping for " << SERVER_WRITE_DELAY_MS << " ms" << endl);
@@ -521,7 +534,7 @@ public:
             throw;
         }
         LOG(LogLevel::e_message, "worker "  << (void*)self << " exiting" << endl);
-        return KThreadRelease(self);
+        return 0;
     }
 
     // for use in test cases
@@ -617,11 +630,11 @@ public:
 
     KStream* MakeStreamTimed( int32_t p_retryTimeout, int32_t p_readMillis, int32_t p_writeMillis  )
     {
-        timeout_t tm;
-        TimeoutInit ( & tm, p_retryTimeout );
+        timeout_t t;
+        TimeoutInit ( & t, (uint32_t)p_retryTimeout );
 
         KSocket* socket;
-        THROW_ON_RC ( KNSManagerMakeRetryTimedConnection(m_mgr, &socket, &tm, p_readMillis, p_writeMillis, nullptr, &ep) );
+        THROW_ON_RC ( KNSManagerMakeRetryTimedConnection(m_mgr, &socket, &t, p_readMillis, p_writeMillis, nullptr, &ep) );
         if (socket == 0)
            throw logic_error ( "MakeStreamTimed: KStreamRelease failed" );
 
@@ -650,6 +663,7 @@ PROCESS_FIXTURE_TEST_CASE(TimedConnection_Read_NULL_Timeout, TimedConnection_Rea
 
 	TeardownClient();
 }
+
 PROCESS_FIXTURE_TEST_CASE(TimedConnection_TimedReadOverride_NULL_Timeout, TimedConnection_ReadSocketFixture, 0, 20)
 {   // 2.1.1 wait indefinitely until the server responds
     string content = GetName();
@@ -685,6 +699,7 @@ PROCESS_FIXTURE_TEST_CASE(TimedConnection_Read_0_Timeout, TimedConnection_ReadSo
     TestEnv::SleepMs(SERVER_WRITE_DELAY_MS * 2); // let the server wake up to handle the 'done' message
 	TeardownClient();
 }
+
 PROCESS_FIXTURE_TEST_CASE(TimedConnection_ReadOverride_0_Timeout, TimedConnection_ReadSocketFixture, 0, 20)
 {   // 2.2.1 time out immediately when the server has not yet responded
     string content = GetName();
@@ -704,6 +719,7 @@ PROCESS_FIXTURE_TEST_CASE(TimedConnection_ReadOverride_0_Timeout, TimedConnectio
     TestEnv::SleepMs(SERVER_WRITE_DELAY_MS * 2); // let the server wake up to handle the 'done' message
 	TeardownClient();
 }
+
 PROCESS_FIXTURE_TEST_CASE(TimedConnection_SettingsOverride_0_Timeout, TimedConnection_ReadSocketFixture, 0, 20)
 {   // 2.2.2 time out immediately when the server has not yet responded
     REQUIRE_RC(KNSManagerSetConnectionTimeouts(m_mgr, 5000, 0, 0)); // override default setting (long time-out) to "no wait"
@@ -741,6 +757,7 @@ PROCESS_FIXTURE_TEST_CASE(TimedConnection_Read_Short_Timeout, TimedConnection_Re
     TestEnv::SleepMs(SERVER_WRITE_DELAY_MS * 2); // let the server wake up to handle the 'done' message
 	TeardownClient();
 }
+
 PROCESS_FIXTURE_TEST_CASE(TimedConnection_ReadOverride_Short_Timeout, TimedConnection_ReadSocketFixture, 0, 20)
 {   // 2.3.1. time out when the server has not responded quickly enough
     string content = GetName();
@@ -775,6 +792,7 @@ PROCESS_FIXTURE_TEST_CASE(TimedConnection_Read_Long_Timeout, TimedConnection_Rea
 
 	TeardownClient();
 }
+
 PROCESS_FIXTURE_TEST_CASE(TimedConnection_ReadOverride_Long_Timeout, TimedConnection_ReadSocketFixture, 0, 20)
 {   // 2.4.1. wait enough time for the server to respond
     string content = GetName();
@@ -845,7 +863,7 @@ public:
 		char localBuf[MaxMessageSize];
 		size_t num;
         timeout_t tm;
-        tm.mS = p_timeoutMs;
+        tm.mS = (uint32_t)p_timeoutMs;
 		THROW_ON_RC ( KStreamTimedRead(p_stream, localBuf, size == 0 ? sizeof(localBuf) : size, &num, p_timeoutMs == -1 ? nullptr : &tm) );
 
 		return string(localBuf, num);
@@ -862,12 +880,12 @@ public:
 	{
 		size_t num;
         timeout_t tm;
-        tm.mS = p_timeoutMs;
+        tm.mS = (uint32_t)p_timeoutMs;
         LOG(LogLevel::e_message, "WriteMessage, timeout=" << p_timeoutMs << "ms" << endl);
 		return KStreamTimedWrite(p_stream, p_msg.c_str(), p_msg.size(), &num, p_timeoutMs == -1 ? nullptr : &tm);
 	}
 
-	static volatile bool go;
+	static atomic<bool> go;
     static rc_t TimedWriteServerFn ( const KThread *self, void *data )
     {
         // this function does not always exit, so using STL string in this function leads to occasional leaks.
@@ -948,7 +966,7 @@ public:
             throw;
         }
         LOG(LogLevel::e_message, (string(prefix) + " exiting\n"));
-        return KThreadRelease(self);
+        return 0;
     }
 
     // for use in test cases (=client code)
@@ -957,21 +975,21 @@ public:
         LOG(LogLevel::e_message, "flooding" << endl);
 		char localBuf[MaxMessageSize];
         memset(localBuf, 0xab, sizeof(localBuf)); // to keep valgrind happy
-		size_t num;
+		size_t nm;
         struct timeout_t tm;
         tm.mS = 0; /* do not wait */
 		while (true)
 		{
 			LOG(LogLevel::e_message, "writing " << MaxMessageSize << " bytes\n");
-			rc_t rc = KStreamTimedWrite(m_data, localBuf, sizeof(localBuf), &num, &tm);
+			rc_t rc = KStreamTimedWrite(m_data, localBuf, sizeof(localBuf), &nm, &tm);
 			if (rc != 0)
 			{
 				LOG(LogLevel::e_message, "KStreamWrite failed - flooding complete\n");
 				break;
 			}
-			if (num != sizeof(localBuf))
+			if (nm != sizeof(localBuf))
 			{
-				LOG(LogLevel::e_message, "written " << num << " bytes, expected " << sizeof(localBuf) << endl);
+				LOG(LogLevel::e_message, "written " << nm << " bytes, expected " << sizeof(localBuf) << endl);
 				break;
 			}
 		}
@@ -981,7 +999,7 @@ public:
     KStream* m_control;
 };
 
-volatile bool TimedWriteSocketFixture::go = false;
+atomic<bool> TimedWriteSocketFixture::go ( false );
 
 //  1. flood the socket, see KStreamTimedWrite time out
 PROCESS_FIXTURE_TEST_CASE(TimedWrite_Short_Timeout, TimedWriteSocketFixture, 0, 20)
@@ -1032,29 +1050,7 @@ static rc_t argsHandler(int argc, char * argv[]) {
     return rc;
 }
 
-extern "C"
-{
-
-#include <kapp/args.h>
-#include <kfg/config.h>
-#include <klib/debug.h>
-
-ver_t CC KAppVersion ( void )
-{
-    return 0x1000000;
-}
-rc_t CC UsageSummary (const char * progname)
-{
-    return 0;
-}
-
-rc_t CC Usage ( const Args * args )
-{
-    return 0;
-}
-const char UsageDefaultName[] = "test-kns";
-
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
 
@@ -1073,8 +1069,5 @@ rc_t CC KMain ( int argc, char *argv [] )
         KDirectoryCreateDir(dir, 0700, 0, "%s/.ncbi", getenv ( "HOME" ));
     KDirectoryRelease(dir);
 
-    rc_t rc=KnsIpcTestSuite(argc, argv);
-    return rc;
-}
-
+    return KnsIpcTestSuite(argc, argv);
 }

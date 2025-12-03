@@ -515,6 +515,7 @@ static rc_t KArcListingInit (KArcListing *self,
             }
             else
             {
+
                 void *r = NULL;
                 const char *name;
 
@@ -599,6 +600,7 @@ static rc_t KArcListingInit (KArcListing *self,
                      */
                     else
                     {
+                        free( self->namelist );
                         self->namelist = r;
                     }
                 }
@@ -1098,7 +1100,6 @@ rc_t CC KArcDirList (const KArcDir *self,
 	    if (rc == 0)
 	    {
 		KArcListing *list = malloc (sizeof *list);
-
 		if (list == NULL)
 		{
 		    rc = RC (rcFS, rcDirectory, rcListing, rcMemory, rcExhausted);
@@ -2422,7 +2423,7 @@ static rc_t CC KArcDirResolvePath (const KArcDir *self,
                                    const char *path,
                                    va_list args)
 {
-    char * full;
+    char * full = NULL;
     rc_t   rc;
 
     assert (self != NULL);

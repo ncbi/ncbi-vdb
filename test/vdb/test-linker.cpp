@@ -24,6 +24,8 @@
 
 #include "WVDB_Fixture.hpp"
 
+#include <kfg/config.h>
+
 #include <bitstr.h>
 
 using namespace std;
@@ -197,32 +199,7 @@ FIXTURE_TEST_CASE ( OverrideIntrinsic, TestLinkerFicture )
 }
 
 //////////////////////////////////////////// Main
-extern "C"
+int main ( int argc, char *argv [] )
 {
-
-#include <kapp/args.h>
-#include <kfg/config.h>
-
-ver_t CC KAppVersion ( void )
-{
-    return 0x1000000;
-}
-rc_t CC UsageSummary (const char * progname)
-{
-    return 0;
-}
-
-rc_t CC Usage ( const Args * args )
-{
-    return 0;
-}
-
-const char UsageDefaultName[] = "test-linker";
-
-rc_t CC KMain ( int argc, char *argv [] )
-{
-    rc_t rc=LinkerTestSuite(argc, argv);
-    return rc;
-}
-
+    return LinkerTestSuite(argc, argv);
 }

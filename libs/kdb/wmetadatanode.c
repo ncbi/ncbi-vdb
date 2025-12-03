@@ -1105,7 +1105,7 @@ KWMDataNodeReadAttr ( const KMDataNode *bself, const char *name, char *buffer, s
                 * size = 0;
                 if ( bsize != 0 )
                     buffer [ 0 ] = 0;
-                rc = RC ( rcDB, rcMetadata, rcReading, rcAttr, rcNotFound );
+                rc = SILENT_RC ( rcDB, rcMetadata, rcReading, rcAttr, rcNotFound );
             }
             else
             {
@@ -1117,7 +1117,7 @@ KWMDataNodeReadAttr ( const KMDataNode *bself, const char *name, char *buffer, s
                     return 0;
                 }
 
-                return RC ( rcDB, rcMetadata, rcReading, rcBuffer, rcInsufficient );
+                return SILENT_RC ( rcDB, rcMetadata, rcReading, rcBuffer, rcInsufficient );
             }
         }
 
@@ -1269,10 +1269,10 @@ KMDataNodeVDropChild ( KMDataNode *bself, const char *path, va_list args )
 {
     CAST();
 
-    int len = 0;
+    int len = 0, lead = 0;
     rc_t rc;
     KWMDataNode *found;
-    char full [ 4096 ], *p = full;
+    char orig [ 4096 ], full [ 4096 ], *p = full;
 
     if ( self == NULL )
         return RC ( rcDB, rcNode, rcUpdating, rcSelf, rcNull );
@@ -1284,10 +1284,6 @@ KMDataNodeVDropChild ( KMDataNode *bself, const char *path, va_list args )
         return RC ( rcDB, rcNode, rcUpdating, rcPath, rcInvalid );
 
     /* generate full path */
-    /* VDB-4386: cannot treat va_list as a pointer! */
-    /*if ( args == NULL )
-        len = snprintf ( full, sizeof full, "%s", path );
-    else*/
     if ( path != NULL )
         len = vsnprintf ( full, sizeof full, path, args );
     if ( len < 0 || len >= sizeof full )
@@ -1296,6 +1292,21 @@ KMDataNodeVDropChild ( KMDataNode *bself, const char *path, va_list args )
     /* don't allow update when open for read */
     if ( self -> read_only )
         return RC ( rcDB, rcNode, rcUpdating, rcNode, rcReadonly );
+
+    /* remove trailing slashes */
+    while ( len > 1 && full [ len - 1 ] == '/' )
+        full [ len-- - 1 ] = '\0';
+
+    /* remove leading slashes */
+    while ( len - lead > 1 && full [ lead ] == '/' )
+        ++lead;
+    if ( lead > 0 ) {
+        memmove ( full, full + lead, len - lead + 1 );
+        len -= lead;
+    }
+
+    /* full is updated in KWMDataNodeFind */
+    string_copy ( orig, sizeof orig, full, len );
 
     rc = KWMDataNodeFind ( self, & found, & p );
     if ( GetRCState ( rc ) == rcNotFound )
@@ -1307,7 +1318,20 @@ KMDataNodeVDropChild ( KMDataNode *bself, const char *path, va_list args )
         BSTreeInit ( & found -> child );
     }
     else
-    {
+    { /* "/" agrument is accepted */
+        char *slash = NULL;
+        if ( len > 1 )
+            slash = string_rchr ( orig, len, '/' );
+        if ( slash != NULL ) {
+            KMDataNode *node = NULL;
+            rc = KMDataNodeOpenNodeUpdate ( bself, & node,
+                "%.*s", slash - orig, orig );
+            if ( rc == 0 )
+                rc = KMDataNodeDropChild ( node, slash + 1 );
+            KMDataNodeRelease ( node );
+            return rc;
+        }
+
         BSTreeUnlink ( & self -> child, & found -> dad . n );
         KMDataNodeRelease ( & found -> dad );
     }

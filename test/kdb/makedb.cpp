@@ -36,6 +36,8 @@
 #include <vdb/table.h>
 #include <vdb/cursor.h>
 
+#include <kfg/config.h>
+
 #include <arch-impl.h>
 
 #include <kdb/meta.h>
@@ -140,33 +142,9 @@ MakeDatabase()
 }
 
 //////////////////////////////////////////// Main
-extern "C"
-{
-
-#include <kapp/args.h>
-#include <kfg/config.h>
-
-ver_t CC KAppVersion ( void )
-{
-    return 0x1000000;
-}
-rc_t CC UsageSummary (const char * progname)
-{
-    return 0;
-}
-
-rc_t CC Usage ( const Args * args )
-{
-    return 0;
-}
-
-const char UsageDefaultName[] = "makedb";
-
-rc_t CC KMain ( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
 
-    return MakeDatabase();
-}
-
+    return (int)MakeDatabase();
 }
