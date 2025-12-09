@@ -23,9 +23,13 @@
 // ===========================================================================
 
 #include "klib/defs.h"
+#include <cstdint>
 #include <ktst/unit_test.hpp> // TEST_CASE
 
 #include <vdb/manager.h>
+#include <vdb/database.h>
+#include <vdb/table.h>
+#include <vdb/cursor.h>
 #include <vfs/manager.h>
 #include <vfs/path.h>
 #include <kfs/directory.h>
@@ -55,42 +59,122 @@ std::string get_home_dir( void ) {
     return res;
 }
 
+rc_t cstr_2_vpath( const char * s, VPath** vpath ) {
+    VFSManager * vfs_mgr = NULL;
+    rc_t rc = VFSManagerMake( &vfs_mgr );
+    if ( 0 == rc ) {
+        rc = VFSManagerMakePath( vfs_mgr, vpath, s );
+        if ( 0 != rc ) {
+            FAIL( "FAIL: VFSManagerMakePath() failed" );
+        }
+        VFSManagerRelease( vfs_mgr );
+    } else {
+        FAIL( "FAIL: VFSManagerMake( &vfs_mgr ) failed" );
+    }
+    return rc;
+}
+
+rc_t set_cache_root( const std::string& dir ) {
+    const VDBManager * vdb_mgr;
+    rc_t rc = VDBManagerMakeRead( &vdb_mgr, NULL );
+    if ( rc != 0 ) {
+        FAIL( "FAIL: VDBManagerMakeRead( &vdb_mgr ) failed [1]" );
+    } else {
+        VPath * vpath;
+        rc = cstr_2_vpath( dir . c_str(), &vpath );
+        rc = VDBManagerSetCacheRoot( vdb_mgr, vpath );
+        if ( rc != 0 ) {
+            FAIL( "FAIL: VDBManagerSetCacheRoot( mgr, vpath ) failed" );
+        } else {
+            std::cout << "VDBManagerSetCacheRoot : OK"<< std::endl;
+        }
+        VPathRelease( vpath );
+        VDBManagerRelease( vdb_mgr );
+    }
+    return rc;
+}
+
+rc_t open_db( const std::string& acc, const VDatabase ** db ) {
+    VPath * vpath;
+    rc_t rc = cstr_2_vpath( acc . c_str(), &vpath );
+    if ( 0 == rc ) {
+        const VDBManager * mgr;
+        rc = VDBManagerMakeRead( &mgr, NULL );
+        if ( rc != 0 ) {
+            FAIL( "FAIL: VDBManagerMakeRead( &vdb_mgr ) failed [1]" );
+        } else {
+            rc = VDBManagerOpenDBReadVPath( mgr, db, nullptr, vpath );
+            if ( 0 != rc  ) {
+                FAIL( "FAIL: VDBManagerOpenDBReadVPath() failed" );
+            }
+            VDBManagerRelease( mgr );
+        }
+        VPathRelease( vpath );
+    }
+    return rc;
+}
+
+rc_t access_sra( const std::string& acc ) {
+    const VDatabase * db;
+    rc_t rc = open_db( acc, &db );
+    if ( 0 == rc ) {
+        const VTable * tbl;
+        rc = VDatabaseOpenTableRead( db, &tbl, "SEQUENCE" );
+        if ( rc != 0 ) {
+            FAIL( "FAIL: VDatabaseOpenTableRead() failed" );
+        } else {
+            const VCursor * cur;
+            rc = VTableCreateCursorRead( tbl, &cur );
+            if ( rc != 0 ) {
+                FAIL( "FAIL: VTableCreateCursorRead() failed" );
+            } else {
+                uint32_t idx;
+                rc = VCursorAddColumn( cur, &idx, "READ" );
+                if ( rc != 0 ) {
+                    FAIL( "FAIL: VCursorAddColumn( READ ) failed" );
+                } else {
+                    rc = VCursorOpen( cur );
+                    if ( rc != 0 ) {
+                        FAIL( "FAIL: VCursorOpen() failed" );
+                    } else {
+                        uint32_t elem_bits, boff, row_len;
+                        const void * base;
+                        rc = VCursorCellDataDirect( cur, 1, idx, &elem_bits, &base, &boff, &row_len );
+                        if ( rc != 0 ) {
+                            FAIL( "FAIL: VCursorCellDataDirect() failed" );
+                        } else {
+                            std::cout << "elem_bits : " << elem_bits << std::endl;
+                            std::cout << "boff      : " << boff << std::endl;
+                            std::cout << "row_len   : " << row_len << std::endl;
+                        }
+                    }
+                }
+                VCursorRelease( cur );
+            }
+            VTableRelease( tbl );
+        }
+        VDatabaseRelease( db );
+    }
+    return rc;
+}
 
 //////////////////////////////////////////// Main
 int main ( int argc, char *argv [] )
 {
-    std::string cwd = get_home_dir();
-    if ( cwd . empty() ) {
+    rc_t rc = 0;
+    std::string dir;
+    if ( argc > 1 ) {
+        dir = argv[ 1 ];
+    } else {
+        dir = get_home_dir();
+    }
+    if ( dir . empty() ) {
         FAIL( "cannot determine current working directory" );
     } else {
-        std::cout << "cwd = " << cwd << std::endl;
-        const VDBManager * vdb_mgr;
-        rc_t rc = VDBManagerMakeRead( &vdb_mgr, NULL );
-        if ( rc != 0 ) {
-            FAIL( "FAIL: VDBManagerMakeRead( &vdb_mgr ) failed" );
-        } else {
-            VFSManager * vfs_mgr = NULL;
-            rc = VFSManagerMake( &vfs_mgr );
-            if ( rc != 0 ) {
-                FAIL( "FAIL: VFSManagerMake( &vfs_mgr ) failed" );
-            } else {
-                VPath * vpath;
-                const std::string s{ "/some/other/p哈path" };
-
-                rc = VFSManagerMakePath( vfs_mgr, &vpath, s . c_str() );
-                if ( rc != 0 ) {
-                    FAIL( "FAIL: VFSManagerMakePath() failed" );
-                } else {
-                    rc = VDBManagerSetCacheRoot( vdb_mgr, vpath );
-                    if ( rc != 0 ) {
-                        FAIL( "FAIL: VDBManagerSetCacheRoot( mgr, vpath ) failed" );
-                    }
-                    VPathRelease( vpath );
-                }
-                VFSManagerRelease( vfs_mgr );
-            }
-            VDBManagerRelease( vdb_mgr );
+        rc = set_cache_root( dir );
+        if ( rc == 0 ) {
+            rc = access_sra( "SRR341578" );
         }
     }
-    return 0;
+    return rc;
 }
