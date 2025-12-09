@@ -51,8 +51,7 @@
 
 using namespace std;
 
-static rc_t argsHandler ( int argc, char * argv [] );
-TEST_SUITE_WITH_ARGS_HANDLER ( VdbTableCursorTestSuite_Read, argsHandler );
+TEST_SUITE ( VdbTableCursorTestSuite_Read );
 
 const char * Accession = "SRR600096";
 
@@ -688,15 +687,7 @@ FIXTURE_TEST_CASE( VTableCursor_ListReadableColumns, TableCursorFixture )
 }
 
 //////////////////////////////////////////// Main
-static rc_t argsHandler ( int argc, char * argv [] ) {
-    Args * args = NULL;
-    rc_t rc = ArgsMakeAndHandle ( & args, argc, argv, 0, NULL, 0 );
-    ArgsWhack ( args );
-    return rc;
-}
-
 int main( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
     return VdbTableCursorTestSuite_Read(argc, argv);
 }

@@ -39,6 +39,7 @@ elseif ( "windows" STREQUAL ${OS} )
 endif()
 
 set( SRC
+    branch-engineering
     testenv
     testcase
     testrunner

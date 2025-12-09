@@ -231,6 +231,5 @@ FIXTURE_TEST_CASE ( ColumnBlobRead_insufficient_buffer, WColumnBlobFixture_API )
 //////////////////////////////////////////// Main
 int main ( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
     return WBlobTestSuite(argc, argv);
 }

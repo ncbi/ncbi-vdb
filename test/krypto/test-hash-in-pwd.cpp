@@ -31,16 +31,9 @@
 #include <vfs/manager.h> /* VFSManagerRelease */
 #include <vfs/manager-priv.h> /* VFSManagerMakeFromKfg */
 
-#include <ktst/unit_test.hpp> /* TEST_SUITE_WITH_ARGS_HANDLER */
+#include <ktst/unit_test.hpp>
 
-static rc_t argsHandler(int argc, char * argv[]) {
-    Args * args = NULL;
-    rc_t rc = ArgsMakeAndHandle(&args, argc, argv, 0, NULL, 0);
-    ArgsWhack(args);
-    return rc;
-}
-
-TEST_SUITE_WITH_ARGS_HANDLER(TestHashInPwd, argsHandler)
+TEST_SUITE(TestHashInPwd)
 
 static const char pwdKfg[] = "o#";
 
@@ -98,9 +91,8 @@ TEST_CASE(TestFile) {
     REQUIRE_RC(KConfigRelease(kfg));
 }
 
-int main(int argc, char *argv[]) {
-    KConfigDisableUserSettings(); // ignore ~/.ncbi/user-settings.mkfg
-
+int main(int argc, char *argv[])
+{
     return TestHashInPwd(argc, argv);
 }
 

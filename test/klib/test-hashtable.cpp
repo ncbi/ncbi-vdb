@@ -993,6 +993,5 @@ TEST_CASE(Klib_hash_hamming)
 int main(int argc, char* argv[])
 {
     srandom(time(NULL));
-    KConfigDisableUserSettings();
     return KHashTableTestSuite(argc, argv);
 }

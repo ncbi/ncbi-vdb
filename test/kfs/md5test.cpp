@@ -166,7 +166,6 @@ TEST_CASE(KMD5WriteFileNotTruncateWithoutChange)
 //////////////////////////////////////////// Main
 int main ( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
     return KMD5FileTestSuite(argc, argv);
 }
 

@@ -29,7 +29,6 @@
 
 int main ( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
     KDBManager *p;
     rc_t rc = KDBManagerMakeUpdate( &p, NULL );
     if ( rc == 0 )

@@ -982,7 +982,6 @@ FIXTURE_TEST_CASE ( BlobChecksumOFF, WVDB_Fixture)
 //////////////////////////////////////////// Main
 int main ( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
     return WVdbTestSuite(argc, argv);
 }
 

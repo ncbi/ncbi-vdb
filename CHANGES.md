@@ -23,6 +23,17 @@ Please cite the author in any work or product based on this material.
 # NCBI External Developer Release:
 
 
+## NCBI VDB 3.3.0
+**December 2, 2025**
+
+  **kdbmeta, ngs, pileup-stats, prefetch, srapath, vfs**: improved directory path handling  
+  **kfg, prefetch**: improved file type handling  
+  **kns**: fixed to build on FreeBSD Release 14.3  
+  **ncbi-vdb, sra, sra-info**: added Salus and Geneus platforms  
+  **test**: fixed deprecation  
+  **test**: ported cipher test to run on multiple UNIX platforms  
+
+
 ## NCBI VDB 3.2.1
 **March 18, 2025**
 

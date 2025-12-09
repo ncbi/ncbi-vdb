@@ -381,8 +381,5 @@ TEST_CASE(testLive) {
 TEST_SUITE ( TestResolver4 )
 
 int main ( int argc, char * argv [] ) {
-    if (
-0 )
-        assert ( ! KDbgSetString ( "VFS-JSON" ) );
     return TestResolver4 ( argc, argv );
 }

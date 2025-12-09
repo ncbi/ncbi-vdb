@@ -240,6 +240,5 @@ FIXTURE_TEST_CASE(IRZIP_i32_assert1, EncoderFixture)
 //////////////////////////////////////////// Main
 int main ( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
     return VxfTestSuite(argc, argv);
 }

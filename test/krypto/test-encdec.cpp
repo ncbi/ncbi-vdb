@@ -579,6 +579,5 @@ TEST_CASE(KDectryptInvalidKey)
 
 int main( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
     return KEncDecTestSuite(argc, argv);
 }

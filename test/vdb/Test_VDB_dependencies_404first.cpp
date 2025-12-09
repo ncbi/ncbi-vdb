@@ -26,8 +26,7 @@
  * =========================================================================== */
 
 #include <kapp/args.h> // ArgsWhack
-#include <kfg/config.h> /* KConfigDisableUserSettings */
-#include <ktst/unit_test.hpp> /* TEST_SUITE_WITH_ARGS_HANDLER */
+#include <ktst/unit_test.hpp>
 #include <vdb/database.h> /* VDatabaseRelease */
 #include <vdb/dependencies.h> /* VDBDependencies */
 #include <vdb/manager.h> // VDBManagerRelease
@@ -35,13 +34,7 @@
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
     if (rc2 != 0 && rc == 0) { rc = rc2; } obj = NULL; } while (false)
 
-static rc_t argsHandler(int argc, char* argv[]){
-    Args* args = NULL;
-    rc_t rc = ArgsMakeAndHandle(&args, argc, argv, 0, NULL, 0);
-    ArgsWhack(args);
-    return rc;
-}
-TEST_SUITE_WITH_ARGS_HANDLER(Test_VDB_dependencies_404firstSuite, argsHandler)
+TEST_SUITE(Test_VDB_dependencies_404firstSuite)
 
 TEST_CASE(Test_VDB_dependencies_404first) {
     rc_t rc = 0;
@@ -69,7 +62,7 @@ TEST_CASE(Test_VDB_dependencies_404first) {
     REQUIRE_RC(rc);
 }
 
-int main(int argc, char *argv[]) {
-    KConfigDisableUserSettings();
+int main(int argc, char *argv[])
+{
     return Test_VDB_dependencies_404firstSuite(argc, argv);
 }

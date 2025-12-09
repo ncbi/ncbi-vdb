@@ -24,7 +24,6 @@
 *
 */
 
-#include <kfg/config.h> /* KConfigDisableUserSettings */
 #include <klib/debug.h> /* KDbgSetString */
 #include <ktst/unit_test.hpp> // TEST_SUITE
 #include <vfs/path.h> /* VPathRelease */
@@ -429,13 +428,7 @@ TEST_CASE(expiredNsg) {
 }
 #endif
 
-int main( int argc, char * argv [] ) {
-    if (
-0 )
-        assert ( ! KDbgSetString ( "VFS" ) );
-    if (
-0 )
-        assert ( ! KDbgSetString ( "VFS-JSON" ) );
-    KConfigDisableUserSettings();
+int main( int argc, char * argv [] )
+{
     return TestSdlResolver( argc, argv );
 }

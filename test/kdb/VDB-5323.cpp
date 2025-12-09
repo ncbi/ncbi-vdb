@@ -151,7 +151,6 @@ FIXTURE_TEST_CASE ( CheckIndex1, KDB_KIndexFixture )
 
 int main( int argc, char *argv[] )
 {
-    KConfigDisableUserSettings ();
     return KdbTestSuite ( argc, argv );
 }
 

@@ -35,7 +35,7 @@
 #include <kns/kns-mgr-priv.h> /* KNSManagerSetAdCaching */
 #include <kns/manager.h> /* KNSManagerMake */
 
-#include <ktst/unit_test.hpp> 
+#include <ktst/unit_test.hpp>
 
 #include <vdb/vdb-priv.h> /* VDBManagerGetQuality */
 
@@ -326,10 +326,6 @@ int main( int argc, char * argv [] ) {
     rc_t rc = 0;
     if (
 1)          VFSManagerLogNamesServiceErrors(0, false);
-    if (
-0)
-        rc = KDbgSetString("VFS");
-    KConfigDisableUserSettings();
 #ifndef USE_SERVICES_CACHE
     return (int)rc;
 #else

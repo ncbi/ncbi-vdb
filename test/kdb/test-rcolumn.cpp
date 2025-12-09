@@ -154,6 +154,5 @@ FIXTURE_TEST_CASE(KRColumn_OpenBlobRead, KColumn_Fixture)
 //////////////////////////////////////////// Main
 int main( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
     return KRColumnTestSuite(argc, argv);
 }

@@ -401,6 +401,5 @@ FIXTURE_TEST_CASE(ObjIdRegister_Lock, ObjIdBindingFixture)
 //////////////////////////////////////////// Main
 int main ( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
     return KeyStoreTestSuite(argc, argv);
 }

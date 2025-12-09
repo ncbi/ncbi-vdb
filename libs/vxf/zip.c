@@ -34,7 +34,7 @@
 #include <sysalloc.h>
 
 #include <string.h>
-#include <zlib.h>
+#include "../ext/zlib/zlib.h"
 #include <stdint.h>
 #include <stdlib.h>
 

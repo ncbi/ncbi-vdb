@@ -65,7 +65,6 @@
 #include "manager-priv.h" /* VFSManagerExtNoqual */
 #include "services-priv.h"
 #include "path-priv.h"
-#include "resolver-cgi.h" /* RESOLVER_CGI */
 #include "resolver-priv.h"
 
 #include <sysalloc.h>
@@ -102,13 +101,6 @@
 #define NAME_SERVICE_MAJ_VERS_ 1
 #define NAME_SERVICE_MIN_VERS_ 2
 #define ONE_DOT_ONE 0x01010000
-
-#ifdef TESTING_SERVICES_VS_OLD_RESOLVING
-    static uint32_t NAME_SERVICE_MAJ_VERS = NAME_SERVICE_MAJ_VERS_;
-    static uint32_t NAME_SERVICE_MIN_VERS = NAME_SERVICE_MIN_VERS_;
-    static uint32_t NAME_SERVICE_VERS
-        = NAME_SERVICE_MAJ_VERS_ << 24 | NAME_SERVICE_MIN_VERS_ << 16;
-#endif
 
 
 /*--------------------------------------------------------------------------
@@ -1802,112 +1794,6 @@ rc_t VResolverAlgParseResolverCGIResponse ( const KDataBuffer *result,
 }
 
 
-
-#ifdef NAMESCGI
-#ifdef TESTING_SERVICES_VS_OLD_RESOLVING
-/* RemoteProtectedResolve
- *  use NCBI CGI to resolve accession into URL
- */
-static
-rc_t oldVResolverAlgRemoteProtectedResolve( const VResolverAlg *self,
-    const KNSManager *kns, VRemoteProtocols protocols, const String *acc,
-    const VPath ** path, const VPath ** mapping, bool legacy_wgs_refseq )
-{
-#ifdef VDB_3162
-                if ( TEST_VDB_3162 ) {
-                    code = TESTING_VDB_3162_CODE ( rc, code );
-                }
-#endif
-
-                DBGMSG
-                    ( DBG_VFS, DBG_FLAG ( DBG_VFS ), ( " Code = %d\n", code ) );
-                if ( code == 200 )
-                {
-                    KStream *response;
-
-                    rc = KHttpResultGetInputStream ( rslt, &response );
-                    if ( rc == 0 )
-                    {
-                        size_t num_read;
-                        size_t total = 0;
-
-                        KDataBuffer result;
-                        memset ( & result, 0, sizeof result );
-                        KDataBufferMakeBytes ( & result, 4096 );
-
-                        while ( 1 )
-                        {
-                            uint8_t *base;
-                            uint64_t avail = result . elem_count - total;
-                            if ( avail < 256 )
-                            {
-                                rc = KDataBufferResize ( & result, result . elem_count + 4096 );
-                                if ( rc != 0 )
-                                    break;
-                            }
-
-                            base = result . base;
-                            rc = KStreamRead ( response, & base [ total ], ( size_t ) result . elem_count - total, & num_read );
-                            if ( rc != 0 )
-                            {
-                                /* TBD - look more closely at rc */
-                                if ( num_read > 0 )
-                                    rc = 0;
-                                else
-                                    break;
-                            }
-
-                            if ( num_read == 0 )
-                                break;
-
-                            total += num_read;
-                        }
-
-                        if ( rc == 0 )
-                        {
-                            result.elem_count = total;
-
-                            rc = VResolverAlgParseResolverCGIResponse(&result, path, mapping, acc, self->ticket);
-                            KDataBufferWhack ( &result );
-                        }
-
-                        KStreamRelease ( response );
-                    }
-                }
-                else if ( code == 403 ) { /* TODO CHECK AGAINST SERVICES */
-                    /* HTTP/1.1 403 Forbidden
-                     - resolver CGI was called over http insted of https */
-                    rc = RC ( rcVFS, rcResolver, rcResolving,
-                        rcConnection, rcUnauthorized );
-                }
-                else if ( code == 404 )
-                {
-                    /* HTTP/1.1 404 Bad Request - resolver CGI was not found */
-                    rc = RC ( rcVFS, rcResolver, rcResolving, rcConnection, rcNotFound );
-                }
-                else
-                {
-                    /* Something completely unexpected */
-                    rc = RC ( rcVFS, rcResolver, rcResolving, rcConnection, rcUnexpected );
-                }
-                KHttpResultRelease ( rslt );
-            }
-        }
-        KHttpRequestRelease ( req );
-    }
-
-    assert(*path != NULL || rc != 0);
-
-    if (rc == 0 && *path == NULL)
-    {
-        rc = RC(rcVFS, rcResolver, rcResolving, rcName, rcNull);
-    }
-
-    return rc;
-}
-#endif
-#endif
-
 rc_t VResolverAlgRemoteProtectedResolve( const VResolverAlg *self,
     const KNSManager *kns, VRemoteProtocols protocols, const String *acc,
     const VPath ** path, const VPath ** mapping, bool legacy_wgs_refseq,
@@ -2079,12 +1965,7 @@ rc_t VResolverAlgRemoteResolve ( const VResolverAlg *self,
         bool done = false;
         for ( i = 0; i < 2 && ! done; ++i ) {
             if ( version == NULL )
-#ifdef TESTING_SERVICES_VS_OLD_RESOLVING
-              rc = oldVResolverAlgRemoteProtectedResolve ( self, kns,
-                protocols, & tok -> acc, path, mapping, legacy_wgs_refseq );
-#else
               assert(0);
-#endif
             else
               rc = VResolverAlgRemoteProtectedResolve ( self, kns,
                 protocols, & tok -> acc, path, mapping, legacy_wgs_refseq,
@@ -3641,9 +3522,6 @@ rc_t VResolverRemoteResolve ( const VResolver *self,
        case of resolving oid to cache location */
 
     {
-#ifdef NAMESCGI
-        const VResolverAlg * alg4 = NULL;
-#endif
         ver_t v = InitVersion(version, self->ticket);
         for ( i = 0; i < count; ++ i )
         {
@@ -3677,30 +3555,10 @@ rc_t VResolverRemoteResolve ( const VResolver *self,
                     if (rc == 0)
                         rc = try_rc;
                 }
-#ifdef NAMESCGI
-                else if (alg->version == VERSION_3_0 ||
-                    alg->version == VERSION_4_0)
-                {
-                    alg4 = alg;
-                }
-#endif
               }
             }
         }
         if (rc == 0 && count > 0) {
-#ifdef NAMESCGI
-            if (v > VERSION_4_0 && alg4 != NULL) {
-                /* fallback to old name s service */
-                try_rc = VResolverAlgRemoteResolve(alg4, self->kns,
-                    protocols, &tok, path, mapping, opt_file_rtn,
-                    legacy_wgs_refseq, "4", NULL);
-                if (try_rc == 0)
-                    return 0;
-                if (rc == 0)
-                    rc = try_rc;
-            }
-            else {
-#endif
             {
                 rc = RC(rcVFS, rcResolver, rcResolving, rcName, rcNotFound);
 /*              PLOGERR(klogErr, (klogErr, rc,
@@ -5008,26 +4866,6 @@ rc_t VResolverQueryInt ( const VResolver * self, VRemoteProtocols protocols,
     return rc;
 }
 
-#ifdef TESTING_SERVICES_VS_OLD_RESOLVING
-LIB_EXPORT
-rc_t CC oldVResolverQuery ( const VResolver * self, VRemoteProtocols protocols,
-    const VPath * query, const VPath ** local, const VPath ** remote, const VPath ** cache )
-{
-    rc_t rc = VResolverQueryInt ( self, protocols, query, local, remote, cache,
-        NULL, true, NULL, NULL, NULL, NULL);
-    if ( rc == 0 )
-    {
-        /* the paths returned from resolver are highly reliable */
-        if ( local != NULL && * local != NULL )
-            VPathMarkHighReliability ( * ( VPath ** ) local, true );
-        if ( remote != NULL && * remote != NULL )
-            VPathMarkHighReliability ( * ( VPath ** ) remote, true );
-        if ( cache != NULL && * cache != NULL )
-            VPathMarkHighReliability ( * ( VPath ** ) cache, true );
-    }
-    return rc;
-}
-#endif
 
 static
 rc_t CC VResolverQueryImpl ( const VResolver * self, VRemoteProtocols protocols,
@@ -5051,282 +4889,6 @@ rc_t CC VResolverQueryImpl ( const VResolver * self, VRemoteProtocols protocols,
         if ( cache != NULL && * cache != NULL )
             VPathMarkHighReliability ( * ( VPath ** ) cache, true );
     }
-#ifdef TESTING_SERVICES_VS_OLD_RESOLVING
-    if ( ! queryIsUrl ) {
-        const VPath * oath = NULL;
-        const VPath ** p = remote ? & oath : NULL;
-        const VPath * cath = NULL;
-        const VPath ** c = cache ? & cath : NULL;
-        const VPath * lath = NULL;
-        const VPath ** l = local ? & lath : NULL;
-#if _DEBUGGING
-        rc_t ro =
-#endif
-            VResolverQueryInt ( self, protocols, query, l, p, c,
-                                "3", true, NULL, NULL, NULL, NULL);
-        assert ( rcs == ro );
-        if ( remote == NULL )
-            assert ( p == NULL );
-        else if ( * remote == NULL )
-            assert ( p && * p == NULL && oath == NULL );
-        else {
-            int notequal = ~ 0;
-            VPathMarkHighReliability ( ( VPath * ) oath, true );
-            assert ( ! VPathEqual ( * remote, oath, & notequal ) );
-            if ( notequal )
-                assert ( VPathHasRefseqContext ( query ) && notequal == 2 );
-        }
-        if ( cache == NULL )
-            assert ( c == NULL );
-        else if ( * cache == NULL )
-            assert ( c && * c == NULL && cath == NULL );
-        else {
-            int notequal = ~ 0;
-            VPathMarkHighReliability ( ( VPath * ) cath, true );
-            assert ( ! VPathEqual ( * cache, cath, & notequal ) );
-            if ( notequal )
-                assert ( VPathHasRefseqContext ( query ) && notequal == 2 );
-        }
-        if ( local == NULL )
-            assert ( l == NULL );
-        else if ( * local == NULL )
-            assert ( l && * l == NULL && lath == NULL );
-        else {
-            VPathMarkHighReliability ( ( VPath * ) lath, true );
-#if _DEBUGGING
-            {
-                int notequal = ~ 0;
-                assert ( ! VPathEqual ( * local, lath, & notequal ) );
-                assert ( ! notequal );
-            }
-#endif
-        }
-        RELEASE ( VPath, lath );
-        RELEASE ( VPath, oath );
-        RELEASE ( VPath, cath );
-    }
-    if ( true || ! queryIsUrl ) {
-        const VPath * oath = NULL;
-        const VPath ** p = remote ? & oath : NULL;
-        const VPath * cath = NULL;
-        const VPath ** c = cache ? & cath : NULL;
-        const VPath * lath = NULL;
-        const VPath ** l = local ? & lath : NULL;
-#if _DEBUGGING
-        rc_t ro =
-#endif
-            VResolverQueryInt ( self, protocols, query, l, p, c, "3",
-                            resolveAllAccToCache, dir, inOutDir, NULL, NULL);
-        assert ( rcs == ro );
-        if ( remote == NULL )
-            assert ( p == NULL );
-        else if ( * remote == NULL )
-            assert ( p && * p == NULL && oath == NULL );
-        else {
-            int notequal = ~ 0;
-            VPathMarkHighReliability ( ( VPath * ) oath, true );
-            assert ( ! VPathEqual ( * remote, oath, & notequal ) );
-            if ( notequal )
-                assert ( VPathHasRefseqContext ( query ) && notequal == 2 );
-        }
-        if ( cache == NULL )
-            assert ( c == NULL );
-        else if ( * cache == NULL )
-            assert ( c && * c == NULL && cath == NULL );
-        else {
-            int notequal = ~ 0;
-            VPathMarkHighReliability ( ( VPath * ) cath, true );
-            assert ( ! VPathEqual ( * cache, cath, & notequal ) );
-            if ( notequal )
-                assert ( VPathHasRefseqContext ( query ) && notequal == 2 );
-        }
-        if ( local == NULL )
-            assert ( l == NULL );
-        else if ( * local == NULL )
-            assert ( l && * l == NULL && lath == NULL );
-        else {
-            VPathMarkHighReliability ( ( VPath * ) lath, true );
-#if _DEBUGGING
-            {
-                int notequal = ~ 0;
-                assert ( ! VPathEqual ( * local, lath, & notequal ) );
-                assert ( ! notequal );
-            }
-#endif
-        }
-        RELEASE ( VPath, lath );
-        RELEASE ( VPath, oath );
-        RELEASE ( VPath, cath );
-    }
-    if ( ! queryIsUrl ) {
-        const VPath * oath = NULL;
-        const VPath ** p = remote ? & oath : NULL;
-        const VPath * cath = NULL;
-        const VPath ** c = cache ? & cath : NULL;
-        const VPath * lath = NULL;
-        const VPath ** l = local ? & lath : NULL;
-#if _DEBUGGING
-        rc_t ro =
-#endif
-            VResolverQueryInt ( self, protocols, query, l, p, c,
-                                "1.2", true, NULL, NULL, NULL, NULL );
-
-        assert ( rcs == ro );
-        if ( remote == NULL )
-            assert ( p == NULL );
-        else if ( * remote == NULL )
-            assert ( p && * p == NULL && oath == NULL );
-        else {
-            int notequal = ~ 0;
-            VPathMarkHighReliability ( ( VPath * ) oath, true );
-            assert ( ! VPathEqual ( * remote, oath, & notequal ) );
-            if ( notequal )
-                assert ( VPathHasRefseqContext ( query ) && notequal == 2 );
-        }
-        if ( cache == NULL )
-            assert ( c == NULL );
-        else if ( * cache == NULL )
-            assert ( c && * c == NULL && cath == NULL );
-        else {
-            int notequal = ~ 0;
-            VPathMarkHighReliability ( ( VPath * ) cath, true );
-            assert ( ! VPathEqual ( * cache, cath, & notequal ) );
-            if ( notequal )
-                assert ( VPathHasRefseqContext ( query ) && notequal == 2 );
-        }
-        if ( local == NULL )
-            assert ( l == NULL );
-        else if ( * local == NULL )
-            assert ( l && * l == NULL && lath == NULL );
-        else {
-            VPathMarkHighReliability ( ( VPath * ) lath, true );
-#if _DEBUGGING
-            {
-                int notequal = ~ 0;
-                assert ( ! VPathEqual ( * local, lath, & notequal ) );
-                assert ( ! notequal );
-            }
-#endif
-        }
-        RELEASE ( VPath, lath );
-        RELEASE ( VPath, oath );
-        RELEASE ( VPath, cath );
-    }
-    if ( true ) { /* ! queryIsUrl ) { */
-        const VPath * oath = NULL;
-        const VPath ** p = remote ? & oath : NULL;
-        const VPath * cath = NULL;
-        const VPath ** c = cache ? & cath : NULL;
-        const VPath * lath = NULL;
-        const VPath ** l = local ? & lath : NULL;
-#if _DEBUGGING
-        rc_t ro =
-#endif
-            VResolverQueryInt ( self, protocols, query, l, p, c, "1.2",
-                            resolveAllAccToCache, dir, inOutDir, NULL, NULL );
-
-        assert ( rcs == ro );
-        if ( remote == NULL )
-            assert ( p == NULL );
-        else if ( * remote == NULL )
-            assert ( p && * p == NULL && oath == NULL );
-        else {
-            int notequal = ~ 0;
-            VPathMarkHighReliability ( ( VPath * ) oath, true );
-            assert ( ! VPathEqual ( * remote, oath, & notequal ) );
-            if ( notequal )
-                assert ( VPathHasRefseqContext ( query ) && notequal == 2 );
-        }
-        if ( cache == NULL )
-            assert ( c == NULL );
-        else if ( * cache == NULL )
-            assert ( c && * c == NULL && cath == NULL );
-        else {
-            int notequal = ~ 0;
-            VPathMarkHighReliability ( ( VPath * ) cath, true );
-            assert ( ! VPathEqual ( * cache, cath, & notequal ) );
-            if ( notequal )
-                assert ( VPathHasRefseqContext ( query ) && notequal == 2 );
-        }
-        if ( local == NULL )
-            assert ( l == NULL );
-        else if ( * local == NULL )
-            assert ( l && * l == NULL && lath == NULL );
-        else {
-            VPathMarkHighReliability ( ( VPath * ) lath, true );
-#if _DEBUGGING
-            {
-                int notequal = ~ 0;
-                assert ( ! VPathEqual ( * local, lath, & notequal ) );
-                assert ( ! notequal );
-            }
-#endif
-        }
-        RELEASE ( VPath, lath );
-        RELEASE ( VPath, oath );
-        RELEASE ( VPath, cath );
-    }
-    if ( ! queryIsUrl ) {
-        const VPath * oath = NULL;
-        const VPath ** p = remote ? & oath : NULL;
-        const VPath * cath = NULL;
-        const VPath ** c = cache ? & cath : NULL;
-        const VPath * lath = NULL;
-        const VPath ** l = local ? & lath : NULL;
-        rc_t ro = oldVResolverQuery ( self, protocols, query, l, p, c );
-        /*ros = ro;*/
-        if ( rc != ro ) {
-            enum RCModule  mod = GetRCModule  ( rc );
-            enum RCTarget  targ = GetRCTarget  ( rc );
-            enum RCContext ctx = GetRCContext ( rc );
-            if ( targ == rcQuery && GetRCTarget ( ro ) == rcTree ) {
-                rc = ResetRCContext ( rc, mod, rcTree, ctx );
-                /*fixed = true;*/
-            }
-        }
-        assert ( rc == ro );
-        if ( remote == NULL )
-            assert ( p == NULL );
-        else if ( * remote == NULL )
-            assert ( p && * p == NULL && oath == NULL );
-        else {
-            int notequal = ~ 0;
-            assert ( ! VPathEqual ( * remote, oath, & notequal ) );
-            if ( notequal ) {
-                assert ( VPathHasRefseqContext ( query ) && notequal == 2 );
-            }
-        }
-        if ( cache == NULL )
-            assert ( c == NULL );
-        else if ( * cache == NULL )
-            assert ( c && * c == NULL && cath == NULL );
-        else {
-            int notequal = ~ 0;
-            VPathMarkHighReliability ( ( VPath * ) cath, true );
-            assert ( ! VPathEqual ( * cache, cath, & notequal ) );
-            if ( notequal ) {
-                assert ( VPathHasRefseqContext ( query ) && notequal == 2 );
-            }
-        }
-        if ( local == NULL )
-            assert ( l == NULL );
-        else if ( * local == NULL )
-            assert ( l && * l == NULL && lath == NULL );
-        else {
-            VPathMarkHighReliability ( ( VPath * ) lath, true );
-#if _DEBUGGING
-            {
-                int notequal = ~ 0;
-                assert ( ! VPathEqual ( * local, lath, & notequal ) );
-                assert ( ! notequal );
-            }
-#endif
-        }
-        RELEASE ( VPath, lath );
-        RELEASE ( VPath, oath );
-        RELEASE ( VPath, cath );
-    }
-#endif
 
     return rc;
 }
@@ -6790,15 +6352,8 @@ static rc_t VResolverInitVersion(VResolver * self, const KConfig *kfg) {
     }
 
     else {
-        if (self->ticket == NULL)
-             /* default version for public data is SDL-2 ( 128(SDL) | 2 ) */
-            self->version = string_dup_measure("130", NULL);
-        else if (self->versions == 0)
-            /* default version for protected data is 3.0 when calling names.cgi */
-            self->version = string_dup_measure("3", NULL);
-        else
-            /* default version for protected data is SDL-2 when calling sdl */
-            self->version = string_dup_measure("130", NULL);
+        /* default version is SDL-2 ( 128(SDL) | 2 ) */
+        self->version = string_dup_measure("130", NULL);
 
         if (self->version == NULL)
             return RC(rcVFS, rcMgr, rcCreating, rcMemory, rcExhausted);

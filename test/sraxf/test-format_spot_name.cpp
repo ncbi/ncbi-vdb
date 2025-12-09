@@ -26,22 +26,14 @@
 
 #include <kapp/args.h> /* Args */
 #include <kfg/kfg-priv.h> /* KConfigMakeEmpty */
-#include <ktst/unit_test.hpp> /* TEST_SUITE_WITH_ARGS_HANDLER */
+#include <ktst/unit_test.hpp>
 
 #include <vdb/cursor.h> /* VCursorRelease */
 #include <vdb/database.h> /* VDatabaseRelease */
 #include <vdb/manager.h> /* VDBManagerRelease */
 #include <vdb/table.h> /* VTableRelease */
 
-static rc_t argsHandler(int argc, char* argv[]) {
-
-    Args* args = NULL;
-    rc_t rc = ArgsMakeAndHandle(&args, argc, argv, 0, NULL, 0);
-    ArgsWhack(args);
-    return rc;
-}
-
-TEST_SUITE_WITH_ARGS_HANDLER(FormatSpotNameSuite, argsHandler)
+TEST_SUITE(FormatSpotNameSuite)
 
 TEST_CASE(TestFormatSpotName) { // VDB-4097
     const VDBManager *mgr = NULL;
@@ -74,9 +66,8 @@ TEST_CASE(TestFormatSpotName) { // VDB-4097
     REQUIRE_RC(VDBManagerRelease(mgr));
 }
 
-int main(int argc, char *argv[]) {
-    KConfigDisableUserSettings(); // ignore ~/.ncbi/user-settings.mkfg
-
+int main(int argc, char *argv[])
+{
     return FormatSpotNameSuite(argc, argv);
 }
 

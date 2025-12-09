@@ -36,7 +36,7 @@ struct KBZipFile;
 #include <klib/log.h>
 #include <sysalloc.h>
 
-#include <bzlib.h>      /* bz_stream */
+#include "../ext/bzip2/bzlib.h" /* bz_stream */
 #include <assert.h>
 #include <stdlib.h>    /* malloc */
 #include <string.h>

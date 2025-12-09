@@ -37,7 +37,7 @@
 #include <endian.h>
 #include <byteswap.h>
 #include <string.h>
-#include <zlib.h>
+#include "../ext/zlib/zlib.h"
 #include <assert.h>
 
 static rc_t invoke_zlib(void *dst, size_t dsize, const void *src, size_t ssize, int windowBits)

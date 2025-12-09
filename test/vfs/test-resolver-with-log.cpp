@@ -26,17 +26,17 @@
 
 /* tests of names service */
 
-#include <kfg/config.h> /* KConfigDisableUserSettings */
+#include <kfg/config.h>
 #include <klib/debug.h> /* KDbgSetString */
 #include <klib/text.h> /* CONST_STRING */
-#include <ktst/unit_test.hpp> 
+#include <ktst/unit_test.hpp>
 #include <vfs/manager.h> /* VFSManagerRelease */
 #include <vfs/manager-priv.h> /* VFSManagerMakeFromKfg */
 #include <vfs/path.h> /* VPathRelease */
 #include <vfs/resolver.h> /* VResolverRelease */
 
 #include "../../libs/vfs/path-priv.h" // VPathEqual
-#include "../../libs/vfs/resolver-cgi.h" /* RESOLVER_CGI */
+#include "../../libs/vfs/resolver-cgi.h" /* SDL_CGI */
 #include "../../libs/vfs/resolver-priv.h" /* VResolverSetVersion */
 
 TEST_SUITE ( VResolverWithLogTestSuite );
@@ -190,13 +190,8 @@ FIXTURE_TEST_CASE ( ZZZZ99, Fixture ) {
     free ( const_cast < String * > ( uri ) );
 }
 
-int main( int argc, char * argv [] ) {
-#if _DEBUGGING
-    KDbgSetString ( "VFS" );
-#endif
-
-    KConfigDisableUserSettings ();
-
+int main( int argc, char * argv [] )
+{
     rc_t rc = KConfigMake ( & KFG, NULL );
     if ( rc == 0 )
         rc = KConfigWriteString ( KFG,

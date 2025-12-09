@@ -145,6 +145,5 @@ MakeDatabase()
 int main ( int argc, char *argv [] )
 {
     KConfigDisableUserSettings();
-
     return (int)MakeDatabase();
 }

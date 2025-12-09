@@ -53,8 +53,7 @@
 
 using namespace std;
 
-static rc_t argsHandler(int argc, char* argv[]);
-TEST_SUITE_WITH_ARGS_HANDLER(GcpTestSuite, argsHandler)
+TEST_SUITE(GcpTestSuite)
 
 TEST_CASE(GCP_Sign_RSA_SHA256)
 {
@@ -368,25 +367,7 @@ rc_t ParseAccessToken( const char * jsonResponse, char ** token, KTime_t * expir
 
 //////////////////////////////////////////// Main
 
-static rc_t argsHandler(int argc, char * argv[]) {
-    Args * args = NULL;
-    rc_t rc = ArgsMakeAndHandle(&args, argc, argv, 0, NULL, 0);
-    ArgsWhack(args);
-    return rc;
-}
-
 int main( int argc, char *argv [] )
 {
-    VDB::Application app(argc,argv);
-    KConfigDisableUserSettings();
-
-    // this makes messages from the test code appear
-    // (same as running the executable with "-l=message")
-    //TestEnv::verbosity = LogLevel::e_message;
-
-#ifdef TO_SHOW_RESULTS
-    assert(!KDbgSetString("KNS"));
-#endif
-
     return GcpTestSuite(argc, argv);
 }

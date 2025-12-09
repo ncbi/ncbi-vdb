@@ -42,7 +42,9 @@ using namespace std;
 // Start using main(), never call KWrtInit() or KLogInit()
 // call all logging functions, make sure they do not crash
 
-TEST_SUITE(KOutTestSuite);
+// intercept args handling in order to bypass a call to VdbInitialize()
+static rc_t argsHandler ( int argc, char * argv [] ) { return 0; }
+TEST_SUITE_WITH_ARGS_HANDLER(KOutTestSuite, argsHandler);
 
 // Getters working on an implicitly initialized logging
 TEST_CASE(Out_KOutHandlerGet)
@@ -68,9 +70,9 @@ TEST_CASE(Out_KOutMsg)
 
 // Setters
 // TODO:
-// KOutHandlerSet 
-// KOutHandlerSetStdOut 
-// KOutHandlerSetStdErr 
+// KOutHandlerSet
+// KOutHandlerSetStdOut
+// KOutHandlerSetStdErr
 
 // VDB-1352: short-circuit certain formats in KMsgOut
 rc_t CC writerFn ( void * self, const char * buffer, size_t bufsize, size_t * num_writ ) noexcept
@@ -78,7 +80,7 @@ rc_t CC writerFn ( void * self, const char * buffer, size_t bufsize, size_t * nu
     string& res = *(string*)self;
     res += string(buffer, bufsize);
     *num_writ = bufsize;
-    return 0; 
+    return 0;
 }
 
 TEST_CASE(KOutMsgShortcut_s)
@@ -210,7 +212,6 @@ TEST_CASE(KOutMsgInvalidRC)
 
 //////////////////////////////////////////////////// Main
 int main ( int argc, char *argv [] )
-{   
-    // NB do not use VdbApplication; we need VDB to be in an unitialized state (see the top 4 tests in this file)
+{
     return KOutTestSuite(argc, argv);
 }

@@ -25,18 +25,11 @@
 
 #include <kapp/args.h> // ArgsWhack
 #include <kapp/vdbapp.h> // ArgsWhack
-#include <kfg/config.h> /* KConfigDisableUserSettings */
 #include <klib/debug.h> /* KDbgSetString */
-#include <ktst/unit_test.hpp> /* TEST_SUITE_WITH_ARGS_HANDLER */
+#include <ktst/unit_test.hpp>
 #include <vdb/manager.h> // VDBManagerRelease
 
-static rc_t argsHandler(int argc, char* argv[]) {
-    Args* args = NULL;
-    rc_t rc = ArgsMakeAndHandle(&args, argc, argv, 0, NULL, 0);
-    ArgsWhack(args);
-    return rc;
-}
-TEST_SUITE_WITH_ARGS_HANDLER(Test_VDBManagerGetObjVersionSuite, argsHandler)
+TEST_SUITE(Test_VDBManagerGetObjVersionSuite)
 
 TEST_CASE(Test_VDBManagerGetObjVersion) {
     // N.B. This test is required to run in ncbi-vdb/test/vfs to find local runs
@@ -94,12 +87,7 @@ TEST_CASE(Test_VDBManagerGetObjVersion) {
     REQUIRE_RC(VDBManagerRelease(m));
 }
 
-int main(int argc, char *argv[]) {
-    VDB::Application app(argc, argv);
-    if (0)
-        KDbgSetString("VFS");
-
-    KConfigDisableUserSettings();
-
+int main(int argc, char *argv[])
+{
     return Test_VDBManagerGetObjVersionSuite(argc, argv);
 }

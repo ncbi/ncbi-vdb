@@ -53,8 +53,7 @@
 
 #define ALL
 
-static rc_t argsHandler ( int argc, char * argv [] );
-TEST_SUITE_WITH_ARGS_HANDLER ( HttpRequestVerifyURLSuite, argsHandler );
+TEST_SUITE( HttpRequestVerifyURLSuite );
 
 using namespace std;
 using namespace ncbi::NK;
@@ -569,15 +568,6 @@ int main ( int argc, char *argv [] )
 
     if (rc == 0) // needed to use ceRequired on cloud
         rc = KConfig_Set_Report_Cloud_Instance_Identity(kfg, true);
-
-    if ( 0 ) assert ( ! KDbgSetString ( "KNS" ) );
-    if ( 0 ) assert ( ! KDbgSetString ( "VFS" ) );
-
-    KConfigDisableUserSettings();
-
-	// this makes messages from the test code appear
-	// (same as running the executable with "-l=message")
-	// TestEnv::verbosity = LogLevel::e_message;
 
     if (rc == 0)
         rc = (rc_t)HttpRequestVerifyURLSuite(argc, argv);

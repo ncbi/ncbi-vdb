@@ -30,7 +30,7 @@
 #include <kns/http.h> /* KNSManagerMakeHttpFile */
 #include <kns/manager.h> /* KNSManagerRelease */
 #include <kns/tls.h> /* KNSManagerRelease */
-#include <ktst/unit_test.hpp> /* TEST_SUITE_WITH_ARGS_HANDLER */
+#include <ktst/unit_test.hpp>
 
 #define RELEASE( type, obj ) do { rc_t rc2 = type##Release ( obj ); \
     if (rc2 != 0 && rc == 0) { rc = rc2; } obj = NULL; } while ( false )
@@ -49,10 +49,7 @@
  *+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*+*/
 const char * Bizdrapuda = "https://storage.googleapis.com/yan-blastdb/2018-09-12-08-33-02/fuse.xml";
 
-static rc_t argsHandler ( int argc, char * argv [] )
-{   return ArgsMakeAndHandle ( NULL, argc, argv, 0, NULL, 0 ); }
-
-TEST_SUITE_WITH_ARGS_HANDLER ( ALLOW_ALL_CERTS, argsHandler )
+TEST_SUITE( ALLOW_ALL_CERTS )
 
 TEST_CASE ( Test_ConfDisAllowCerts ) {
 
@@ -129,12 +126,8 @@ KOutMsg ( "##[6] OK : Conf (true ) + SetAllow ( true ) = true\n" );
     RELEASE ( KConfig, kfg );
 }
 
-int main( int argc, char * argv [] ) {
-    if ( 0 ) assert ( ! KDbgSetString ( "KNS-HTTP" ) );
-
-    KConfigDisableUserSettings ();
-
+int main( int argc, char * argv [] )
+{
     // turn off certificate validation to download from storage.googleapis.com
-
     return ALLOW_ALL_CERTS ( argc, argv );
 }

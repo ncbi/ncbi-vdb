@@ -51,7 +51,9 @@ rc_t CC TestWrtWriter( void * data, const char * buffer, size_t bufsize, size_t 
 // Start using main(), never call KWrtInit() or KLogInit()
 // call all logging functions, make sure they do not crash
 
-TEST_SUITE(KLogTestSuite);
+// intercept args handling in order to bypass a call to VdbInitialize()
+static rc_t argsHandler ( int argc, char * argv [] ) { return 0; }
+TEST_SUITE_WITH_ARGS_HANDLER(KLogTestSuite, argsHandler);
 
 // Getters working on an implicitly initialized logging
 TEST_CASE(KLog_KLogLevelGet)
@@ -130,89 +132,89 @@ TEST_CASE(KLog_KLogFmtFlagsGet)
 }
 
 TEST_CASE(KLog_KLogFmtWriterGet)
-{   
+{
     REQUIRE_NE((KFmtWriter)0, KLogFmtWriterGet());
 }
 
 TEST_CASE(KLog_KLogLibFmtWriterGet)
-{   
+{
     REQUIRE_NE((KFmtWriter)0, KLogLibFmtWriterGet());
 }
 
 TEST_CASE(KLog_KLogFmtDataGet)
-{   
+{
     REQUIRE_NULL(KLogFmtDataGet());
 }
 
 TEST_CASE(KLog_KLogLibFmtDataGet)
-{   
+{
     REQUIRE_NULL(KLogLibFmtDataGet());
 }
 
 // Writers (just make sure they do not crash)
 TEST_CASE(KLog_LogMsg)
-{   
+{
     REQUIRE_RC(LogMsg(klogFatal, "test"));
 }
 
 TEST_CASE(KLog_LogLibMsg)
-{   
+{
     REQUIRE_RC(LogLibMsg(klogFatal, "test"));
 }
 
 TEST_CASE(KLog_pLogMsg)
-{   
+{
     REQUIRE_RC(pLogMsg(klogFatal, "test $(a) $(b)\n", "a=%s,b=%d", "kaboom", 10));
 }
 
 TEST_CASE(KLog_vLogMsg)
-{   
+{
     va_list l;
     va_end(l);
     REQUIRE_RC(vLogMsg(klogFatal, "test $(a) $(b)\n", "a=%s,b=%d", l));
 }
 
 TEST_CASE(KLog_pLogLibMsg)
-{   
+{
     REQUIRE_RC(pLogLibMsg(klogFatal, "test $(a) $(b)\n", "a=%s,b=%d", "kaboom", 10));
 }
 
 TEST_CASE(KLog_vLogLibMsg)
-{   
+{
     va_list l;
     va_end(l);
     REQUIRE_RC(vLogLibMsg(klogFatal, "test $(a) $(b)\n", "a=%s,b=%d", l));
 }
 
 TEST_CASE(KLog_LogErr)
-{   
+{
     REQUIRE_RC(LogErr(klogFatal, RC(rcNS,rcFile,rcWriting,rcTimeout,rcExhausted), "bad stuff"));
 }
 
 TEST_CASE(KLog_LogLibErr)
-{   
+{
     REQUIRE_RC(LogLibErr(klogFatal, RC(rcNS,rcFile,rcWriting,rcTimeout,rcExhausted), "bad stuff"));
 }
 
 TEST_CASE(KLog_pLogErr)
-{   
+{
     REQUIRE_RC(pLogErr(klogFatal, RC(rcNS,rcFile,rcWriting,rcTimeout,rcExhausted), "bad $(s)", "s=%s", "stuff"));
 }
 
 TEST_CASE(KLog_vLogErr)
-{   
+{
     va_list l;
     va_end(l);
     REQUIRE_RC(vLogErr(klogFatal, RC(rcNS,rcFile,rcWriting,rcTimeout,rcExhausted), "bad $(s)", "s=%s", l));
 }
 
 TEST_CASE(KLog_pLogLibErr)
-{   
+{
     REQUIRE_RC(pLogLibErr(klogFatal, RC(rcNS,rcFile,rcWriting,rcTimeout,rcExhausted), "bad $(s)", "s=%s", "stuff"));
 }
 
 TEST_CASE(KLog_vLogLibErr)
-{   
+{
     va_list l;
     va_end(l);
     REQUIRE_RC(vLogLibErr(klogFatal, RC(rcNS,rcFile,rcWriting,rcTimeout,rcExhausted), "bad $(s)", "s=%s", l));
@@ -330,9 +332,9 @@ TEST_CASE ( rcBufferrcInsufficientInprep_v_argsstring_vprintf ) {
 }
 
 //TODO:
-// KLogFmtFlagsSet    
-// KLogLibFmtFlagsSet 
-// KLogFmtHandlerSet   
+// KLogFmtFlagsSet
+// KLogLibFmtFlagsSet
+// KLogFmtHandlerSet
 // KLogLibFmtHandlerSet
 // KLogFmtHandlerSetDefault
 // KLogLibFmtHandlerSetDefault
