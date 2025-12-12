@@ -1928,7 +1928,7 @@ struct KFileMD5ReadObserver {
     bool completed; /* entire file was read */
     bool finished;  /* digest is ready */
     uint8_t digest[16];
-    uint64_t size; /* file size, 0 if unknown */
+    uint64_t size; /* file size, ~0 if unknown */
     uint64_t pos; /* last processed position in file */
     MD5State md5;
 };
@@ -1968,6 +1968,9 @@ LIB_EXPORT rc_t CC KFileMD5ReadObserverRelease(
     return 0;
 }
 
+static void CC read_observer_update(
+    void* self, rc_t rc, uint64_t pos, void* vbuffer, size_t num_read);
+
 LIB_EXPORT rc_t CC KFileMD5ReadObserverGetDigest(
     const KFileMD5ReadObserver *cself, uint8_t digest[16],
     const char **error)
@@ -1980,6 +1983,9 @@ LIB_EXPORT rc_t CC KFileMD5ReadObserverGetDigest(
     if (self == NULL)
         return RC(rcFS, rcFile, rcReading, rcSelf, rcNull);
 
+    if (!self->completed && self->size == 0)
+        read_observer_update(self, 0, 0, NULL, 0);
+
     if (!self->completed) {
         if (error != NULL) {
             size_t num_writ = 0;
@@ -1991,7 +1997,7 @@ LIB_EXPORT rc_t CC KFileMD5ReadObserverGetDigest(
                 char *e = malloc(num_writ + 1);
                 if (e == NULL)
                     return RC(rcFS, rcFile, rcUpdating, rcMemory, rcExhausted);
-                if (self->size > 0)
+                if (self->size != ~0)
                     rc = string_printf(e, num_writ + 1, &num_writ,
                         "The file was not read to the end; it was read "
                         "to byte %lu of %lu.", self->pos, self->size);
@@ -2031,7 +2037,8 @@ static void CC read_observer_update(
     if (observer->completed)
         return;
 
-    if (pos > observer->pos) /* a part of file was skipped */
+    if (observer->size > 0 && pos > observer->pos)
+        /* a part of file was skipped */
         return;
 
     if (pos < observer->pos) {
@@ -2051,7 +2058,7 @@ static void CC read_observer_update(
     MD5StateAppend(&observer->md5, buffer, num_read);
     observer->pos += num_read;
 
-    if (observer->size > 0 && observer->pos >= observer->size)
+    if (observer->size != ~0 && observer->pos >= observer->size)
         observer->completed = true;
 }
 
@@ -2077,7 +2084,7 @@ LIB_EXPORT rc_t CC KFileMakeMD5ReadObserver(const KFile *self,
 
     rc = KFileSize(self, &obj->size);
     if (rc != 0)
-        obj->size = 0;
+        obj->size = ~0;
 
     KRefcountInit(&obj->refcount, 1, "KFileMD5ReadObserver", "make", "file");
 
@@ -2094,5 +2101,3 @@ LIB_EXPORT rc_t CC KFileMakeMD5ReadObserver(const KFile *self,
 
     return rc;
 }
-
-/******************************************************************************/

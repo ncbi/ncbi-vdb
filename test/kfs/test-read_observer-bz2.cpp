@@ -24,7 +24,7 @@
 * Tests of KFileMD5ReadObserver for bz2 file
 */
 
-#include "../vfs/observer-test.hpp" // ObserverTest
+#include "../vfs/file-observer-test.hpp" // ObserverTest
 
 TEST_SUITE(ReadObserverTestSuite)
 

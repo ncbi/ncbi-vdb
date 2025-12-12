@@ -39,6 +39,8 @@ if( NOT WIN32 )
 endif()
 
 AddExecutableTest( Test_KFS_read_observer-file "test-read_observer" "${LIBS}" )
+AddExecutableTest( Test_KFS_read_observer-empty-file
+                                         "test-empty-read_observer" "${LIBS}" )
 AddExecutableTest( Test_KFS_read_observer-bz "test-read_observer-bz2" "${LIBS}"
 )
 AddExecutableTest( Test_KFS_read_observer-gz "test-read_observer-gz" "${LIBS}" )

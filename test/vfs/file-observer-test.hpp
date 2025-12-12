@@ -44,10 +44,11 @@
 
 #define ERR_HEAD "The file was not read to the end; it was read to byte "
 
-const char SRC_FILE[]("../vdb/db/VDB-3418.sra");
+char SRC_FILE[]("../vdb/db/VDB-3418.sra");
 const char *DST_FILE(nullptr);
 
 typedef enum {
+    eEmpty,
     ePlain,
     eBz2,
     eGzip,
@@ -57,7 +58,10 @@ typedef enum {
 class ObserverTest:protected ncbi::NK::TestCase {
     static VFSManager *s_mgr;
     static const VPath *s_path;
-    static std::string s_digest;
+    static const std::string s_full_digest;
+    static const std::string s_empty_digest;
+    static std::string m_digest;
+    static const std::string *s_digest;
     static KDirectory *s_cwd;
     static EType s_type;
 
@@ -69,6 +73,7 @@ public:
     uint64_t size;
     bool sizeUnknown;
     char *buf;
+    uint64_t bufSize;
     const char *error;
     uint8_t digest[16];
     struct timeout_t tm;
@@ -81,6 +86,7 @@ public:
         , size(0)
         , sizeUnknown(false)
         , buf(NULL)
+        , bufSize(0)
         , error(nullptr)
     {
         memset(digest, 0, sizeof digest);
@@ -94,14 +100,38 @@ public:
         _dad->ErrorCounterAdd(GetErrorCounter());
     }
 
+    static void Prepare(EType type) {
+        rc_t rc(KDirectoryNativeDir(&s_cwd));
+
+        s_type = type;
+        if (s_type == eEmpty) {
+            strcpy(SRC_FILE, "empty");
+
+            KFile* f(nullptr);
+            if (rc == 0)
+                rc = KDirectoryCreateFile(s_cwd, &f, false, 0400, kcmInit,
+                    SRC_FILE);
+
+            rc_t r2(KFileRelease(f));
+            if (rc == 0 && r2 != 0)
+                rc = r2;
+        }
+    }
+
     static rc_t Begin(EType type = ePlain) { /* prepare input test file */
         rc_t rc(0);
 
-        rc = KDirectoryNativeDir(&s_cwd);
+        if (s_cwd == nullptr)
+            rc = KDirectoryNativeDir(&s_cwd);
 
-        s_type = type;
+        if (s_type == ePlain)
+            s_type = type;
 
-        if (type == ePlain)
+        if (type == eEmpty) {
+            s_digest = &s_empty_digest;
+            return rc;
+        }
+        else if (type == ePlain)
             return rc;
 
         else if (s_type == eHttp) {
@@ -131,7 +161,8 @@ public:
                 total += len;
             }
             digest[total] = '\0';
-            s_digest = digest;
+            m_digest = digest;
+            s_digest = &m_digest;
 
             return rc;
         }
@@ -195,6 +226,12 @@ public:
         if (DST_FILE != nullptr)
             rc = KDirectoryRemove(s_cwd, false, "%s", DST_FILE);
 
+        if (s_type == eEmpty) {
+            rc_t r2(KDirectoryRemove(s_cwd, true, SRC_FILE));
+            if (rc == 0 && r2 != 0)
+                rc = r2;
+        }
+
         KDirectoryRelease(s_cwd); s_cwd = nullptr;
         VFSManagerRelease(s_mgr); s_mgr = nullptr;
         VPathRelease(s_path); s_path = nullptr;
@@ -205,7 +242,7 @@ public:
     void Start(bool failures = false // test how functions react
     )                                // to invalid arguments
     {
-        if (s_type == ePlain)
+        if (s_type == ePlain || s_type == eEmpty)
             REQUIRE_RC(KDirectoryOpenFileRead(s_cwd, &file, SRC_FILE));
         else if (s_type == eHttp)
             REQUIRE_RC(VFSManagerOpenFileRead(s_mgr, &file, s_path));
@@ -234,7 +271,10 @@ public:
             sizeUnknown = true;
             size = 12887839;
         }
-        buf = reinterpret_cast<char*>(malloc(size + 1));
+        bufSize = size;
+        if (bufSize < 33)
+            bufSize = 33;
+        buf = reinterpret_cast<char*>(malloc(bufSize + 1));
         REQUIRE(buf);
     }
 
@@ -265,13 +305,16 @@ public:
             int total = 0;
             for (int i = 0; i < 16; ++i) {
                 int len
-                    = snprintf(&buf[total], size - total, "%02x", digest[i]);
+                    = snprintf(&buf[total], bufSize - total, "%02x", digest[i]);
                 assert(len == 2);
                 total += len;
             }
             buf[total] = '\0';
-            REQUIRE_EQ(std::string(buf), s_digest);
+
+            assert(s_digest);
+            REQUIRE_EQ(std::string(buf), *s_digest);
         }
+
         else {
             REQUIRE_RC_FAIL(
                 KFileMD5ReadObserverGetDigest(md5, digest, &error));
@@ -287,6 +330,11 @@ public:
 
 VFSManager *ObserverTest::s_mgr(nullptr);
 const VPath *ObserverTest::s_path(nullptr);
-std::string ObserverTest::s_digest("7d66f3f346db0f916a8c723d40087b6c");
+const std::string ObserverTest::s_full_digest(
+    "7d66f3f346db0f916a8c723d40087b6c");
+const std::string ObserverTest::s_empty_digest(
+    "d41d8cd98f00b204e9800998ecf8427e");
+std::string ObserverTest::m_digest;
+const std::string* ObserverTest::s_digest = &s_full_digest;
 KDirectory *ObserverTest::s_cwd(nullptr);
 EType ObserverTest::s_type(ePlain);
