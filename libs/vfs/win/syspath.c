@@ -99,7 +99,8 @@ LIB_EXPORT rc_t CC VFSManagerMakeSysPath ( const VFSManager * self,
             {
                 /* we need to call windows to do the conversion, because sys_path can
                    be ascii or multi-byte */
-                copy_size = MultiByteToWideChar ( CP_THREAD_ACP, MB_PRECOMPOSED,
+                /* VDB-4192: changed CP_THREAD_ACP to CP_UTF8 */
+                copy_size = MultiByteToWideChar ( CP_UTF8, MB_PRECOMPOSED,
                     sys_path, ( int ) src_size, dst,
                     ( int ) ( dst_size / sizeof dst [ 0 ] ) - 1 );
                 if ( copy_size == 0 )
