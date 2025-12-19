@@ -39,6 +39,8 @@ struct KMD5File;
 #include <klib/rc.h>
 #include <klib/text.h>
 
+#include <kns/stream.h> /* KStreamSetReadObserver */
+
 #include <os-native.h>
 #include <sysalloc.h>
 
@@ -1968,7 +1970,7 @@ LIB_EXPORT rc_t CC KFileMD5ReadObserverRelease(
     return 0;
 }
 
-static void CC read_observer_update(
+static void CC file_observer_update(
     void* self, rc_t rc, uint64_t pos, void* vbuffer, size_t num_read);
 
 LIB_EXPORT rc_t CC KFileMD5ReadObserverGetDigest(
@@ -1980,11 +1982,14 @@ LIB_EXPORT rc_t CC KFileMD5ReadObserverGetDigest(
     if (error != NULL)
         *error = NULL;
 
+    if (digest == NULL)
+        return RC(rcFS, rcFile, rcReading, rcParam, rcNull);
+
     if (self == NULL)
         return RC(rcFS, rcFile, rcReading, rcSelf, rcNull);
 
     if (!self->completed && self->size == 0)
-        read_observer_update(self, 0, 0, NULL, 0);
+        file_observer_update(self, 0, 0, NULL, 0);
 
     if (!self->completed) {
         if (error != NULL) {
@@ -2025,7 +2030,7 @@ LIB_EXPORT rc_t CC KFileMD5ReadObserverGetDigest(
     return 0;
 }
 
-static void CC read_observer_update(
+static void CC file_observer_update(
     void *self, rc_t rc, uint64_t pos, void *vbuffer, size_t num_read)
 {
     KFileMD5ReadObserver * observer = (KFileMD5ReadObserver*)self;
@@ -2062,7 +2067,7 @@ static void CC read_observer_update(
         observer->completed = true;
 }
 
-static rc_t CC read_observer_destroy(void *self )
+static rc_t CC file_observer_destroy(void *self )
 {   return KFileMD5ReadObserverRelease(self); }
 
 LIB_EXPORT rc_t CC KFileMakeMD5ReadObserver(const KFile *self,
@@ -2090,8 +2095,8 @@ LIB_EXPORT rc_t CC KFileMakeMD5ReadObserver(const KFile *self,
 
     MD5StateInit(&obj->md5);
 
-    rc = KFileSetReadObserver(
-        (KFile*)self, read_observer_update, read_observer_destroy, obj);
+    rc = KFileSetReadObserver((KFile*)self,
+        file_observer_update, file_observer_destroy, obj);
 
     if (rc == 0)
         rc = KFileMD5ReadObserverAddRef(obj);
@@ -2100,4 +2105,103 @@ LIB_EXPORT rc_t CC KFileMakeMD5ReadObserver(const KFile *self,
         *observer = obj;
 
     return rc;
+}
+
+
+/*
+ * Observer to calculate md5 checksum when KStream is read
+ */
+
+struct KStreamMD5ReadObserver {
+    KRefcount refcount;
+    bool finished;  /* digest is ready */
+    uint8_t digest[16];
+    uint64_t pos; /* last processed position in stream */
+    MD5State md5;
+};
+
+LIB_EXPORT rc_t CC KStreamMD5ReadObserverAddRef(
+    const KStreamMD5ReadObserver *self)
+{
+    if (self != NULL) {
+        switch (KRefcountAdd(&self->refcount, "KStreamMD5ReadObserver"))
+        {
+        case krefLimit:
+            return RC(rcFS, rcFile, rcAttaching, rcRange, rcExcessive);
+        case krefNegative:
+            return RC(rcFS, rcFile, rcAttaching, rcSelf, rcInvalid);
+        default:
+            break;
+        }
+    }
+
+    return 0;
+}
+
+static void CC stream_observer_update(
+    void* self, rc_t rc, void* vbuffer, size_t num_read)
+{
+    KFileMD5ReadObserver* observer = (KFileMD5ReadObserver*)self;
+    unsigned char* buffer = (unsigned char*)vbuffer;
+    if (rc != 0 || observer == NULL)
+        return;
+    if (observer->finished)
+        return;
+    MD5StateAppend(&observer->md5, buffer, num_read);
+    observer->pos += num_read;
+}
+
+static rc_t CC stream_observer_destroy(void* self)
+{   return KStreamMD5ReadObserverRelease(self); }
+
+LIB_EXPORT rc_t CC KStreamMD5ReadObserverGetDigest(
+    const KStreamMD5ReadObserver* cself, uint8_t digest[16],
+    const char** error)
+{
+    KStreamMD5ReadObserver* self = (KStreamMD5ReadObserver*)cself;
+    if (error != NULL)
+        *error = NULL;
+    if (digest == NULL)
+        return RC(rcFS, rcFile, rcReading, rcParam, rcNull);
+    if (self == NULL)
+        return RC(rcFS, rcFile, rcReading, rcSelf, rcNull);
+    if (!self->finished && self->pos == 0)
+        stream_observer_update(self, 0, NULL, 0);
+    if (!self->finished) {
+        MD5StateFinish(&self->md5, self->digest);
+        self->finished = true;
+    }
+    memmove(digest, self->digest, sizeof self->digest);
+    return 0;
+}
+
+LIB_EXPORT rc_t CC KStreamMakeMD5ReadObserver(const KStream* self,
+    const KStreamMD5ReadObserver** observer)
+{
+    rc_t rc = 0;
+    KStreamMD5ReadObserver* obj = NULL;
+    if (observer == NULL)
+        return RC(rcFS, rcFile, rcUpdating, rcParam, rcNull);
+    *observer = NULL;
+    if (self == NULL)
+        return RC(rcFS, rcFile, rcUpdating, rcSelf, rcNull);
+    obj = calloc(1, sizeof * obj);
+    if (obj == NULL)
+        return RC(rcFS, rcFile, rcUpdating, rcMemory, rcExhausted);
+    KRefcountInit(&obj->refcount, 1,
+        "KStreamMakeMD5ReadObserver", "make", "stream");
+    MD5StateInit(&obj->md5);
+    rc = KStreamSetReadObserver((KStream*)self,
+        stream_observer_update, stream_observer_destroy, obj);
+    if (rc == 0)
+        rc = KStreamMD5ReadObserverAddRef(obj);
+    if (rc == 0)
+        *observer = obj;
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KStreamMD5ReadObserverRelease(
+    const KStreamMD5ReadObserver* observer)
+{
+    return 0;
 }

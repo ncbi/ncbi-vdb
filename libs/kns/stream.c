@@ -53,8 +53,16 @@ rc_t KStreamDestroy ( KStream *self )
 
     switch ( self -> vt -> v1 . maj )
     {
-    case 1:
-        return ( * self -> vt -> v1 . destroy ) ( self );
+    case 1: {
+        rc_t rc = 0, r2 = 0;
+        if ( self -> read_observer_destroy != NULL )
+            rc = ( * self -> read_observer_destroy ) ( self -> read_observer );
+        self -> read_observer = NULL;
+        r2 = ( * self -> vt -> v1 . destroy ) ( self );
+        if ( rc == 0 && r2 != 0 )
+            rc = r2;
+        return rc;
+      }
     }
 
     return RC ( rcNS, rcStream, rcDestroying, rcInterface, rcBadVersion );
@@ -141,8 +149,14 @@ LIB_EXPORT rc_t CC KStreamRead ( const KStream *self,
 
     switch ( self -> vt -> v1 . maj )
     {
-    case 1:
-        return ( * self -> vt -> v1 . read ) ( self, buffer, bsize, num_read );
+    case 1: {
+        rc_t rc = ( * self -> vt -> v1 . read ) 
+            ( self, buffer, bsize, num_read );
+        if ( self -> read_observer_update != NULL )
+            ( * self -> read_observer_update )
+                ( self -> read_observer, rc, buffer, *num_read );
+        return rc;
+      }
     }
 
     return RC ( rcNS, rcStream, rcReading, rcInterface, rcBadVersion );
@@ -169,12 +183,21 @@ LIB_EXPORT rc_t CC KStreamTimedRead ( const KStream *self,
 
     switch ( self -> vt -> v1 . maj )
     {
-    case 1:
+    case 1: {
+        rc_t rc = 0;
         if ( self -> vt -> v1 . min >= 1 )
-            return ( * self -> vt -> v1 . timed_read ) ( self, buffer, bsize, num_read, tm );
-        if ( tm == NULL )
-            return ( * self -> vt -> v1 . read ) ( self, buffer, bsize, num_read );
-        break;
+            rc = ( * self -> vt -> v1 . timed_read ) (
+                self, buffer, bsize, num_read, tm );
+        else if ( tm == NULL )
+            rc = ( * self -> vt -> v1 . read ) (
+                self, buffer, bsize, num_read );
+        else
+            break;
+        if ( self -> read_observer_update != NULL )
+            ( * self -> read_observer_update )
+                ( self -> read_observer, rc, buffer, *num_read );
+        return rc;
+      }
     }
 
 
@@ -205,7 +228,7 @@ LIB_EXPORT rc_t CC KStreamReadAll ( const KStream *self,
 {
     rc_t rc;
     uint8_t *b;
-    size_t total, count;
+    size_t total = 0, count;
 
     if ( num_read == NULL )
         return RC ( rcNS, rcStream, rcReading, rcParam, rcNull );
@@ -267,6 +290,13 @@ LIB_EXPORT rc_t CC KStreamReadAll ( const KStream *self,
     }
 
     if ( total != 0 )
+        rc = 0;
+
+    if ( self -> read_observer_update != NULL )
+            ( * self -> read_observer_update )
+                ( self -> read_observer, rc, buffer, total );
+    
+    if ( total != 0 )
     {
         * num_read = total;
         return 0;
@@ -280,7 +310,7 @@ LIB_EXPORT rc_t CC KStreamTimedReadAll ( const KStream *self,
 {
     rc_t rc;
     uint8_t *b;
-    size_t total, count;
+    size_t total = 0, count;
 
     if ( num_read == NULL )
         return RC ( rcNS, rcStream, rcReading, rcParam, rcNull );
@@ -346,6 +376,13 @@ LIB_EXPORT rc_t CC KStreamTimedReadAll ( const KStream *self,
     }
 
     if ( total != 0 )
+        rc = 0;
+
+    if ( self -> read_observer_update != NULL )
+            ( * self -> read_observer_update )
+                ( self -> read_observer, rc, buffer, total );
+    
+    if ( total != 0 )
     {
         * num_read = total;
         return 0;
@@ -374,7 +411,7 @@ LIB_EXPORT rc_t CC KStreamReadExactly ( const KStream *self,
 {
     rc_t rc = 0;
     uint8_t *b;
-    size_t total, count;
+    size_t total = 0, count;
 
     if ( self == NULL )
         return RC ( rcNS, rcStream, rcReading, rcSelf, rcNull );
@@ -412,6 +449,10 @@ LIB_EXPORT rc_t CC KStreamReadExactly ( const KStream *self,
         return RC ( rcNS, rcStream, rcReading, rcInterface, rcBadVersion );
     }
 
+    if ( self -> read_observer_update != NULL )
+            ( * self -> read_observer_update )
+                ( self -> read_observer, rc, buffer, total );
+    
     return rc;
 }
 
@@ -420,7 +461,7 @@ LIB_EXPORT rc_t CC KStreamTimedReadExactly ( const KStream *self,
 {
     rc_t rc = 0;
     uint8_t *b;
-    size_t total, count;
+    size_t total = 0, count;
 
     if ( self == NULL )
         return RC ( rcNS, rcStream, rcReading, rcSelf, rcNull );
@@ -487,6 +528,10 @@ LIB_EXPORT rc_t CC KStreamTimedReadExactly ( const KStream *self,
         return RC ( rcNS, rcStream, rcReading, rcInterface, rcBadVersion );
     }
 
+    if ( self -> read_observer_update != NULL )
+            ( * self -> read_observer_update )
+                ( self -> read_observer, rc, buffer, total );
+    
     return rc;
 }
 
@@ -793,5 +838,23 @@ LIB_EXPORT rc_t CC KStreamWhack ( KStream * self, const char * classname )
         self -> read_enabled = false;
         self -> write_enabled = false;
     }
+    return 0;
+}
+
+
+LIB_EXPORT rc_t CC KStreamSetReadObserver(
+    KStream* self,
+    void (CC* read_observer_update)
+        (void* self, rc_t rc, void* buffer, size_t num_read),
+    rc_t(CC* read_observer_destroy) (void* self),
+    void* read_observer)
+{
+    if (self == NULL)
+        return RC(rcFS, rcFile, rcUpdating, rcSelf, rcNull);
+
+    self->read_observer_update = read_observer_update;
+    self->read_observer_destroy = read_observer_destroy;
+    self->read_observer = read_observer;
+
     return 0;
 }
