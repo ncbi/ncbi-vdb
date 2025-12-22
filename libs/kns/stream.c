@@ -818,6 +818,8 @@ LIB_EXPORT rc_t CC KStreamInit ( KStream *self, const KStream_vt *vt,
         return RC ( rcNS, rcStream, rcConstructing, rcInterface, rcBadVersion );
     }
 
+    memset ( self, 0, sizeof * self );
+
     self -> vt = vt;
     KRefcountInit ( & self -> refcount, 1, classname, "init", strname );
     self -> read_enabled = ( uint8_t ) ( read_enabled != 0 );
