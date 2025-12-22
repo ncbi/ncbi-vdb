@@ -2201,7 +2201,18 @@ LIB_EXPORT rc_t CC KStreamMakeMD5ReadObserver(const KStream* self,
 }
 
 LIB_EXPORT rc_t CC KStreamMD5ReadObserverRelease(
-    const KStreamMD5ReadObserver* observer)
+    const KStreamMD5ReadObserver* self)
 {
+    if (self != NULL) {
+        switch (KRefcountDrop(&self->refcount, "KStreamMD5ReadObserver")) {
+        case krefWhack:
+            memset((void*)self, 0, sizeof * self);
+            free((void*)self);
+            return 0;
+        case krefNegative:
+            return RC(rcNS, rcMgr, rcAttaching, rcRefcount, rcInvalid);
+        }
+    }
+
     return 0;
 }
