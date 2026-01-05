@@ -92,7 +92,7 @@ protected:
         REQUIRE_RC(KStreamMakeMD5ReadObserver(str, &md5));
 
         if (_failures) {
-            size_t num_read(~0);
+            size_t num_read(9);
             REQUIRE_RC_FAIL(KStreamRead(nullptr, buf, 1, &num_read));
             REQUIRE_RC_FAIL(KStreamRead(str, nullptr, 1, &num_read));
             REQUIRE_RC_FAIL(KStreamRead(str, buf, 0, &num_read));
@@ -144,7 +144,7 @@ public:
             REQUIRE_RC_FAIL(KStreamMD5ReadObserverGetDigest(md5, digest,
                 nullptr));
 
-            rc_t rc = ~0;
+            rc_t rc(1);
             REQUIRE_RC_FAIL(KStreamMD5ReadObserverGetDigest(md5, digest, &rc));
             REQUIRE_EQ(rc, aRc);
         }
@@ -160,15 +160,15 @@ public:
 class EmptyObserverTest : public ObserverTest {
 public:
     EmptyObserverTest
-    (bool stdin, TestCase* dad, const std::string& name, bool failures = false)
-        : ObserverTest(stdin, true, dad, name, failures)
+    (bool stdIn, TestCase* dad, const std::string& name, bool failures = false)
+        : ObserverTest(stdIn, true, dad, name, failures)
     {}
 };
 
 class FilledObserverTest : public ObserverTest {
 public:
     FilledObserverTest
-    (bool stdin, TestCase* dad, const std::string& name, bool failures = false)
-        : ObserverTest(stdin, false, dad, name, failures)
+    (bool stdIn, TestCase* dad, const std::string& name, bool failures = false)
+        : ObserverTest(stdIn, false, dad, name, failures)
     {}
 };
