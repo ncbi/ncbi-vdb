@@ -24,7 +24,7 @@
 * Tests of KStreamMD5ReadObserver for empty file
 */
 
-bool STDIN(false);
+bool STDIN(true);
 
 #include "test-empty-file_stream_observer.hpp" // TEST_CASE-s
 

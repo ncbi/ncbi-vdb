@@ -33,6 +33,10 @@ AddExecutableTest( Test_KNS_stream-observer-empty
                                   "test-empty-file_stream_observer" "${LIBS}" )
 AddExecutableTest( Test_KNS_stream-observer-not_empty
                                   "test-stream_observer" "${LIBS}" )
+AddExecutableTest( Test_KNS_stdin-observer-empty
+                                  "test-empty-stdin_observer" "${LIBS}" )
+AddExecutableTest( Test_KNS_stdin-observer-not_empty
+                                  "test-stdin_observer" "${LIBS}" )
 
 AddExecutableTest( Test_KNS_google-proxy "test-google-proxy" "${LIBS}" )
 AddExecutableTest( Test_KNS_test200for-whole-file "test200for-whole-file" "${LIBS}" )

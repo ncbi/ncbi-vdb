@@ -21,12 +21,12 @@
 *  Please cite the author in any work or product based on this material.
 *
 * ==============================================================================
-* Tests of KStreamMD5ReadObserver for empty file
+* Tests of KStreamMD5ReadObserver for not-empty file
 */
 
-bool STDIN(false);
+bool STDIN(true);
 
-#include "test-empty-file_stream_observer.hpp" // TEST_CASE-s
+#include "test-stream_observer.hpp" // TEST_CASE-s
 
 int main(int argc, char* argv[]) {
     rc_t rc(ObserverTestSuite(argc, argv));

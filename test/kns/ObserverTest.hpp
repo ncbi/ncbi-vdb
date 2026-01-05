@@ -24,6 +24,8 @@
 * Common code for KStreamMD5ReadObserver tests
 */
 
+#include <kfs/directory.h> /* KDirectoryRelease */
+#include <kfs/file.h> /* KFileRelease */
 #include <kfs/md5.h> /* KStreamMD5ReadObserverRelease */
 #include <kns/stream.h> /* KStreamRelease */
 #include <kproc/timeout.h> // TimeoutInit
@@ -31,36 +33,56 @@
 #include <klib/rc.h> // IF_EXITCODE
 #include "../../libs/kns/stream-priv.h" /* rcStream */
 
+static rc_t correctKStreamMakeFromBuffer(
+    const KStream** stream, const char* buffer, size_t size)
+{   return KStreamMakeFromBuffer((KStream**)stream, buffer, size); }
+
 class ObserverTest : protected ncbi::NK::TestCase {
     TestCase* _dad;
     bool _failures;
+    bool _stdin;
     bool _empty;
+    KDirectory* _d = nullptr;
+    char const* _path = "tmp";
 
 public:
-    KStream* str = nullptr;
+    const KStream* str = nullptr;
     const KStreamMD5ReadObserver* md5 = nullptr;
-    struct timeout_t tm;
-    char buf[99] = "";
+    char buf[99] = "1";
     uint8_t digest[16];
 
 protected:
-    ObserverTest
-    (bool empty, TestCase* dad, const std::string& name, bool failures)
+    ObserverTest(bool aStdin, bool empty,
+        TestCase* dad, const std::string& name, bool failures)
         : TestCase(name)
         , _dad(dad)
         , _failures(failures)
+        , _stdin(aStdin)
         , _empty(empty)
     {
-        TimeoutInit(&tm, 300000);
         digest[0] = '\0';
 
         if (_failures)
             REQUIRE_RC_FAIL(KStreamMakeFromBuffer(nullptr, buf, 1));
 
-        if (_empty)
-            REQUIRE_RC(KStreamMakeFromBuffer(&str, nullptr, 0));
-        else
-            REQUIRE_RC(KStreamMakeFromBuffer(&str, "1", 1));
+        if (_stdin) {
+            REQUIRE_RC(KDirectoryNativeDir(&_d));
+            REQUIRE_RC(KDirectoryRemove(_d, true, _path));
+            KFile* f(nullptr);
+            REQUIRE_RC(
+                KDirectoryCreateFile(_d, &f, false, 0400, kcmInit, _path));
+            if (!_empty)
+                REQUIRE_RC(KFileWrite(f, 0, buf, 1, NULL));
+            REQUIRE_RC(KFileRelease(f));
+            REQUIRE_NOT_NULL(freopen(_path, "r", stdin));
+            REQUIRE_RC(KStreamMakeStdIn(&str));
+        }
+        else {
+            if (_empty)
+                REQUIRE_RC(correctKStreamMakeFromBuffer(&str, nullptr, 0));
+            else
+                REQUIRE_RC(correctKStreamMakeFromBuffer(&str, buf, 1));
+        }
 
         if (_failures) {
             REQUIRE_RC_FAIL(KStreamMakeMD5ReadObserver(str, nullptr));
@@ -81,6 +103,13 @@ protected:
     ~ObserverTest() {
         assert(_dad);
         _dad->ErrorCounterAdd(GetErrorCounter());
+
+        if (_stdin) {
+            KDirectoryRemove(_d, true, _path);
+
+            KDirectoryRelease(_d);
+            _d = nullptr;
+        }
     }
 
 public:
@@ -131,15 +160,15 @@ public:
 class EmptyObserverTest : public ObserverTest {
 public:
     EmptyObserverTest
-    (TestCase* dad, const std::string& name, bool failures = false)
-        : ObserverTest(true, dad, name, failures)
+    (bool stdin, TestCase* dad, const std::string& name, bool failures = false)
+        : ObserverTest(stdin, true, dad, name, failures)
     {}
 };
 
 class FilledObserverTest : public ObserverTest {
 public:
     FilledObserverTest
-    (TestCase* dad, const std::string& name, bool failures = false)
-        : ObserverTest(false, dad, name, failures)
+    (bool stdin, TestCase* dad, const std::string& name, bool failures = false)
+        : ObserverTest(stdin, false, dad, name, failures)
     {}
 };
