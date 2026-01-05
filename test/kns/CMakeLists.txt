@@ -28,6 +28,12 @@ set( LIBS "${COMMON_LIBS_READ}")
 
 AddExecutableTest( Test_KNS_allow_all_certificates "test_allow_all_certificates" "${LIBS}" )
 AddExecutableTest( Test_KNS_dis_allow_all_certificates "test_dis_allow_all_certificates" "${LIBS}" )
+
+AddExecutableTest( Test_KNS_stream-observer-empty
+                                  "test-empty-file_stream_observer" "${LIBS}" )
+AddExecutableTest( Test_KNS_stream-observer-not_empty
+                                  "test-stream_observer" "${LIBS}" )
+
 AddExecutableTest( Test_KNS_google-proxy "test-google-proxy" "${LIBS}" )
 AddExecutableTest( Test_KNS_test200for-whole-file "test200for-whole-file" "${LIBS}" )
 AddExecutableTest( Test_KNS_dflt "knstest" "${COMMON_LIBS_READ}" )

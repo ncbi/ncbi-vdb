@@ -348,13 +348,11 @@ KFS_EXTERN rc_t CC KStreamMD5ReadObserverRelease(
  *
  *  "digest" [ OUT ] - return parameter for the MD5 checksum
  *
- *  "error" [ OUT, NULL OKAY ] - optional error message that is returned
- *  when md5 cannot be calculated.
- *  "free(error)" has to be called after you have finished using it.
+ *  "rc" [ OUT, NULL OKAY ] - optional return code that wss returned by Read.
+ *  0 if all Read() returned 0;
  */
 KFS_EXTERN rc_t CC KStreamMD5ReadObserverGetDigest(
-    const KStreamMD5ReadObserver* self, uint8_t digest[16],
-    const char** error);
+    const KStreamMD5ReadObserver* self, uint8_t digest[16], rc_t* rc);
 
 #ifdef __cplusplus
 }
