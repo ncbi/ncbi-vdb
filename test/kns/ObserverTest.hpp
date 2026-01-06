@@ -67,7 +67,7 @@ protected:
 
         if (_stdin) {
             REQUIRE_RC(KDirectoryNativeDir(&_d));
-            REQUIRE_RC(KDirectoryRemove(_d, true, _path));
+            KDirectoryRemove(_d, true, _path);
             KFile* f(nullptr);
             REQUIRE_RC(
                 KDirectoryCreateFile(_d, &f, false, 0400, kcmInit, _path));
