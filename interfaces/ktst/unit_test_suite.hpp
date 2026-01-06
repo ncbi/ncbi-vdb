@@ -156,6 +156,8 @@ public:
     static void SetVerbosity(LogLevel::E v)
     {   verbosity = v; verbositySet = true; }
 
+    static void Terminate();
+
 private:
     static void TermHandler() noexcept;
 
