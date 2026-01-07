@@ -123,9 +123,9 @@ TestEnv::~TestEnv ()
     }
 }
 
-void TestEnv::Terminate ()
+void TestEnv::Terminate(rc_t rc)
 {
-    VdbTerminate(0);
+    VdbTerminate(rc);
 }
 
 char TestEnv::lastLocation[] = "<init>";
