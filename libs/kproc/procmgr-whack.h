@@ -24,6 +24,6 @@
 
 #include "../klib/singletons.h" /* VDB_USES_SINGLETONS */
 
-#ifdef VDB_USES_SINGLETONS
+#ifndef VDB_USES_SINGLETONS
     #define WHACK_PROC_MGR 1
 #endif
