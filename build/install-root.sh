@@ -47,7 +47,9 @@ if [ "$EUID" -eq 0 ]; then
     echo "Updating ${PROFILE_FILE}.sh"
     printf \
 "#version ${VERSION}\n"\
-"if ! echo \$LD_LIBRARY_PATH | /bin/grep -q ${LIBDIR}\n"\
+"if [ \"\$LD_LIBRARY_PATH\" = \"\" ]\n"\
+"then export LD_LIBRARY_PATH=${LIBDIR}\n"\
+"elif ! echo \$LD_LIBRARY_PATH | /bin/grep -q ${LIBDIR}\n"\
 "then export LD_LIBRARY_PATH=${LIBDIR}:\$LD_LIBRARY_PATH\n"\
 "fi\n"\
 "export NCBI_VDB_LIBDIR=${LIBDIR}\n" \
@@ -56,8 +58,12 @@ if [ "$EUID" -eq 0 ]; then
     echo "Updating ${PROFILE_FILE}.csh"
     printf \
 "#version ${VERSION}\n"\
-"echo \$LD_LIBRARY_PATH | /bin/grep -q ${LIBDIR}\n"\
-"if ( \$status ) setenv LD_LIBRARY_PATH ${LIBDIR}:\$LD_LIBRARY_PATH\n"\
+"if ( \$?LD_LIBRARY_PATH ) then\n"\
+"  echo \$LD_LIBRARY_PATH | /bin/grep -q ${LIBDIR}\n"\
+"  if ( \$status ) setenv LD_LIBRARY_PATH ${LIBDIR}:\$LD_LIBRARY_PATH\n"\
+"else\n"\
+"  setenv LD_LIBRARY_PATH ${LIBDIR}\n"\
+"endif\n"\
 "setenv NCBI_VDB_LIBDIR ${LIBDIR}\n" \
         >${PROFILE_FILE}.csh && chmod 644 ${PROFILE_FILE}.csh
 
