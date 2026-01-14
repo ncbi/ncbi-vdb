@@ -58,6 +58,12 @@ struct KStream
 {
     const KStream_vt *vt;
     KRefcount refcount;
+
+    void (CC* read_observer_update)
+        (void* self, rc_t rc, void* buffer, size_t num_read); 
+    rc_t(CC* read_observer_destroy) (void* self);
+    void* read_observer;
+
     uint8_t read_enabled;
     uint8_t write_enabled;
     uint8_t align [ 2 ];

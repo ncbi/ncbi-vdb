@@ -1,4 +1,4 @@
-/*===========================================================================
+/*==============================================================================
 *
 *                            PUBLIC DOMAIN NOTICE
 *               National Center for Biotechnology Information
@@ -20,10 +20,15 @@
 *
 *  Please cite the author in any work or product based on this material.
 *
-* =========================================================================== */
+* ==============================================================================
+* Tests of KStreamMD5ReadObserver for not-empty file
+*/
 
-#if 1
-    /* Turn on use of singletons.
-       Turn it off to debug memory leaks. */
-    #define VDB_USES_SINGLETONS
-#endif
+bool STDIN(true);
+
+#include "test-stream_observer.hpp" // TEST_CASE-s
+
+int main(int argc, char* argv[]) {
+    rc_t rc(ObserverTestSuite(argc, argv));
+    return (rc == 0) ? 0 : IF_EXITCODE(rc, 3);
+}
