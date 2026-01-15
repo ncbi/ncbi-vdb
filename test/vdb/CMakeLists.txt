@@ -86,7 +86,7 @@ AddExecutableTest( SlowTest_VDB_vdb-slow "test-vdb-slow" "${LIBS_READ}" )
 AddExecutableTest( SlowTest_VDB_wvdb-slow "test-wvdb-slow" "${LIBS_WRITE}" )
 
 BuildExecutableForTest( rowwritetest "rowwritetest" "${LIBS_WRITE}" )
-add_test( NAME Test_VDB_row_write COMMAND bash -c "rowwritetest -t ${CMAKE_CURRENT_SOURCE_DIR}/db/Test_VDB_row_write" )
+add_test( NAME Test_VDB_row_write COMMAND bash -c "${CMAKE_TEST_OUTPUT_DIRECTORY}/rowwritetest -t ${CMAKE_CURRENT_SOURCE_DIR}/db/Test_VDB_row_write" )
 
 # TODO: make sure runs are not cached in the user repository when running tests
 

@@ -86,7 +86,7 @@ rc_t run (const char * table_path, uint64_t N )
     static const char *colInf[] = {
         "C1: Same value, same length",
         "C2: Var. value, same length",
-        "C3: Var. value, var. legnth",
+        "C3: Var. value, var. length",
         "C4: Same value except I row",
         "C5: Same value except L row" };
     rc_t rc;
