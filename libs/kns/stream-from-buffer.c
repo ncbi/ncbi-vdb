@@ -128,7 +128,7 @@ static KStream_vt_v1 vtKBufferStream = {
 LIB_EXPORT rc_t CC KStreamMakeFromBuffer ( KStream ** self, const char * buffer,
     size_t size )
 {
-    rc_t rc= 0;    
+    rc_t rc = 0;    
 
     KBufferStream * obj = NULL;
 

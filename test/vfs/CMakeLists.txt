@@ -39,7 +39,7 @@ AddExecutableTest(
     Test_VFS_vfs_resolve "test-vfs-resolve" "${LIBS}")
 AddExecutableTest( Test_VFS_path "pathtest" "${LIBS}" )
 AddExecutableTest( Test_VFS_path-c "path-test" "${LIBS}" )
-AddExecutableTest( Test_VFS_read_observer "test-read_observer" "${LIBS}" )
+AddExecutableTest( Test_VFS_file_observer "test-file_observer" "${LIBS}" )
 AddExecutableTest( Test_VFS_perm "test-perm" "${LIBS}" )
 AddExecutableTest( Test_VFS_resolve "test-resolve" "${LIBS}" )
 AddExecutableTest( Test_VFS_resolver_dflt "Test_VFS_resolver_dflt" "${LIBS}" )

@@ -123,6 +123,11 @@ TestEnv::~TestEnv ()
     }
 }
 
+void TestEnv::Terminate(rc_t rc)
+{
+    VdbTerminate(rc);
+}
+
 char TestEnv::lastLocation[] = "<init>";
 LogLevel::E TestEnv::verbosity = LogLevel::e_error;
 bool TestEnv::verbositySet = false;
