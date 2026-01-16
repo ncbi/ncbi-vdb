@@ -74,7 +74,7 @@ enum
 //typedef INSDC_read_type INSDC_SRA_xread_type;
 typedef INSDC_SRA_xread_type INSDC_SRA_read_type;
 #if 0
-already defined in sra.h
+//already defined in sra.h
 enum
 {
     /* read_type and xread_type */
@@ -115,7 +115,8 @@ enum
     SRA_PLATFORM_DNBSEQ            = 17,
     SRA_PLATFORM_SINGULAR_GENOMICS = 18,
     SRA_PLATFORM_GENEUS_TECH       = 19,
-    SRA_PLATFORM_SALUS             = 20
+    SRA_PLATFORM_SALUS             = 20,
+    SRA_PLATFORM_AMCARE            = 21
 };
 
 /*
@@ -147,7 +148,8 @@ enum
     "SRA_PLATFORM_DNBSEQ",            \
     "SRA_PLATFORM_SINGULAR_GENOMICS", \
     "SRA_PLATFORM_GENEUS_TECH",       \
-    "SRA_PLATFORM_SALUS"
+    "SRA_PLATFORM_SALUS",             \
+    "SRA_PLATFORM_AMCARE"
 
 #ifdef __cplusplus
 }
