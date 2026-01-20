@@ -119,7 +119,7 @@ enum
     SRA_PLATFORM_AMCARE            = 21,
     SRA_PLATFORM_DAAN_GENE         = 22,
     SRA_PLATFORM_GENEPLUS          = 23,
-    SRA_PLATFORM_QITAN_TECH        = 23
+    SRA_PLATFORM_QITAN_TECH        = 24
 };
 
 /*
