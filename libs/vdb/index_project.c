@@ -147,7 +147,7 @@ rc_t CC index_project_impl(
                 start_id = empty_row_id_start;
             }
 
-            if ( start_id + id_count > empty_row_id_start + empty_row_id_count )
+            if ( start_id + (int64_t)id_count > empty_row_id_start + empty_row_id_count )
             {
                 id_count = empty_row_id_start + empty_row_id_count - start_id;
             }
