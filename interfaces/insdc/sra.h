@@ -117,7 +117,10 @@ enum
     SRA_PLATFORM_GENEUS_TECH       = 19,
     SRA_PLATFORM_SALUS             = 20,
     SRA_PLATFORM_AMCARE            = 21,
-    SRA_PLATFORM_DAAN_GENE         = 22
+    SRA_PLATFORM_DAAN_GENE         = 22,
+    SRA_PLATFORM_GENEPLUS          = 23,
+    SRA_PLATFORM_QITAN_TECH        = 24,
+    SRA_PLATFORM_CAPITAL_BIOTECH   = 25
 };
 
 /*
@@ -151,7 +154,10 @@ enum
     "SRA_PLATFORM_GENEUS_TECH",       \
     "SRA_PLATFORM_SALUS",             \
     "SRA_PLATFORM_AMCARE",            \
-    "SRA_PLATFORM_DAAN_GENE"
+    "SRA_PLATFORM_DAAN_GENE",         \
+    "SRA_PLATFORM_GENEPLUS",          \
+    "SRA_PLATFORM_QITAN_TECH",        \
+    "SRA_PLATFORM_CAPITAL_BIOTECH"
 
 #ifdef __cplusplus
 }
