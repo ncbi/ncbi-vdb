@@ -2082,6 +2082,11 @@ rc_t ArgsMakeAndHandleInt ( Args ** pself, int argc, const char ** argv,
         * pself = NULL;
     }
 
+    if ( argv == NULL )
+    {
+        return RC ( rcExe, rcArgv, rcConstructing, rcParam, rcNull );
+    }
+
     rc = ArgsMakeStandardOptions_int(&self, argv[0]);
     if ( rc == 0 && param_count != 0 )
     {
