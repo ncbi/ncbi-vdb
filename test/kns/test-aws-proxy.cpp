@@ -117,6 +117,7 @@ TEST_CASE ( AwsProxyTest ) {
 
 int main( int argc, char * argv [] )
 {
+#if _DEBUGGING
     KDbgInit();
     KWrtInit("test", 0);
     KDbgHandlerSetStdErr();
@@ -124,6 +125,7 @@ int main( int argc, char * argv [] )
         assert(!KDbgSetString("KNS"));
         assert(!KDbgSetString("VFS"));
     }
+#endif
 
     KConfigDisableUserSettings ();
     
