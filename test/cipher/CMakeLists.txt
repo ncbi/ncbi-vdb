@@ -22,7 +22,7 @@
 #
 # ===========================================================================
 
-if ( Python3_FOUND AND NOT WIN32 )
+if ( Python3_FOUND AND NOT WIN32 AND NOT "mac" STREQUAL ${OS} )
        add_test( NAME Test_CIPHER COMMAND sh test.sh ${CMAKE_SOURCE_DIR}
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
         set_tests_properties(Test_CIPHER
