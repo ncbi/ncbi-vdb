@@ -22,12 +22,12 @@
 #
 # ===========================================================================
 
-find_program(LSB_RELEASE_EXEC lsb_release)
-execute_process ( COMMAND ${LSB_RELEASE_EXEC} -is
-         OUTPUT_VARIABLE LSB_RELEASE_ID_SHORT OUTPUT_STRIP_TRAILING_WHITESPACE )
+#find_program(LSB_RELEASE_EXEC lsb_release)
+#execute_process ( COMMAND ${LSB_RELEASE_EXEC} -is
+#        OUTPUT_VARIABLE LSB_RELEASE_ID_SHORT OUTPUT_STRIP_TRAILING_WHITESPACE )
 
-if ( Python3_FOUND AND NOT WIN32
-   AND NOT "mac" STREQUAL ${OS} AND NOT "Ubuntu" STREQUAL LSB_RELEASE_ID_SHORT
+if ( Python3_FOUND AND NOT WIN32 AND NOT "mac" STREQUAL ${OS}
+#  AND NOT "Ubuntu" STREQUAL LSB_RELEASE_ID_SHORT
    )
        add_test( NAME Test_CIPHER COMMAND sh test.sh ${CMAKE_SOURCE_DIR}
             WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )

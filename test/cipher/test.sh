@@ -46,7 +46,12 @@ fi
 # the following creates "build dist .eggs" in $CIPHER_DIR
 tmp_cur_dir=$(pwd)
 cd $CIPHER_DIR                       || exit 3
-python -m pip install --use-pep517 . || exit 4
+lsb_release=`lsb_release -is`
+if [ "$lsb_release" = "Ubuntu" ]; then
+  python -m pip install              . || exit 4
+else
+  python -m pip install --use-pep517 . || exit 4
+fi
 cd $tmp_cur_dir                      || exit 5
 unset tmp_cur_dir
 
