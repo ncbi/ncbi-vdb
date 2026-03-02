@@ -33,6 +33,7 @@ fi
 
 #installing cipher module into newly created virtual env
 tmp_py_env=$(pwd)/temp_env_${OS}
+rm -f $tmp_py_env
 
 if [ "${VIRTUALENV}" != "" ]; then
    virtualenv -p ${PYTHON} $tmp_py_env || exit 1
@@ -42,6 +43,7 @@ fi
 . $tmp_py_env/bin/activate             || exit 2
 
 #now inside the virtual env, python is python
+pip install --upgrade pip setuptools wheel
 
 # the following creates "build dist .eggs" in $CIPHER_DIR
 tmp_cur_dir=$(pwd)
