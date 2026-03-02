@@ -46,11 +46,17 @@ fi
 # the following creates "build dist .eggs" in $CIPHER_DIR
 tmp_cur_dir=$(pwd)
 cd $CIPHER_DIR                       || exit 3
-lsb_release=`lsb_release -is`
-if [ "$lsb_release" = "Ubuntu" ]; then
-  python -m pip install              . || exit 4
+if [ "${OS}" = "mac" ]; then
+  PFX="python $CIPHER_DIR/"
+  python -m pip install --no-build-isolation . || exit 4
 else
-  python -m pip install --use-pep517 . || exit 4
+  PFX=
+  lsb_release=`lsb_release -is`
+  if [ "$lsb_release" = "Ubuntu" ]; then
+    python -m pip install              . || exit 4
+  else
+    python -m pip install --use-pep517 . || exit 4
+  fi
 fi
 cd $tmp_cur_dir                      || exit 5
 unset tmp_cur_dir
@@ -69,8 +75,8 @@ do
     echo "Hello world $i" >> test.in
 done
 
-encrypt.py --password=password123 test.in  test.enc || exit 7
-decrypt.py --password=password123 test.enc test.out || exit 8
+${PFX}encrypt.py --password=password123 test.in  test.enc || exit 7
+${PFX}decrypt.py --password=password123 test.enc test.out || exit 8
 
 diff test.in test.out
 exit_code=$?
