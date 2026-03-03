@@ -43,7 +43,9 @@ fi
 . $tmp_py_env/bin/activate             || exit 2
 
 #now inside the virtual env, python is python
-pip install --upgrade pip setuptools wheel
+if [ "${OS}" = "mac" ]; then
+  pip install --upgrade pip setuptools wheel
+fi
 
 # the following creates "build dist .eggs" in $CIPHER_DIR
 tmp_cur_dir=$(pwd)
