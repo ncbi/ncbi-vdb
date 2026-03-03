@@ -524,6 +524,9 @@ LIB_EXPORT rc_t PageMapNewIterator(const PageMap *self, PageMapIterator *lhs, ui
     if (first_row + num_rows > self->row_count)
         num_rows = self->row_count - first_row;
 
+    if (num_rows != (row_count_t)num_rows)
+        return RC(rcDB, rcPagemap, rcAccessing, rcBlob, rcInvalid);
+
 #if _DEBUGGING
     if (self->data_recs > 1) {
         assert(first_row == (row_count_t)first_row);

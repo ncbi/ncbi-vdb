@@ -735,11 +735,12 @@ rc_t VFunctionProdCallRowFunc1( VFunctionProd *self, VBlob **prslt, int64_t row_
 
 
 
-
+    if ( rc == 0)
 #if PROD_NAME
-    rc = VBlobNew ( &blob, self->start_id, self->stop_id, self->dad.name );
+        rc = VBlobNew ( &blob, self->start_id, self->stop_id, self->dad.name );
 #else
-    rc = VBlobNew ( &blob, self->start_id, self->stop_id, "VFunctionProdCallDetRowFunc" );
+        rc = VBlobNew ( &blob, self->start_id, self->stop_id,
+            "VFunctionProdCallDetRowFunc" );
 #endif
     TRACK_BLOB ( VBlobNew, blob );
     if (rc)
