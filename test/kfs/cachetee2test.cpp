@@ -395,8 +395,8 @@ static rc_t cache_access( int tid, int num_threads, const KFile * origfile, cons
     }
 
     // Initialize an RNG C++17-style
-    static std::random_device rd;
-    static std::mt19937 g(rd());
+    std::random_device rd;
+    std::mt19937 g(rd());
     std::shuffle( &chunk_pos[ 0 ], &chunk_pos[ num_chunks ], g );
 
     for ( i = 0; i < num_chunks; ++i )
