@@ -24,6 +24,6 @@
 
 #if 1
     /* Turn on use of singletons.
-       Turn it of to debug memory leaks. */
+       Turn it off to debug memory leaks. */
     #define VDB_USES_SINGLETONS
 #endif

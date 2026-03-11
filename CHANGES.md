@@ -23,6 +23,17 @@ Please cite the author in any work or product based on this material.
 # NCBI External Developer Release:
 
 
+## NCBI VDB 3.4.0
+**March 17, 2026**
+
+  **kdb, sra-stat, vdb**: does not crash when alignment is invalid  
+  **kfs, kns**: added ability to calculate md5 checksum while reading a stream  
+  **ncbi-vdb**: fixed installation for superuser when LD_LIBRARY_PATH is not defined  
+  **ncbi-vdb, sra-tools**: bzip2 was upgraded to version 1.0.8  
+  **ncbi-vdb, sra-tools**: zstd was upgraded to version 1.5.7  
+  **test**: fixed  
+
+
 ## NCBI VDB 3.3.0
 **December 2, 2025**
 

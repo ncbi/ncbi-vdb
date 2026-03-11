@@ -24,7 +24,7 @@
 * Tests of KFileMD5ReadObserver for HTTP file
 */
 
-#include "observer-test.hpp" // ObserverTest
+#include "file-observer-test.hpp" // ObserverTest
 
 TEST_SUITE(ReadObserverTestSuite)
 

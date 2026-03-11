@@ -1,7 +1,4 @@
-#ifndef _h_libs_klib_release_vers_
-#define _h_libs_klib_release_vers_
-
-/*===========================================================================
+/*==============================================================================
 *
 *                            PUBLIC DOMAIN NOTICE
 *               National Center for Biotechnology Information
@@ -23,29 +20,15 @@
 *
 *  Please cite the author in any work or product based on this material.
 *
-* ===========================================================================
-*
+* ==============================================================================
+* Tests of KStreamMD5ReadObserver for not-empty file
 */
 
-#include <klib/vdb-features.h> /* VDB_RELEASE_VERSION */
+bool STDIN(false);
 
-/* THIS FILE IS NOT GENERATED AUTOMATICALLY! */
+#include "test-stream_observer.hpp" // TEST_CASE-s
 
-
-/* Version of current SRA Toolkit Release */
-#define RELEASE_VERS VDB_RELEASE_VERSION
-
-
-/* Type of Version of current SRA Toolkit Release is one of:
- *  'd' - development
- *  'a' - alpha
- *  'b' - beta
- *  'c' - release candidate
- *  'r' - final
- */
-#define RELEASE_TYPE 'r'
-
-/* Revision of Version of current SRA Toolkit Release */
-#define RELEASE_REVISION 0
-
-#endif /* _h_libs_klib_release_vers_ */
+int main(int argc, char* argv[]) {
+    rc_t rc(ObserverTestSuite(argc, argv));
+    return (rc == 0) ? 0 : IF_EXITCODE(rc, 3);
+}

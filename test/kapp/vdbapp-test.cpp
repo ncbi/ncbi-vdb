@@ -80,6 +80,21 @@ TEST_CASE(ReportsInitialized)
     REQUIRE_EQ( GetKAppVersion(), version );
 }
 
+TEST_CASE(Args_Make_NullArgv0)
+{
+    Args * args;
+    REQUIRE_RC_FAIL( ArgsMakeAndHandle( &args, 0, nullptr, 0, nullptr, 0 ) );
+}
+
+TEST_CASE(Args_Make_Release)
+{
+    Args * args;
+    char v0[] = "path";
+    char * argv[] = { v0 };
+    REQUIRE_RC( ArgsMakeAndHandle( &args, 1, argv, 0, nullptr, 0 ) );
+    REQUIRE_RC( ArgsRelease( args ) );
+}
+
 #if WIN32
 TEST_CASE(SignalHup_ignored)
 {

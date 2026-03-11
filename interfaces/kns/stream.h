@@ -222,6 +222,25 @@ KNS_EXTERN rc_t CC KStreamMakeFromBuffer ( KStream ** stream,
     const char * buffer, size_t size );
 
 
+/* SetReadObserver
+ *  set observer that is called after each read.
+ *
+ *  "read_observer_update" [ IN ] - observer's update function
+ *
+ *  "read_observer_destroy" [ IN ] - function to release observer
+ *  to be called when KStream is deleted
+ *
+ *  "read_observer" [ IN ] - has to be passed when "read_observer_update"
+ *  or "read_observer_destroy" is called.
+ */
+KNS_EXTERN rc_t CC KStreamSetReadObserver (
+      KStream * self,
+      void ( CC * read_observer_update )
+        ( void * self, rc_t rc, void *buffer, size_t num_read ),
+      rc_t ( CC * read_observer_destroy ) ( void *self ),
+      void * read_observer
+    );
+
 #ifdef __cplusplus
 }
 #endif
