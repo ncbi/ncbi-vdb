@@ -272,7 +272,6 @@ void finish_test( const char * sub )
 //////////////////////////////////////////// Main
 int main( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
     KConfig *cfg;
     rc_t rc = prepare_test( &cfg, HomeSub );
     if ( rc == 0 )

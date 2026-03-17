@@ -67,7 +67,6 @@
 #include "jwt.h" /* JwtKartValidateFile */
 #include "manager-priv.h" /* VFSManagerExtNoqual */
 #include "path-priv.h" /* VPathMakeFmt */
-#include "resolver-cgi.h" /* RESOLVER_CGI */
 #include "resolver-priv.h" /* VPathCheckFromNamesCGI */
 #include "services-cache.h" /* ServicesCacheAddId */
 #include "services-priv.h"
@@ -146,72 +145,8 @@ typedef struct { char * s; } SRaw;
 
 
 /******************************************************************************/
-#ifdef NAMESCGI
-/* SERVICE VERSIONS */
-#define VERSION_1_0 0x01000000
-#define VERSION_1_1 0x01010000
-#define VERSION_1_2 0x01020000
-
-#define VERSION_2_0 0x02000000
-#endif
-
 /* version in server request / response */
 typedef ver_t SVersion;
-
-#ifdef NAMESCGI
-/* features that are different for different protocol versions ****************/
-static bool SVersionNotExtendedVPaths ( const SVersion  self ) {
-    return self == VERSION_1_0;
-}
-
-static bool SVersionBefore3_0 ( const SVersion  self ) {
-    return self < VERSION_3_0;
-}
-
-static bool SVersionHasRefseqCtx ( const SVersion  self ) {
-    return self < VERSION_3_0;
-}
-
-static bool SVersionAccInRequest ( const SVersion  self ) {
-    return self < VERSION_3_0;
-}
-
-static bool SVersionSingleUrl ( const SVersion  self ) {
-    return self < VERSION_3_0;
-}
-
-static bool SVersionTypInRequest ( const SVersion  self ) {
-    return self == VERSION_3_0;
-}
-
-static bool SVersionUseObjidAsAcc ( const SVersion  self ) {
-    return self == VERSION_3_0;
-}
-
-static bool SVersionHasMultipleObjects ( const SVersion self, bool sdl ) {
-    return sdl || self >= VERSION_3_0;
-}
-
-static bool SVersionResponseHasMultipeUrls ( const SVersion  self ) {
-    return self >= VERSION_3_0;
-}
-
-static bool SVersionResponseHasTimestamp ( const SVersion  self ) {
-    return self >= VERSION_3_0;
-}
-
-static bool SVersionResponseInJson ( const SVersion  self, bool sdl ) {
-    return self >= VERSION_4_0 || sdl;
-}
-
-/*static bool SVersionNeedCloudLocation(const SVersion  self, bool sdl) {
-    return !sdl && self == VERSION_4_0;
-}*/
-
-static bool SVersionNeedCloudEnvironment(const SVersion  self, bool sdl) {
-    return sdl && self >= VERSION_2_0;
-}
-#endif
 
 /******************************************************************************/
 
@@ -678,8 +613,6 @@ static rc_t SVersionInit(SVersion * self, bool * sdl, const char * src,
     String * result = NULL;
     const char * e = NULL;
 
-/* TODO: needs investigation: using it makes impossibe to call SDL; names.cgi is always called instead: bool dummy; if (sdl == NULL) sdl = &dummy; */
-
     assert(self);
 
     *self = 0;
@@ -779,12 +712,6 @@ rc_t SHelperResolverCgi ( SHelper * self, bool aProtected,
     SRequest * request, bool adjustVersion)
 {
     const char sdl[] = "/repository/remote/main/SDL.2/resolver-cgi";
-#ifdef NAMESCGI
-    const char man[] = "/repository/remote/main/CGI/resolver-cgi";
-    const char prt[] = "/repository/remote/protected/CGI/resolver-cgi";
-    const char cgi[] = RESOLVER_CGI;
-    const char * path = aProtected ? prt : man;
-#endif
 
     rc_t rc = 0;
     assert( request );
@@ -806,70 +733,12 @@ rc_t SHelperResolverCgi ( SHelper * self, bool aProtected,
                 rc = 0;
             }
         }
-#ifdef NAMESCGI
-        else {
-            rc = KConfigRead(self->kfg, path, 0, buffer, bsize,
-                &num_read, NULL);
-            if (rc != 0) {
-                if (buffer == NULL)
-                    return RC(rcVFS, rcQuery, rcExecuting, rcParam, rcNull);
-                if (bsize < sizeof cgi)
-                    return RC(rcVFS, rcQuery, rcExecuting, rcBuffer,
-                        rcInsufficient);
-                string_copy(buffer, bsize, cgi, sizeof cgi);
-                rc = 0;
-            }
-        }
-#endif
     }
     else
         string_copy_measure ( buffer, bsize, aCgi );
 
     if (rc == 0 && request->sdl) /* don't auto-correct version and cgi */
         adjustVersion = false;   /* when calling SDL */
-
-#ifdef NAMESCGI
-    if (rc == 0 && adjustVersion) {
-        if (cgiNotSupportsJson(buffer)) { /* cgi supports versions < 4 */
-            if (SVersionResponseInJson(request->version, request->sdl))
-                /* version >= 4 but cgi does't support 4: use version-3.0 */
-                request->version = VERSION_3_0;
-        }
-        else { /* cgi supports versions >= 4 */
-            if (request->request.appRc != 0
-                && SVersionResponseInJson(request->version, request->sdl))
-            {
-                /* version >= 4
-                but different acc-s in request:
-                require to use "filetype=run" (SRR)
-                and not (not SRR):
-                call version-3.0 using old cgi */
-                string_copy(buffer, bsize, cgi, sizeof cgi);
-                request->version = VERSION_3_0;
-            }
-            else if (!cgiSupportsFullJson(buffer)) {
-                if (request->request.objects > 0 &&
-                    request->request.object[0].objectId != NULL &&
-                    isdigit(request->request.object[0].objectId[0]) &&
-                    SVersionResponseInJson(request->version, request->sdl))
-                {
-                    /* version >= 4; request contains numeric kart-ids
-                    but cgi does not support numeric kart-ids:
-                    call version-3.0 using old cgi */
-                    string_copy(buffer, bsize, cgi, sizeof cgi);
-                    request->version = VERSION_3_0;
-                }
-                else if (!SVersionResponseInJson(request->version,
-                    request->sdl))
-                {
-                    /* version < 4; but cgi supports version>=4:
-                    use old cgi */
-                    string_copy(buffer, bsize, cgi, sizeof cgi);
-                }
-            }
-        }
-    }
-#endif
 
     return rc;
 }
@@ -1083,9 +952,6 @@ rc_t STypedInit ( STyped * self, const SOrdered * raw, const SConverters * how,
     }
 
     if ( rc == 0 )
-#ifdef NAMESCGI
-        if ( SVersionResponseHasMultipeUrls ( version ) )
-#endif
             rc = STypedInitUrls ( self );
 
     if ( rc == 0 )
@@ -1448,33 +1314,6 @@ static const SConverters * SConvertersNames3_0Make ( void ) {
 }
 
 
-#ifdef NAMESCGI
-/* converter factory function */
-static
-rc_t SConvertersMake ( const SConverters ** self, SHeader * header )
-{
-    assert ( self && header );
-    switch ( header -> version ) {
-        case VERSION_1_0:
-            * self = SConvertersNames1_0Make ();
-            return 0;
-        case VERSION_1_1:
-            * self = SConvertersNames1_1Make ();
-            return 0;
-        case VERSION_1_2:
-            * self = SConvertersNames1_2Make ();
-            return 0;
-        case VERSION_3_0:
-            * self = SConvertersNames3_0Make ();
-            return 0;
-        default:
-            * self = NULL;
-            return RC ( rcVFS, rcQuery, rcExecuting, rcMessage, rcBadVersion );
-    }
-}
-#endif
-
-
 /* SOrdered *******************************************************************/
 static
 rc_t SOrderedInit ( SOrdered * self, const SRaw * raw, int fields )
@@ -1685,7 +1524,7 @@ static bool VPathMakeOrNot ( VPath ** new_path, const String * src,
             id = & typed -> accession;
 
         if ( id -> size == 0 ) {
-/* compensate current names.cgi-v3.0 bug: it does not return id for object-id-s
+/* compensate current names-cgi-v3.0 bug: it does not return id for object-id-s
  */
             if ( src -> size > 0 &&
                  isdigit ( src -> addr [ src -> size - 1 ] ) )
@@ -1733,29 +1572,6 @@ static rc_t STypedMakeMapping(const STyped * self,
 
     assert(self);
 
-#ifdef NAMESCGI
-    if (SVersionBefore3_0(version)) {
-        if (self->ticket.size != 0) {
-            if (self->accession.size != 0)
-                rc = VPathMakeFmt(mapping, "ncbi-acc:%S?tic=%S",
-                    &self->accession, &self->ticket);
-            else if (self->name.size == 0)
-                return 0;
-            else
-                rc = VPathMakeFmt(mapping,
-                    "ncbi-file:%S?tic=%S", &self->name, &self->ticket);
-        }
-        else if (self->accession.size != 0)
-            rc = VPathMakeFmt(mapping, "ncbi-acc:%S%S", &self->accession,
-                isVdbcache ? &vdbcache : &empty);
-        else if (self->name.size == 0)
-            return 0;
-        else
-            rc = VPathMakeFmt(mapping, "ncbi-file:%S%S", &self->name,
-                isVdbcache ? &vdbcache : &empty);
-    }
-    else
-#endif
     {
         if (self->ticket.size != 0) {
             if (self->objectId.size != 0 &&
@@ -1856,13 +1672,6 @@ static rc_t EVPathInit ( EVPath * self, const STyped * src,
         if ( src -> code == 200 ) {
             bool ext = true;
             assert ( req );
-#ifdef NAMESCGI
-            if ( req -> serviceType == eSTnames &&
-                 SVersionNotExtendedVPaths ( req -> version ) )
-            {
-                ext = false;
-            }
-#endif
 
             made |= VPathMakeOrNot ( & self -> http,
                 & src -> hUrl , & src -> ticket, src, ext, & rc, true );
@@ -2070,14 +1879,6 @@ static rc_t SRowMake ( SRow ** self, const String * src, const SRequest * req,
             if ( acc . size > 2 && acc . addr [1] == 'R'
                                 && acc . addr [2] == 'R' )
             {
-#ifdef NAMESCGI
-                if (SVersionUseObjidAsAcc ( version ) ) {
-                    if  ( ! StringEqual ( & p -> typed . objectId , & acc ) )
-                        return RC ( rcVFS, rcQuery, rcResolving,
-                                    rcMessage, rcCorrupt );
-                }
-                else
-#endif
                 if ( ! StringEqual ( & p -> typed . accession, & acc ) )
                     return     RC ( rcVFS, rcQuery, rcResolving,
                                     rcMessage, rcCorrupt );
@@ -2111,10 +1912,6 @@ static rc_t SRowMake ( SRow ** self, const String * src, const SRequest * req,
     }
     if ( rc == 0 ) {
         String * s =
-#ifdef NAMESCGI
-                     SVersionUseObjidAsAcc ( version )
-            ? & p -> typed . objectId :
-#endif
             & p -> typed . accession;
         char * acc = string_dup ( s -> addr, s -> size );
         if ( s -> size != 0 && acc == NULL )
@@ -2137,9 +1934,7 @@ static rc_t SRowMake ( SRow ** self, const String * src, const SRequest * req,
 
     if ( rc == 0 )
         rc = VPathSetMake ( & p -> set, & p -> path, false );
-#ifdef NAMESCGI
-                            SVersionSingleUrl ( version ) );
-#endif
+
     if ( rc == 0 ) {
         assert ( self );
         * self = p;
@@ -2372,9 +2167,6 @@ rc_t SKVMakeObj ( const SKV ** self, const SObject * obj,
     size_t num_writ = 0;
     char tmp [] = "";
     bool old = false;
-#ifdef NAMESCGI
-             = SVersionAccInRequest ( version );
-#endif
     char * p = NULL;
     const char * k = "object";
     if ( old )
@@ -2645,23 +2437,12 @@ static rc_t SCgiRequestPerform ( const SCgiRequest * self,
                             break;
                         }
                         if (rx != 0) {
-#ifdef NAMESCGI
-                            if (SVersionResponseInJson(service->req.version,
-                                service->req.sdl))
-#endif
                             {
                                 rc = KHttpResultGetPhid(rslt, &service->resp.phid);
                                 service->resp.rc = rx;
                                 if (rc == 0)
                                     rc = KHttpResultGetInputStream(rslt, stream);
                             }
-#ifdef NAMESCGI
-                            else {
-                                rc = rx;
-                                if ( stream != NULL )
-                                    RELEASE(KStream, *stream);
-                            }
-#endif
                         }
                         else {
                             rc = KHttpResultGetPhid(rslt, &service->resp.phid);
@@ -2672,6 +2453,7 @@ static rc_t SCgiRequestPerform ( const SCgiRequest * self,
                 }
                 RELEASE ( KHttpResult, rslt );
             }
+
             {
                 rc_t r2 = SHttpRequestHelperFini(&h);
                 if (rc == 0)
@@ -3515,26 +3297,7 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
                 return rc;
         }
     }
-#ifdef NAMESCGI
-    if ( ! SVersionHasMultipleObjects ( request -> version,
-        request -> sdl ) )
-    {
-        if ( request -> request . object [ 0 ] . objectId == NULL )
-            return RC ( rcVFS, rcQuery, rcExecuting, rcParam, rcNull );
-        else {
-            const char name [] = "acc";
-            rc = SKVMake
-                ( & kv, name, request -> request . object [ 0 ] . objectId );
-            DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), ( "  %s=%s\n",
-                name, request -> request . object [ 0 ] . objectId ) );
-            if ( rc == 0 )
-                rc = VectorAppend ( & self -> params, NULL, kv );
-        }
-        if ( rc != 0 )
-            return rc;
-    }
-    else
-#endif
+
     {
         uint32_t i = 0;
         if (idx >= 0)
@@ -3544,10 +3307,6 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
             request -> request . object [ i ] . ordId = i;
             rc = SObjectCheckUrl ( & request -> request . object [ i ] );
             if ( rc != 0 || ! request -> request . object [ i ] . isUri ) {
-#ifdef NAMESCGI
-              if ( SVersionResponseInJson ( request -> version,
-                  request ->sdl ) )
-#endif
               {
                 const char * name = "acc";
                 if (request->request.object[i].objectType == eOT_sdlObject)
@@ -3557,27 +3316,21 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
                 DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ), ( "  %s=%s\n",
                     name, request -> request . object [ i ] . objectId ) );
               }
-#ifdef NAMESCGI
-              else {
-                rc = SKVMakeObj ( & kv, & request -> request . object [ i ],
-                                   request -> version );
-                if ( rc == 0 )
-                    DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ),
-                        ( "  %.*s=%.*s\n", kv -> k . len, kv -> k . addr,
-                                           kv -> v . len, kv -> v . addr ) );
-              }
-#endif
+
               if ( rc == 0 ) {
                 rc = VectorAppend ( & self -> params, NULL, kv );
                 request -> hasQuery = true;
               }
             }
+
             if (idx >= 0)
                 break;
         }
+
         if ( rc != 0 )
             return rc;
     }
+
     {
         uint32_t i = 0;
         const char * prefs [ eProtocolMaxPref ];
@@ -3638,40 +3391,6 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
             return rc;
         }
     }
-#ifdef NAMESCGI
-    if ( SVersionHasRefseqCtx (  request -> version ) &&
-         request -> request . refseq_ctx )
-    {
-        const char name [] = "ctx";
-        rc = SKVMake ( & kv, name, "refseq" );
-        if ( rc == 0 ) {
-                DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ),
-                    ( "  %s=refseq\n", name ) );
-            rc = VectorAppend ( & self -> params, NULL, kv );
-        }
-        if ( rc != 0 ) {
-            return rc;
-        }
-    }
-    if ( SVersionTypInRequest (  request -> version ) ) {
-        if ( request -> request . object [ 0 ] . objectType !=
-            eOT_undefined )
-        {
-            const char name [] = "typ";
-            const char * v = ObjectTypeToString
-                ( request -> request . object [ 0 ] . objectType );
-            rc = SKVMake ( & kv, name, v );
-            if ( rc == 0 ) {
-                DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ),
-                    ( "  %s=%s\n", name, v ) );
-                rc = VectorAppend ( & self -> params, NULL, kv );
-            }
-        }
-        if ( rc != 0 ) {
-            return rc;
-        }
-    }
-#endif
 
     if ( request -> format != NULL ) {
         const char * n = "type";
@@ -3700,10 +3419,6 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
     }
 
     if (rc == 0
-#ifdef NAMESCGI
-                &&
-        SVersionResponseInJson(request->version, request->sdl)
-#endif
        )
     {
         if (request->request.appRc != 0)
@@ -3753,16 +3468,10 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
             }
         }
         else if (!SCgiRequestAddKfgLocation(self, helper))
-#ifdef NAMESCGI
-            if (SVersionNeedCloudEnvironment(request->version, request->sdl))
-#endif
                 rc = SCgiRequestAddCloudEnvironment(self, helper);
     }
 
     if (rc == 0
-#ifdef NAMESCGI
-                && SVersionResponseInJson(request->version, request->sdl)
-#endif
        )
         rc = SCgiRequestAddAcceptCharges(self, helper);
 
@@ -4278,11 +3987,6 @@ rc_t KServiceProcessLine ( KService * self,
     if ( line -> addr [ 0 ] == '$' ) {
         * end = true;
         if (
-#ifdef NAMESCGI
-             SVersionResponseHasTimestamp
-                (  self -> resp . header . version )
-            &&
-#endif
                line -> size > 2 && line -> len > 2 )
         {
             String timestamp;
@@ -4303,74 +4007,7 @@ rc_t KServiceProcessLine ( KService * self,
         else
             rc = KartAddRow ( self -> resp . kart, line -> addr, line -> size );
     }
-#ifdef NAMESCGI
-    else {
-        const SConverters * f = NULL;
-        rc = SConvertersMake ( & f, & self -> resp . header );
-        if ( rc == 0 ) {
-            bool append = true;
-            SRow * row = NULL;
-            rc_t r2 = SRowMake ( & row, line, & self -> req, f,
-                 self -> resp . header . version );
-            uint32_t l = VectorLength ( & self -> resp . rows );
-            if ( r2 == 0 ) {
-                if ( SVersionHasMultipleObjects (
-                        self -> resp . header . version, false )
-                    || l == 0 )
-                {
-                    if ( l == 1 &&
-                         self -> req . request . objects == 1 )
-                    {
-/* SRA-5283 VDB-3423: names.cgi version 3.0 incorrectly returns
-           2 rows for filtered runs instead of 1: here we compensate this bug */
-                        const KSrvError * error = NULL;
-                        SRow * prev
-                            = (SRow *) VectorGet ( & self -> resp . rows, 0 );
-                        assert ( prev );
-                        error = row -> path . error;
-                        if ( error != NULL &&
-                             error -> code == 403 &&
-                             error ->        objectType == eOT_sragap &&
-                             prev -> typed . objectType == eOT_srapub &&
-                             row -> typed . ordId == prev -> typed . ordId &&
-                             StringEqual ( & row  -> typed . objectId,
-                                           & prev -> typed . objectId ) )
-                        {
-                            append = false;
-                        }
-                    }
-                }
-                else {
-/* ignore ACC.vdbcache : TODO : search for vdb.cache extension */
-                    if ( l == 1 && ( row -> typed . objectId . len == 18 ||
-                                     row -> typed . objectId . len == 19   ) )
-                    {
-                        append = false;
-                    }
-                }
-                if ( append )
-                    r2 = VectorAppend ( & self -> resp . rows, NULL, row );
-                else {
-                    r2 = SRowWhack ( row );
-                    row = NULL;
-                }
-            }
-            if ( r2 == 0 ) {
-                if ( append && ( SVersionHasMultipleObjects
-                                     ( self -> resp . header . version, false )
-                          || KSrvResponseLength ( self -> resp . list ) == 0 ) )
 
-                {
-                    r2 = KSrvResponseAppend ( self -> resp . list, row -> set );
-                }
-                else
-                    assert ( ! row );
-            }
-            if ( r2 != 0 && rc == 0 && l != 1 )
-                rc = r2;
-        }
-    }
-#endif
     return rc;
 }
 
@@ -4450,9 +4087,6 @@ rc_t KServiceProcessStreamAll ( KService * self, KStream * stream )
         buffer = self -> helper . input;
         buffer [ offW ] = '\0';
         if ( self != NULL
-#ifdef NAMESCGI
-            && SVersionResponseInJson(self -> req . version, self -> req .sdl)
-#endif
             && offW > 0
             && buffer [ 0 ] != '#' )
         {
@@ -5014,17 +4648,9 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
         if (magic != NULL)
             rc = KServiceAddIdToCache(self, objectId);
         else
-#ifdef NAMESCGI
-             if ( SVersionResponseInJson (self -> req . version,
-            self -> req . sdl) )
-#endif
         {
             rc = KServiceProcessStreamAll     ( self, stream );
         }
-#ifdef NAMESCGI
-        else
-            rc = KServiceProcessStreamByParts ( self, stream );
-#endif
     }
 
     if ( rc == 0 )
@@ -5041,9 +4667,6 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
 
     if (rc == 0) {
         uint32_t i = 0;
-#ifdef NAMESCGI
-        if (SVersionResponseInJson(self->req.version, self->req.sdl))
-#endif
         {
             uint32_t l = 0;
             /* attach vdbcache */
@@ -5061,80 +4684,6 @@ rc_t KServiceProcessStream ( KService * self, KStream * stream )
             }
             RELEASE(KSrvResponse, response);
         }
-
-#ifdef NAMESCGI
-        else {
-            uint32_t l = KSrvResponseLength(self->resp.list);
-            for (i = 0; rc == 0 && i < l; ++i) {
-                Container * box = NULL;
-                Item * file = NULL;
-                const char * reqId = NULL;
-                const char * respId = NULL;
-                VRemoteProtocols pp[]
-                    = { eProtocolHttp, eProtocolFasp, eProtocolHttps };
-                uint32_t p = 0;
-                const VPath * mapping = NULL;
-                const VPath * vdbcacheMapping = NULL;
-                rc = KSrvResponseGetIds(self->resp.list, i, &reqId,
-                    &respId);
-                if (rc == 0)
-                    rc = Response4AddAccOrId(r4, reqId, -1, &box);
-                if (rc == 0)
-                    ContainerAdd(box, respId, -1, &file, NULL);
-                if (rc != 0)
-                    break;
-                if (rc == 0)
-                    rc = KSrvResponseGetMapping(
-                        self->resp.list, i, &mapping, &vdbcacheMapping);
-                for (p = 0; rc == 0 && p < sizeof pp / sizeof pp[0]; ++p) {
-                    const VPath * path = NULL;
-                    const VPath * vdbcache = NULL;
-                    const KSrvError * error = NULL;
-                    uint64_t osize = 0;
-                    rc = KSrvResponseGetPath(self->resp.list, i, pp[p],
-                        &path, &vdbcache, &error);
-                    if (rc == 0)
-                        rc = KSrvResponseGetOSize(self->resp.list, i, &osize);
-                    if (rc == 0) {
-                        if (path != NULL) {
-                            String ticket;
-                            rc_t r = 0;
-                            memset(&ticket, 0, sizeof ticket);
-                            r = VPathGetTicket(path, &ticket);
-                            if (r == 0)
-                                rc = ItemSetTicket(file, &ticket);
-                            if (rc == 0)
-                                rc = ItemAddVPath(file, "sra", path,
-                                    mapping, true, osize);
-                            RELEASE(VPath, path);
-                            if (rc != 0)
-                                break;
-                        }
-                        if (rc == 0 && vdbcache != NULL) {
-                            rc = ItemAddVPath(file, "vdbcache", vdbcache,
-                                vdbcacheMapping, true, 0);
-                            RELEASE(VPath, vdbcache);
-                            if (rc != 0)
-                                break;
-                        }
-                    }
-
-                    RELEASE(VPath, path);
-                    RELEASE(VPath, vdbcache);
-                    RELEASE(KSrvError, error);
-                    RELEASE(VPath, mapping);
-
-                    if (rc != 0)
-                    {
-                        break;
-                    }
-
-                }
-                RELEASE(VPath, mapping);
-                RELEASE(VPath, vdbcacheMapping);
-            }
-        }
-#endif
     }
 
     if (rc == 0)
@@ -5926,60 +5475,6 @@ rc_t KServiceProcessStreamTestNames1 ( const KNSManager * mgr,
     return rc;
 }
 
-
-#ifdef NAMESCGI
-/* Parse "buffer" as name s-3.0 response.
-   Do not log "errorsToIgnore" messages during response processing */
-rc_t KServiceNames3_0StreamTestMany ( const char * buffer,
-    const KSrvResponse ** response, int errorsToIgnore,
-    int itemsInRequest )
-{
-    rc_t rc = 0;
-    rc_t r2 = 0;
-
-    KStream * stream = NULL;
-
-    KService service;
-
-    if ( rc == 0 )
-        rc = KServiceInit ( & service, NULL, NULL, NULL );
-    if ( rc == 0 )
-        KServiceExpectErrors ( & service, errorsToIgnore );
-
-    if ( rc == 0 )
-        rc = KStreamMakeFromBuffer ( & stream, buffer, string_size ( buffer ) );
-
-    if ( rc == 0 ) {
-        int i = 0;
-        for ( i = 0; i < itemsInRequest; ++ i ) {
-            char id [ 99 ] = "";
-            string_printf ( id, sizeof id, NULL,
-                            "Fake_KServiceNames3_0StreamTest_ID_%d", i + 1 );
-            KServiceAddId ( & service, id );
-        }
-        service . req . hasQuery = true;
-        rc = KServiceProcessStream ( & service, stream );
-    }
-
-    if ( rc == 0 )
-        rc = KServiceGetResponse ( & service , response );
-
-    r2 = KServiceFini ( & service );
-    if ( rc == 0 )
-        rc = r2;
-
-    RELEASE ( KStream, stream );
-
-    return rc;
-}
-
-rc_t KServiceNames3_0StreamTest ( const char * buffer,
-    const KSrvResponse ** response, int errorsToIgnore )
-{
-    return ( KServiceNames3_0StreamTestMany ( buffer, response,
-                                              errorsToIgnore, 1 ) );
-}
-#endif
 
 rc_t KServiceCgiTest1 ( const KNSManager * mgr, const char * cgi,
     const char * version, const char * acc, const char * ticket,

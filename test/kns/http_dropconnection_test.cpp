@@ -52,14 +52,7 @@
 
 #include "KNSManagerFixture.hpp"
 
-static rc_t argsHandler(int argc, char* argv[]) {
-    Args* args = NULL;
-    rc_t rc = ArgsMakeAndHandle(&args, argc, argv, 0, NULL, 0);
-    ArgsWhack(args);
-    return rc;
-}
-
-TEST_SUITE_WITH_ARGS_HANDLER(HttpTestSuite, argsHandler)
+TEST_SUITE(HttpTestSuite);
 
 using namespace std;
 using namespace ncbi::NK;
@@ -436,11 +429,5 @@ FIXTURE_TEST_CASE(GET_Read_Failed_Reconnect_Failed, HttpFixture)
 //////////////////////////////////////////// Main
 int main ( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
-
-	// this makes messages from the test code appear
-	// (same as running the executable with "-l=message")
-	// TestEnv::verbosity = LogLevel::e_message;
-
     return HttpTestSuite(argc, argv);
 }

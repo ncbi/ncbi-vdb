@@ -567,6 +567,5 @@ TEST_CASE(KDBRManager_MakeReadWithVFSManager)
 //////////////////////////////////////////// Main
 int main( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
     return VdbTestSuite(argc, argv);
 }

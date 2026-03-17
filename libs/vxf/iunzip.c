@@ -38,7 +38,7 @@
 #include <limits.h>
 #include <math.h>
 
-#include <zlib.h>
+#include "../ext/zlib/zlib.h"
 
 #include <stdio.h>
 #include <assert.h>

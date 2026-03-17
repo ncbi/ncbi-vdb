@@ -569,6 +569,5 @@ FIXTURE_TEST_CASE(KTextDatabase_GetPath, KTextDatabase_ApiFixture)
 //////////////////////////////////////////// Main
 int main ( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
     return KTextDatabaseTestSuite(argc, argv);
 }

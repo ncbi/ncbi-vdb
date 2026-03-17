@@ -24,9 +24,7 @@
 * Tests of KFileMD5ReadObserver for bz2 file
 */
 
-#include "../vfs/observer-test.hpp" // ObserverTest
-
-#include <kfg/config.h> /* KConfigDisableUserSettings */
+#include "../vfs/file-observer-test.hpp" // ObserverTest
 
 TEST_SUITE(ReadObserverTestSuite)
 
@@ -316,9 +314,8 @@ TEST_CASE(TimedReadExactlyTwicePartially) {
 }
 #endif
 
-int main(int argc, char *argv[]) {
-    KConfigDisableUserSettings();
-
+int main(int argc, char *argv[])
+{
     rc_t rc(ObserverTest::Begin(eBz2));
 
     if (rc == 0)

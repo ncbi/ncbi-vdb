@@ -632,11 +632,8 @@ TEST_CASE ( REFSEQ_APP_CACHE_DISABLE ) {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-int main ( int argc, char * argv [] ) {
+int main ( int argc, char * argv [] )
+{
     setenv("HOME", ".", 1);
-    KConfigDisableUserSettings ();
-    if (
-0 ) assert ( ! KDbgSetString ( "VFS" ) );
-
     return CachingSuite ( argc, argv );
 }

@@ -345,6 +345,5 @@ FIXTURE_TEST_CASE ( SparseColEmpty, VDB_Fixture)
 //////////////////////////////////////////// Main
 int main ( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
     return SparseColTestSuite(argc, argv);
 }

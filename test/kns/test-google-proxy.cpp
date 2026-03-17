@@ -40,8 +40,7 @@
 
 #include <../../libs/kns/mgr-priv.h> /* KNSManager */
 
-static rc_t argsHandler(int argc, char * argv[]);
-TEST_SUITE_WITH_ARGS_HANDLER(GoogleProxyTestSuite, argsHandler)
+TEST_SUITE(GoogleProxyTestSuite)
 
 static KConfig * KFG = NULL;
 
@@ -150,11 +149,10 @@ TEST_CASE ( KClientHttpRequestPOSTTest )
 
     KHttpRequest * req = NULL;
     REQUIRE_RC ( KNSManagerMakeClientRequest ( mgr, & req, 0x01000000,
-        NULL, "https://trace.ncbi.nlm.nih.gov/Traces/names/names.fcgi" ) );
+        NULL, "https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve" ) );
 
     REQUIRE_RC(KHttpRequestAddPostParam(req, "acc=AAAB01"));
     REQUIRE_RC(KHttpRequestAddPostParam(req, "accept-proto=https"));
-    REQUIRE_RC(KHttpRequestAddPostParam(req, "version=1.2"));
 
     KHttpResult * rslt = NULL;
 /* POST: format HTTP request in KClientHttpRequestFormatMsgBegin using
@@ -176,12 +174,8 @@ static rc_t argsHandler(int argc, char * argv[]) {
     return rc;
 }
 
-int main ( int argc, char * argv [] ) {
-    if ( 0 ) assert ( ! KDbgSetString ( "KNS-DNS" ) );
-    if ( 0 ) assert ( ! KDbgSetString ( "KNS-HTTP" ) );
-    if ( 0 ) assert ( ! KDbgSetString ( "KNS-PROXY" ) );
-    if ( 0 ) ncbi::NK::TestEnv::verbosity = ncbi::NK::LogLevel::E::e_all;
-
+int main ( int argc, char * argv [] )
+{
 #if _DEBUGGING
     if ( 0 ) KStsLevelSet ( 5 );
 #endif

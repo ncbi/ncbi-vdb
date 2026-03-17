@@ -41,7 +41,7 @@
 #include <assert.h>
 #include <stdio.h>
 
-#include <zlib.h>
+#include "../ext/zlib/zlib.h"
 
 /* Page maps describe the layout of rows within a blob.
  * The data within a page map is run-length encoded.
@@ -524,32 +524,34 @@ LIB_EXPORT rc_t PageMapNewIterator(const PageMap *self, PageMapIterator *lhs, ui
     if (first_row + num_rows > self->row_count)
         num_rows = self->row_count - first_row;
 
-#if _DEBUGGING
-    if (self->data_recs > 1) {
-        assert(first_row == (row_count_t)first_row);
-        assert(num_rows == (row_count_t)num_rows);
-        assert(first_row + num_rows == (row_count_t)(first_row + num_rows));
-    }
-#endif
-
     memset(lhs, 0, sizeof(*lhs));
 
 #if _HEAVY_PAGEMAP_DEBUGGING
     lhs->parent = self;
 #endif
 
-    lhs->last_row = (row_count_t) ( first_row + num_rows );
-    lhs->cur_row = (row_count_t) first_row;
-    if(self->data_recs == 1){
-	lhs->repeat_count  = (row_count_t) ( (num_rows < UINT32_MAX)?num_rows:UINT32_MAX );
-	lhs->static_datalen = self->length[0];
-	return 0;
+    lhs->cur_row = (row_count_t)first_row;
+    lhs->last_row = (row_count_t)((first_row + num_rows) > UINT32_MAX ? UINT32_MAX : (first_row + num_rows));
+    num_rows = lhs->last_row - lhs->cur_row;
+    if (self->data_recs == 1) {
+        lhs->repeat_count   = (row_count_t)num_rows;
+        lhs->static_datalen = self->length[0];
+        return 0;
     }
-    if(self->random_access && self->leng_recs == 1 && first_row < self->row_count){ /** simple random access - no explosion needed **/
-	lhs->static_datalen = self->length[0];
-	lhs->exp_base = ( elem_count_t ** )&self->data_offset;
-	if(lhs->last_row > self->row_count) lhs->last_row = self->row_count;
-	return 0;
+#if _DEBUGGING
+    assert(first_row == (row_count_t)first_row);
+    assert(num_rows == (row_count_t)num_rows);
+    assert(first_row + num_rows == (row_count_t)(first_row + num_rows));
+#endif
+    if (first_row > UINT32_MAX || num_rows > UINT32_MAX || (first_row + num_rows) > UINT32_MAX)
+        return RC(rcDB, rcPagemap, rcAccessing, rcBlob, rcInvalid);
+
+    if (self->random_access && self->leng_recs == 1 && first_row < self->row_count) { /** simple random access - no explosion needed **/
+        lhs->static_datalen = self->length[0];
+        lhs->exp_base = ( elem_count_t ** )&self->data_offset;
+        if (lhs->last_row > self->row_count)
+            lhs->last_row = self->row_count;
+        return 0;
     }
     if( self->exp_row_last < lhs->last_row){
 	    rc = PageMapExpand(self,lhs->last_row-1);

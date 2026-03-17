@@ -26,6 +26,7 @@
 #include <kfg/config.h> /* KConfigDisableUserSettings */
 #include <kfs/file.h> /* KFileRelease */
 #include <klib/debug.h> /* KDbgSetString */
+#include <kns/endpoint.h> /* KEndPoint */
 #include <kns/http.h> /* KNSManagerMakeHttpFile */
 #include <kns/manager.h> /* KNSManagerRelease */
 #include <ktst/unit_test.hpp> // TEST_SUITE
@@ -45,14 +46,34 @@ static rc_t argsHandler(int argc, char * argv[]) {
     return rc;
 }
 
-TEST_SUITE_WITH_ARGS_HANDLER ( AwsProxyTestSuite, argsHandler )
+TEST_SUITE_WITH_ARGS_HANDLER( AwsProxyTestSuite, argsHandler )
+
+static bool Am_I_on_GCP(const KNSManager* mgr) {
+    String hostname;
+    CONST_STRING(&hostname, "metadata.google.internal");
+
+    KEndPoint ep;
+    rc_t rc(KNSManagerInitDNSEndpoint(mgr, &ep, &hostname, 80));
+    return rc == 0;
+}
 
 TEST_CASE ( AwsProxyTest ) {
+    KConfig* kfg(NULL);
+    REQUIRE_RC(KConfigMake(&kfg, NULL));
+
     KNSManager * mgr = NULL;
     REQUIRE_RC ( KNSManagerMake ( & mgr ) );
 
+    if (Am_I_on_GCP(mgr))
+        // SDL refuses to return a URL if the request was sent from GCP:
+        // stop sending location.
+        REQUIRE_RC(KConfigWriteString(kfg, "/libs/cloud/provider", "n"));
+    
     KService * service = NULL;
-    REQUIRE_RC ( KServiceMake ( & service ) );
+    REQUIRE_RC ( KServiceMakeWithMgr ( & service, NULL, NULL, kfg ) );
+    
+    REQUIRE_RC(KConfigRelease(kfg));
+    
     REQUIRE_RC ( KServiceAddId ( service, "SRR1219902" ) );
     REQUIRE_RC ( KServiceSetNgcFile ( service, "data/prj_phs710EA_test.ngc" ) );
     REQUIRE_RC ( KServiceSetQuality ( service, "R" ) );
@@ -94,9 +115,19 @@ TEST_CASE ( AwsProxyTest ) {
     REQUIRE_RC ( KNSManagerRelease ( mgr ) );
 }
 
-int main( int argc, char * argv [] ) {
-    if (
-0 ) assert ( ! KDbgSetString ( "KNS" ) );
+int main( int argc, char * argv [] )
+{
+#if _DEBUGGING
+    KDbgInit();
+    KWrtInit("test", 0);
+    KDbgHandlerSetStdErr();
+    if (0) {
+        assert(!KDbgSetString("KNS"));
+        assert(!KDbgSetString("VFS"));
+    }
+#endif
+
     KConfigDisableUserSettings ();
+    
     return AwsProxyTestSuite(argc, argv);
 }

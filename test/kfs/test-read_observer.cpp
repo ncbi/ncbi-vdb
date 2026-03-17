@@ -24,9 +24,7 @@
 * Tests of KFileMD5ReadObserver for file from filesystem
 */
 
-#include "../vfs/observer-test.hpp" // ObserverTest
-
-#include <kfg/config.h> /* KConfigDisableUserSettings */
+#include "../vfs/file-observer-test.hpp" // ObserverTest
 
 TEST_SUITE(ReadObserverTestSuite)
 
@@ -123,7 +121,7 @@ TEST_CASE(Read) {
 TEST_CASE(ReadSkip0) {
     ObserverTest t(this, "ReadSkip0");
     t.Start(true);
-    size_t num_read(0);
+    size_t num_read(1);
     uint64_t pos(1);
     for (pos = 1; num_read > 0; pos += num_read)
         REQUIRE_RC(KFileRead(t.file, pos, t.buf, t.size / 2, &num_read));
@@ -185,7 +183,7 @@ TEST_CASE(TimedRead) {
 TEST_CASE(TimedReadSkip0) {
     ObserverTest t(this, "TimedReadSkip0");
     t.Start(true);
-    size_t num_read(0);
+    size_t num_read(1);
     uint64_t pos(1);
     for (pos = 1; num_read > 0; pos += num_read)
         REQUIRE_RC(KFileTimedRead(t.file, pos, t.buf, 90000, &num_read, &t.tm));
@@ -406,11 +404,10 @@ TEST_CASE(TimedReadExactlyTwicePartially) {
     t.Finish();
 }
 
-int main(int argc, char *argv[]) {
-    KConfigDisableUserSettings();
+int main(int argc, char *argv[])
+{
+    rc_t rc(ObserverTest::Begin());
 
-    rc_t rc(ObserverTest::Begin()); 
-    
     if (rc == 0)
         rc = ReadObserverTestSuite(argc, argv);
 

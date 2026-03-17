@@ -153,6 +153,5 @@ TEST_CASE ( Progress10 )
 //////////////////////////////////////////////////// Main
 int main ( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
     return ProgressbarTestSuite( argc, argv );
 }

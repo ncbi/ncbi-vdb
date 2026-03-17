@@ -147,6 +147,5 @@ FIXTURE_TEST_CASE(KWMetadata_OpenNodeRead, KMetadata_Fixture)
 //////////////////////////////////////////// Main
 int main( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
     return KDBWMetadataTestSuite(argc, argv);
 }

@@ -48,7 +48,9 @@
 
 #include "../../libs/kns/kns_manager-singleton.h" // KNSManagerUseSingleton
 
-static rc_t argsHandler(int argc, char* argv[]);
+// some test cases need to bypass the default args handler since it calls
+// VdbInitialize() with its user agent initialization
+static rc_t argsHandler(int argc, char * argv[]) { return 0; }
 TEST_SUITE_WITH_ARGS_HANDLER(KnsTestSuite, argsHandler);
 
 using namespace std;
@@ -324,13 +326,6 @@ FIXTURE_TEST_CASE( POST, KNSManagerFixture )
 
 //////////////////////////////////////////// Main
 
-static rc_t argsHandler(int argc, char * argv[]) {
-    Args * args = nullptr;
-    rc_t rc = ArgsMakeAndHandle(&args, argc, argv, 0, nullptr, 0);
-    ArgsWhack(args);
-    return rc;
-}
-
 static void checkForSanitizers(char *argv0)
 {
     auto const len = strlen(argv0);
@@ -351,10 +346,6 @@ int main(int argc, char* argv[])
 
     // make sure to use singleton, otherwise some tests fail
     KNSManagerUseSingleton(true);
-
-//    assert(!KDbgSetString("KNS"));
-
-    KConfigDisableUserSettings();
 
     return KnsTestSuite(argc, app.getArgV());
 }

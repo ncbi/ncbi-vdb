@@ -60,7 +60,7 @@
 #include <endian.h>
 #include <byteswap.h>
 
-#include <zlib.h>
+#include "../ext/zlib/zlib.h"
 
 #include <os-native.h>
 

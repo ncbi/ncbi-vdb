@@ -54,8 +54,7 @@ using namespace ncbi::NK;
 
 KConfig * kfg = NULL;
 
-static rc_t argsHandler ( int argc, char * argv [] );
-TEST_SUITE_WITH_ARGS_HANDLER ( HttpRefreshTestSuite, argsHandler );
+TEST_SUITE ( HttpRefreshTestSuite );
 
 class CloudFixture : public HttpFixture
 {
@@ -534,18 +533,8 @@ FIXTURE_TEST_CASE( HttpRefreshTestSuite_HeadAsPost_ShortFile, CloudFixture )
 
 //////////////////////////////////////////// Main
 
-static rc_t argsHandler ( int argc, char * argv [] ) {
-    Args * args = NULL;
-    rc_t rc = ArgsMakeAndHandle ( & args, argc, argv, 0, NULL, 0 );
-    ArgsWhack ( args );
-    return rc;
-}
-
 int main( int argc, char * argv [] )
 {
-    //if ( 1 ) assert ( ! KDbgSetString ( "KNS-HTTP" ) );
-    KConfigDisableUserSettings ();
-
     rc_t rc = KConfigMakeEmpty ( & kfg );
     // turn off certificate validation to download from storage.googleapis.com
     if ( rc == 0 )

@@ -28,8 +28,6 @@
 
 int main ( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
-
     return 0;
 }
 

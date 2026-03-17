@@ -28,6 +28,9 @@
 
 #include <klib/rc.h>
 #include <klib/text.h>
+#include <kapp/vdbapp.h>
+#include <kfg/config.h>
+
 #include <sstream>
 #include <csignal>
 #include <cstdlib>
@@ -41,6 +44,62 @@ using std::string;
 //const int TestEnv::TEST_CASE_FAILED=255;
 
 bool TestEnv::in_child_process = false;
+
+namespace ncbi::NK
+{
+    rc_t
+    UsageSummary(const char* progname)
+    {
+        std::cout
+            << "Usage:\n"
+            << progname
+            << " [OPTIONS]\n";
+        return 0;
+    }
+
+    rc_t
+    Usage( const Args * args )
+    {
+        rc_t rc = 0;
+
+        const char * progname = "";
+
+        if (args == NULL)
+            rc = RC(rcApp, rcArgv, rcAccessing, rcSelf, rcNull);
+        else
+            rc = ArgsProgram(args, nullptr, &progname);
+        UsageSummary ( progname );
+        HelpOptionsStandard();
+        std::cout <<
+            "Testing framework options:\n"
+            "  -debug                   Print recognized command line arguments (should be specified first)\n"
+            "  -catch_system_errors     Allows to switch between catching and ignoring system errors (signals)\n"
+            "  -l=(log_level)           Specifies log level\n"
+            "\tall                        report all log messages including the passed test notification\n"
+            "\ttest_suite                 show test suite messages\n"
+            "\tmessage                    show user messages\n"
+            "\twarning                    report warnings issued by user\n"
+            "\terror                      report all error conditions (default)\n"
+            "\tfatal_error                report user or system originated fatal errors (for example, memory access violation)\n"
+            "\tnothing                    do not report any information\n";
+        return rc;
+    }
+
+    rc_t
+    DefaultArgsHandler(int argc, char * argv[])
+    {
+        rc_t rc = VdbInitialize(argc, argv, 0); // this may be not the first call to VdbInitialize, but should not be a problem.
+        if ( rc == 0 )
+        {
+            SetUsage( ncbi::NK::Usage );
+            SetUsageSummary( ncbi::NK::UsageSummary );
+            Args * args = nullptr;
+            rc = ArgsMakeAndHandle(&args, argc, argv, 0, nullptr, 0);
+            ArgsWhack(args);
+        }
+        return rc;
+    }
+}
 
 TestEnv::TestEnv(int argc, char* argv[], ArgsHandler* argsHandler)
     : catch_system_errors(true)
@@ -64,9 +123,15 @@ TestEnv::~TestEnv ()
     }
 }
 
+void TestEnv::Terminate(rc_t rc)
+{
+    VdbTerminate(rc);
+}
+
 char TestEnv::lastLocation[] = "<init>";
 LogLevel::E TestEnv::verbosity = LogLevel::e_error;
 bool TestEnv::verbositySet = false;
+bool TestEnv::useUserConfig = false;;
 
 void CC TestEnv::TermHandler() noexcept
 {
@@ -119,9 +184,8 @@ rc_t TestEnv::process_args(int argc, char* argv[], ArgsHandler* argsHandler)
 
     bool debug = false;
     LogLevel::E detected = LogLevel::e_undefined;
-    char arg_catch_system_errors[] = "-catch_system_errors=";
+    char arg_catch_system_errors[] = "-catch_system_errors";
     char arg_log_level          [] = "-l=";
-    char arg_app_args           [] = "-app_args=";
     for (int i = 1; i < argc; ++i)
     {
         if (verbositySet) {
@@ -167,91 +231,16 @@ rc_t TestEnv::process_args(int argc, char* argv[], ArgsHandler* argsHandler)
         else if (strncmp(argv[i], arg_catch_system_errors,
             strlen(arg_catch_system_errors)) == 0)
         {
-            char* a = argv[i] + strlen(arg_catch_system_errors);
-            if (strcmp(a, "n") == 0 || strcmp(a, "no") == 0)
+            if (debug)
             {
-                catch_system_errors = false;
-                if (debug)
-                {
-                    LOG(LogLevel::e_nothing,
-                       "debug: arg_catch_system_errors was set to false\n");
-                }
-            }
-            else
-            {
-                if (debug)
-                {
-                    LOG(LogLevel::e_nothing,
-                       "debug: arg_catch_system_errors was set to true\n");
-                }
+                LOG(LogLevel::e_nothing,
+                    "debug: arg_catch_system_errors was set to true\n");
             }
         }
         else if (strcmp(argv[i], "-debug") == 0)
         {
             debug = true;
             LOG(LogLevel::e_nothing, "debug: debug was set to true\n");
-        }
-        else if (strcmp(argv[i], "-h") == 0)
-        {
-            if (debug)
-            {
-                LOG(LogLevel::e_nothing, "debug: help was set to true\n");
-            }
-            std::cout << "Usage:\n"
-                      << argv[0]
-                      << " [-debug] [-catch_system_errors=[yes|y|no|n]]\n"
-                         "      [-app_args='<value>'] [-l=<value>] [-h]\n"
-                "where:\n"
-                "debug              - Print recognized command line arguments\n"
-                "                     (should be specified first)\n"
-                "catch_system_errors -  Allows to switch between catching\n"
-                "                     and ignoring system errors (signals)\n"
-                "app_args           - Allows to pass command line arguments\n"
-                "                     to application handler\n"
-                "    (see unit_test.hpp/FIXTURE_TEST_SUITE_WITH_ARGS_HANDLER)\n"
-                "\n"
-                "l (log_level)       - Specifies log level\n"
-                "\tall        - report all log messages\n"
-                "\t             including the passed test notification\n"
-                "\ttest_suite - show test suite messages\n"
-                "\tmessage    - show user messages\n"
-                "\twarning    - report warnings issued by user\n"
-                "\terror      - report all error conditions (default)\n"
-                "\tfatal_error- report user or system originated fatal errors\n"
-                "\t             (for example, memory access violation)\n"
-                "\tnothing    - do not report any information\n"
-                "\n"
-                "h (help)            - this help message\n";
-            exit(0);
-        }
-        else if (strncmp(argv[i], arg_app_args, strlen(arg_app_args)) == 0)
-        {
-            char* a = argv[i] + strlen(arg_app_args);
-            if (debug)
-            {
-                LOG(LogLevel::e_nothing,
-                    string("debug: arg_app_args was detected: ") + a + "\n");
-            }
-            char* pch = strtok(a ," ");
-            while (pch != NULL) {
-                if ( (size_t)argc2 >= arg2 ) {
-                    arg2 *= 2;
-                    char** tmp = static_cast<char**>(
-                        realloc(argv2, arg2 * sizeof *argv2));
-                    if (tmp == NULL) {
-                        return RC(
-                            rcApp, rcArgv, rcAccessing, rcMemory, rcExhausted);
-                    }
-                    argv2 = tmp;
-                }
-                argv2[argc2] = string_dup_measure(pch, NULL);
-                if (argv2[argc2] == NULL) {
-                    return RC(
-                        rcApp, rcArgv, rcAccessing, rcMemory, rcExhausted);
-                }
-                ++argc2;
-                pch = strtok(NULL, " ");
-            }
         }
         else {
             if ( (size_t)argc2 >= arg2 ) {
@@ -283,6 +272,11 @@ rc_t TestEnv::process_args(int argc, char* argv[], ArgsHandler* argsHandler)
     if (rc == 0) {
         if (argsHandler)
         {	rc = argsHandler(argc2, argv2); }
+    }
+
+    if ( ! useUserConfig )
+    {   // ignore ~/.ncbi/user-settings.mkfg
+        KConfigDisableUserSettings();
     }
 
     return rc;
@@ -320,37 +314,6 @@ ncbi::NK::GetTestSuite(void)
 {
     static ncbi::NK::TestRunner t;
     return &t;
-}
-
-rc_t CC TestEnv::UsageSummary(const char* progname) {
-    std::cout
-        << "Usage:\n"
-        << progname
-        << " [-debug] [-catch_system_errors=[yes|y|no|n]] "
-        "[-l=<value>] [-h] [...]\n";
-    return 0;
-}
-
-rc_t CC TestEnv::Usage(const char *progname)
-{
-    UsageSummary ( progname );
-    std::cout <<
-        "where:\n"
-        "debug - Print recognized command line arguments (should be specified first)\n"
-        "catch_system_errors - "
-        "Allows to switch between catching and ignoring system errors (signals)\n"
-        "l (log_level) - Specifies log level\n"
-        "\tall        - report all log messages\n"
-        "\t             including the passed test notification\n"
-        "\ttest_suite - show test suite messages\n"
-        "\tmessage    - show user messages\n"
-        "\twarning    - report warnings issued by user\n"
-        "\terror      - report all error conditions (default)\n"
-        "\tfatal_error- report user or system originated fatal errors\n"
-        "\t             (for example, memory access violation)\n"
-        "\tnothing    - do not report any information\n"
-        "h (help) - this help message\n";
-    return 0;
 }
 
 bool TestEnv::Sleep(unsigned int seconds)

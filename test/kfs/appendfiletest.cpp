@@ -364,9 +364,8 @@ TEST_CASE(KAppendFile_set_size)
 
 //////////////////////////////////////////// Main
 
-int 
+int
 main ( int argc, char *argv [] )
 {
-    VDB::Application app(argc, argv);
     return AppendFileTestSuite(argc, argv);
 }

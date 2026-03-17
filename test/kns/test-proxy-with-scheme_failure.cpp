@@ -46,8 +46,7 @@
 #define RELEASE( type, obj ) do { rc_t rc2 = type##Release ( obj ); \
     if (rc2 != 0 && rc == 0) { rc = rc2; } obj = NULL; } while ( false )
 
-static rc_t argsHandler(int argc, char* argv[]);
-TEST_SUITE_WITH_ARGS_HANDLER(TestProxySchemeSuite, argsHandler);
+TEST_SUITE(TestProxySchemeSuite);
 
 static const char * PROXY = "webproxy.ncbi.nlm.nih.gov";
 
@@ -134,15 +133,8 @@ rc_t CC UsageSummary ( const char * prog_name ) noexcept {
                    );
 }
 
-static rc_t argsHandler ( int argc, char * argv [] ) {
-    return ArgsMakeAndHandle ( NULL, argc, argv, 0, NULL, 0 );
-}
-
 int main( int argc, char * argv [] ) {
     putenv((char*)"NCBI_VDB_NO_CACHE_SDL_RESPONSE=1");
     SetUsageSummary( UsageSummary );
-
-    //assert(!KDbgSetString("VFS"));
-    assert(!KDbgSetString("KNS"));
     return TestProxySchemeSuite ( argc, argv );
 }

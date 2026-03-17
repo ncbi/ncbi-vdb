@@ -34,8 +34,7 @@
 
 using namespace std;
 
-static rc_t argsHandler ( int argc, char * argv [] );
-TEST_SUITE_WITH_ARGS_HANDLER ( VdbSlowTestSuite, argsHandler );
+TEST_SUITE ( VdbSlowTestSuite );
 
 FIXTURE_TEST_CASE(TestReadBitsDirect_vs_CellDataDirect, VDB_Fixture)
 {   // VDB-4431
@@ -63,15 +62,8 @@ FIXTURE_TEST_CASE(TestReadBitsDirect_vs_CellDataDirect, VDB_Fixture)
     REQUIRE_EQ( remaining_count_ReadBits, remaining_count_CellData );
 }
 //////////////////////////////////////////// Main
-static rc_t argsHandler ( int argc, char * argv [] ) {
-    Args * args = NULL;
-    rc_t rc = ArgsMakeAndHandle ( & args, argc, argv, 0, NULL, 0 );
-    ArgsWhack ( args );
-    return rc;
-}
 
 int main( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
     return VdbSlowTestSuite(argc, argv);
 }

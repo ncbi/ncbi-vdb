@@ -252,6 +252,5 @@ FIXTURE_TEST_CASE(KWTable_MetaCompare, KTable_Fixture)
 //////////////////////////////////////////// Main
 int main( int argc, char *argv [] )
 {
-    KConfigDisableUserSettings();
     return KWTableTestSuite(argc, argv);
 }
