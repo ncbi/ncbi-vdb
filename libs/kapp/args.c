@@ -100,6 +100,12 @@ rc_t DefaultUsageSummary( const char * progname )
                     progname);
 }
 
+const char *
+GetUsageDefaultName()
+{
+    return UsageDefaultName;
+}
+
 void SetUsageDefaultName( const char* str )
 {
     if ( str != NULL  )

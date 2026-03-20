@@ -163,31 +163,18 @@ VdbInitialize( int argc, char *argv [], ver_t vers )
     kns = ctx -> rsrc -> kns;
 #endif
 
-    /* initialize the default User-Agent in the kns-manager to default value - using "vers" and argv[0] above strrchr '/' */
+    /* initialize the default User-Agent in the kns-manager to default value - using "vers" */
     {
-        char * path;
-
-        rc = ArgsConvFilepath(NULL, 0, argv[0], string_size(argv[0]), (void**)&path, NULL);
-
-        size_t tool_size = string_size (path);
-        const char* tool = path;
-
-        const char * sep = string_rchr ( tool, tool_size, '/' );
-        if ( sep ++ == NULL )
-            sep = tool;
-        else
-            tool_size -= sep - tool;
-
-        sep = string_chr ( tool = sep, tool_size, '.' );
-        if ( sep != NULL )
-#if WINDOWS
-          if (strcmp(sep, ".exe") != 0)
-#endif
-            tool_size = sep - tool;
+        const char* tool = GetUsageDefaultName();
+        size_t tool_size = string_size (tool);
+        if ( tool_size == 0 )
+        {
+abort();
+            tool = "ncbi-vdb";
+            tool_size = string_size (tool);
+        }
 
         KNSManagerSetUserAgent ( kns, PKGNAMESTR " sra-toolkit %.*s.%.3V", ( uint32_t ) tool_size, tool, vers );
-
-        free(path);
     }
 
     KNSManagerSetQuitting ( kns, Quitting );
@@ -203,8 +190,8 @@ VdbInitialize( int argc, char *argv [], ver_t vers )
 }
 
 #if WINDOWS
-LIB_EXPORT 
-rc_t 
+LIB_EXPORT
+rc_t
 wVdbInitialize(int argc, wchar_t* wargv[], char*** argv)
 {
     rc_t rc = ConvertWArgsToUtf8(argc, wargv, argv, true);
