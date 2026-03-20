@@ -23,6 +23,12 @@ Please cite the author in any work or product based on this material.
 # NCBI External Developer Release:
 
 
+## NCBI VDB 3.4.1
+**March 25, 2026**
+
+This release updates release notes. It adds some release notes that were missed in 3.3.0 and 3.4.0. It contains no changes to functionality.
+
+
 ## NCBI VDB 3.4.0
 **March 17, 2026**
 
@@ -31,15 +37,24 @@ Please cite the author in any work or product based on this material.
   **ncbi-vdb**: fixed installation for superuser when LD_LIBRARY_PATH is not defined  
   **ncbi-vdb, sra-tools**: bzip2 was upgraded to version 1.0.8  
   **ncbi-vdb, sra-tools**: zstd was upgraded to version 1.5.7  
+  **sra**: added platform AMCARE  
+  **sra**: added platform CAPITAL_BIOTECH  
+  **sra**: added platform DAAN_GENE  
+  **sra**: added platform GENEPLUS  
+  **sra**: added platform HYK_GENE  
+  **sra**: added platform QITAN_TECH  
   **test**: fixed  
 
 
 ## NCBI VDB 3.3.0
 **December 2, 2025**
 
+  **kdb**: fixed KMDataNodeDropChild to work with nested nodes  
+  **copycat, vdb**: moved teefile to sra-tools  
   **kdbmeta, ngs, pileup-stats, prefetch, srapath, vfs**: improved directory path handling  
   **kfg, prefetch**: improved file type handling  
   **kns**: fixed to build on FreeBSD Release 14.3  
+  **kfs, sra-tools, vfs**: use verbosity option to report HTTP file cache location  
   **ncbi-vdb, sra, sra-info**: added Salus and Geneus platforms  
   **test**: fixed deprecation  
   **test**: ported cipher test to run on multiple UNIX platforms  
