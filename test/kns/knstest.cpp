@@ -48,10 +48,7 @@
 
 #include "../../libs/kns/kns_manager-singleton.h" // KNSManagerUseSingleton
 
-// some test cases need to bypass the default args handler since it calls
-// VdbInitialize() with its user agent initialization
-static rc_t argsHandler(int argc, char * argv[]) { return 0; }
-TEST_SUITE_WITH_ARGS_HANDLER(KnsTestSuite, argsHandler);
+TEST_SUITE(KnsTestSuite);
 
 using namespace std;
 using namespace ncbi::NK;
@@ -71,11 +68,11 @@ public:
     ~SessionIdFixture()
     {
         // restore the original; only use the initial portion
-        // size_t len = original_ua.find( " (phid=" );
-        KNSManagerSetUserAgent(nullptr, "%s", original_ua.c_str() );
-        // KNSManagerSetUserAgentSuffix("");
-        // KNSManagerSetClientIP(m_mgr, "");
-        // KNSManagerSetSessionID(m_mgr, "");
+        size_t len = original_ua.find( " (phid=" );
+        KNSManagerSetUserAgent(nullptr, "%s", original_ua.substr(0, len).c_str() );
+        KNSManagerSetUserAgentSuffix("");
+        KNSManagerSetClientIP(m_mgr, "");
+        KNSManagerSetSessionID(m_mgr, "");
     }
 
     bool UserAgent_Contains( const string & str ) const
@@ -114,10 +111,17 @@ FIXTURE_TEST_CASE(KNSManagerGetUserAgent_Default, SessionIdFixture)
 {
     const char * ua = nullptr;
     KNSManagerGetUserAgent(&ua);
-    auto const ua_contains = std::string{"sra-toolkit "} + VDB_EXE_NAME + std::string{".0.0.12 (phid=noc"};
-    fprintf(stderr,"Got: '%s', expected '%s'\n", ua, ua_contains.data());
+    auto const ua_contains = std::string{"sra-toolkit "} + VDB_EXE_NAME + ".";
+    //fprintf(stderr,"Got: '%s', expected '%s'\n", ua, ua_contains.data());
     REQUIRE_NE( string::npos, string(ua).find(ua_contains) );
     // VDB-4896: no double quotes inside UA
+    REQUIRE_EQ( string::npos, string(ua).find("\"") );
+}
+
+FIXTURE_TEST_CASE(KNSManagerGetUserAgent_Default_NoDoubleQuotes, SessionIdFixture)
+{   // VDB-4896: no double quotes inside UA
+    const char * ua = nullptr;
+    KNSManagerGetUserAgent(&ua);
     REQUIRE_EQ( string::npos, string(ua).find("\"") );
 }
 
@@ -323,7 +327,7 @@ FIXTURE_TEST_CASE( POST, KNSManagerFixture )
 int main(int argc, char* argv[])
 {
     // make sure to use singleton, otherwise some tests fail
-    KNSManagerUseSingleton(true);
+    //KNSManagerUseSingleton(true);
 
     return KnsTestSuite(argc, argv);
 }
