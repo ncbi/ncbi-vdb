@@ -42,6 +42,7 @@ endfunction()
 #
 # sanitizer settings
 #   address sanitizer: stop and fail the test if undefined behavior is detected
+#   -lresolv helps to avoid compatibility issues
 set( asan_defs "-fsanitize=address" "-fsanitize=undefined" "-fno-sanitize-recover=undefined" "-lresolv")
 set( tsan_defs "-fsanitize=thread"  "-lresolv")
 #
