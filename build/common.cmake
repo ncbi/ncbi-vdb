@@ -42,8 +42,8 @@ endfunction()
 #
 # sanitizer settings
 #   address sanitizer: stop and fail the test if undefined behavior is detected
-set( asan_defs "-fsanitize=address" "-fsanitize=undefined" "-fno-sanitize-recover=undefined" )
-set( tsan_defs "-fsanitize=thread" )
+set( asan_defs "-fsanitize=address" "-fsanitize=undefined" "-fno-sanitize-recover=undefined" "-lresolv")
+set( tsan_defs "-fsanitize=thread"  "-lresolv")
 #
 
 function( GenerateStaticLibsWithDefs target_name sources compile_defs )

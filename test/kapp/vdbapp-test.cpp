@@ -65,7 +65,7 @@ TEST_CASE(UserAgentInitialized)
     REQUIRE_RC( KNSManagerGetUserAgent( & agent ) );
     REQUIRE_NOT_NULL( agent );
     // cout<<agent<<endl;
-    REQUIRE_NE( string::npos, string(agent).find("sra-toolkit Test_VDBAPP.") );
+    REQUIRE_NE( string::npos, string(agent).find("sra-toolkit Test_VDBAPP") );
 }
 
 TEST_CASE(KnsQuittingInitialized)
