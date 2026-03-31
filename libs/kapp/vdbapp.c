@@ -169,7 +169,6 @@ VdbInitialize( int argc, char *argv [], ver_t vers )
         size_t tool_size = string_size (tool);
         if ( tool_size == 0 )
         {
-abort();
             tool = "ncbi-vdb";
             tool_size = string_size (tool);
         }
