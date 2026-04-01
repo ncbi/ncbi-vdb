@@ -75,17 +75,10 @@
 #define DEBUG_PRINT(fmt, ...) fprintf(stderr, "%s - " fmt "\n", __func__, __VA_ARGS__)
 #endif
 
-static String * s_LoadedQuality = NULL; /* default or from configuration*/
-
 /*--------------------------------------------------------------------------
  * VDBManager
  *  opaque handle to library
  */
-
-void VDBManagerWhackStatic ( void ) {
-    StringWhack ( s_LoadedQuality );
-    s_LoadedQuality = NULL;
-}
 
 /* Whack
  */
@@ -109,8 +102,6 @@ rc_t VDBManagerWhack ( VDBManager *self )
 
         VSchemaRelease ( self -> schema );
         VLinkerRelease ( self -> linker );
-
-        VDBManagerWhackStatic ();
 
         free ( self );
         return 0;
@@ -995,6 +986,8 @@ static const char * s_SetQuality = NULL;/* explicitly set VDBManagerSetQuality*/
 
 static String s_DfltQuality;
 
+static char s_LoadedQuality[99]; /* default or from configuration*/
+
 static char s_FullQuality[99];
 static char s_ZeroQuality[99];
 
@@ -1003,6 +996,14 @@ rc_t CC VDBManagerSetQualityString(VDBManager * self,
 {
     s_SetQuality = quality;
     return 0;
+}
+
+void VDBManagerQualityReset() {
+    StringInit(&s_DfltQuality, NULL, 0, 0);
+    s_EnvQuality = NULL;
+    s_EnvQualitySet = false;
+    s_SetQuality = NULL;
+    memset(&s_LoadedQuality, 0, sizeof s_LoadedQuality);
 }
 
 static const char * VDBManagerGetQuality(const VDBManager * self) {
@@ -1022,8 +1023,11 @@ static const char * VDBManagerGetQuality(const VDBManager * self) {
     if (s_EnvQuality != NULL)
         return s_EnvQuality;
 
-    if (s_LoadedQuality == NULL) {
+    if (s_LoadedQuality[0] == '\0') {
         const KConfig * kfg = NULL;
+        String * quality = NULL;
+        String * q = NULL;
+        size_t s = 0;
 
         if (self != NULL) {
             const KDBManager * kmgr = NULL;
@@ -1040,15 +1044,22 @@ static const char * VDBManagerGetQuality(const VDBManager * self) {
         if (kfg == NULL)
             KConfigMake((KConfig**)&kfg, NULL);
 
-        rc = KConfigReadString(kfg, "/libs/vdb/quality", &s_LoadedQuality);
+        rc = KConfigReadString(kfg, "/libs/vdb/quality", &quality);
+        q = quality;
         if (rc != 0)
-            StringCopy((const String**)&s_LoadedQuality, &s_DfltQuality);
+            q = &s_DfltQuality;
+        s = string_copy(s_LoadedQuality, sizeof s_LoadedQuality,
+            q->addr, q->size);
+        assert(s <= sizeof s_LoadedQuality);
+        if (s == sizeof s_LoadedQuality)
+            s_LoadedQuality[sizeof s_LoadedQuality - 1] = '\0';
+        free(quality);
 
         KConfigRelease(kfg);
     }
 
-    assert(s_LoadedQuality);
-    return s_LoadedQuality->addr;
+    assert(s_LoadedQuality[0]);
+    return s_LoadedQuality;
 }
 
 static
