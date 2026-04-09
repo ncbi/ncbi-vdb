@@ -998,19 +998,19 @@ rc_t CC VDBManagerSetQualityString(VDBManager * self,
     return 0;
 }
 
-void VDBManagerQualityReset() {
-    StringInit(&s_DfltQuality, NULL, 0, 0);
-    s_EnvQuality = NULL;
-    s_EnvQualitySet = false;
-    s_SetQuality = NULL;
-    memset(&s_LoadedQuality, 0, sizeof s_LoadedQuality);
-}
-
-static const char * VDBManagerGetQuality(const VDBManager * self) {
+static const char * VDBManagerGetQualityImpl(const VDBManager * self,
+    bool force)
+{
     rc_t rc = 0;
 
     static bool latch;
     
+    if (force) {
+        /* reset for test-only */
+        latch = false;
+        return NULL;
+    }
+
     if (!latch) {
         if (s_DfltQuality.addr == NULL)
             CONST_STRING(&s_DfltQuality, "RZ");
@@ -1067,6 +1067,21 @@ static const char * VDBManagerGetQuality(const VDBManager * self) {
 
     assert(s_LoadedQuality[0]);
     return s_LoadedQuality;
+}
+
+/* test-only function */
+void VDBManagerQualityReset() {
+    StringInit(&s_DfltQuality, NULL, 0, 0);
+    s_EnvQuality = NULL;
+    s_EnvQualitySet = false;
+    s_SetQuality = NULL;
+    memset(&s_LoadedQuality, 0, sizeof s_LoadedQuality);
+
+    VDBManagerGetQualityImpl(NULL, true);
+}
+
+static const char* VDBManagerGetQuality(const VDBManager* self) {
+    return VDBManagerGetQualityImpl(NULL, false);
 }
 
 static
