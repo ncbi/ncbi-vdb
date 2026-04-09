@@ -164,15 +164,19 @@ rc_t CC NextLogLevelCommon ( const char * level_parameter );
 
 #ifdef __cplusplus
 
+#ifndef VDB_EXE_NAME
+    #define VDB_EXE_NAME ""
+#endif
+
     namespace VDB
     {
 
         class Application
         {
         public:
-            Application(int argc, char* argv[], ver_t vers = 0);
+            Application( int argc, char* argv[], const char * exe_name = VDB_EXE_NAME );
 #if WINDOWS && UNICODE
-            Application( int argc, wchar_t* argv[], ver_t vers = 0);
+            Application( int argc, wchar_t* argv[], const char * exe_name = VDB_EXE_NAME );
 #endif
             ~Application();
 

@@ -28,7 +28,7 @@
 #define _h_ktst_unit_test_
 
 #include <ktst/unit_test_suite.hpp>
-
+#include <kapp/args.h>
 
 ////////////////////////////////////////////////////////////////////////////////
 namespace ncbi { namespace NK {
@@ -201,6 +201,10 @@ private:
 #define DECLARE_EXTERN_C_ENTRYPOINTS
 #endif
 
+#ifndef VDB_EXE_NAME
+    #define VDB_EXE_NAME ""
+#endif
+
 // define a suite of test cases with a global fixture
 // Note: Typed access to global fixture from the test cases' code is not currently implemented
 #define FIXTURE_TEST_SUITE( suite_name, F ) \
@@ -208,6 +212,7 @@ DECLARE_EXTERN_C_ENTRYPOINTS \
 typedef F AUTO_TEST_CASE_FIXTURE; \
 int suite_name(int argc, char* argv[]) { \
     try { \
+        SetUsageDefaultName( VDB_EXE_NAME ); \
         ncbi::NK::TestEnv args(argc, argv); \
         if (args.catch_system_errors) { \
             args.set_handlers(); \
@@ -225,6 +230,7 @@ DECLARE_EXTERN_C_ENTRYPOINTS \
 typedef F AUTO_TEST_CASE_FIXTURE; \
 int suite_name(int argc, char* argv[]) { \
     try { \
+        SetUsageDefaultName( VDB_EXE_NAME ); \
         ncbi::NK::TestEnv args(argc, argv, Handler); \
         if (args.catch_system_errors) { \
             args.set_handlers(); \
@@ -240,6 +246,7 @@ int suite_name(int argc, char* argv[]) { \
 typedef F AUTO_TEST_CASE_FIXTURE; \
 int suite_name(int argc, char* argv[]) { \
     try { \
+        SetUsageDefaultName( VDB_EXE_NAME ); \
         ncbi::NK::TestEnv args(argc, argv); \
         if (args.catch_system_errors) { \
             args.set_handlers(); \

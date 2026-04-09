@@ -33,7 +33,7 @@ fi
 
 #installing cipher module into newly created virtual env
 tmp_py_env=$(pwd)/temp_env_${OS}
-rm -f $tmp_py_env
+rm -rf $tmp_py_env
 
 if [ "${VIRTUALENV}" != "" ]; then
    virtualenv -p ${PYTHON} $tmp_py_env || exit 1

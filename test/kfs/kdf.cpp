@@ -296,6 +296,5 @@ static rc_t argsHandler ( int argc, char * argv [] )
 
 int main ( int argc, char * argv [] )
 {
-    VdbInitialize( argc, argv, 0 );
     return DuSuite ( argc, argv );
 }
