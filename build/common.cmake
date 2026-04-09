@@ -43,8 +43,8 @@ endfunction()
 # sanitizer settings
 #   address sanitizer: stop and fail the test if undefined behavior is detected
 #   -lresolv helps to avoid compatibility issues
-set( asan_defs "-fsanitize=address" "-fsanitize=undefined" "-fno-sanitize-recover=undefined" "-lresolv")
-set( tsan_defs "-fsanitize=thread"  "-lresolv")
+set( asan_defs "-fsanitize=address" "-fsanitize=undefined" "-fno-sanitize-recover=undefined" "-lresolv" "-fno-omit-frame-pointer")
+set( tsan_defs "-fsanitize=thread"  "-lresolv" "-fno-omit-frame-pointer")
 #
 
 function( GenerateStaticLibsWithDefs target_name sources compile_defs )
@@ -236,7 +236,9 @@ function( AddExecutableTest test_name sources libraries )
         endif()
 
         if (NOT "--no-tsan" IN_LIST ARGV)
-            BuildExecutableForTest( "${test_name}_tsan" "${sources}" "${libraries}" )
+            string(REPLACE "libncbi-vdb" "libncbi-vdb-tsan" TLIBS "${libraries}" )
+            BuildExecutableForTest( "${test_name}_tsan" "${sources}" "${TLIBS}" )
+            add_dependencies( "${test_name}_tsan" ncbi-vdb-tsan )
             target_compile_options( "${test_name}_tsan" PRIVATE ${tsan_defs} )
             target_link_options( "${test_name}_tsan" PRIVATE ${tsan_defs} )
             add_test( NAME "${test_name}_tsan" COMMAND "${test_name}_tsan" WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
