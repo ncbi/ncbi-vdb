@@ -28,15 +28,16 @@
 
 using namespace VDB;
 
-Application::Application(int argc, char* argv[], ver_t vers)
+Application::Application(int argc, char* argv[], const char * exe_name)
     : m_argc( argc ), m_argv( argv ), m_argvOwned ( false )
 {
-    m_rc = VdbInitialize(argc, argv, vers);
+    SetUsageDefaultName( exe_name );
+    m_rc = VdbInitialize(argc, argv, 0);
 }
 
 #if WINDOWS && UNICODE
 #include <kapp/win/main-priv-win.h>
-Application::Application(int argc, wchar_t* argv[], ver_t vers)
+Application::Application(int argc, wchar_t* argv[], const char * exe_name)
     : m_argc( argc ), m_argvOwned ( false )
 {
     int status = ConvertWArgsToUtf8(argc, argv, &m_argv, true);
@@ -47,7 +48,8 @@ Application::Application(int argc, wchar_t* argv[], ver_t vers)
     else
     {
         m_argvOwned = true;
-        m_rc = VdbInitialize(argc, m_argv, vers);
+        SetUsageDefaultName( exe_name );
+        m_rc = VdbInitialize(argc, m_argv, 0);
     }
 }
 #endif

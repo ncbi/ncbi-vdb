@@ -42,8 +42,9 @@ endfunction()
 #
 # sanitizer settings
 #   address sanitizer: stop and fail the test if undefined behavior is detected
-set( asan_defs "-fsanitize=address" "-fsanitize=undefined" "-fno-sanitize-recover=undefined" )
-set( tsan_defs "-fsanitize=thread" )
+#   -lresolv helps to avoid compatibility issues
+set( asan_defs "-fsanitize=address" "-fsanitize=undefined" "-fno-sanitize-recover=undefined" "-lresolv")
+set( tsan_defs "-fsanitize=thread"  "-lresolv")
 #
 
 function( GenerateStaticLibsWithDefs target_name sources compile_defs )
@@ -203,6 +204,7 @@ endfunction()
 
 function( BuildExecutableForTest exe_name sources libraries )
 	add_executable( ${exe_name} ${sources} )
+    target_compile_definitions(${exe_name} PRIVATE VDB_EXE_NAME="${exe_name}")
     add_dependencies( ${exe_name} ncbi-vdb ncbi-wvdb )
     if( WIN32 )
         target_link_options( ${exe_name} PRIVATE "/ENTRY:mainCRTStartup" )

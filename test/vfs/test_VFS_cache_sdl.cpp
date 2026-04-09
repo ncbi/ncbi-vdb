@@ -390,12 +390,16 @@ static rc_t DefaultWorkerThreadFn(const KThread * self, void * data) noexcept {
 
         mtx.lock();
         rc = VResolverRemote(f->resolver, 0, f->query, &remote);
+        mtx.unlock();
 //      if (rc != 0) int i = 0;
 
+        mtx.lock();
         char path[4096] = "";
         if (rc == 0)
             rc = VPathReadUri(remote, path, sizeof path, NULL);
+        mtx.unlock();
 
+        mtx.lock();
         rc_t r2(VPathRelease(remote));
         mtx.unlock();
 
@@ -404,9 +408,11 @@ static rc_t DefaultWorkerThreadFn(const KThread * self, void * data) noexcept {
             rc = r2;
 
         uint32_t state(eSCSEmpty);
+        mtx.lock();
         VFSManagerSdlCacheCount(f->mgr, &state);
         if (state > eSCSFound)
             VFSManagerSdlCacheClear(f->mgr);
+        mtx.unlock();
     }
 
     return rc;
