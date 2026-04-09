@@ -1009,54 +1009,61 @@ void VDBManagerQualityReset() {
 static const char * VDBManagerGetQuality(const VDBManager * self) {
     rc_t rc = 0;
 
-    if (s_DfltQuality.addr == NULL)
-        CONST_STRING(&s_DfltQuality, "RZ");
+    static bool latch;
+    
+    if (!latch) {
+        if (s_DfltQuality.addr == NULL)
+            CONST_STRING(&s_DfltQuality, "RZ");
+
+        if (!s_EnvQualitySet) {
+            char* e = getenv("NCBI_VDB_QUALITY");
+            s_EnvQualitySet = true;
+            s_EnvQuality = e;
+        }
+
+        if (s_LoadedQuality[0] == '\0') {
+            const KConfig* kfg = NULL;
+            String* quality = NULL;
+            String* q = NULL;
+            size_t s = 0;
+
+            if (self != NULL) {
+                const KDBManager* kmgr = NULL;
+                VFSManager* vfs = NULL;
+                rc = VDBManagerOpenKDBManagerRead(self, &kmgr);
+                if (rc == 0)
+                    rc = KDBManagerGetVFSManager(kmgr, &vfs);
+                if (rc == 0)
+                    kfg = VFSManagerGetConfig(vfs);
+                VFSManagerRelease(vfs);
+                KDBManagerRelease(kmgr);
+            }
+
+            if (kfg == NULL)
+                KConfigMake((KConfig**)&kfg, NULL);
+
+            rc = KConfigReadString(kfg, "/libs/vdb/quality", &quality);
+            q = quality;
+            if (rc != 0)
+                q = &s_DfltQuality;
+            s = string_copy(s_LoadedQuality, sizeof s_LoadedQuality,
+                q->addr, q->size);
+            assert(s <= sizeof s_LoadedQuality);
+            if (s == sizeof s_LoadedQuality)
+                s_LoadedQuality[sizeof s_LoadedQuality - 1] = '\0';
+            free(quality);
+
+            KConfigRelease(kfg);
+        }
+
+        latch = true;
+    }
 
     if (s_SetQuality != NULL)
         return s_SetQuality;
 
-    if (!s_EnvQualitySet) {
-        char * e = getenv("NCBI_VDB_QUALITY");
-        s_EnvQualitySet = true;
-        s_EnvQuality = e;
-    }
     if (s_EnvQuality != NULL)
         return s_EnvQuality;
-
-    if (s_LoadedQuality[0] == '\0') {
-        const KConfig * kfg = NULL;
-        String * quality = NULL;
-        String * q = NULL;
-        size_t s = 0;
-
-        if (self != NULL) {
-            const KDBManager * kmgr = NULL;
-            VFSManager * vfs = NULL;
-            rc = VDBManagerOpenKDBManagerRead(self, &kmgr);
-            if (rc == 0)
-                rc = KDBManagerGetVFSManager(kmgr, &vfs);
-            if (rc == 0)
-                kfg = VFSManagerGetConfig(vfs);
-            VFSManagerRelease(vfs);
-            KDBManagerRelease(kmgr);
-        }
-
-        if (kfg == NULL)
-            KConfigMake((KConfig**)&kfg, NULL);
-
-        rc = KConfigReadString(kfg, "/libs/vdb/quality", &quality);
-        q = quality;
-        if (rc != 0)
-            q = &s_DfltQuality;
-        s = string_copy(s_LoadedQuality, sizeof s_LoadedQuality,
-            q->addr, q->size);
-        assert(s <= sizeof s_LoadedQuality);
-        if (s == sizeof s_LoadedQuality)
-            s_LoadedQuality[sizeof s_LoadedQuality - 1] = '\0';
-        free(quality);
-
-        KConfigRelease(kfg);
-    }
 
     assert(s_LoadedQuality[0]);
     return s_LoadedQuality;
