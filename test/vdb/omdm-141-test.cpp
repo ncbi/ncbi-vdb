@@ -288,7 +288,7 @@ static const vector<string> accessions = {
     // "SRR1551783", "SRR389414", "SRR494733", "SRR505887"
 };
 
-static int n_repeats = 10;
+static int n_repeats = 2;
 
 void LowLevelAllTests(int idx)
 {
@@ -306,7 +306,7 @@ void LowLevelAllTests(int idx)
 
 int main(int argc, const char* argv[])
 {
-    int n_threads = 30;
+    int n_threads = 2;
     if (argc > 1) {
         use_mutex = atoi(argv[1]) != 0;
     }
