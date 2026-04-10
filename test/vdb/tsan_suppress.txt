@@ -1,12 +1,11 @@
+mutex:KNSManagerGetUserAgent
 race:CloudMgrGetCurrentCloud
 race:DBManagerOpenVdbcache
 race:FileAddSdlLocation
 race:KClientHttpOpen
 race:KConfigMakeImpl
-#race:KConfigNodeVOpenNodeReadInt
 race:KDirectoryNativeDir_v1
 race:KLogLevelGet
-mutex:KNSManagerGetUserAgent
 race:KNSManagerGetUserAgent
 race:KNSManagerMakeSingleton
 race:KNSManagerVMakeHttpFileInt
