@@ -89,13 +89,13 @@ BuildExecutableForTest( rowwritetest "rowwritetest" "${LIBS_WRITE}" )
 add_test( NAME Test_VDB_row_write COMMAND rowwritetest -t ${CMAKE_CURRENT_SOURCE_DIR}/db/Test_VDB_row_write )
 
 BuildExecutableForTest( Test_VDB_omdm "omdm-141-test" "${LIBS_READ}" )
-add_test( NAME SlowTest_VDB_omdm_quick COMMAND Test_VDB_omdm 0 2 2 WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+add_test( NAME Test_VDB_omdm_quick COMMAND Test_VDB_omdm 0 2 2 WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 add_test( NAME SlowTest_VDB_omdm_full COMMAND Test_VDB_omdm WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 if( RUN_SANITIZER_TESTS )
 # to manually run TSAN with suppressions:
 # TSAN_OPTIONS="suppressions=$(pwd)/tsan_suppress.txt" make RUN_SANITIZER_TESTS=ON slowtests CTESTARGS="-R SlowTest_VDB_omdm_quick -V"
-    add_test( NAME SlowTest_VDB_omdm_quick-asan COMMAND ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Test_VDB_omdm_asan 0 2 2 WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-    add_test( NAME SlowTest_VDB_omdm_quick-tsan COMMAND ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Test_VDB_omdm_tsan 0 2 2 WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+    add_test( NAME Test_VDB_omdm_quick-asan COMMAND ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Test_VDB_omdm_asan 0 2 2 WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+    add_test( NAME Test_VDB_omdm_quick-tsan COMMAND ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Test_VDB_omdm_tsan 0 2 2 WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
     add_test( NAME SlowTest_VDB_omdm_full-asan COMMAND ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Test_VDB_omdm_asan WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
     add_test( NAME SlowTest_VDB_omdm_full-tsan COMMAND ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Test_VDB_omdm_tsan WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
 endif()

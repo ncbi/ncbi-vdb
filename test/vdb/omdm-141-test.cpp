@@ -317,10 +317,6 @@ int main(int argc, const char* argv[])
         n_repeats = atoi(argv[3]);
     }
 
-    // use_mutex = false;
-    // int n_threads = 2;
-    // n_repeats = 2;
-
     //KWrtInit("ApplicationName", 0);
     //KDbgSetString("KNS");
 
