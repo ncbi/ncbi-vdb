@@ -120,6 +120,9 @@ rc_t CC VDBManagerSetQualityString(VDBManager * self, const char * quality);
 /* reset static quality veriables for tests */
 void VDBManagerQualityReset(void);
 
+/* input validation */
+bool QualityInputValidForCgiCall(const char* str, size_t size);
+
 #ifdef __cplusplus
 }
 #endif

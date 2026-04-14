@@ -64,10 +64,11 @@
 
 #include <sysalloc.h>
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
 #include <assert.h>
+#include <ctype.h> /* isalnum */
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #if 1
 #define DEBUG_PRINT( fmt, ... ) ( void ) 0
@@ -998,6 +999,22 @@ rc_t CC VDBManagerSetQualityString(VDBManager * self,
     return 0;
 }
 
+static bool InputValidForCgiCall(const char* str, size_t size, size_t max)
+{
+    if (str == NULL || size == 0 || size > max)
+        return false;
+    else {
+        size_t i = 0;
+        for (i = 0; i < size; ++i)
+            if (!isalnum(str[i]) && str[i] != '_')
+                return false;
+        return true;
+    }
+}
+
+bool QualityInputValidForCgiCall(const char* str, size_t size)
+{   return InputValidForCgiCall(str, size, 8); }
+
 static const char * VDBManagerGetQualityImpl(const VDBManager * self,
     bool force)
 {
@@ -1017,8 +1034,11 @@ static const char * VDBManagerGetQualityImpl(const VDBManager * self,
 
         if (!s_EnvQualitySet) {
             char* e = getenv("NCBI_VDB_QUALITY");
+            if (QualityInputValidForCgiCall(e, string_size(e)))
+                s_EnvQuality = e;
+            else
+                s_EnvQuality = NULL;
             s_EnvQualitySet = true;
-            s_EnvQuality = e;
         }
 
         if (s_LoadedQuality[0] == '\0') {
@@ -1044,7 +1064,7 @@ static const char * VDBManagerGetQualityImpl(const VDBManager * self,
 
             rc = KConfigReadString(kfg, "/libs/vdb/quality", &quality);
             q = quality;
-            if (rc != 0)
+            if (rc != 0 || !QualityInputValidForCgiCall(q->addr, q->size))
                 q = &s_DfltQuality;
             s = string_copy(s_LoadedQuality, sizeof s_LoadedQuality,
                 q->addr, q->size);
