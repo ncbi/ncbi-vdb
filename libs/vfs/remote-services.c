@@ -63,6 +63,7 @@
 #include <vfs/services.h> /* KServiceMake */
 
 #include "../kns/mgr-priv.h" /* KNSManagerGetCloudLocation */
+#include "../vdb/dbmgr-priv.h" /* InputValidForCgiCall */
 #include "json-response.h" /* Response4 */
 #include "jwt.h" /* JwtKartValidateFile */
 #include "manager-priv.h" /* VFSManagerExtNoqual */
@@ -3011,8 +3012,11 @@ bool SCgiRequestAddKfgLocation(SCgiRequest * self, SHelper * helper)
         rc = KConfigRead(helper->kfg, "/libs/cloud/location", 0,
             buffer, sizeof buffer, &num_read, NULL);
         if (rc == 0) {
-            if (num_read == 0)
+            if (num_read == 0 ||
+                !InputValidForCgiCall(buffer, string_size(buffer), 64))
+            {
                 return false;
+            }
             else {
                 const SKV * kv = NULL;
                 const char n[] = "location";

@@ -999,8 +999,7 @@ rc_t CC VDBManagerSetQualityString(VDBManager * self,
     return 0;
 }
 
-static bool InputValidForCgiCall(const char* str, size_t size, size_t max)
-{
+bool InputValidForCgiCall(const char* str, size_t size, size_t max) {
     if (str == NULL || size == 0 || size > max)
         return false;
     else {
