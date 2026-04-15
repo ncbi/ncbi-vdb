@@ -1005,8 +1005,15 @@ bool InputValidForCgiCall(const char* str, size_t size, size_t max) {
     else {
         size_t i = 0;
         for (i = 0; i < size; ++i)
-            if (!isalnum(str[i]) && str[i] != '_')
-                return false;
+            if (!isalnum(str[i]))
+                switch (str[i]) {
+                case '-':
+                case '.':
+                case '_':
+                    break;
+                default:
+                    return false;
+                }
         return true;
     }
 }
