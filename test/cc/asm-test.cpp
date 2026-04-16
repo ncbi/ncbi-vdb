@@ -37,6 +37,13 @@
 #include <atomic32.h>
 #include <arch-impl.h>
 
+#include <thread>
+#include <vector>
+#include <sstream>
+#include <mutex>
+
+using namespace std;
+
 TEST_SUITE(AsmTestSuite);
 
 // 32 bit operations
@@ -504,6 +511,102 @@ TEST_CASE(uint32__ror)
 }
 
 #endif
+
+#undef atomic32_read
+#define atomic32_read( v ) \
+    __atomic_load_n(&((v)->counter), __ATOMIC_SEQ_CST)
+
+// latch pattern using atomic32_test_and_set. run under thread sanitizer to detect any races.
+
+void* threadFn( int thread_no )
+{
+    static atomic_ptr_t singleton = { nullptr };
+
+    ostringstream tn;
+    tn << thread_no;
+    string tns = tn.str();
+    cout<< (tns+": thread start: ") << endl;
+
+    void* ret = atomic_read_ptr ( &singleton );
+    if ( ret != nullptr )
+    {
+        cout<< (tns+": latch closed") << endl;
+        return ret;
+    }
+    else
+    {
+        cout<< (tns+": latch open") << endl;
+
+        // wait some time, then attemp to set the flag
+        this_thread::sleep_for(std::chrono::milliseconds(rand()%10));
+
+        cout<< (tns+": latch closing") <<endl;
+
+        static int foo;
+        int * s = &foo;
+
+        if ( atomic_test_and_set_ptr ( &singleton, s, nullptr ) == 0 )
+        {
+            cout<<  (tns+": latch closing success") << endl;
+        }
+        else
+        {
+            // release s
+            cout<<  (tns+": latch closing failure") << endl;
+        }
+    }
+    cout<< (tns+": thread end") << endl;
+    return atomic_read_ptr ( &singleton );
+}
+
+// int threadFn( int thread_no )
+// {
+//     ostringstream tn;
+//     tn << thread_no;
+//     string tns = tn.str();
+//     cout<< (tns+": thread start: ") << endl;
+//     static atomic32_t latch = { 0 };
+//     static mutex m;
+//     m.lock();
+//     if ( atomic32_read ( &latch ) == 0 )
+//     {
+//         cout<< (tns+": latch open") << endl;
+
+//         // wait some time, then attemp to set the flag
+//         this_thread::sleep_for(std::chrono::milliseconds(rand()%10));
+
+//         cout<< (tns+": latch closing") <<endl;
+
+//         if ( atomic32_test_and_set ( &latch, 1, 0 ) == 0 )
+//         {
+//             singleton = 1;
+//             cout<<  (tns+": latch closing success") << endl;
+//         }
+//         else
+//         {
+//             cout<<  (tns+": latch closing failure") << endl;
+//         }
+//     }
+//     else
+//     {
+//         cout<< (tns+": latch closed") << endl;
+//     }
+//     cout<< (tns+": thread end") << endl;
+//     int ret = singleton;
+//     m.unlock();
+//     return ret;
+// }
+
+TEST_CASE(Latch)
+{
+    const int n_threads = 33;
+    vector<thread> threads;
+    for (int i = 0; i < n_threads; ++i)
+    {
+        threads.push_back(thread(threadFn, i+1));
+    }
+    for (auto& t : threads) t.join();
+}
 
 //////////////////////////////////////////// Main
 int main ( int argc, char *argv [] )

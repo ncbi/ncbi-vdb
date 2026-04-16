@@ -735,10 +735,6 @@ rc_t KConfigNodeVOpenNodeReadInt ( const KConfigNode *self, const KConfig *mgr,
                     /* open node for read */
                     if ( self -> read_only )
                     {
-if(self -> mgr != mgr)
-{
-printf("KConfigNodeVOpenNodeReadInt, self->mgr=%p, mgr=%p\n", self->mgr, mgr);
-}
                         assert ( self -> mgr == mgr );
                         rc = KLockUnlock( self -> lock );
                         if ( rc != 0 )
