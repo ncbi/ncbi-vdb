@@ -23,7 +23,7 @@
  * ============================================================================$
  *
  */
-
+`
 #include <kfg/kfg-priv.h>
 #include <kfg/properties.h> /* KConfig_Get_GUID */
 #include "kfg-priv.h"
@@ -3599,10 +3599,10 @@ rc_t KConfigMakeImpl ( KConfig ** cfg, const KDirectory * cfgdir, bool local,
                     if ( prev != NULL )
                     {
                         /* the global singleton was already instantiated: hand out that one */
-                        rc = KConfigAddRef ( G_kfg.ptr );
+                        rc = KConfigAddRef ( prev );
                         if ( rc == 0 )
                         {
-                            * cfg = G_kfg . ptr;
+                            * cfg = prev;
                         }
                         /* and we have to deallocate the object we just made! */
                         KConfigEmpty ( mgr );
