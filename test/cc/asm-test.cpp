@@ -551,6 +551,7 @@ void* threadFn( int thread_no )
         }
         else
         {
+            rc = KConfigAddRef ( prev );
             // release s
             cout<<  (tns+": latch closing failure") << endl;
         }
