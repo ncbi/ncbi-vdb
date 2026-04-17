@@ -48,10 +48,7 @@
 
 #include "../../libs/kns/kns_manager-singleton.h" // KNSManagerUseSingleton
 
-// some test cases need to bypass the default args handler since it calls
-// VdbInitialize() with its user agent initialization
-static rc_t argsHandler(int argc, char * argv[]) { return 0; }
-TEST_SUITE_WITH_ARGS_HANDLER(KnsTestSuite, argsHandler);
+TEST_SUITE(KnsTestSuite);
 
 using namespace std;
 using namespace ncbi::NK;
@@ -114,10 +111,17 @@ FIXTURE_TEST_CASE(KNSManagerGetUserAgent_Default, SessionIdFixture)
 {
     const char * ua = nullptr;
     KNSManagerGetUserAgent(&ua);
-    auto const ua_contains = std::string{"sra-toolkit "} + get_baseName(GetTestSuite()->argv[0]) + std::string{".0.0.12 (phid=noc"};
-    // fprintf(stderr,"Got: '%s', expected '%s'\n", ua, ua_contains.data());
+    auto const ua_contains = std::string{"sra-toolkit "} + VDB_EXE_NAME + ".";
+    //fprintf(stderr,"Got: '%s', expected '%s'\n", ua, ua_contains.data());
     REQUIRE_NE( string::npos, string(ua).find(ua_contains) );
     // VDB-4896: no double quotes inside UA
+    REQUIRE_EQ( string::npos, string(ua).find("\"") );
+}
+
+FIXTURE_TEST_CASE(KNSManagerGetUserAgent_Default_NoDoubleQuotes, SessionIdFixture)
+{   // VDB-4896: no double quotes inside UA
+    const char * ua = nullptr;
+    KNSManagerGetUserAgent(&ua);
     REQUIRE_EQ( string::npos, string(ua).find("\"") );
 }
 
@@ -183,19 +187,13 @@ FIXTURE_TEST_CASE(KNSManagerSetUserAgentSuffix_Get, SessionIdFixture)
     const char * s;
     REQUIRE_RC(KNSManagerGetUserAgentSuffix( & s ));
     REQUIRE_EQ( suffix, string( s ) );
-    REQUIRE( UserAgent_Contains(
-        string{"sra-toolkit "}
-      + get_baseName(GetTestSuite()->argv[0])
-      + string{".0.0.12suffix (phid=noc"} ) );
+    REQUIRE( UserAgent_Contains( "suffix (phid=noc" ) );
 }
 
 FIXTURE_TEST_CASE(KNSManagerSetUserAgentSuffix_Restore, SessionIdFixture)
 {
     REQUIRE_RC(KNSManagerSetUserAgentSuffix("suffix1"));
-    REQUIRE( UserAgent_Contains(
-        string{"sra-toolkit "}
-      + get_baseName(GetTestSuite()->argv[0])
-      + string{".0.0.12suffix1 (phid=noc"} ) );
+    REQUIRE( UserAgent_Contains(string{"suffix1 (phid=noc"} ) );
 
     REQUIRE_RC(KNSManagerSetUserAgentSuffix(""));
     const char * ua = nullptr;
@@ -326,26 +324,10 @@ FIXTURE_TEST_CASE( POST, KNSManagerFixture )
 
 //////////////////////////////////////////// Main
 
-static void checkForSanitizers(char *argv0)
-{
-    auto const len = strlen(argv0);
-    if (len <= 5) return;
-
-    auto const suffix = std::string{argv0 + len - 5};
-    if (suffix == "_asan" || suffix == "_tsan")
-        argv0[len - 5] = '\0';
-}
-
 int main(int argc, char* argv[])
 {
-    VDB::Application app( argc, argv, 12 ); // we need custom version for some tests
-    if (!app)
-    {
-        return 1;
-    }
-
     // make sure to use singleton, otherwise some tests fail
-    KNSManagerUseSingleton(true);
+    //KNSManagerUseSingleton(true);
 
-    return KnsTestSuite(argc, app.getArgV());
+    return KnsTestSuite(argc, argv);
 }

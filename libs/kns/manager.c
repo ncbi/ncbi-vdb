@@ -1192,10 +1192,11 @@ static rc_t CC KNSManagerMakeConfigImpl ( KNSManager **mgrp, KConfig *kfg )
                                        unix|win etc. subdir ) */
             if ( rc == 0 ) {
                 /* the manager is not a proper singleton */
-                if ( strlen ( kns_manager_user_agent.base ) == 0 ) {
+                const char * ua = NULL;
+                KNSManagerGetUserAgent(&ua);
+                if ( strlen ( ua ) == 0 ) {
                     ver_t version = RELEASE_VERS;
-                    KNSManagerSetUserAgent (
-                        mgr, PKGNAMESTR " ncbi-vdb.%V", version );
+                    KNSManagerSetUserAgent ( mgr, PKGNAMESTR " ncbi-vdb.%V", version );
                 }
 
                 rc = HttpRetrySpecsInit ( &mgr->retry_specs, kfg );

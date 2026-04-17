@@ -79,6 +79,7 @@ AddExecutableTest( Test_VDB_TooBigMeta "test-VDB-TooBigMeta" "${LIBS_WRITE}" )
 AddExecutableTest( Test_VDB_link "test-link" "${LIBS_READ}" )
 AddExecutableTest( Test_VDB_text "test-textvdb" "${LIBS_READ};kdbtext" )
 AddExecutableTest( Test_VDB_linker "test-linker" "${LIBS_WRITE}" )
+AddExecutableTest( Test_VDB_quality "test-quality" "${LIBS_READ}" )
 
 # Slow tests
 AddExecutableTest( SlowTest_VDB_tablecursor "test-tablecursor" "${LIBS_READ}" )

@@ -100,6 +100,12 @@ rc_t DefaultUsageSummary( const char * progname )
                     progname);
 }
 
+const char *
+GetUsageDefaultName()
+{
+    return UsageDefaultName;
+}
+
 void SetUsageDefaultName( const char* str )
 {
     if ( str != NULL  )
@@ -2080,6 +2086,11 @@ rc_t ArgsMakeAndHandleInt ( Args ** pself, int argc, const char ** argv,
 
     if ( pself != NULL ) {
         * pself = NULL;
+    }
+
+    if ( argv == NULL )
+    {
+        return RC ( rcExe, rcArgv, rcConstructing, rcParam, rcNull );
     }
 
     rc = ArgsMakeStandardOptions_int(&self, argv[0]);

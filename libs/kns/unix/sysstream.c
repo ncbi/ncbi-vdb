@@ -96,7 +96,7 @@ rc_t CC KStdIOStreamRead ( const KStdIOStream *self,
             rc = RC ( rcNS, rcStream, rcReading, rcTransfer, rcUnknown );
             LOGERR (klogErr, rc, "system I/O error - broken pipe");
             return rc;
-            
+
         case EBADF:
             rc = RC ( rcNS, rcStream, rcReading, rcFileDesc, rcInvalid );
             PLOGERR (klogInt,
@@ -157,7 +157,7 @@ rc_t CC KStdIOStreamWrite ( KStdIOStream *self,
             rc = RC ( rcNS, rcStream, rcWriting, rcTransfer, rcUnknown );
             LOGERR (klogErr, rc, "system I/O error - broken pipe");
             return rc;
-            
+
         case EBADF:
             rc = RC ( rcNS, rcStream, rcWriting, rcFileDesc, rcInvalid );
             PLOGERR (klogInt,
@@ -194,8 +194,6 @@ static KStream_vt_v1 vtKStdIOStream =
     KStdIOStreamWrite
 };
 
-
-static
 rc_t KStdIOStreamMake ( KStream **sp, int fd, const char *strname,
     bool read_enabled, bool write_enabled )
 {

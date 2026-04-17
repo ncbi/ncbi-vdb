@@ -64,7 +64,7 @@ TEST_CASE(UserAgentInitialized)
     const char * agent = nullptr;
     REQUIRE_RC( KNSManagerGetUserAgent( & agent ) );
     REQUIRE_NOT_NULL( agent );
-    //cout<<agent;
+    // cout<<agent<<endl;
     REQUIRE_NE( string::npos, string(agent).find("sra-toolkit Test_VDBAPP") );
 }
 
@@ -78,6 +78,21 @@ TEST_CASE(ReportsInitialized)
     ver_t version = 0;
     REQUIRE_RC( ReportGetVersion( & version ) );
     REQUIRE_EQ( GetKAppVersion(), version );
+}
+
+TEST_CASE(Args_Make_NullArgv0)
+{
+    Args * args;
+    REQUIRE_RC_FAIL( ArgsMakeAndHandle( &args, 0, nullptr, 0, nullptr, 0 ) );
+}
+
+TEST_CASE(Args_Make_Release)
+{
+    Args * args;
+    char v0[] = "path";
+    char * argv[] = { v0 };
+    REQUIRE_RC( ArgsMakeAndHandle( &args, 1, argv, 0, nullptr, 0 ) );
+    REQUIRE_RC( ArgsRelease( args ) );
 }
 
 #if WIN32

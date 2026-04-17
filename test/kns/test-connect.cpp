@@ -46,8 +46,7 @@
 
 #include "KNSManagerFixture.hpp"
 
-static rc_t argsHandler(int argc, char* argv[]);
-TEST_SUITE_WITH_ARGS_HANDLER(KnsTestSuite, argsHandler);
+TEST_SUITE(KnsTestSuite);
 
 using namespace std;
 using namespace ncbi::NK;
@@ -184,15 +183,6 @@ FIXTURE_TEST_CASE(Connect_CtrlC, ConnectFixture)
 
 #include <kapp/args.h> /* ArgsMakeAndHandle */
 #include <kapp/vdbapp.h>
-
-static rc_t argsHandler(int argc, char * argv[])
-{
-    VdbInitialize( argc, argv, 0 );
-    Args * args = NULL;
-    rc_t rc = ArgsMakeAndHandle(&args, argc, argv, 0, NULL, 0);
-    ArgsWhack(args);
-    return rc;
-}
 
 int main ( int argc, char *argv [] )
 {

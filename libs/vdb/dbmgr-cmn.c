@@ -64,10 +64,11 @@
 
 #include <sysalloc.h>
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
 #include <assert.h>
+#include <ctype.h> /* isalnum */
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #if 1
 #define DEBUG_PRINT( fmt, ... ) ( void ) 0
@@ -75,17 +76,10 @@
 #define DEBUG_PRINT(fmt, ...) fprintf(stderr, "%s - " fmt "\n", __func__, __VA_ARGS__)
 #endif
 
-static String * s_LoadedQuality = NULL; /* default or from configuration*/
-
 /*--------------------------------------------------------------------------
  * VDBManager
  *  opaque handle to library
  */
-
-void VDBManagerWhackStatic ( void ) {
-    StringWhack ( s_LoadedQuality );
-    s_LoadedQuality = NULL;
-}
 
 /* Whack
  */
@@ -109,8 +103,6 @@ rc_t VDBManagerWhack ( VDBManager *self )
 
         VSchemaRelease ( self -> schema );
         VLinkerRelease ( self -> linker );
-
-        VDBManagerWhackStatic ();
 
         free ( self );
         return 0;
@@ -995,6 +987,8 @@ static const char * s_SetQuality = NULL;/* explicitly set VDBManagerSetQuality*/
 
 static String s_DfltQuality;
 
+static char s_LoadedQuality[99]; /* default or from configuration*/
+
 static char s_FullQuality[99];
 static char s_ZeroQuality[99];
 
@@ -1005,16 +999,46 @@ rc_t CC VDBManagerSetQualityString(VDBManager * self,
     return 0;
 }
 
-static const char * VDBManagerGetQuality(const VDBManager * self) {
+bool InputValidForCgiCall(const char* str, size_t size, size_t max) {
+    if (str == NULL || size == 0 || size > max)
+        return false;
+    else {
+        size_t i = 0;
+        for (i = 0; i < size; ++i)
+            if (!isalnum(str[i]))
+                switch (str[i]) {
+                case '-':
+                case '.':
+                case '_':
+                    break;
+                default:
+                    return false;
+                }
+        return true;
+    }
+}
+
+bool QualityInputValidForCgiCall(const char* str, size_t size)
+{   return InputValidForCgiCall(str, size, 8); }
+
+static const char * VDBManagerGetQualityImpl(const VDBManager * self,
+    bool force)
+{
     rc_t rc = 0;
 
-    if (s_DfltQuality.addr == NULL)
-        CONST_STRING(&s_DfltQuality, "RZ");
+    static bool latch;
+    
+    if (force) {
+        /* reset for test-only */
+        latch = false;
+        return NULL;
+    }
 
-    if (s_SetQuality != NULL)
-        return s_SetQuality;
+    if (!latch) {
+        if (s_DfltQuality.addr == NULL)
+            CONST_STRING(&s_DfltQuality, "RZ");
 
-    if (!s_EnvQualitySet) {
+        if (!s_EnvQualitySet) {
 #ifdef WINDOWS
 #pragma warning(push)
 #pragma warning(disable:4996)
@@ -1027,43 +1051,78 @@ static const char * VDBManagerGetQuality(const VDBManager * self) {
    all its callers is required
 */
 #endif
-        char * e = getenv("NCBI_VDB_QUALITY");
+            char* e = getenv("NCBI_VDB_QUALITY");
 #ifdef WINDOWS
 #pragma warning(pop)
 #endif
-        s_EnvQualitySet = true;
-        s_EnvQuality = e;
+            if (QualityInputValidForCgiCall(e, string_size(e)))
+                s_EnvQuality = e;
+            else
+                s_EnvQuality = NULL;
+            s_EnvQualitySet = true;
+        }
+
+        if (s_LoadedQuality[0] == '\0') {
+            const KConfig* kfg = NULL;
+            String* quality = NULL;
+            String* q = NULL;
+            size_t s = 0;
+
+            if (self != NULL) {
+                const KDBManager* kmgr = NULL;
+                VFSManager* vfs = NULL;
+                rc = VDBManagerOpenKDBManagerRead(self, &kmgr);
+                if (rc == 0)
+                    rc = KDBManagerGetVFSManager(kmgr, &vfs);
+                if (rc == 0)
+                    kfg = VFSManagerGetConfig(vfs);
+                VFSManagerRelease(vfs);
+                KDBManagerRelease(kmgr);
+            }
+
+            if (kfg == NULL)
+                KConfigMake((KConfig**)&kfg, NULL);
+
+            rc = KConfigReadString(kfg, "/libs/vdb/quality", &quality);
+            q = quality;
+            if (rc != 0 || !QualityInputValidForCgiCall(q->addr, q->size))
+                q = &s_DfltQuality;
+            s = string_copy(s_LoadedQuality, sizeof s_LoadedQuality,
+                q->addr, q->size);
+            assert(s <= sizeof s_LoadedQuality);
+            if (s == sizeof s_LoadedQuality)
+                s_LoadedQuality[sizeof s_LoadedQuality - 1] = '\0';
+            free(quality);
+
+            KConfigRelease(kfg);
+        }
+
+        latch = true;
     }
+
+    if (s_SetQuality != NULL)
+        return s_SetQuality;
+
     if (s_EnvQuality != NULL)
         return s_EnvQuality;
 
-    if (s_LoadedQuality == NULL) {
-        const KConfig * kfg = NULL;
+    assert(s_LoadedQuality[0]);
+    return s_LoadedQuality;
+}
 
-        if (self != NULL) {
-            const KDBManager * kmgr = NULL;
-            VFSManager * vfs = NULL;
-            rc = VDBManagerOpenKDBManagerRead(self, &kmgr);
-            if (rc == 0)
-                rc = KDBManagerGetVFSManager(kmgr, &vfs);
-            if (rc == 0)
-                kfg = VFSManagerGetConfig(vfs);
-            VFSManagerRelease(vfs);
-            KDBManagerRelease(kmgr);
-        }
+/* test-only function */
+void VDBManagerQualityReset() {
+    StringInit(&s_DfltQuality, NULL, 0, 0);
+    s_EnvQuality = NULL;
+    s_EnvQualitySet = false;
+    s_SetQuality = NULL;
+    memset(&s_LoadedQuality, 0, sizeof s_LoadedQuality);
 
-        if (kfg == NULL)
-            KConfigMake((KConfig**)&kfg, NULL);
+    VDBManagerGetQualityImpl(NULL, true);
+}
 
-        rc = KConfigReadString(kfg, "/libs/vdb/quality", &s_LoadedQuality);
-        if (rc != 0)
-            StringCopy((const String**)&s_LoadedQuality, &s_DfltQuality);
-
-        KConfigRelease(kfg);
-    }
-
-    assert(s_LoadedQuality);
-    return s_LoadedQuality->addr;
+static const char* VDBManagerGetQuality(const VDBManager* self) {
+    return VDBManagerGetQualityImpl(NULL, false);
 }
 
 static

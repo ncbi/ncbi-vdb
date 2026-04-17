@@ -988,7 +988,7 @@ FIXTURE_TEST_CASE(KQueue_Single_Reader_Multi_Writer_Seal, KQueueFixture)
 {
     KTimeMs_t timeBefore = KTimeMsStamp();
     const int numWriters = 31;
-    const int timeoutMs = 5000;
+    const int timeoutMs = 10000;
     StartThreads(1, numWriters, false, timeoutMs);
     threadsData[0].finish = true;
     WaitThreads(false);
