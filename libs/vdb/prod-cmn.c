@@ -614,12 +614,12 @@ static
 rc_t VFunctionProdCallRowFunc1( VFunctionProd *self, VBlob **prslt, int64_t row_id,
     uint32_t row_count, const VXformInfo *info, Vector *args,int64_t param_start_id,int64_t param_stop_id)
 {
-    rc_t rc;
+    rc_t rc = 0;
     uint32_t i, argc = VectorLength ( args );
     VRowResult rslt;
     VRowData args_os[16], *args_oh, *argv;
     KDataBuffer scratch;
-    VBlob *blob;
+    VBlob *blob = NULL;
     const VBlob *in;
     PageMapIterator iter_os[16], *iter_oh, *iter;
     uint64_t last = 0;
