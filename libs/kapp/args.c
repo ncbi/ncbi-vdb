@@ -45,7 +45,7 @@
 #include <kapp/args-conv.h>
 
 #include "args_debug.h"
-#include "version-hash.h" /* HASH_SRA_TOOLS */
+#include <kapp/version-hash.h> /* HASH_NCBI_VDB */
 
 #include <assert.h>
 #include <ctype.h>
@@ -126,6 +126,13 @@ UsageSummary_t SetUsageSummary ( UsageSummary_t func )
     UsageSummary_t ret = UsageSummary;
     UsageSummary = func;
     return ret;
+}
+
+static char HashSraTools[99] = "";
+
+void SetSraToolsHash(const char* str)
+{
+    string_copy_measure(HashSraTools, sizeof HashSraTools, str);
 }
 
 ver_t SetKAppVersion ( ver_t ver )
@@ -2261,7 +2268,7 @@ void CC HelpVersion (const char * fullpath, ver_t version)
     }
     else {
         OUTMSG (("%s : %.3V%s ( %s%s )\n\n",
-            fullpath, version, HASH_SRA_TOOLS, cSra, HASH_NCBI_VDB));
+            fullpath, version, HashSraTools, cSra, HASH_NCBI_VDB));
     }
 }
 
