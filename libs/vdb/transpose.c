@@ -91,7 +91,7 @@ rc_t CC transpose_formatted8 ( void *self, const VXformInfo *info, int64_t row_i
 
         /* page-map iterator */
         PageMapIterator it;
-        rc = PageMapNewIterator ( in -> pm, & it, 0, -1 );
+        rc = PageMapNewIterator ( in -> pm, & it, 0, (uint64_t)-1 );
 
         /* create a new reference to the page map */
         if ( rc == 0 )
@@ -171,7 +171,7 @@ rc_t CC transpose_formatted16 ( void *self, const VXformInfo *info, int64_t row_
     {
         VBlob *out = * rslt;
         PageMapIterator it;
-        rc = PageMapNewIterator ( in -> pm, & it, 0, -1 );
+        rc = PageMapNewIterator ( in -> pm, & it, 0, (uint64_t)-1 );
         if ( rc == 0 )
             rc = PageMapAddRef ( in -> pm );
         if ( rc != 0 )
@@ -235,7 +235,7 @@ rc_t CC transpose_formatted32 ( void *self, const VXformInfo *info, int64_t row_
     {
         VBlob *out = * rslt;
         PageMapIterator it;
-        rc = PageMapNewIterator ( in -> pm, & it, 0, -1 );
+        rc = PageMapNewIterator ( in -> pm, & it, 0, (uint64_t)-1 );
         if ( rc == 0 )
             rc = PageMapAddRef ( in -> pm );
         if ( rc != 0 )
@@ -299,7 +299,7 @@ rc_t CC transpose_formatted64 ( void *self, const VXformInfo *info, int64_t row_
     {
         VBlob *out = * rslt;
         PageMapIterator it;
-        rc = PageMapNewIterator ( in -> pm, & it, 0, -1 );
+        rc = PageMapNewIterator ( in -> pm, & it, 0, (uint64_t)-1 );
         if ( rc == 0 )
             rc = PageMapAddRef ( in -> pm );
         if ( rc != 0 )
@@ -432,7 +432,7 @@ rc_t CC transpose_unformatted8 ( void *self, const VXformInfo *info, int64_t row
 
         /* page-map iterator */
         PageMapIterator it;
-        rc = PageMapNewIterator ( in -> pm, & it, 0, -1 );
+        rc = PageMapNewIterator ( in -> pm, & it, 0, (uint64_t)-1 );
 
         /* create a new reference to the page map */
         if ( rc == 0 )
@@ -512,7 +512,7 @@ rc_t CC transpose_unformatted16 ( void *self, const VXformInfo *info, int64_t ro
     {
         VBlob *out = * rslt;
         PageMapIterator it;
-        rc = PageMapNewIterator ( in -> pm, & it, 0, -1 );
+        rc = PageMapNewIterator ( in -> pm, & it, 0, (uint64_t)-1 );
         if ( rc == 0 )
             rc = PageMapAddRef ( in -> pm );
         if ( rc != 0 )
@@ -576,7 +576,7 @@ rc_t CC transpose_unformatted32 ( void *self, const VXformInfo *info, int64_t ro
     {
         VBlob *out = * rslt;
         PageMapIterator it;
-        rc = PageMapNewIterator ( in -> pm, & it, 0, -1 );
+        rc = PageMapNewIterator ( in -> pm, & it, 0, (uint64_t)-1 );
         if ( rc == 0 )
             rc = PageMapAddRef ( in -> pm );
         if ( rc != 0 )
@@ -640,7 +640,7 @@ rc_t CC transpose_unformatted64 ( void *self, const VXformInfo *info, int64_t ro
     {
         VBlob *out = * rslt;
         PageMapIterator it;
-        rc = PageMapNewIterator ( in -> pm, & it, 0, -1 );
+        rc = PageMapNewIterator ( in -> pm, & it, 0, (uint64_t)-1 );
         if ( rc == 0 )
             rc = PageMapAddRef ( in -> pm );
         if ( rc != 0 )
