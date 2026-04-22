@@ -516,95 +516,60 @@ TEST_CASE(uint32__ror)
 #define atomic32_read( v ) \
     __atomic_load_n(&((v)->counter), __ATOMIC_SEQ_CST)
 
-// latch pattern using atomic32_test_and_set. run under thread sanitizer to detect any races.
+// latch pattern using atomic32_test_and_set_ptr. run under thread sanitizer to detect any races.
 
-void* threadFn( int thread_no )
+void* threadFn( int thread_no, bool trace = false )
 {
     static atomic_ptr_t singleton = { nullptr };
 
     ostringstream tn;
     tn << thread_no;
     string tns = tn.str();
-    cout<< (tns+": thread start: ") << endl;
+    if (trace) cout<< (tns+": thread start: ") << endl;
 
     void* ret = atomic_read_ptr ( &singleton );
     if ( ret != nullptr )
     {
-        cout<< (tns+": latch closed") << endl;
+        if (trace) cout<< (tns+": singleton set") << endl;
         return ret;
     }
     else
     {
-        cout<< (tns+": latch open") << endl;
+        if (trace) cout<< (tns+": singleton not set") << endl;
 
-        // wait some time, then attemp to set the flag
+        // wait some time, then initialize an object and attempt to set is as the singleton
         this_thread::sleep_for(std::chrono::milliseconds(rand()%10));
-
-        cout<< (tns+": latch closing") <<endl;
 
         static int foo;
         int * s = &foo;
 
+        if (trace) cout<< (tns+": setting singleton") <<endl;
         if ( atomic_test_and_set_ptr ( &singleton, s, nullptr ) == 0 )
         {
-            cout<<  (tns+": latch closing success") << endl;
+            //rc_t rc = KConfigAddRef ( singleton );
+            // if ( rc != 0 )
+            // {
+            //     throw logic_error("KConfigAddRef failed");
+            // }
+            if (trace) cout<<  (tns+": set singleton success") << endl;
         }
         else
-        {
-            rc = KConfigAddRef ( prev );
-            // release s
-            cout<<  (tns+": latch closing failure") << endl;
+        {   // somebody else has set the singleton before this thread
+            if (trace) cout<<  (tns+": set singleton failure") << endl;
+            // release the object
         }
     }
-    cout<< (tns+": thread end") << endl;
+    if (trace) cout<< (tns+": thread end") << endl;
     return atomic_read_ptr ( &singleton );
 }
 
-// int threadFn( int thread_no )
-// {
-//     ostringstream tn;
-//     tn << thread_no;
-//     string tns = tn.str();
-//     cout<< (tns+": thread start: ") << endl;
-//     static atomic32_t latch = { 0 };
-//     static mutex m;
-//     m.lock();
-//     if ( atomic32_read ( &latch ) == 0 )
-//     {
-//         cout<< (tns+": latch open") << endl;
-
-//         // wait some time, then attemp to set the flag
-//         this_thread::sleep_for(std::chrono::milliseconds(rand()%10));
-
-//         cout<< (tns+": latch closing") <<endl;
-
-//         if ( atomic32_test_and_set ( &latch, 1, 0 ) == 0 )
-//         {
-//             singleton = 1;
-//             cout<<  (tns+": latch closing success") << endl;
-//         }
-//         else
-//         {
-//             cout<<  (tns+": latch closing failure") << endl;
-//         }
-//     }
-//     else
-//     {
-//         cout<< (tns+": latch closed") << endl;
-//     }
-//     cout<< (tns+": thread end") << endl;
-//     int ret = singleton;
-//     m.unlock();
-//     return ret;
-// }
-
-TEST_CASE(Latch)
+TEST_CASE(SingletonSetup)
 {
     const int n_threads = 33;
     vector<thread> threads;
     for (int i = 0; i < n_threads; ++i)
     {
-        threads.push_back(thread(threadFn, i+1));
+        threads.push_back(thread(threadFn, i+1, false)); // call with true to see thread's output
     }
     for (auto& t : threads) t.join();
 }

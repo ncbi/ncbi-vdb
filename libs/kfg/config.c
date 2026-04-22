@@ -23,7 +23,7 @@
  * ============================================================================$
  *
  */
-`
+
 #include <kfg/kfg-priv.h>
 #include <kfg/properties.h> /* KConfig_Get_GUID */
 #include "kfg-priv.h"
