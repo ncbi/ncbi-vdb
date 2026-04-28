@@ -24,10 +24,12 @@
 *
 */
 
+#include <klib/printf.h> /* string_printf */
+#include <klib/rc.h>
+#include <klib/text.h>
+
 #include <kns/impl.h>
 #include <kns/endpoint.h>
-#include <klib/text.h>
-#include <klib/rc.h>
 
 #include "stream-priv.h"
 
@@ -36,7 +38,7 @@
 
 #include <sysalloc.h>
 
-
+#include <arpa/inet.h>
 /* InitIPv4Endpoint
  *  initialize the endpoint with an IPv4 address and port
  *
@@ -66,6 +68,16 @@ rc_t CC KNSManagerInitIPv4Endpoint ( struct KNSManager const *self,
             ep -> type = epIPV4;
             ep -> u . ipv4. addr = ipv4;
             ep -> u. ipv4 . port = port;
+            {
+                union {
+                    uint32_t raw;
+                    uint8_t octet[4];
+                } ip;
+                ip.raw = htonl(ipv4);
+                string_printf(ep->ip_address, sizeof ep->ip_address, NULL,
+                    "%d.%d.%d.%d",
+                    ip.octet[0], ip.octet[1], ip.octet[2], ip.octet[3]);
+            }
             return 0;
         }
 
