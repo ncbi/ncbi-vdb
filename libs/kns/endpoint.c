@@ -24,6 +24,8 @@
 *
 */
 
+#include <kns/extern.h>
+
 #include <klib/printf.h> /* string_printf */
 #include <klib/rc.h>
 
