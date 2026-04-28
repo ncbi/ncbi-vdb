@@ -26,7 +26,6 @@
 
 #include <klib/printf.h> /* string_printf */
 #include <klib/rc.h>
-#include <klib/text.h>
 
 #include <kns/impl.h>
 #include <kns/endpoint.h>
@@ -36,9 +35,13 @@
 #include <string.h>
 #include <assert.h>
 
+/* os-native.h includes klib/text.h;
+ * on Linux arpa/inet.h
+ * on Windows includes windows.h and winsock2.h !!! */
+#include <os-native.h>
+
 #include <sysalloc.h>
 
-#include <arpa/inet.h>
 /* InitIPv4Endpoint
  *  initialize the endpoint with an IPv4 address and port
  *
