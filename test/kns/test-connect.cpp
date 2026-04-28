@@ -59,6 +59,7 @@ public:
     ConnectFixture()
     :   socket ( nullptr )
     {
+        memset(&ep, 0, sizeof ep);
     }
 
     void InitEP(const char* p_url, uint32_t timeoutMs, uint16_t port = 80)
@@ -174,6 +175,23 @@ FIXTURE_TEST_CASE(Connect_CtrlC, ConnectFixture)
     REQUIRE_EQ ( 1u, tries );
 #ifdef DEBUG
     cerr << "^^^ expect to see 'connect_wait() interrupted'" << endl;
+#endif
+}
+
+#if LINUX
+#include <arpa/inet.h>
+#endif
+FIXTURE_TEST_CASE(InitIPv4Endpoint, ConnectFixture) {
+    uint32_t ipv4(0x012033FF);
+    string expected("1.32.51.255");
+    REQUIRE_RC(KNSManagerInitIPv4Endpoint(m_mgr, &ep, ipv4, 0));
+    REQUIRE_EQ(string(ep.ip_address), expected);
+#if LINUX
+    char ip_address[256];
+    struct in_addr addr;
+    addr.s_addr = htonl(ipv4);
+    string_copy_measure(ip_address, sizeof ip_address, inet_ntoa(addr));
+    REQUIRE_EQ(string(ip_address), expected);
 #endif
 }
 
