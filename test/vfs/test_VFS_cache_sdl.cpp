@@ -44,7 +44,6 @@
 
 #include <os-native.h> // setenv
 
-#include "../../libs/vdb/dbmgr-priv.h" // VDBManagerWhackStatic
 #include "../../libs/vfs/manager-priv.h" // VFSManagerSdlCacheEmpty
 
 #include <mutex>
@@ -94,8 +93,6 @@ protected:
         VPathRelease(query);
         VResolverRelease(resolver);
         VFSManagerRelease(mgr);
-
-        VDBManagerWhackStatic();
     }
 
     rc_t ResetQuery(const char * path_str) {

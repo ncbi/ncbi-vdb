@@ -25,4 +25,3 @@
 */
 
 #define HASH_NCBI_VDB ""
-#define HASH_SRA_TOOLS ""
