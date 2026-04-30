@@ -37,6 +37,13 @@
 #include <atomic32.h>
 #include <arch-impl.h>
 
+#include <thread>
+#include <vector>
+#include <sstream>
+#include <mutex>
+
+using namespace std;
+
 TEST_SUITE(AsmTestSuite);
 
 // 32 bit operations
@@ -504,6 +511,68 @@ TEST_CASE(uint32__ror)
 }
 
 #endif
+
+#undef atomic32_read
+#define atomic32_read( v ) \
+    __atomic_load_n(&((v)->counter), __ATOMIC_SEQ_CST)
+
+// latch pattern using atomic32_test_and_set_ptr. run under thread sanitizer to detect any races.
+
+void* threadFn( int thread_no, bool trace = false )
+{
+    static atomic_ptr_t singleton = { nullptr };
+
+    ostringstream tn;
+    tn << thread_no;
+    string tns = tn.str();
+    if (trace) cout<< (tns+": thread start: ") << endl;
+
+    void* ret = atomic_read_ptr ( &singleton );
+    if ( ret != nullptr )
+    {
+        if (trace) cout<< (tns+": singleton set") << endl;
+        return ret;
+    }
+    else
+    {
+        if (trace) cout<< (tns+": singleton not set") << endl;
+
+        // wait some time, then initialize an object and attempt to set is as the singleton
+        this_thread::sleep_for(std::chrono::milliseconds(rand()%10));
+
+        static int foo;
+        int * s = &foo;
+
+        if (trace) cout<< (tns+": setting singleton") <<endl;
+        if ( atomic_test_and_set_ptr ( &singleton, s, nullptr ) == 0 )
+        {
+            //rc_t rc = KConfigAddRef ( singleton );
+            // if ( rc != 0 )
+            // {
+            //     throw logic_error("KConfigAddRef failed");
+            // }
+            if (trace) cout<<  (tns+": set singleton success") << endl;
+        }
+        else
+        {   // somebody else has set the singleton before this thread
+            if (trace) cout<<  (tns+": set singleton failure") << endl;
+            // release the object
+        }
+    }
+    if (trace) cout<< (tns+": thread end") << endl;
+    return atomic_read_ptr ( &singleton );
+}
+
+TEST_CASE(SingletonSetup)
+{
+    const int n_threads = 33;
+    vector<thread> threads;
+    for (int i = 0; i < n_threads; ++i)
+    {
+        threads.push_back(thread(threadFn, i+1, false)); // call with true to see thread's output
+    }
+    for (auto& t : threads) t.join();
+}
 
 //////////////////////////////////////////// Main
 int main ( int argc, char *argv [] )
