@@ -116,7 +116,13 @@ void CC BSTreeMbrWhack ( BSTNode *n, void *ignore );
 
 /*----------------------------------------------------------------------------*/
 rc_t CC VDBManagerSetQualityString(VDBManager * self, const char * quality);
-void VDBManagerWhackStatic(void);
+
+/* reset static quality veriables for tests */
+void VDBManagerQualityReset(void);
+
+/* input validation */
+bool InputValidForCgiCall(const char* str, size_t size, size_t max);
+bool QualityInputValidForCgiCall(const char* str, size_t size);
 
 #ifdef __cplusplus
 }

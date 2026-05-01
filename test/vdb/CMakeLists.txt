@@ -79,6 +79,7 @@ AddExecutableTest( Test_VDB_TooBigMeta "test-VDB-TooBigMeta" "${LIBS_WRITE}" )
 AddExecutableTest( Test_VDB_link "test-link" "${LIBS_READ}" )
 AddExecutableTest( Test_VDB_text "test-textvdb" "${LIBS_READ};kdbtext" )
 AddExecutableTest( Test_VDB_linker "test-linker" "${LIBS_WRITE}" )
+AddExecutableTest( Test_VDB_quality "test-quality" "${LIBS_READ}" )
 
 # Slow tests
 AddExecutableTest( SlowTest_VDB_tablecursor "test-tablecursor" "${LIBS_READ}" )
@@ -88,16 +89,19 @@ AddExecutableTest( SlowTest_VDB_wvdb-slow "test-wvdb-slow" "${LIBS_WRITE}" )
 BuildExecutableForTest( rowwritetest "rowwritetest" "${LIBS_WRITE}" )
 add_test( NAME Test_VDB_row_write COMMAND rowwritetest -t ${CMAKE_CURRENT_SOURCE_DIR}/db/Test_VDB_row_write )
 
-AddExecutableTest( Test_VDB_omdm "omdm-141-test" "${LIBS_READ}" )
-add_test( NAME SlowTest_VDB_omdm_full COMMAND Test_VDB_omdm 0 30 10 WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-if( RUN_SANITIZER_TESTS )
-# to manually run TSAN with suppressions:
-# TSAN_OPTIONS="suppressions=$(pwd)/tsan_suppress.txt" make RUN_SANITIZER_TESTS=ON CTESTARGS="-R Test_VDB_omdm_tsan -V"
-# TSAN_OPTIONS="suppressions=$(pwd)/tsan_suppress.txt" make RUN_SANITIZER_TESTS=ON slowtests CTESTARGS="-R SlowTest_VDB_omdm_full_tsan -V"
-    add_test( NAME SlowTest_VDB_omdm_full_asan COMMAND ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Test_VDB_omdm_asan 0 30 10 WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-    add_test( NAME SlowTest_VDB_omdm_full_tsan COMMAND ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Test_VDB_omdm_tsan 0 30 10 WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
-endif()
+if ( NOT WIN32 ) # temporarily skipped on Windows (VDB-6341)
 
+    AddExecutableTest( Test_VDB_omdm "omdm-141-test" "${LIBS_READ}" )
+    add_test( NAME SlowTest_VDB_omdm_full COMMAND Test_VDB_omdm 0 30 10 WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+    if( RUN_SANITIZER_TESTS )
+    # to manually run TSAN with suppressions:
+    # TSAN_OPTIONS="suppressions=$(pwd)/tsan_suppress.txt" make RUN_SANITIZER_TESTS=ON CTESTARGS="-R Test_VDB_omdm_tsan -V"
+    # TSAN_OPTIONS="suppressions=$(pwd)/tsan_suppress.txt" make RUN_SANITIZER_TESTS=ON slowtests CTESTARGS="-R SlowTest_VDB_omdm_full_tsan -V"
+        add_test( NAME SlowTest_VDB_omdm_full_asan COMMAND ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Test_VDB_omdm_asan 0 30 10 WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+        add_test( NAME SlowTest_VDB_omdm_full_tsan COMMAND ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/Test_VDB_omdm_tsan 0 30 10 WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR})
+    endif()
+
+endif()
 # TODO: make sure runs are not cached in the user repository when running tests
 
 # TODO: valgrind
