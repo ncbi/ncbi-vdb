@@ -2592,12 +2592,7 @@ LIB_EXPORT rc_t CC KDirectoryNativeDir_v1 ( KDirectory_v1 **dirp )
     uint32_t size;
     char wd [ PATH_MAX ];
 
-    static bool latch;
-    if ( ! latch )
-    {
-        ReportInitKFS ( ReportCWD, ReportRedirect );
-        latch = true;
-    }
+    ReportInitKFS ( ReportCWD, ReportRedirect );
 
     if ( dirp == NULL )
         return RC ( rcFS, rcDirectory, rcAccessing, rcParam, rcNull );
