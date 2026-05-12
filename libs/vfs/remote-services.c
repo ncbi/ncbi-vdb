@@ -2376,7 +2376,7 @@ rc_t MaskSdlResponse(const char* in, KDataBuffer* out) {
             
             while (*e != '\0')
                 /* skip spaces */
-                if (isblank(*e))
+                if (isspace(*e))
                     KDataBufferPrintf(out, "%c", *(e++));
                 /* expecting : */
                 else if (*e == ':') {
@@ -2388,7 +2388,7 @@ rc_t MaskSdlResponse(const char* in, KDataBuffer* out) {
             
             while (*e != '\0')
                 /* skip spaces after "link"[\s*]:*/
-                if (isblank(*e))
+                if (isspace(*e))
                     KDataBufferPrintf(out, "%c", *(e++));
             /* expecting opening " */
                 else if (*e == '"') {
