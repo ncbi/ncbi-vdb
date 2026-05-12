@@ -42,12 +42,13 @@ extern "C" {
 #endif
 
 
-struct KSrvRespObj;
+struct KDataBuffer;
 struct KNSManager;
 struct KRepositoryMgr;
 struct KService;
 struct ServicesCache;
 struct KSrvRespFile;
+struct KSrvRespObj;
 struct KSrvResponse;
 struct Locations;
 struct Response4;
