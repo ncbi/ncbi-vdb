@@ -36,6 +36,7 @@
 #include <klib/out.h> /* KOutMsg */
 #include <klib/printf.h> /* string_printf */
 #include <klib/rc.h> /* RC */
+#include <klib/status.h> /* define STATUS */
 #include <klib/strings.h> /* KFG_USER_ACCEPT_GCP_CHARGES etc */
 #include <klib/text.h> /* String */
 #include <klib/time.h> /* KTime */
