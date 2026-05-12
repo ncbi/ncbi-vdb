@@ -234,6 +234,9 @@ rc_t VFSManagerSetCachedKSrvResponse
 rc_t VFSManagerGetCachedKSrvResponse
 (const struct VFSManager * self, const char * id, const KSrvResponse ** resp);
 
+rc_t MaskSdlRequestArg(const String* arg, KDataBuffer* out);
+rc_t MaskSdlResponse(const char* in, KDataBuffer* out);
+
 #ifdef __cplusplus
 }
 #endif
