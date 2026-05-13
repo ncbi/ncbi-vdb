@@ -37,38 +37,80 @@ using namespace std;
 
 TEST_SUITE( VdbTestIncludesSuite )
 
-TEST_CASE( DirectInclude )
+class IncludeFixture
 {
+public:
+    IncludeFixture()
+    {
+        THROW_ON_RC( VDBManagerMakeRead(&mgr, nullptr) );
+        THROW_ON_RC( VDBManagerMakeSchema( mgr, &schema ) );
+    }
+
+    ~IncludeFixture()
+    {
+        VSchemaRelease(schema);
+        VDBManagerRelease(mgr);
+    }
+
     const VDBManager *mgr = nullptr;
-    REQUIRE_RC( VDBManagerMakeRead(&mgr, nullptr) );
-
     VSchema *schema = nullptr;
-    REQUIRE_RC( VDBManagerMakeSchema( mgr, &schema ) );
+};
 
+FIXTURE_TEST_CASE( DirectInclude, IncludeFixture )
+{   // relative path to the working directory
     const string Text = "version 2; include 'kfg/includes/test.vschema';";
     REQUIRE_RC( VSchemaParseText ( schema, "test", Text.data(), Text.size() ) );
 
-    REQUIRE_RC( VSchemaRelease(schema) );
-
-    REQUIRE_RC( VDBManagerRelease(mgr) );
+    VTypedecl resolved;
+    REQUIRE_RC( VSchemaResolveTypedecl ( schema, &resolved, "type1" ) ); // defined in kfg/test.vschema
 }
 
-TEST_CASE( IncludeViaKonfig )
+FIXTURE_TEST_CASE( IncludeViaKonfig, IncludeFixture )
 {
-    const VDBManager *mgr = nullptr;
-    REQUIRE_RC( VDBManagerMakeRead(&mgr, nullptr) );
-
-    VSchema *schema = nullptr;
-    REQUIRE_RC( VDBManagerMakeSchema( mgr, &schema ) );
-
-    # kfg/includes comes from the konfig
+    // kfg/includes comes from the konfig (see main())
     const string Text = "version 2; include 'test.vschema';";
     REQUIRE_RC( VSchemaParseText ( schema, "test", Text.data(), Text.size() ) );
 
-    REQUIRE_RC( VSchemaRelease(schema) );
+    VTypedecl resolved;
+    REQUIRE_RC( VSchemaResolveTypedecl ( schema, &resolved, "type1" ) ); // defined in kfg/test.vschema
+}
 
+FIXTURE_TEST_CASE( IncludeViaAPI, IncludeFixture )
+{
+    // override konfig's includes via an API call
+    REQUIRE_RC( VSchemaAddIncludePath( schema, "kfg/includes/includeViaAPI" ) );
+
+    const string Text = "version 2; include 'test.vschema';";
+    REQUIRE_RC( VSchemaParseText ( schema, "test", Text.data(), Text.size() ) );
+
+    VTypedecl resolved;
+    REQUIRE_RC( VSchemaResolveTypedecl ( schema, &resolved, "type2" ) ); // defined in kfg/includes/includeViaAPI/test.vschema
+}
+
+TEST_CASE( IncludeViaEnv )
+{
+    const VDBManager *mgr = nullptr;
+    VSchema *schema = nullptr;
+    REQUIRE_RC( VDBManagerMakeRead(&mgr, nullptr) );
+
+    // override everything via an environment variable
+    setenv( "VDB_SCHEMA_INCLUDES", "kfg/includes/includeViaEnv", 1);
+    REQUIRE_RC( VDBManagerMakeSchema( mgr, &schema ) );
+
+    // overrride konfig's includes via an API call, should not override the env var
+    REQUIRE_RC( VSchemaAddIncludePath( schema, "kfg/includes/includeViaAPI" ) );
+
+    const string Text = "version 2; include 'test.vschema';";
+    REQUIRE_RC( VSchemaParseText ( schema, "test", Text.data(), Text.size() ) );
+
+    VTypedecl resolved;
+    REQUIRE_RC( VSchemaResolveTypedecl ( schema, &resolved, "type3" ) ); // defined in kfg/includes/includesEnv/test.vschema
+
+    REQUIRE_RC( VSchemaRelease(schema) );
     REQUIRE_RC( VDBManagerRelease(mgr) );
 }
+
+//TODO: ':'-separated list of directories
 
 //////////////////////////////////////////// Main
 int main( int argc, char *argv [] )

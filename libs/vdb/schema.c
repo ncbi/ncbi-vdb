@@ -64,6 +64,9 @@
 #include <os-native.h>
 #include <assert.h>
 
+static
+rc_t
+VSchemaAddIncludePaths_impl(VSchema *self, Vector * inc_list, size_t length, const char *paths);
 
 /*--------------------------------------------------------------------------
  * generic
@@ -571,6 +574,7 @@ void CC VSchemaDestroy ( VSchema *self )
     BSTreeWhack ( & self -> scope, KSymbolWhack, NULL );
     BSTreeWhack ( & self -> paths, BSTreeMbrWhack, NULL );
     VectorWhack ( & self -> inc, includePathFree, NULL );
+    VectorWhack ( & self -> inc_env, includePathFree, NULL );
     VectorWhack ( & self -> alias, NULL, NULL );
     VectorWhack ( & self -> fmt, SFormatWhack, NULL );
 #if SLVL >= 1
@@ -721,6 +725,7 @@ rc_t VSchemaMake ( VSchema **sp,  const VSchema *dad )
        parameterized types = 0x80000001..0xFFFFFFFF
     */
     VSchemaVectorInit ( schema, dad, inc, 0, 4 );
+    VSchemaVectorInit ( schema, dad, inc_env, 0, 4 );
     VSchemaVectorInit ( schema, dad, alias, 0, 16 );
     VSchemaVectorInit ( schema, dad, fmt, 1, 16 );
     VSchemaVectorInit ( schema, dad, dt, 0, 128 );
@@ -762,6 +767,17 @@ rc_t VSchemaMake ( VSchema **sp,  const VSchema *dad )
         }
     }
 
+    const  char * incl_env = getenv( "VDB_SCHEMA_INCLUDES" );
+    if ( incl_env != NULL )
+    {   // pick up include paths from environment
+        rc_t rc = VSchemaAddIncludePaths_impl( schema, &schema->inc_env, strlen(incl_env), incl_env );
+        if ( rc != 0 )
+        {
+            VSchemaWhack ( schema );
+            * sp = NULL;
+        }
+    }
+
     * sp = schema;
     return 0;
 }
@@ -794,6 +810,7 @@ LIB_EXPORT rc_t CC VSchemaVAddIncludePath ( VSchema *self, const char *path, va_
         temp = string_dup_measure(buffer.base, NULL);
         KDataBufferWhack(&buffer);
     }
+
     if (temp == NULL)
         return RC ( rcVDB, rcString, rcAppending, rcMemory, rcExhausted );
     rc = VectorAppend(&self->inc, NULL, temp);
@@ -814,23 +831,13 @@ LIB_EXPORT rc_t CC VSchemaAddIncludePath ( VSchema *self, const char *path, ... 
     return rc;
 }
 
-/*
- * Add ':' separated paths
- */
-LIB_EXPORT rc_t CC VSchemaAddIncludePaths(VSchema *self, size_t length, const char *paths)
+rc_t
+VSchemaAddIncludePaths_impl(VSchema *self, Vector * inc_list, size_t length, const char *paths)
 {
     rc_t rc = 0;
     char const *const max = paths + length;
     char const *cur;
     char const *end;
-
-    assert(self != NULL);
-    if (self == NULL)
-        return RC ( rcVDB, rcString, rcAppending, rcSelf, rcNull );
-
-    if (paths == NULL || length == 0)
-    	return 0;
-
     for (cur = end = paths; end <= max; ++end) {
         int const ch = end < max ? *end : '\0';
 
@@ -846,7 +853,7 @@ LIB_EXPORT rc_t CC VSchemaAddIncludePaths(VSchema *self, size_t length, const ch
             ((char *)temp)[sz] = 0;
             cur = end + 1;
 
-            rc = VectorAppend(&self->inc, NULL, temp);
+            rc = VectorAppend(inc_list, NULL, temp);
             if (rc) {
                 free(temp);
                 break;
@@ -857,6 +864,20 @@ LIB_EXPORT rc_t CC VSchemaAddIncludePaths(VSchema *self, size_t length, const ch
     }
 
     return rc;
+}
+/*
+ * Add ':' separated paths
+ */
+LIB_EXPORT rc_t CC VSchemaAddIncludePaths(VSchema *self, size_t length, const char *paths)
+{
+    assert(self != NULL);
+    if (self == NULL)
+        return RC ( rcVDB, rcString, rcAppending, rcSelf, rcNull );
+
+    if (paths == NULL || length == 0)
+    	return 0;
+
+    return VSchemaAddIncludePaths_impl( self, &self->inc, length, paths );
 }
 
 
@@ -908,7 +929,6 @@ static
 rc_t
 VSchemaParseTextInt_v2 ( VSchema *self, const char *name, const char *text, size_t bytes )
 {
-    //printf("VSchemaParseTextInt_v2:\n%.*s\n", (int)bytes, text);
     if ( VSchemaParse_v2 ( self, text, bytes ) )
     {
         PARSE_DEBUG( ("Parsed schema v2 from %s\n", name) );
@@ -1061,45 +1081,64 @@ rc_t CC VSchemaTryOpenFile ( const VSchema *self, const KDirectory *dir, const K
     return rc;
 }
 
+static
+rc_t
+OpenFromIncludes( const VSchema *const self, Vector const *const vec, const KFile **fp,
+                    KDirectory const *ndir, char *path, size_t path_max, const char *name, va_list args )
+{
+    uint32_t i = VectorStart(vec);
+    uint32_t const end = i + VectorLength(vec);
+
+    /* Loop over the list of include paths */
+    for ( ; i < end; ++i) {
+        char const *const dirname = VectorGet(vec, i);
+
+        if ( dirname != NULL )
+        {
+            KDirectory const *dir = NULL;
+            rc_t rc = KDirectoryOpenDirRead(ndir, &dir, false, dirname);
+
+            if (rc != 0)
+                continue;
+#if _DEBUGGING
+            PARSE_DEBUG( ("VSchemaOpenFile looking in '%s'\n", dirname ) );
+#endif
+            *fp = NULL;
+            { /* since we are in a loop, it is not safe to pass our copy;
+                * we MUST make a copy and pass that
+                */
+                va_list copy;
+                va_copy(copy, args);
+                rc = VSchemaTryOpenFile(self, dir, fp, path, path_max, name, copy);
+                va_end(copy); /* every va_copy needs a matching va_end */
+            }
+            KDirectoryRelease(dir);
+            if (rc == 0 || GetRCState(rc) != rcNotFound)
+                return rc;
+        }
+    }
+
+    return RC ( rcVDB, rcSchema, rcOpening, rcPath, rcNotFound );
+}
+
 static rc_t VSchemaOpenFile_1 ( const VSchema *const self, const KFile **fp, KDirectory const *ndir,
                          char *path, size_t path_max, const char *name, va_list args )
 {
+    // first, try the environment-specified directories
+    if ( OpenFromIncludes( self, &self->inc_env, fp, ndir, path, path_max, name, args ) == 0 )
+    {
+        return 0;
+    }
+
+    /* Loop over the list of schema objects, try include directories attached to the schema */
     const VSchema *schema = self;
-
-    /* Loop over the list of schema objects */
-    for ( schema = self; schema != NULL; schema = schema -> dad ) {
-        Vector const *const vec = &schema->inc;
-        uint32_t i = VectorStart(vec);
-        uint32_t const end = i + VectorLength(vec);
-
-        /* Loop over the list of include paths */
-        for ( ; i < end; ++i) {
-            char const *const dirname = VectorGet(vec, i);
-
-            if ( dirname != NULL )
-            {
-                KDirectory const *dir = NULL;
-                rc_t rc = KDirectoryOpenDirRead(ndir, &dir, false, dirname);
-
-                if (rc != 0)
-                    continue;
-#if _DEBUGGING
-                PARSE_DEBUG( ("VSchemaOpenFile looking in '%s'\n", dirname ) );
-#endif
-                *fp = NULL;
-                { /* since we are in a loop, it is not safe to pass our copy;
-                   * we MUST make a copy and pass that
-                   */
-                    va_list copy;
-                    va_copy(copy, args);
-                    rc = VSchemaTryOpenFile(self, dir, fp, path, path_max, name, copy);
-                    va_end(copy); /* every va_copy needs a matching va_end */
-                }
-                KDirectoryRelease(dir);
-                if (rc == 0 || GetRCState(rc) != rcNotFound)
-                    return rc;
-            }
+    while ( schema != NULL )
+    {
+        if ( OpenFromIncludes( schema, &schema->inc, fp, ndir, path, path_max, name, args ) == 0 )
+        {
+            return 0;
         }
+        schema = schema -> dad;
     }
 
     return RC ( rcVDB, rcSchema, rcOpening, rcPath, rcNotFound );
