@@ -432,6 +432,9 @@ rc_t CC ArgsHandleAppendMode ( const Args * self );
 bool CC ArgsIsAppendModeSet ( void );
 void CC ArgsAppendModeSet ( bool AppendMode );
 
+/* hash of sra-tools repository used to generate unique version string */
+void SetSraToolsHash ( const char* str );
+
 #ifdef __cplusplus
 }
 #endif

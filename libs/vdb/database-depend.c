@@ -320,7 +320,8 @@ static rc_t CtxInit(Ctx* self, const VDatabase *db) {
             rc = KConfigOpenNodeRead(cfg, &node, "repository");
             if (rc == 0) {
                 OLD = false;
-                LOGMSG(klogInfo, "KConfig(repository) found: using VResolver");
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
+                    ("KConfig(repository) found: using VResolver"));
             }
             else {
                 OLD = true;
