@@ -503,6 +503,7 @@ int64_t CC VIncludedPathSortByOrder ( const BSTNode *item, const BSTNode *n )
  */
 rc_t CC VIncludedPathMake ( BSTree *paths, uint32_t *count, const char *path )
 {
+    PARSE_DEBUG( ( "VIncludedPathMake(%p, %s)\n", (void*)paths, path) );
     VIncludedPath *p = malloc ( sizeof * p + strlen ( path ) );
     if ( p == NULL )
         return RC ( rcVDB, rcSchema, rcParsing, rcMemory, rcExhausted );
@@ -1061,22 +1062,29 @@ rc_t CC VSchemaTryOpenFile ( const VSchema *self, const KDirectory *dir, const K
 
     if ( rc == 0 )
     {
-        PARSE_DEBUG( ("VSchemaTryOpenFile: path = '%s'\n", path) );
+        PARSE_DEBUG( ("VSchemaTryOpenFile(%p): path = '%s' %p count=%u\n", (void*)self, path,  (void*)& self -> paths, self->file_count) );
         /* try to find file in already opened list */
         if ( BSTreeFind ( & self -> paths, path, VIncludedPathCmp ) != NULL )
         {
-            PARSE_DEBUG( ("VSchemaTryOpenFile: '%s' already open\n", path) );
+            PARSE_DEBUG( ("VSchemaTryOpenFile(%p): '%s' already open\n", (void*)self, path) );
             * fp = NULL;
             return 0;
         }
+
+        PARSE_DEBUG( ("VSchemaTryOpenFile(%p): calling VIncludedPathMake(%s)\n", (void*)self, path) );
+        // since this is a form of caching, pretend self is not modified:
+        VSchema *non_const_self = (VSchema *)self;
+        rc = VIncludedPathMake ( & non_const_self -> paths, & non_const_self -> file_count, path );
     }
     else
     {
-        PARSE_DEBUG( ("VSchemaTryOpenFile:  failed\n", path) );
+        PARSE_DEBUG( ("VSchemaTryOpenFile(%p):  failed\n", (void*)self, path) );
     }
 
     if ( rc == 0 )
         rc = KDirectoryOpenFileRead ( dir, fp, "%s", path );
+
+PARSE_DEBUG( ("VSchemaTryOpenFile(%p):  rc=%i\n", (void*)self, rc) );
 
     return rc;
 }
@@ -1101,7 +1109,7 @@ OpenFromIncludes( const VSchema *const self, Vector const *const vec, const KFil
             if (rc != 0)
                 continue;
 #if _DEBUGGING
-            PARSE_DEBUG( ("VSchemaOpenFile looking in '%s'\n", dirname ) );
+            PARSE_DEBUG( ("VSchemaOpenFile(%p) looking in '%s'\n", (void*)self, dirname ) );
 #endif
             *fp = NULL;
             { /* since we are in a loop, it is not safe to pass our copy;
@@ -1158,7 +1166,7 @@ rc_t CC VSchemaOpenFile ( const VSchema *self, const KFile **fp,
         va_copy ( cpy_args, args );
         string_vprintf ( full_name, sizeof( full_name ), &num_writ, name, cpy_args );
         va_end ( cpy_args );
-        PARSE_DEBUG( ("VSchemaOpenFile('%s')\n", full_name) );
+        PARSE_DEBUG( ("VSchemaOpenFile(%p, '%s')\n", (void*)self, full_name) );
     }
 #endif
 
@@ -1220,14 +1228,14 @@ LIB_EXPORT rc_t CC VSchemaVParseFile ( VSchema *self, const char *name, va_list 
                 rc = VSchemaTryOpenFile ( self, wd, & f, path, sizeof path, name, args );
                 if ( rc == 0 )
                 {
-                    PARSE_DEBUG( ("VSchemaTryOpenFile = '%s'\n", path) );
+                    PARSE_DEBUG( ("VSchemaTryOpenFile(%p) = '%s'\n", (void*)self, path) );
                 }
                 KDirectoryRelease ( wd );
             }
         }
         else
         {
-            PARSE_DEBUG( ("VSchemaOpenFile = '%s'\n", path) );
+            PARSE_DEBUG( ("VSchemaOpenFile(%p) = '%s'\n", (void*)self, path) );
         }
 
         /* if the file was opened... */
@@ -1244,12 +1252,8 @@ LIB_EXPORT rc_t CC VSchemaVParseFile ( VSchema *self, const char *name, va_list 
                     rc = KMMapSize ( mm, & size );
                 if ( rc == 0 )
                 {
-                    rc = VIncludedPathMake ( & self -> paths, & self -> file_count, path );
-                    if ( rc == 0 )
-                    {
-                        PARSE_DEBUG( ("VSchemaVParseFile %s\n", path) );
-                        rc = VSchemaParseTextInt ( self, path, addr, size );
-                    }
+                    PARSE_DEBUG( ("VSchemaVParseFile(%p) '%s'\n", (void*)self, path ) );
+                    rc = VSchemaParseTextInt ( self, path, addr, size );
                 }
 
                 KMMapRelease ( mm );
