@@ -779,6 +779,8 @@ rc_t VSchemaMake ( VSchema **sp,  const VSchema *dad )
         }
     }
 
+    schema -> version = SchemaParser_default;
+
     * sp = schema;
     return 0;
 }
@@ -944,29 +946,40 @@ static
 rc_t
 VSchemaParseTextInt ( VSchema *self, const char *name, const char *text, size_t bytes )
 {
-    KConfig * kfg;
-    rc_t rc = KConfigMake ( & kfg, NULL );
-    if ( rc == 0 )
-    {
-        uint8_t version;
-        rc = KConfigGetSchemaParserVersion( kfg , & version );
+    rc_t rc = 0;
+    SchemaParserVersion version = self->version;
+
+    if ( version == SchemaParser_default )
+    {   // retrieve from kfg
+        KConfig * kfg;
+        rc = KConfigMake ( & kfg, NULL );
         if ( rc == 0 )
         {
-            switch (version)
+            uint8_t v;
+            rc = KConfigGetSchemaParserVersion( kfg , & v );
+            if ( rc == 0 )
             {
-            case 1:
-                rc = VSchemaParseTextInt_v1 ( self, name, text, bytes );
-                break;
-            case 2:
-                rc = VSchemaParseTextInt_v2 ( self, name, text, bytes );
-                break;
-            default:
-                rc = RC ( rcVDB, rcSchema, rcParsing, rcFileFormat, rcUnsupported );
-                break;
+                version = (SchemaParserVersion)v;
             }
         }
+        KConfigRelease ( kfg );
     }
-    KConfigRelease ( kfg );
+
+    if ( rc == 0 )
+    {
+        switch (version)
+        {
+        case SchemaParser_v1:
+            rc = VSchemaParseTextInt_v1 ( self, name, text, bytes );
+            break;
+        case SchemaParser_v2:
+            rc = VSchemaParseTextInt_v2 ( self, name, text, bytes );
+            break;
+        default:
+            rc = RC ( rcVDB, rcSchema, rcParsing, rcFileFormat, rcUnsupported );
+            break;
+        }
+    }
     return rc;
 }
 
@@ -2212,3 +2225,10 @@ rc_t SViewMakeKSymbolName(const SView * self, KSymbolName ** out) {
 }
 
 /******************************************************************************/
+
+void
+VSchemaSetParserVersion( VSchema *self, SchemaParserVersion v )
+{
+    assert( self );
+    self -> version = v;
+}

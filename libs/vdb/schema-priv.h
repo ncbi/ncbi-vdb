@@ -238,6 +238,11 @@ rc_t SNameOverloadVectorCopy ( BSTree *scope,
  */
 void CC SNameOverloadWhack ( void *self, void *ignore );
 
+typedef enum {
+    SchemaParser_default = 0,
+    SchemaParser_v1 = 1,
+    SchemaParser_v2 = 2
+} SchemaParserVersion; // if set to SchemaParser_default, use version from kfg
 
 /*--------------------------------------------------------------------------
  * VSchema
@@ -310,6 +315,8 @@ struct VSchema
        for cursor-open binding of
        type and constant expressions */
     uint32_t num_indirect;
+
+    SchemaParserVersion version;
 };
 
 
@@ -1627,6 +1634,8 @@ const struct KSymbol * SViewFindOverride ( const SView * self, const VCtxId * ci
  * Log all errors
  */
 bool VSchemaParse_v2 ( VSchema *self, const char *text, size_t bytes );
+
+void VSchemaSetParserVersion( VSchema *self, SchemaParserVersion v );
 
 #ifdef __cplusplus
 }

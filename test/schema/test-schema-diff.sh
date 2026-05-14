@@ -2,13 +2,13 @@
 
 test_schema_diff=$1
 TOP=$2
-OBJDIR=$3
+WORKDIR=$3
 
 echo Starting Schema Diff test
 
-mkdir -p $OBJDIR/data
+mkdir -p $WORKDIR/data
 
-output=$(VDB_CONFIG=local.kfg $test_schema_diff -I$TOP/interfaces -o$OBJDIR/data \
+output=$(VDB_CONFIG=local.kfg $test_schema_diff -I$TOP/interfaces -o$WORKDIR/data \
 	$TOP/interfaces/vdb/built-in.vschema \
 	$TOP/interfaces/vdb/vdb.vschema \
 )
@@ -19,5 +19,3 @@ if [ "$res" != "0" ];
 fi
 
 echo Schema Diff test is finished
-
-
