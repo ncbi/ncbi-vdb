@@ -174,7 +174,7 @@ rc_t ByteCode_ProductionReadBlob ( struct VProduction * self, struct ByteCodeCon
 
 rc_t ByteCode_Pre_ProductionReadBlob ( struct VProduction * self, struct ByteCodeContext * ctx )
 {
-    int i;
+    uint32_t i;
 
     ctx -> result = NULL;
 
