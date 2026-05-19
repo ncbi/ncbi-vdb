@@ -74,7 +74,7 @@ DumpSchema ( const VSchema * p_schema, ostream & p_out )
 
 int main ( int argc, char *argv [] )
 {
-    VDB::Application( argc, argv );
+    VDB::Application app( argc, argv );
 
     int failed = 0;
     if ( argc < 2 )
@@ -116,8 +116,6 @@ int main ( int argc, char *argv [] )
                         outputDir = arg + 2;
                         outputDir += "/";
                         break;
-                    case '+':
-                        break;
                     default:
                         cout << "Unknown option " << arg << endl;
                         break;
@@ -144,24 +142,24 @@ int main ( int argc, char *argv [] )
             bool compare = true;
 
             // old parser
-            {
-                VSchema * schema;
-                if ( VDBManagerMakeSchema ( vdb, & schema ) != 0 )
-                {
-                    throw runtime_error ( "VDBManagerMakeSchema failed" );
-                }
-                VSchemaSetParserVersion( schema, SchemaParser_v1 );
-                if ( VSchemaParseFile ( schema, "%s", arg ) != 0 )
-                {
-                    throw runtime_error ( "VSchemaParseFile (v1) failed" );
-                }
+            // {
+            //     VSchema * schema;
+            //     if ( VDBManagerMakeSchema ( vdb, & schema ) != 0 )
+            //     {
+            //         throw runtime_error ( "VDBManagerMakeSchema failed" );
+            //     }
+            //     VSchemaSetParserVersion( schema, SchemaParser_v1 );
+            //     if ( VSchemaParseFile ( schema, "%s", arg ) != 0 )
+            //     {
+            //         throw runtime_error ( string(arg) + ": VSchemaParseFile (v1) failed" );
+            //     }
 
-                ostringstream out;
-                DumpSchema ( schema, out );
-                oldSchemaStr = out . str ();
+            //     ostringstream out;
+            //     DumpSchema ( schema, out );
+            //     oldSchemaStr = out . str ();
 
-                VSchemaRelease ( schema );
-            }
+            //     VSchemaRelease ( schema );
+            // }
 
             // new parser
             {
@@ -173,39 +171,39 @@ int main ( int argc, char *argv [] )
                 VSchemaSetParserVersion( schema, SchemaParser_v2 );
                 if ( VSchemaParseFile ( schema, "%s", arg ) != 0 )
                 {
-                    throw runtime_error ( "VSchemaParseFile (v2) failed" );
+                    throw runtime_error ( string(arg) + ": VSchemaParseFile (v2) failed" );
                 }
 
                 ostringstream out;
                 DumpSchema ( schema, out );
-                oldSchemaStr = out . str ();
+                newSchemaStr = out . str ();
 
                 VSchemaRelease ( schema );
             }
 
-            if ( compare )
-            {
-                if ( oldSchemaStr != newSchemaStr )
-                {
-                    string filename = arg;
-                    replace ( filename . begin (), filename . end (), '/', '_' );
+            // if ( compare )
+            // {
+            //     if ( oldSchemaStr != newSchemaStr )
+            //     {
+            //         string filename = arg;
+            //         replace ( filename . begin (), filename . end (), '/', '_' );
 
-                    ofstream oldfile ( ( outputDir + filename + ".old" ) . c_str () );
-                    oldfile << oldSchemaStr;
-                    oldfile . close();
+            //         ofstream oldfile ( ( outputDir + filename + ".old" ) . c_str () );
+            //         oldfile << oldSchemaStr;
+            //         oldfile . close();
 
-                    ofstream newfile ( ( outputDir + filename + ".new" ) . c_str () );
-                    newfile << newSchemaStr;
-                    newfile . close();
+            //         ofstream newfile ( ( outputDir + filename + ".new" ) . c_str () );
+            //         newfile << newSchemaStr;
+            //         newfile . close();
 
-                    cout << " ... schema dump mismatch, see " << filename << ".old/.new" << endl;
-                    ++ failed;
-                }
-                else
-                {
-                    cout << " ... OK" << endl;
-                }
-            }
+            //         cout << " ... schema dump mismatch, see " << filename << ".old/.new" << endl;
+            //         ++ failed;
+            //     }
+            //     else
+            //     {
+            //         cout << " ... OK" << endl;
+            //     }
+            // }
 
             VPathRelease ( path );
             VFSManagerRelease ( vfs );
