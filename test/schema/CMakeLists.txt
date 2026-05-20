@@ -48,6 +48,9 @@ if( SINGLE_CONFIG )
 
     BuildExecutableForTest( Test_SCHEMA_schema-diff "test-schema-diff" "${LIBS}" )
     add_test( NAME Test_SCHEMA_schema-diff COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/test-schema-diff.sh ${CMAKE_TEST_OUTPUT_DIRECTORY}/Test_SCHEMA_schema-diff ${CMAKE_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR} WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
+
+    BuildExecutableForTest( Test_SCHEMA_schema-parse-and-dump "parse-and-dump" "${LIBS}" )
+
 endif()
 
 # Test_SCHEMA_454_db and Test_SCHEMA_IonTorrent_db moved to sra-tools/test/schema because of their dependemcy on the SRA schema. VDB-4792

@@ -771,6 +771,7 @@ rc_t VSchemaMake ( VSchema **sp,  const VSchema *dad )
     const  char * incl_env = getenv( "VDB_SCHEMA_INCLUDES" );
     if ( incl_env != NULL )
     {   // pick up include paths from environment
+printf("VSchemaAddIncludePaths_impl(%p) ENV\n", (void*)schema);
         rc_t rc = VSchemaAddIncludePaths_impl( schema, &schema->inc_env, strlen(incl_env), incl_env );
         if ( rc != 0 )
         {
@@ -792,7 +793,7 @@ rc_t VSchemaMake ( VSchema **sp,  const VSchema *dad )
 LIB_EXPORT rc_t CC VSchemaVAddIncludePath ( VSchema *self, const char *path, va_list args )
 {
     rc_t rc = -1;
-    void *temp = NULL;
+    char *temp = NULL;
 
     assert(self != NULL);
     if (self == NULL)
@@ -816,6 +817,7 @@ LIB_EXPORT rc_t CC VSchemaVAddIncludePath ( VSchema *self, const char *path, va_
 
     if (temp == NULL)
         return RC ( rcVDB, rcString, rcAppending, rcMemory, rcExhausted );
+printf("VSchemaVAddIncludePath(%p, %s)\n", (void*)self, temp);
     rc = VectorAppend(&self->inc, NULL, temp);
     if (rc)
         free(temp);
@@ -856,9 +858,9 @@ VSchemaAddIncludePaths_impl(VSchema *self, Vector * inc_list, size_t length, con
             ((char *)temp)[sz] = 0;
             cur = end + 1;
 
-            rc = VectorAppend(inc_list, NULL, temp);
+            rc = VSchemaAddIncludePath ( self, temp );
+            free(temp);
             if (rc) {
-                free(temp);
                 break;
             }
             if (ch == '\0')
@@ -880,6 +882,7 @@ LIB_EXPORT rc_t CC VSchemaAddIncludePaths(VSchema *self, size_t length, const ch
     if (paths == NULL || length == 0)
     	return 0;
 
+printf("VSchemaAddIncludePaths_impl(%p) -I\n", (void*)self);
     return VSchemaAddIncludePaths_impl( self, &self->inc, length, paths );
 }
 
