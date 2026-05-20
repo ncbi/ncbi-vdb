@@ -31,8 +31,13 @@
 #include <klib/defs.h>
 #endif
 
-#include <time.h>
+#ifndef _h_klib_text_
+#include <klib/text.h>
+#endif
+
+#include <arpa/inet.h>
 #include <sys/time.h>
+#include <time.h>
 
 #ifdef __cplusplus
 extern "C" {
