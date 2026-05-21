@@ -410,11 +410,17 @@ rc_t VPhysicalReadKColumn ( VPhysical *self, VBlob **vblob, int64_t id, uint32_t
         if ( rc == 0 )
         {
             /* get blob size */
-            size_t num_read, remaining;
+            size_t num_read = 0, remaining = 0;
 
 #if BLOB_VALIDATION
             KDataBuffer whole_blob;
             KColumnBlobCSData cs_data;
+            whole_blob.base = NULL;
+            whole_blob.ignore = NULL;
+            whole_blob.bit_offset = 0;
+            whole_blob.elem_bits = 0;
+            whole_blob.elem_count = 0;
+
             bool validate_this_blob = VCursorGetTable ( self -> curs ) -> blob_validation;
 
             if ( rc == 0 && validate_this_blob )
@@ -437,6 +443,11 @@ rc_t VPhysicalReadKColumn ( VPhysical *self, VBlob **vblob, int64_t id, uint32_t
 
             {
                 KDataBuffer buffer;
+                buffer.base = NULL;
+                buffer.ignore = NULL;
+                buffer.bit_offset = 0;
+                buffer.elem_bits = 0;
+                buffer.elem_count = 0;
 
                 /* fabricate "stop_id" */
                 int64_t stop_id = start_id + count - 1;
@@ -543,7 +554,7 @@ rc_t VPhysicalReadStatic ( VPhysical *self, VBlob **vblob, int64_t id, uint32_t 
             rc = KMDataNodeAddr ( row, & base, & bytes );
             if ( rc == 0 )
             {
-                uint64_t row_bits;
+                uint64_t row_bits = 0;
 
                 /* if there's a "size" node, read size in bits */
                 const KMDataNode *size;
@@ -576,7 +587,7 @@ rc_t VPhysicalReadStatic ( VPhysical *self, VBlob **vblob, int64_t id, uint32_t 
 
                         /* copy out single row */
                         memmove ( buffer . base, base, bytes );
-                        self->fixed_len = buffer.elem_count;
+                        self->fixed_len = (uint32_t)buffer.elem_count;
 
                         /* limit row range */
                         if ( ( ( sstop_id - sstart_id ) >> 30 ) != 0 )

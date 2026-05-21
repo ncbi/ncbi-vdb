@@ -141,7 +141,7 @@ rc_t CC VBlobCreateMerged( VBlob **lhs, uint32_t num_inputs, const VBlob *input[
         for (i = 0; rc == 0 && i != n; ++i) {
             rc = PageMapSerialize(pm[i], &buffer, bsize, &sz);
             VBlobHeaderArgPushTail(hdr, sz);
-            bsize += sz;
+            bsize += (uint32_t)sz;
         }
         free(pm);
     }
@@ -150,7 +150,7 @@ rc_t CC VBlobCreateMerged( VBlob **lhs, uint32_t num_inputs, const VBlob *input[
         if (input[i]->headers) {
             rc = BlobHeadersSerialize(input[i]->headers, &buffer, bsize, &sz);
             VBlobHeaderArgPushTail(hdr, sz);
-            bsize += sz;
+            bsize += (uint32_t)sz;
         }
         else
             VBlobHeaderArgPushTail(hdr, 0);
@@ -166,7 +166,7 @@ rc_t CC VBlobCreateMerged( VBlob **lhs, uint32_t num_inputs, const VBlob *input[
             rc = KDataBufferResize(&buffer, bsize + sz);
             if (rc == 0) {
                 memmove((uint8_t *)buffer.base + bsize, o->data.base, sz);
-                bsize += sz;
+                bsize += (uint32_t)sz;
             }
         }
     }

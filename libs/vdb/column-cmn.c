@@ -75,14 +75,14 @@ void VColumnDestroy ( VColumn *self )
 int CC VColumnCmp ( const void *item, const void *n )
 {
     const VColumn *b = n;
-    return SColumnSort ( item, b -> scol );
+    return (int) SColumnSort ( item, b -> scol );
 }
 
 int CC VColumnSort ( const void *item, const void *n )
 {
     const VColumn *a = item;
     const VColumn *b = n;
-    return SColumnSort ( a -> scol, b -> scol );
+    return (int) SColumnSort ( a -> scol, b -> scol );
 }
 
 

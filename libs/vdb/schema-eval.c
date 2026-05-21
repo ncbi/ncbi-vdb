@@ -830,7 +830,7 @@ LIB_EXPORT rc_t CC eval_text_expr ( const VSchema *self, const VTypedecl *td,
 
     /* create output object */
     {
-	unsigned int alloc_size;
+	size_t alloc_size;
 
 	alloc_size=size;
 	if(alloc_size < sizeof(x->u)){ /** don't go below size of union ***/
@@ -1047,7 +1047,7 @@ rc_t eval_type_expr ( const VSchema *self, const VTypedecl *td,
     const STypeExpr *expr, SExpression **xp )
 {
     PLOGMSG( klogWarn, ( klogWarn, "TDB: $(msg)", "msg=handle type expression" ));
-    return -1;
+    return (rc_t)-1;
 }
 
 /* eval-indirect-expr
@@ -1081,7 +1081,7 @@ rc_t eval_const_cast_expr ( const VSchema *self, const VTypedecl *td,
     const SExpression *expr, SExpression **xp )
 {
     PLOGMSG( klogWarn, ( klogWarn, "TDB: $(msg)", "msg=handle const cast expression" ));
-    return -1;
+    return (rc_t)-1;
 }
 
 
@@ -1092,7 +1092,7 @@ rc_t eval_func_param_expr ( const VSchema *self, const VTypedecl *td,
     const SExpression *expr, SExpression **xp )
 {
     PLOGMSG( klogWarn, ( klogWarn, "TDB: $(msg)", "msg=handle function expression" ));
-    return -1;
+    return (rc_t)-1;
 }
 
 struct eval_vector_param_expr_pb
@@ -1297,7 +1297,7 @@ rc_t eval_uint64_expr ( const VSchema *self,
     uint64_t U64_id = VSchemaCacheIntrinsicTypeId ( self, & s_U64_id, "U64" );
 
     /* evaluate expression against type */
-    td . type_id = U64_id;
+    td . type_id = (uint32_t)U64_id;
     td . dim = 1;
     rc = eval_const_expr ( self, & td, expr, ( SExpression** ) & x, cx_bind );
     if ( rc != 0 )

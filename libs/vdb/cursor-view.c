@@ -1058,7 +1058,7 @@ VViewCursorReadBits ( const VViewCursor *    p_self,
         case vcReady:
             return RC ( rcVDB, rcCursor, rcReading, rcRow, rcNotOpen );
         case vcRowOpen:
-            return VViewCursorReadBitsInt ( p_self, p_self -> dad . row_id, p_col_idx, p_elem_bits, p_start, p_buffer, p_off, p_blen, p_num_read, p_remaining);
+            return VViewCursorReadBitsInt ( p_self, (uint32_t)p_self -> dad . row_id, p_col_idx, p_elem_bits, p_start, p_buffer, p_off, p_blen, p_num_read, p_remaining);
         default:
             return RC ( rcVDB, rcCursor, rcReading, rcCursor, rcInvalid );
         }
@@ -1097,7 +1097,7 @@ VViewCursorReadBitsDirect ( const VViewCursor *    p_self,
             return RC ( rcVDB, rcCursor, rcReading, rcCursor, rcNotOpen );
         case vcReady:
         case vcRowOpen:
-            return VViewCursorReadBitsInt ( p_self, p_row_id, p_col_idx, p_elem_bits, p_start, p_buffer, p_off, p_blen, p_num_read, p_remaining);
+            return VViewCursorReadBitsInt ( p_self, (uint32_t)p_row_id, p_col_idx, p_elem_bits, p_start, p_buffer, p_off, p_blen, p_num_read, p_remaining);
         default:
             return RC ( rcVDB, rcCursor, rcReading, rcCursor, rcInvalid );
         }

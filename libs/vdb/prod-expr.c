@@ -567,8 +567,8 @@ rc_t CC VProdResolveCapture ( void *data, const void *buffer, size_t size )
 {
     if ( xsz + size >= sizeof xbuffer )
     {
-        LOGERR (klogFatal, -1, "( xsz + size >= sizeof xbuffer )");
-        return -1;
+        LOGERR (klogFatal, (rc_t)-1, "( xsz + size >= sizeof xbuffer )");
+        return (rc_t)-1;
     }
     memmove ( & xbuffer [ xsz ], buffer, size );
     xsz += size;

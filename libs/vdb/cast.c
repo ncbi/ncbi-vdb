@@ -320,11 +320,11 @@ rc_t convert_int ( const void *src, void *dst )
 
 static
 rc_t convert_int_float ( const void *src, void *dst )
-{ * ( double* ) dst = * ( const int64_t* ) src; return 0; }
+{ * ( double* ) dst = ( double ) * ( const int64_t* ) src; return 0; }
 
 static
 rc_t convert_uint_float ( const void *src, void *dst )
-{ * ( double* ) dst = * ( const uint64_t* ) src; return 0; }
+{ * ( double* ) dst = ( double ) * ( const uint64_t* ) src; return 0; }
 
 static
 rc_t convert_float_int ( const void *src, void *dst )

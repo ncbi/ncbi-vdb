@@ -570,7 +570,7 @@ LIB_EXPORT rc_t CC VTableVOpenIndexRead ( const VTable *self,
     struct KIndex const **idx, const char *name, va_list args )
 {
     rc_t rc;
-    KIdxType type;
+    KIdxType type = 0;
     uint32_t version;
     const KMDataNode *node;
 
@@ -701,7 +701,7 @@ rc_t make_column_namelist ( const BSTree *columns, KNamelist **names )
 
 LIB_EXPORT rc_t CC VTableListReadableColumns ( const VTable *self, KNamelist **names )
 {
-    rc_t rc;
+    rc_t rc = 0;
 
     if ( names == NULL )
         rc = RC ( rcVDB, rcTable, rcListing, rcParam, rcNull );
@@ -886,7 +886,7 @@ rc_t make_column_typelist ( const BSTree *columns,
 LIB_EXPORT rc_t CC VTableListReadableDatatypes ( const VTable *self,
     const char *col, uint32_t *dflt_idx, KNamelist **typedecls )
 {
-    rc_t rc;
+    rc_t rc = 0;
 
     uint32_t dummy;
     if ( dflt_idx == NULL )
@@ -1253,7 +1253,11 @@ rc_t VColumnRefMake ( VColumnRef **rp, const VSchema *schema, const SColumn *sco
             rc = RC ( rcVDB, rcTable, rcListing, rcMemory, rcExhausted );
         else
         {
+#ifdef WINDOWS
+            strcpy_s ( cref -> typedecl, tdsize + 1, text );
+#else
             strcpy ( cref -> typedecl, text );
+#endif
             string_copy ( & cref -> typedecl [ tdsize + 1 ], name -> size + 1, name -> addr, name -> size );
             StringInit ( & cref -> name, & cref -> typedecl [ tdsize + 1 ], name -> size, name -> len );
             cref -> td = scol -> td;

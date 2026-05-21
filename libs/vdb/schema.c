@@ -345,7 +345,7 @@ rc_t CC KMDataNodeFillSchema ( void *data, KTokenText *tt, size_t save )
     {
     /******** PROTECT FROM BUGS IN TOKENIZER ****/
     if(num_read == sizeof (pb -> buff) - save){ /** not the last chunk ***/
-        int i;
+        size_t i;
         for(i=num_read+save-1;i > save && (isalnum(pb -> buff[i]) || pb -> buff[i]=='_');i--){}
         if(i > save && pb -> buff[i]=='.'){ /*** leave this physical column for the next buffer **/
             num_read=i-save;
@@ -500,11 +500,16 @@ int64_t CC VIncludedPathSortByOrder ( const BSTNode *item, const BSTNode *n )
  */
 rc_t CC VIncludedPathMake ( BSTree *paths, uint32_t *count, const char *path )
 {
-    VIncludedPath *p = malloc ( sizeof * p + strlen ( path ) );
+    size_t path_len = strlen ( path );
+    VIncludedPath *p = malloc ( sizeof * p + path_len );
     if ( p == NULL )
         return RC ( rcVDB, rcSchema, rcParsing, rcMemory, rcExhausted );
     p -> ord = ( * count ) ++;
+#ifdef WINDOWS
+    strcpy_s ( p -> path, path_len + 1, path );
+#else
     strcpy ( p -> path, path );
+#endif
     BSTreeInsert ( paths, & p -> n, VIncludedPathSort );
     return 0;
 }
@@ -772,7 +777,7 @@ rc_t VSchemaMake ( VSchema **sp,  const VSchema *dad )
  */
 LIB_EXPORT rc_t CC VSchemaVAddIncludePath ( VSchema *self, const char *path, va_list args )
 {
-    rc_t rc = -1;
+    rc_t rc = (rc_t)-1;
     void *temp = NULL;
 
     assert(self != NULL);
@@ -1109,7 +1114,7 @@ rc_t CC VSchemaOpenFile ( const VSchema *self, const KFile **fp,
     char *path, size_t path_max, const char *name, va_list args )
 {
     KDirectory *ndir = NULL;
-    rc_t rc = -1;
+    rc_t rc = (rc_t)-1;
 
 #if _DEBUGGING
     {
@@ -1198,7 +1203,7 @@ LIB_EXPORT rc_t CC VSchemaVParseFile ( VSchema *self, const char *name, va_list 
             rc = KMMapMakeRead ( & mm, f );
             if ( rc == 0 )
             {
-                size_t size;
+                size_t size = 0;
                 const void *addr;
                 rc = KMMapAddrRead ( mm, & addr );
                 if ( rc == 0 )
@@ -1615,7 +1620,7 @@ rc_t VSchemaRuntimeTablePrint ( VSchemaRuntimeTable *self, const char *fmt, ... 
     status = vsnprintf ( & buffer [ self -> bytes ], bsize, fmt, args );
     va_end ( args );
 
-    if ( status < 0 || status >= bsize )
+    if ( status < 0 || status >= (int)bsize )
         return RC ( rcVDB, rcSchema, rcConstructing, rcParam, rcExcessive );
 
     self -> bytes += status;
