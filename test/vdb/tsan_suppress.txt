@@ -57,8 +57,5 @@ race:VResolverRemoteResolve
 race:ncbi::SchemaParser::ASTBuilder::Build
 race:ncbi::SchemaParser::SchemaParser::ParseString
 
-race:readNormalIncomplete
-race:rowIsLoaded
-
 race:tlsg_init_certs
 race:tlsg_seed_rng

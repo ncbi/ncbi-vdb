@@ -248,6 +248,7 @@ static unsigned readNormalIncomplete(Object const *self, uint8_t *const dst, uns
             return 0;
         }
         for (row = first; row <= last && rc == 0; ++row) {
+            KLockAcquire(async->mutex);
             ++async->hits;
             if (rowIsLoaded(async, row)) {
                 getBases_2na(buf, rowToPosition(async, row), async->max_seq_len, self->bases, &self->Ns);
@@ -256,12 +257,11 @@ static unsigned readNormalIncomplete(Object const *self, uint8_t *const dst, uns
                 ReadStringResult read = { NULL, 0 };
 
                 memset(buf, 15, async->max_seq_len);
-                KLockAcquire(async->mutex);
                 ++async->miss;
                 if (readString(&read, &async->car[1], row, async->curs, &rc) != NULL) {
                     memmove(buf, read.value, read.length);
                 }
-                KLockUnlock(async->mutex);
+
                 {
                     unsigned i;
                     for (i = 0; i < read.length; ++i) {
@@ -278,6 +278,7 @@ static unsigned readNormalIncomplete(Object const *self, uint8_t *const dst, uns
                 }
             }
             buf += async->max_seq_len;
+            KLockUnlock(async->mutex);
         }
         if (buffer != dst) {
             unsigned const offset = start - rowToPosition(async, first);
@@ -402,7 +403,9 @@ static rc_t runLoadThread(Object *self)
     self->async = NULL;
     atomic_dec(&self->rwl); /* state is updated; readers continue to line 448 */
     if (rc == 0 && i == count) {
+        KLockAcquire(async->mutex);
         double const pct = 100.0 * (async->hits - async->miss) / async->hits;
+        KLockUnlock(async->mutex);
 
         PLOGMSG(klogDebug, (klogDebug, "Done with background loading of reference; preload was $(pct)%", "pct=%5.1f", (float)pct));
     }
