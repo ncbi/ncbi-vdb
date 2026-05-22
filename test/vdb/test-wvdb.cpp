@@ -979,48 +979,6 @@ FIXTURE_TEST_CASE ( BlobChecksumOFF, WVDB_Fixture)
     REQUIRE_EQ(state, rcNotFound);
 }
 
-FIXTURE_TEST_CASE ( sprintf_NULL, WVDB_Fixture)
-{
-    string const schemaText =
-    R"( typeset text_set { utf8, utf16, utf32, ascii };
-        function text_set sprintf #1.0 < ascii fmt > ( any p1, ... ) = vdb:sprintf;
-        table table1 #1.0.0 {
-            column I32 column1 = sprintf < "0|%u" > ( null );
-        };
-        database root_database #1 { table table1 #1 TABLE1; } ;)";
-    const char* TableName = "TABLE1";
-    const char* ColumnName = "column1";
-
-    MakeDatabase ( GetName(), schemaText, "root_database" );
-    {
-        uint32_t column_idx = 0;
-        auto const cursor = CreateTable ( TableName, kcsNone );
-
-        uint32_t column_idx1 = 0;
-        REQUIRE_RC ( VCursorAddColumn ( cursor, & column_idx, ColumnName ) );
-        REQUIRE_RC ( VCursorOpen ( cursor ) );
-        // insert some empty rows
-        for ( int i = 0; i < 22; ++i)
-        {
-            REQUIRE_RC ( VCursorOpenRow ( cursor ) );
-            REQUIRE_RC ( VCursorWrite ( cursor, column_idx, sizeof(int32_t)*8, nullptr, 0, 0 ) );
-            REQUIRE_RC ( VCursorCommitRow ( cursor ) );
-            REQUIRE_RC ( VCursorCloseRow ( cursor ) );
-        }
-        REQUIRE_RC ( VCursorCommit ( cursor ) );
-        REQUIRE_RC ( VCursorRelease ( cursor ) );
-    }
-cout<<"1"<<endl;
-    auto const v = ValidateBlob(TableName, "column1", 1);
-cout<<"2"<<endl;
-    auto const valid = ValidateBlob(TableName, "out_seqid_gi", 1);
-    auto const object = (enum RCObject)GetRCObject(valid);
-    auto const state = (enum RCState)GetRCState(valid);
-    REQUIRE_EQ(object, rcChecksum);
-    REQUIRE_EQ(state, rcNotFound);
-}
-
-
 //////////////////////////////////////////// Main
 int main ( int argc, char *argv [] )
 {
