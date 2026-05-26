@@ -84,7 +84,7 @@ static void BSTItemWhack ( BSTNode * n, void * ignore ) {
 }
 
 static int64_t CC BSTItemCmp ( const void * item, const BSTNode * n ) {
-    const String * s = item;
+    const String * s = (String*)item;
     const BSTItem * i = ( BSTItem * ) n;
 
     assert ( s && i );
@@ -191,7 +191,7 @@ static rc_t HResolver(H * self, const KService * service,
             rc = KServiceGetResolver(self->service, ticket, resolver);
             if (rc == 0 && *resolver != NULL) {
                 found = true;
-                i = calloc(1, sizeof * i);
+                i = (BSTItem*)calloc(1, sizeof * i);
                 if (i == NULL)
                     return RC(rcVFS, rcStorage, rcAllocating,
                         rcMemory, rcExhausted);
@@ -229,7 +229,7 @@ static rc_t HResolver(H * self, const KService * service,
                 rc = 0;
             else if (*resolver != NULL) {
                 found = true;
-                i = calloc(1, sizeof * i);
+                i = (BSTItem*)calloc(1, sizeof * i);
                 if (i == NULL)
                     return RC(rcVFS, rcStorage, rcAllocating,
                         rcMemory, rcExhausted);
@@ -611,7 +611,7 @@ static void _StringFixSrrWithVersion(String * self) {
     self->size = self->len = dot;
 }
 
-static rc_t _VPathGetId ( const VPath * self, const String ** newId,
+rc_t _VPathGetId ( const VPath * self, const String ** newId,
                           String * oldId, const VFSManager * mgr )
 {
     rc_t rc = 0;
@@ -626,7 +626,8 @@ static rc_t _VPathGetId ( const VPath * self, const String ** newId,
 
     bool replace = true;
 
-    assert ( newId && oldId );
+    if (newId == NULL || oldId == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcParam, rcNull);
 
     * newId = NULL;
 
@@ -674,6 +675,8 @@ static rc_t _VPathGetId ( const VPath * self, const String ** newId,
 
                 rc = VPathGetScheme ( self, & scheme );
                 if ( rc == 0 ) {
+                    const char* question = NULL;
+
                     if ( StringEqual ( & scheme, & fasp ) )
                         scol = string_rchr ( start, size, ':' );
                     if ( slash != NULL )
@@ -681,7 +684,20 @@ static rc_t _VPathGetId ( const VPath * self, const String ** newId,
                     if ( scol != NULL && scol > start )
                         start = scol + 1;
 
-                    rc = VFSManagerMakePath ( mgr, & acc_or_oid,
+                    /* check for query in URL */
+                    question = string_chr(start, end - start, '?');
+                    if (question != NULL) {
+                        end = question;
+
+                        /* no path after host */
+                        if (start == end      /* host followed by /? */
+                            || *start == '?') /* host followed by /?query */
+                            rc = VFSManagerMakePath(mgr, &acc_or_oid,
+                                "ncbi-file:index.html");
+                    }
+
+                    if (acc_or_oid == NULL)
+                      rc = VFSManagerMakePath ( mgr, & acc_or_oid,
                         "%.*s", ( uint32_t ) ( end - start ), start );
                 }
             }
