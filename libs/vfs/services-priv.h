@@ -234,6 +234,11 @@ rc_t VFSManagerSetCachedKSrvResponse
 rc_t VFSManagerGetCachedKSrvResponse
 (const struct VFSManager * self, const char * id, const KSrvResponse ** resp);
 
+/******************************************************************************/
+/* exposed internal function for testing */
+rc_t _VPathGetId(const VPath* self, const String** newId,
+    String* oldId, const struct VFSManager* mgr);
+
 #ifdef __cplusplus
 }
 #endif
