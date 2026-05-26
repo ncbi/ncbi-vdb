@@ -394,9 +394,8 @@ static rc_t make_initial_test (  int32_t *field_width, int32_t *precision,
     return rc;
 }
 
-TEST_CASE( BiigPrintfTest )
+TEST_CASE( FormatWidthPrecision )
 {
-    rc_t rc = 0;
     int32_t i;
 
     int32_t field_width [ ] = { 2, 5, 9, 10, -2 };
@@ -473,123 +472,125 @@ TEST_CASE( BiigPrintfTest )
         REQUIRE_RC( make_initial_test ( field_width, precision, " ", "s", "\"`~!@#$%^&*()-_=+[]{}|\\';:?/.,<>" ) );
 
     }
+}
 
-    /* hand written tests */
+/* hand written tests */
 
-    {
+TEST_CASE( FormatSignedInt )
+{
 
-        int8_t t [ ] = { -128, -67, 0, 4, 56, 100, 127 };
-        int16_t h  [ ] = { -32768, -2546, -398, -89, 0, 34, 123, 5736, 32767 };
-        int32_t v [ ] = { -2147483648, -45287957, -100001, 45, 0, 106, 7234, 546963874, 2147483647 };
+    int8_t t [ ] = { -128, -67, 0, 4, 56, 100, 127 };
+    int16_t h  [ ] = { -32768, -2546, -398, -89, 0, 34, 123, 5736, 32767 };
+    int32_t v [ ] = { -2147483648, -45287957, -100001, 45, 0, 106, 7234, 546963874, 2147483647 };
 
-        /*** naked integer literals have type "int" in C, meaning they
-             can't be more than 32 bits. By adding "L" to the end of the
-             literal numeral, the compiler will read them as "long int",
-             which is in fact 64 bits on this machine. on a 32-bit machine,
-             you need type "long long int".
+    /*** naked integer literals have type "int" in C, meaning they
+         can't be more than 32 bits. By adding "L" to the end of the
+            literal numeral, the compiler will read them as "long int",
+            which is in fact 64 bits on this machine. on a 32-bit machine,
+            you need type "long long int".
 
-             you can make use of a pre-processor symbol to do this properly - I'll do it below.
-             */
-        int64_t l [ ] = { INT64_C(-9223372036854775807) - INT64_C(1), INT64_C(-67283678467328376), INT64_C(-2837640198), INT64_C(0),  INT64_C(187267509872), INT64_C(9223372036854775807) };
+            you can make use of a pre-processor symbol to do this properly - I'll do it below.
+            */
+    int64_t l [ ] = { INT64_C(-9223372036854775807) - INT64_C(1), INT64_C(-67283678467328376), INT64_C(-2837640198), INT64_C(0),  INT64_C(187267509872), INT64_C(9223372036854775807) };
 
-        /* d, i */
+    /* d, i */
 
-        /* 8 bit */
-        REQUIRE_RC( test_printf ( "-000128", "%07:0td", t ) );
-        REQUIRE_RC( test_printf ( "  -67"  , "%5:1td", t ) );
-        REQUIRE_RC( test_printf ( "0"      , "%:2td", t ) );
-        REQUIRE_RC( test_printf ( "4    "  , "%-5:3td", t ) );
-        REQUIRE_RC( test_printf ( " 56"    , "% .1:4td", t ) );
-        REQUIRE_RC( test_printf ( "100 "   , "%-4.2:5td", t ) );
-        REQUIRE_RC( test_printf ( "127  "  , "%-05:6td", t ) );
-        /* 16 bit */
-        REQUIRE_RC( test_printf ( "-32768"    , "%.2:0hd", h ) );
-        REQUIRE_RC( test_printf ( "-2546  "   , "%-07:1hd", h ) );
-        REQUIRE_RC( test_printf ( "-398"      , "% :2hd", h ) );
-        REQUIRE_RC( test_printf ( "-0089"     , "%05:3hd", h ) );
-        REQUIRE_RC( test_printf ( "0000"      , "%04:4hd", h ) );
-        REQUIRE_RC( test_printf ( "+34"       , "%+:5hd", h ) );
-        REQUIRE_RC( test_printf ( "+0123"     , "% +05:6hd", h ) );
-        REQUIRE_RC( test_printf ( "5736 "     , "%-05:7hd", h ) );
-        REQUIRE_RC( test_printf ( "     32767", "%10:8hd", h ) );
-        /* 32 bit */
-        REQUIRE_RC( test_printf ( "-2,147,483,648", "%,:0d", v ) );
-        REQUIRE_RC( test_printf ( "-0045287957"   , "%011:1d", v ) );
-        REQUIRE_RC( test_printf ( "-100001 "      , "%-8:2d", v ) );
-        REQUIRE_RC( test_printf ( "45"            , "%0:3d", v ) );
-        REQUIRE_RC( test_printf ( "0"             , "%,:4d", v ) );
-        REQUIRE_RC( test_printf ( "106"           , "%:5d", v ) );
-        REQUIRE_RC( test_printf ( "0,007,234"     , "%,09:6d", v ) );
-        REQUIRE_RC( test_printf ( "546963874"     , "%.3:7d", v ) );
-        REQUIRE_RC( test_printf ( "2147483647"    , "%10:8d", v ) );
-        /* 64 bit */
-        REQUIRE_RC( test_printf ( "-9223372036854775808"    , "%:0ld", l ) );
-        REQUIRE_RC( test_printf ( "-67,283,678,467,328,376" , "%,:1ld", l ) );
-        REQUIRE_RC( test_printf ( "-2837640198         "    , "%-20:2ld", l ) );
-        REQUIRE_RC( test_printf ( "+0"                      , "%+:3ld", l ) );
-        REQUIRE_RC( test_printf ( "00000000187267509872"    , "%020:4ld", l ) );
-        REQUIRE_RC( test_printf ( "9223372036854775807"     , "%.2:5ld", l ) );
+    /* 8 bit */
+    REQUIRE_RC( test_printf ( "-000128", "%07:0td", t ) );
+    REQUIRE_RC( test_printf ( "  -67"  , "%5:1td", t ) );
+    REQUIRE_RC( test_printf ( "0"      , "%:2td", t ) );
+    REQUIRE_RC( test_printf ( "4    "  , "%-5:3td", t ) );
+    REQUIRE_RC( test_printf ( " 56"    , "% .1:4td", t ) );
+    REQUIRE_RC( test_printf ( "100 "   , "%-4.2:5td", t ) );
+    REQUIRE_RC( test_printf ( "127  "  , "%-05:6td", t ) );
+    /* 16 bit */
+    REQUIRE_RC( test_printf ( "-32768"    , "%.2:0hd", h ) );
+    REQUIRE_RC( test_printf ( "-2546  "   , "%-07:1hd", h ) );
+    REQUIRE_RC( test_printf ( "-398"      , "% :2hd", h ) );
+    REQUIRE_RC( test_printf ( "-0089"     , "%05:3hd", h ) );
+    REQUIRE_RC( test_printf ( "0000"      , "%04:4hd", h ) );
+    REQUIRE_RC( test_printf ( "+34"       , "%+:5hd", h ) );
+    REQUIRE_RC( test_printf ( "+0123"     , "% +05:6hd", h ) );
+    REQUIRE_RC( test_printf ( "5736 "     , "%-05:7hd", h ) );
+    REQUIRE_RC( test_printf ( "     32767", "%10:8hd", h ) );
+    /* 32 bit */
+    REQUIRE_RC( test_printf ( "-2,147,483,648", "%,:0d", v ) );
+    REQUIRE_RC( test_printf ( "-0045287957"   , "%011:1d", v ) );
+    REQUIRE_RC( test_printf ( "-100001 "      , "%-8:2d", v ) );
+    REQUIRE_RC( test_printf ( "45"            , "%0:3d", v ) );
+    REQUIRE_RC( test_printf ( "0"             , "%,:4d", v ) );
+    REQUIRE_RC( test_printf ( "106"           , "%:5d", v ) );
+    REQUIRE_RC( test_printf ( "0,007,234"     , "%,09:6d", v ) );
+    REQUIRE_RC( test_printf ( "546963874"     , "%.3:7d", v ) );
+    REQUIRE_RC( test_printf ( "2147483647"    , "%10:8d", v ) );
+    /* 64 bit */
+    REQUIRE_RC( test_printf ( "-9223372036854775808"    , "%:0ld", l ) );
+    REQUIRE_RC( test_printf ( "-67,283,678,467,328,376" , "%,:1ld", l ) );
+    REQUIRE_RC( test_printf ( "-2837640198         "    , "%-20:2ld", l ) );
+    REQUIRE_RC( test_printf ( "+0"                      , "%+:3ld", l ) );
+    REQUIRE_RC( test_printf ( "00000000187267509872"    , "%020:4ld", l ) );
+    REQUIRE_RC( test_printf ( "9223372036854775807"     , "%.2:5ld", l ) );
 
-    }
+}
 
+TEST_CASE( FormatUnsignedInt )
+{
+    /* uxXo */
 
-    {
-        /* uxXo */
+    uint8_t u_t [ ] = { 0, 128, 255};
+    uint16_t u_h [ ] = { 0, 128, 5378, 65535};
+    uint32_t u_v [ ] = { 0, 847, 7859, 376859, 86742874, 4294967295 };
+    uint64_t u_l [ ] = { 0, 178, 178364, 1783940987, 17836479208762, UINT64_C(18446744073709551615) };
 
-       uint8_t u_t [ ] = { 0, 128, 255};
-       uint16_t u_h [ ] = { 0, 128, 5378, 65535};
-       uint32_t u_v [ ] = { 0, 847, 7859, 376859, 86742874, 4294967295 };
-       uint64_t u_l [ ] = { 0, 178, 178364, 1783940987, 17836479208762, UINT64_C(18446744073709551615) };
+    /* 8 bit */
+    REQUIRE_RC( test_printf ( "    0", "%5:0tu", u_t ) );
+    REQUIRE_RC( test_printf ( "80"   , "%:1tx", u_t ) );
+    REQUIRE_RC( test_printf ( "0x80" , "%#:1tx", u_t ) );
+    REQUIRE_RC( test_printf ( "377"  , "%:2to", u_t ) );
+    REQUIRE_RC( test_printf ( "0377" , "%#:2to", u_t ) );
+    /* 16 bit */
+    REQUIRE_RC( test_printf ( "0"        , "%#:0hX", u_h ) );
+    REQUIRE_RC( test_printf ( "00128"    , "%05:1hu", u_h ) );
+    REQUIRE_RC( test_printf ( "0x1502"   , "%-#3:2hx", u_h ) );
+    REQUIRE_RC( test_printf ( "000177777", "%#09:3ho", u_h ) );
+    /* 32 bit */
+    REQUIRE_RC( test_printf ( "00000"          , "%05:0u", u_v ) );
+    REQUIRE_RC( test_printf ( "34f"            , "%:1x", u_v ) );
+    REQUIRE_RC( test_printf ( "0X1EB3"         , "%#6:2X", u_v ) );
+    REQUIRE_RC( test_printf ( "1340033"        , "%:3o", u_v ) );
+    REQUIRE_RC( test_printf ( "86742874       ", "%-#15:4u", u_v ) );
+    REQUIRE_RC( test_printf ( "ffffffff"       , "%0:5x", u_v ) );
+    /* 64 bit */
+    REQUIRE_RC( test_printf ( "0    "               , "%-5:0lX", u_l ) );
+    REQUIRE_RC( test_printf ( "0262 "               , "%#-5:1lo", u_l ) );
+    REQUIRE_RC( test_printf ( "178364"              , "%.4:2lu", u_l ) );
+    REQUIRE_RC( test_printf ( "0x006a54c77b"        , "%#012:3lx", u_l ) );
+    REQUIRE_RC( test_printf ( "1038E101DD3A"        , "%.5:4lX", u_l ) );
+    REQUIRE_RC( test_printf ( "18446744073709551615", "%:5lu", u_l ) );
 
-       /* 8 bit */
-       REQUIRE_RC( test_printf ( "    0", "%5:0tu", u_t ) );
-       REQUIRE_RC( test_printf ( "80"   , "%:1tx", u_t ) );
-       REQUIRE_RC( test_printf ( "0x80" , "%#:1tx", u_t ) );
-       REQUIRE_RC( test_printf ( "377"  , "%:2to", u_t ) );
-       REQUIRE_RC( test_printf ( "0377" , "%#:2to", u_t ) );
-       /* 16 bit */
-       REQUIRE_RC( test_printf ( "0"        , "%#:0hX", u_h ) );
-       REQUIRE_RC( test_printf ( "00128"    , "%05:1hu", u_h ) );
-       REQUIRE_RC( test_printf ( "0x1502"   , "%-#3:2hx", u_h ) );
-       REQUIRE_RC( test_printf ( "000177777", "%#09:3ho", u_h ) );
-       /* 32 bit */
-       REQUIRE_RC( test_printf ( "00000"          , "%05:0u", u_v ) );
-       REQUIRE_RC( test_printf ( "34f"            , "%:1x", u_v ) );
-       REQUIRE_RC( test_printf ( "0X1EB3"         , "%#6:2X", u_v ) );
-       REQUIRE_RC( test_printf ( "1340033"        , "%:3o", u_v ) );
-       REQUIRE_RC( test_printf ( "86742874       ", "%-#15:4u", u_v ) );
-       REQUIRE_RC( test_printf ( "ffffffff"       , "%0:5x", u_v ) );
-       /* 64 bit */
-       REQUIRE_RC( test_printf ( "0    "               , "%-5:0lX", u_l ) );
-       REQUIRE_RC( test_printf ( "0262 "               , "%#-5:1lo", u_l ) );
-       REQUIRE_RC( test_printf ( "178364"              , "%.4:2lu", u_l ) );
-       REQUIRE_RC( test_printf ( "0x006a54c77b"        , "%#012:3lx", u_l ) );
-       REQUIRE_RC( test_printf ( "1038E101DD3A"        , "%.5:4lX", u_l ) );
-       REQUIRE_RC( test_printf ( "18446744073709551615", "%:5lu", u_l ) );
+}
 
-    }
+TEST_CASE( FormatFloat )
+{
+    /* float */
 
+    float f [ ] = { -2.1474836f, -45.287957f, -10000.1f, 0.45f, 0.0f, 1.06f };
+    double lf [ ] = { -9223372036854775808.0, -28.37640198 };
 
-    {
-        /* float */
+    /* 32 bit */
+    REQUIRE_RC( test_printf ( "  -2.15"             , "%7.2:0hf", f ) );
+    REQUIRE_RC( test_printf ( "-00045.288"          , "%010.3:1hf" , f ) );
+    REQUIRE_RC( test_printf ( "-10000.099609"       , "%:2hf", f ) );
+    REQUIRE_RC( test_printf ( "0"                   , "%.0:3hf", f ) );
+    REQUIRE_RC( test_printf ( "0.000"               , "%-5.3:4hf", f ) );
+    REQUIRE_RC( test_printf ( "1.060000    "        , "%-012:5hf", f ) );
+    /* 64 bit */
+    REQUIRE_RC( test_printf ( "-9223372036854775808.000000" , "%:0f", lf ) );
+    REQUIRE_RC( test_printf ( "-28.37640198000000069101", "%2.20:1f", lf ) );
+}
 
-        float f [ ] = { -2.1474836f, -45.287957f, -10000.1f, 0.45f, 0.0f, 1.06f };
-        double lf [ ] = { -9223372036854775808.0, -28.37640198 };
-
-        /* 32 bit */
-        REQUIRE_RC( test_printf ( "  -2.15"             , "%7.2:0hf", f ) );
-        REQUIRE_RC( test_printf ( "-00045.288"          , "%010.3:1hf" , f ) );
-        REQUIRE_RC( test_printf ( "-10000.099609"       , "%:2hf", f ) );
-        REQUIRE_RC( test_printf ( "0"                   , "%.0:3hf", f ) );
-        REQUIRE_RC( test_printf ( "0.000"               , "%-5.3:4hf", f ) );
-        REQUIRE_RC( test_printf ( "1.060000    "        , "%-012:5hf", f ) );
-        /* 64 bit */
-        REQUIRE_RC( test_printf ( "-9223372036854775808.000000" , "%:0f", lf ) );
-        REQUIRE_RC( test_printf ( "-28.37640198000000069101", "%2.20:1f", lf ) );
-    }
-
-
-
+TEST_CASE( FormatCString )
+{
     /* s */
     REQUIRE_RC( test_printf ( "There are too many tests" , "%:s"    , "There are too many tests" ) );
     REQUIRE_RC( test_printf ( "a"                        , "%:6s"   , "There are too many tests" ) );
@@ -630,38 +631,43 @@ TEST_CASE( BiigPrintfTest )
     REQUIRE_RC( test_printf ( "too       "                     , "%-10.4:10-s" , "There are too many tests" ) );
     REQUIRE_RC( test_printf ( "There"                          , "%.*:-8s"  , 5, "There are too many tests" ) );
     REQUIRE_RC( test_printf ( ""                               , "%s", "" ) );
+}
 
-    {
-        String S;
-        CONST_STRING ( & S, "My Bonnie lies over the ocean" );
-        REQUIRE_RC( test_printf ( "My Bo", "%:0-4S", & S ) );
-    }
+TEST_CASE( FormatKlibString )
+{
+    String S;
+    CONST_STRING ( & S, "My Bonnie lies over the ocean" );
+    REQUIRE_RC( test_printf ( "My Bo", "%:0-4S", & S ) );
+}
 
-    {
-        String str1, str2, str3;
-        KSymbol *sym1, *sym2, *sym3;
+TEST_CASE( FormatSymbol )
+{
+    String str1, str2, str3;
+    KSymbol *sym1, *sym2, *sym3;
 
-        CONST_STRING ( & str1, "outer" );
-        CONST_STRING ( & str2, "inner" );
-        CONST_STRING ( & str3, "leaf" );
+    CONST_STRING ( & str1, "outer" );
+    CONST_STRING ( & str2, "inner" );
+    CONST_STRING ( & str3, "leaf" );
 
-        KSymbolMake ( & sym1, & str1, 0, NULL );
-        KSymbolMake ( & sym2, & str2, 0, NULL );
-        KSymbolMake ( & sym3, & str3, 0, NULL );
+    KSymbolMake ( & sym1, & str1, 0, NULL );
+    KSymbolMake ( & sym2, & str2, 0, NULL );
+    KSymbolMake ( & sym3, & str3, 0, NULL );
 
-        sym2 -> dad = sym1;
-        sym3 -> dad = sym2;
+    sym2 -> dad = sym1;
+    sym3 -> dad = sym2;
 
-        REQUIRE_RC( test_printf ( "outer:inner:leaf", "%N", sym3 ) );
-        REQUIRE_RC( test_printf ( "    outer:inner:leaf", "%20N", sym3 ) );
-        REQUIRE_RC( test_printf ( "outer:inner:leaf    ", "%-20N", sym3 ) );
-        REQUIRE_RC( test_printf ( "outer:inner:leaf    ", "%-20.2N", sym3 ) );
+    REQUIRE_RC( test_printf ( "outer:inner:leaf", "%N", sym3 ) );
+    REQUIRE_RC( test_printf ( "    outer:inner:leaf", "%20N", sym3 ) );
+    REQUIRE_RC( test_printf ( "outer:inner:leaf    ", "%-20N", sym3 ) );
+    REQUIRE_RC( test_printf ( "outer:inner:leaf    ", "%-20.2N", sym3 ) );
 
-        KSymbolWhack ( & sym3 -> n, NULL );
-        KSymbolWhack ( & sym2 -> n, NULL );
-        KSymbolWhack ( & sym1 -> n, NULL );
-    }
+    KSymbolWhack ( & sym3 -> n, NULL );
+    KSymbolWhack ( & sym2 -> n, NULL );
+    KSymbolWhack ( & sym1 -> n, NULL );
+}
 
+TEST_CASE( FormatVersion )
+{
     REQUIRE_RC( test_printf ( "version 1", "version %V", 0x1000000 ) );
     REQUIRE_RC( test_printf ( "version ", "version %.V", 0x1000000 ) );
     REQUIRE_RC( test_printf ( "version     1", "version %5V", 0x1000000 ) );
@@ -674,42 +680,51 @@ TEST_CASE( BiigPrintfTest )
     REQUIRE_RC( test_printf ( "version 1.0.0", "version %.3V", 0x1000000 ) );
     REQUIRE_RC( test_printf ( "version 1.0.0", "version %.4V", 0x1000000 ) );
     REQUIRE_RC( test_printf ( "version 1.0", "version %#.2V", 0x1000000 ) );
+}
 
     /* RC can't be tested due to embedded filename and lineno */
 #if 0
+TEST_CASE( Rc )
+{
     rc = RC ( rcExe, rcString, rcFormatting, rcData, rcNoErr );
     test_printf ( "?", "%#R", rc );
+}
 #endif
 
-    {
-        KTime t;
-        t . year = 2011;
-        t . month = 9;
-        t . day = 28;
-        t . weekday = 5;
-        t . tzoff = -5 * 60;
-        t . hour = 15;
-        t . minute = 2;
-        t . second = 16;
-        t . dst = true;
+TEST_CASE( FormatKTime )
+{
+    KTime t;
+    t . year = 2011;
+    t . month = 9;
+    t . day = 28;
+    t . weekday = 5;
+    t . tzoff = -5 * 60;
+    t . hour = 15;
+    t . minute = 2;
+    t . second = 16;
+    t . dst = true;
 
-        REQUIRE_RC( test_printf ( "3:02:16 PM", "%T", & t ) );
-        REQUIRE_RC( test_printf ( "03:02:16 PM", "%0T", & t ) );
-        REQUIRE_RC( test_printf ( "Fri Oct 29 2011 3:02:16 PM", "%lT", & t ) );
-        REQUIRE_RC( test_printf ( "Fri Oct 29 2011 3:02:16 PM -5", "%zT", & t ) );
-        REQUIRE_RC( test_printf ( "Oct 29 2011", "%hT", & t ) );
-    }
-    { /* insufficient buffer; here we have to bypass test_printf since we need a custom buffer size */
-        char buff[10];
-        size_t num_writ;
-        REQUIRE_RC_FAIL( string_printf ( buff, 1, &num_writ, "%s", "0123456789" ) );
-    }
+    REQUIRE_RC( test_printf ( "3:02:16 PM", "%T", & t ) );
+    REQUIRE_RC( test_printf ( "03:02:16 PM", "%0T", & t ) );
+    REQUIRE_RC( test_printf ( "Fri Oct 29 2011 3:02:16 PM", "%lT", & t ) );
+    REQUIRE_RC( test_printf ( "Fri Oct 29 2011 3:02:16 PM -5", "%zT", & t ) );
+    REQUIRE_RC( test_printf ( "Oct 29 2011", "%hT", & t ) );
+}
+
+TEST_CASE( InsufficientBuffer )
+{ /* insufficient buffer; here we have to bypass test_printf since we need a custom buffer size */
+    char buff[10];
+    size_t num_writ;
+    REQUIRE_RC_FAIL( string_printf ( buff, 1, &num_writ, "%s", "0123456789" ) );
+}
 
 #if LINUX
+TEST_CASE( SomethingExtra )
+{
     REQUIRE_RC( test_printf ( "Success", "%!", 0 ) );
     REQUIRE_RC( test_printf ( "Operation not permitted", "%!", 1 ) );
-#endif
 }
+#endif
 
 int main ( int argc, char *argv [] )
 {
