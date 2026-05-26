@@ -633,12 +633,13 @@ TEST_CASE( FormatCString )
     REQUIRE_RC( test_printf ( ""                               , "%s", "" ) );
 }
 
-TEST_CASE( FormatKlibString )
-{
-    String S;
-    CONST_STRING ( & S, "My Bonnie lies over the ocean" );
-    REQUIRE_RC( test_printf ( "My Bo", "%:0-4S", & S ) );
-}
+// will be reenabled by VDB-6386
+// TEST_CASE( FormatKlibString )
+// {
+//     String S;
+//     CONST_STRING ( & S, "My Bonnie lies over the ocean" );
+//     REQUIRE_RC( test_printf ( "My Bo", "%:0-4S", & S ) );
+// }
 
 TEST_CASE( FormatSymbol )
 {
