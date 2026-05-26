@@ -476,28 +476,14 @@ FIXTURE_TEST_CASE ( VCursor_FindNextRowIdDirect, WVDB_Fixture )
     }
     REQUIRE_RC ( VDatabaseRelease ( m_db ) );
 
-    {   // reopen
-        VDBManager * mgr;
-        REQUIRE_RC ( VDBManagerMakeUpdate ( & mgr, NULL ) );
-        REQUIRE_RC ( VDBManagerOpenDBRead ( mgr, (const VDatabase**)& m_db, NULL, m_databaseName . c_str () ) );
-
-        const VCursor* cursor = OpenTable ( TableName );
-
-        uint32_t column_idx;
-        REQUIRE_RC ( VCursorAddColumn ( cursor, & column_idx, ColumnName ) );
-        REQUIRE_RC ( VCursorOpen ( cursor ) );
-
+    auto val_fn = [&]( const VCursor* cur, uint32_t col_idx ) {
         int64_t next;
-        REQUIRE_RC ( VCursorFindNextRowIdDirect ( cursor, column_idx, 1, & next ) );
+        REQUIRE_RC ( VCursorFindNextRowIdDirect ( cur, col_idx, 1, & next ) );
         REQUIRE_EQ ( (int64_t)1, next ) ;
-        REQUIRE_RC ( VCursorFindNextRowIdDirect ( cursor, column_idx, 2, & next ) );
+        REQUIRE_RC ( VCursorFindNextRowIdDirect ( cur, col_idx, 2, & next ) );
         REQUIRE_EQ ( (int64_t)2, next ) ; // VDB-3075: next == 1
-
-        REQUIRE_RC ( VCursorRelease ( cursor ) );
-
-        REQUIRE_RC ( VDBManagerRelease ( mgr ) );
-    }
-
+    };
+    ValidateColumn ( TableName, ColumnName, val_fn );
 }
 
 FIXTURE_TEST_CASE ( VCursorCommit_without_VCursorCloseRow, WVDB_Fixture )
@@ -737,30 +723,17 @@ FIXTURE_TEST_CASE ( VCursor_TypePropagation, WVDB_Fixture )
     }
     REQUIRE_RC ( VDatabaseRelease ( m_db ) );
 
-    {   // reopen
-        VDBManager * mgr;
-        REQUIRE_RC ( VDBManagerMakeUpdate ( & mgr, NULL ) );
-        VDBManagerOpenDBRead ( mgr, (const VDatabase**)& m_db, NULL, m_databaseName . c_str () );
-
-        const VCursor* cursor = OpenTable ( TableName );
-
-        uint32_t column_idx;
-        REQUIRE_RC ( VCursorAddColumn ( cursor, & column_idx, "col" ) );
-        REQUIRE_RC ( VCursorOpen ( cursor ) );
-
+    auto val_fn = [&]( const VCursor* cur, uint32_t col_idx ) {
         // col has the type of column1
         VCtxId id = { 0, 0, eTable };
-        id . id = column_idx;
-        const VColumn * vcol = VCursorGetColumn ( (VCursor*)cursor, & id );
+        id . id = col_idx;
+        const VColumn * vcol = VCursorGetColumn ( (VCursor*)cur, & id );
         REQUIRE_NOT_NULL ( vcol );
         const uint32_t AsciiId = 23;
         REQUIRE_EQ ( AsciiId, vcol -> td . type_id );
         REQUIRE_EQ ( 1u, vcol -> td . dim );
-
-        REQUIRE_RC ( VCursorRelease ( cursor ) );
-
-        VDBManagerRelease ( mgr );
-    }
+    };
+    ValidateColumn ( TableName, "col", val_fn );
 }
 
 FIXTURE_TEST_CASE ( VCursor_TypePropagation_Array, WVDB_Fixture )
@@ -785,30 +758,17 @@ FIXTURE_TEST_CASE ( VCursor_TypePropagation_Array, WVDB_Fixture )
     }
     REQUIRE_RC ( VDatabaseRelease ( m_db ) );
 
-    {   // reopen
-        VDBManager * mgr;
-        REQUIRE_RC ( VDBManagerMakeUpdate ( & mgr, NULL ) );
-        VDBManagerOpenDBRead ( mgr, (const VDatabase**)& m_db, NULL, m_databaseName . c_str () );
-
-        const VCursor* cursor = OpenTable ( TableName );
-
-        uint32_t column_idx;
-        REQUIRE_RC ( VCursorAddColumn ( cursor, & column_idx, "col" ) );
-        REQUIRE_RC ( VCursorOpen ( cursor ) );
-
+    auto val_fn = [&]( const VCursor* cur, uint32_t col_idx ) {
         // col has the type of column1
         VCtxId id = { 0, 0, eTable };
-        id . id = column_idx;
-        const VColumn * vcol = VCursorGetColumn ( (VCursor*)cursor, & id );
+        id . id = col_idx;
+        const VColumn * vcol = VCursorGetColumn ( (VCursor*)cur, & id );
         REQUIRE_NOT_NULL ( vcol );
         const uint32_t I64Id = 16;
         REQUIRE_EQ ( I64Id, vcol -> td . type_id );
         REQUIRE_EQ ( 2u, vcol -> td . dim );
-
-        REQUIRE_RC ( VCursorRelease ( cursor ) );
-
-        VDBManagerRelease ( mgr );
-    }
+    };
+    ValidateColumn ( TableName, "col", val_fn );
 }
 
 FIXTURE_TEST_CASE ( VCursor_Use_cut_ToAccessArrayElement, WVDB_Fixture )
@@ -837,28 +797,15 @@ FIXTURE_TEST_CASE ( VCursor_Use_cut_ToAccessArrayElement, WVDB_Fixture )
     }
     REQUIRE_RC ( VDatabaseRelease ( m_db ) );
 
-    {   // reopen
-        VDBManager * mgr;
-        REQUIRE_RC ( VDBManagerMakeUpdate ( & mgr, NULL ) );
-        VDBManagerOpenDBRead ( mgr, (const VDatabase**)& m_db, NULL, m_databaseName . c_str () );
-
-        const VCursor* cursor = OpenTable ( TableName );
-
-        uint32_t column_idx;
-        REQUIRE_RC ( VCursorAddColumn ( cursor, & column_idx, "col" ) );
-        REQUIRE_RC ( VCursorOpen ( cursor ) );
-
+    auto val_fn = [&]( const VCursor* cur, uint32_t col_idx ) {
         int64_t buf[2] = {0, 0};
         uint32_t row_len = 0;
-        REQUIRE_RC ( VCursorReadDirect(cursor, 1, column_idx, 64, buf, 2, & row_len ) );
+        REQUIRE_RC ( VCursorReadDirect(cur, 1, col_idx, 64, buf, 2, & row_len ) );
         REQUIRE_EQ ( 1u, row_len );
         REQUIRE_EQ((int64_t)2, buf[0]);
         REQUIRE_EQ((int64_t)0, buf[1]);
-
-        REQUIRE_RC ( VCursorRelease ( cursor ) );
-
-        VDBManagerRelease ( mgr );
-    }
+    };
+    ValidateColumn ( TableName, "col", val_fn );
 }
 
 FIXTURE_TEST_CASE ( KDBManager_Leak, WVDB_Fixture )
@@ -981,11 +928,14 @@ FIXTURE_TEST_CASE ( BlobChecksumOFF, WVDB_Fixture)
 
 FIXTURE_TEST_CASE ( sprintf_NULL, WVDB_Fixture)
 {
+m_keepDb = true;
+
     string const schemaText =
     R"( typeset text_set { utf8, utf16, utf32, ascii };
         function text_set sprintf #1.0 < ascii fmt > ( any p1, ... ) = vdb:sprintf;
         table table1 #1.0.0 {
-            column I32 column1 = sprintf < "0|%u" > ( null );
+            column I32 column1;
+            column ascii col = sprintf < "%u" > ( column1 );
         };
         database root_database #1 { table table1 #1 TABLE1; } ;)";
     const char* TableName = "TABLE1";
@@ -996,28 +946,27 @@ FIXTURE_TEST_CASE ( sprintf_NULL, WVDB_Fixture)
         uint32_t column_idx = 0;
         auto const cursor = CreateTable ( TableName, kcsNone );
 
-        uint32_t column_idx1 = 0;
         REQUIRE_RC ( VCursorAddColumn ( cursor, & column_idx, ColumnName ) );
         REQUIRE_RC ( VCursorOpen ( cursor ) );
         // insert some empty rows
         for ( int i = 0; i < 22; ++i)
         {
-            REQUIRE_RC ( VCursorOpenRow ( cursor ) );
-            REQUIRE_RC ( VCursorWrite ( cursor, column_idx, sizeof(int32_t)*8, nullptr, 0, 0 ) );
-            REQUIRE_RC ( VCursorCommitRow ( cursor ) );
-            REQUIRE_RC ( VCursorCloseRow ( cursor ) );
+            WriteEmptyRow( cursor, column_idx );
         }
         REQUIRE_RC ( VCursorCommit ( cursor ) );
         REQUIRE_RC ( VCursorRelease ( cursor ) );
     }
-cout<<"1"<<endl;
-    auto const v = ValidateBlob(TableName, "column1", 1);
-cout<<"2"<<endl;
-    auto const valid = ValidateBlob(TableName, "out_seqid_gi", 1);
-    auto const object = (enum RCObject)GetRCObject(valid);
-    auto const state = (enum RCState)GetRCState(valid);
-    REQUIRE_EQ(object, rcChecksum);
-    REQUIRE_EQ(state, rcNotFound);
+
+    REQUIRE_RC ( VDatabaseRelease ( m_db ) );
+
+    auto val_fn = [&]( const VCursor* cur, uint32_t col_idx ) {
+        char buf[1024];
+        uint32_t row_len = 0;
+        REQUIRE_RC ( VCursorReadDirect(cur, 1, col_idx, 8, buf, sizeof(buf), & row_len ) );
+        REQUIRE_EQ ( 0u, row_len );
+    };
+
+    ValidateColumn ( TableName, "col", val_fn );
 }
 
 

@@ -24,22 +24,14 @@
 *
 */
 
-#include <kapp/args.h>
+#include <kapp/vdbapp.h>
 #include <klib/printf.h>
 #include <klib/symbol.h>
-#include <klib/text.h>
 #include <klib/time.h>
 #include <klib/log.h>
-#include <klib/out.h>
-#include <klib/rc.h>
-#include <kfg/config.h>
+#include "ktst/unit_test.hpp"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdarg.h>
-#include <va_copy.h>
-#include <time.h>
+TEST_SUITE(PrintfTestSuite);
 
 static
 rc_t test_vprintf ( const char *expected, const char *fmt, va_list args )
@@ -94,9 +86,9 @@ rc_t test_vprintf ( const char *expected, const char *fmt, va_list args )
                       , num_writ
                 );
         }
-#if 1
-        rc = 0;
-#endif
+// #if 1
+//         rc = 0;
+// #endif
     }
 
     return rc;
@@ -402,8 +394,7 @@ static rc_t make_initial_test (  int32_t *field_width, int32_t *precision,
     return rc;
 }
 
-static
-rc_t run ( const char *progname )
+TEST_CASE( BiigPrintfTest )
 {
     rc_t rc = 0;
     int32_t i;
@@ -424,97 +415,62 @@ rc_t run ( const char *progname )
 
 
         /* signed integer */
-        if ( rc == 0 )
-        {
-            randValue = rand ();
-            randValue_2 = rand () % 10;
-            randValue_3 = rand () % 5;
+        randValue = rand ();
+        randValue_2 = rand () % 10;
+        randValue_3 = rand () % 5;
 
-            rc = make_initial_test ( field_width, precision, " ht", "di", randValue );
-            if ( rc == 0 )
-                rc = make_initial_test ( ext_value, precision, " ht", "di", randValue_2, randValue );
-            if ( rc == 0 )
-                rc = make_initial_test ( field_width, ext_value, " ht", "di", randValue_3, randValue );
+        REQUIRE_RC( make_initial_test ( field_width, precision, " ht", "di", randValue ) );
+        REQUIRE_RC( make_initial_test ( ext_value, precision, " ht", "di", randValue_2, randValue ) );
+        REQUIRE_RC( make_initial_test ( field_width, ext_value, " ht", "di", randValue_3, randValue ) );
 
-            if ( rc == 0 )
-                rc = make_initial_test ( field_width, precision, "l", "di", ( int64_t ) randValue );
-            if ( rc == 0 )
-                rc = make_initial_test ( ext_value, precision, "l", "di", randValue_2, ( int64_t ) randValue );
-            if ( rc == 0 )
-                rc = make_initial_test ( field_width, ext_value, "l", "di", randValue_3, ( int64_t ) randValue );
-        }
+        REQUIRE_RC( make_initial_test ( field_width, precision, "l", "di", ( int64_t ) randValue ) );
+        REQUIRE_RC( make_initial_test ( ext_value, precision, "l", "di", randValue_2, ( int64_t ) randValue ) );
+        REQUIRE_RC( make_initial_test ( field_width, ext_value, "l", "di", randValue_3, ( int64_t ) randValue ) );
 
         /* unsigned integer */
-        if ( rc == 0 )
-        {
-            rc = make_initial_test ( field_width, precision, " ht", "uxXo", randValue );
-            if ( rc == 0 )
-                rc = make_initial_test ( ext_value, precision, " ht", "uxXo", randValue_2, randValue );
-            if ( rc == 0 )
-                rc = make_initial_test ( field_width, ext_value, " ht", "uxXo", randValue_3, randValue );
+        REQUIRE_RC( make_initial_test ( field_width, precision, " ht", "uxXo", randValue ) );
+        REQUIRE_RC( make_initial_test ( ext_value, precision, " ht", "uxXo", randValue_2, randValue ) );
+        REQUIRE_RC( make_initial_test ( field_width, ext_value, " ht", "uxXo", randValue_3, randValue ) );
 
-            if ( rc == 0 )
-                rc = make_initial_test ( field_width, precision, "l", "uxXo", ( uint64_t ) randValue );
-            if ( rc == 0 )
-                rc = make_initial_test ( ext_value, precision, "l", "uxXo", randValue_2, ( uint64_t )randValue );
-            if ( rc == 0 )
-                rc = make_initial_test ( field_width, ext_value, "l", "uxXo", randValue_3, ( uint64_t ) randValue );
+        REQUIRE_RC( make_initial_test ( field_width, precision, "l", "uxXo", ( uint64_t ) randValue ) );
+        REQUIRE_RC( make_initial_test ( ext_value, precision, "l", "uxXo", randValue_2, ( uint64_t )randValue ) );
+        REQUIRE_RC( make_initial_test ( field_width, ext_value, "l", "uxXo", randValue_3, ( uint64_t ) randValue ) );
 
-            if ( rc == 0 )
-                rc = make_initial_test ( field_width, precision, "z", "uxXo", ( size_t ) randValue );
-            if ( rc == 0 )
-                rc = make_initial_test ( ext_value, precision, "z", "uxXo", randValue_2, ( size_t ) randValue );
-            if ( rc == 0 )
-                rc = make_initial_test ( field_width, ext_value, "z", "uxXo", randValue_3, ( size_t ) randValue );
-        }
+        REQUIRE_RC( make_initial_test ( field_width, precision, "z", "uxXo", ( size_t ) randValue ) );
+        REQUIRE_RC( make_initial_test ( ext_value, precision, "z", "uxXo", randValue_2, ( size_t ) randValue ) );
+        REQUIRE_RC( make_initial_test ( field_width, ext_value, "z", "uxXo", randValue_3, ( size_t ) randValue ) );
 
         /* float */
-        if ( rc == 0 )
-        {
-
-            randValue_f = ( double ) randValue / ( ( randValue % 100 ) + 1 );
+        randValue_f = ( double ) randValue / ( ( randValue % 100 ) + 1 );
 
             /*** could use some floating point random numbers here */
 #if 0
-            rc = make_initial_test ( field_width, precision, " ", "feg", randValue );
-            if ( rc == 0 )
-                rc = make_initial_test ( ext_value, precision, " ", "feg", randValue_2, randValue );
-            if ( rc == 0 )
-                rc = make_initial_test ( field_width, ext_value, " ", "feg", randValue_3, randValue );
+        REQUIRE_RC( make_initial_test ( field_width, precision, " ", "feg", randValue ) );
+        REQUIRE_RC( make_initial_test ( ext_value, precision, " ", "feg", randValue_2, randValue );
+        REQUIRE_RC( make_initial_test ( field_width, ext_value, " ", "feg", randValue_3, randValue );
 #endif
 
-            if ( rc == 0 )
-                rc = make_initial_test ( field_width, precision, " ", "feg", randValue_f );
-            if ( rc == 0 )
-                rc = make_initial_test ( ext_value, precision, " ", "feg", randValue_2, randValue_f );
-            if ( rc == 0 )
-                rc = make_initial_test ( field_width, ext_value, " ", "feg", randValue_3, randValue_f );
-        }
+        REQUIRE_RC( make_initial_test ( field_width, precision, " ", "feg", randValue_f ) );
+        REQUIRE_RC( make_initial_test ( ext_value, precision, " ", "feg", randValue_2, randValue_f ) );
+        REQUIRE_RC( make_initial_test ( field_width, ext_value, " ", "feg", randValue_3, randValue_f ) );
 
         /* character */
-        if ( rc == 0 )
-        {
-            rc = make_initial_test ( field_width, precision, " ", "c", c [ i ] );
-            if ( rc == 0 )
-                rc = test_printf ( "I like 1 embedded % character", "I like %u embedded %% character", 1 );
-        }
+        REQUIRE_RC( make_initial_test ( field_width, precision, " ", "c", c [ i ] ) );
+        REQUIRE_RC( test_printf ( "I like 1 embedded % character", "I like %u embedded %% character", 1 ) );
 
         /* text string */
-        if ( rc == 0 )
-        {
-            rc = make_initial_test ( field_width, precision, " ", "s", "Kurt is having a fit" );
+        REQUIRE_RC( make_initial_test ( field_width, precision, " ", "s", "Kurt is having a fit" ) );
 #if !defined(__SunOS)  &&  !defined(__sun__)
-            /* Solaris printf doesn't cope with NULLs */
+        /* Solaris printf doesn't cope with NULLs */
 #if 0
-            /* The standard says this result is undefined, we shouldn't test for it, it is not consistent */
-            rc = make_initial_test ( field_width, precision, " ", "s", NULL );
+        /* The standard says this result is undefined, we shouldn't test for it, it is not consistent */
+        REQUIRE_RC( make_initial_test ( field_width, precision, " ", "s", NULL ) );
 #endif
 #endif
-            rc = make_initial_test ( field_width, precision, " ", "s", "" );
-            rc = make_initial_test ( field_width, precision, " ", "s", "OK" );
-            rc = make_initial_test ( field_width, precision, " ", "s", "1234567890" );
-            rc = make_initial_test ( field_width, precision, " ", "s", "\"`~!@#$%^&*()-_=+[]{}|\\';:?/.,<>" );
-        }
+        REQUIRE_RC( make_initial_test ( field_width, precision, " ", "s", "" ) );
+        REQUIRE_RC( make_initial_test ( field_width, precision, " ", "s", "OK" ) );
+        REQUIRE_RC( make_initial_test ( field_width, precision, " ", "s", "1234567890" ) );
+        REQUIRE_RC( make_initial_test ( field_width, precision, " ", "s", "\"`~!@#$%^&*()-_=+[]{}|\\';:?/.,<>" ) );
 
     }
 
@@ -539,40 +495,40 @@ rc_t run ( const char *progname )
         /* d, i */
 
         /* 8 bit */
-        test_printf ( "-000128", "%07:0td", t );
-        test_printf ( "  -67"  , "%5:1td", t );
-        test_printf ( "0"      , "%:2td", t );
-        test_printf ( "4    "  , "%-5:3td", t );
-        test_printf ( " 56"    , "% .1:4td", t );
-        test_printf ( "100 "   , "%-4.2:5td", t );
-        test_printf ( "127  "  , "%-05:6td", t );
+        REQUIRE_RC( test_printf ( "-000128", "%07:0td", t ) );
+        REQUIRE_RC( test_printf ( "  -67"  , "%5:1td", t ) );
+        REQUIRE_RC( test_printf ( "0"      , "%:2td", t ) );
+        REQUIRE_RC( test_printf ( "4    "  , "%-5:3td", t ) );
+        REQUIRE_RC( test_printf ( " 56"    , "% .1:4td", t ) );
+        REQUIRE_RC( test_printf ( "100 "   , "%-4.2:5td", t ) );
+        REQUIRE_RC( test_printf ( "127  "  , "%-05:6td", t ) );
         /* 16 bit */
-        test_printf ( "-32768"    , "%.2:0hd", h );
-        test_printf ( "-2546  "   , "%-07:1hd", h );
-        test_printf ( "-398"      , "% :2hd", h );
-        test_printf ( "-0089"     , "%05:3hd", h );
-        test_printf ( "0000"      , "%04:4hd", h );
-        test_printf ( "+34"       , "%+:5hd", h );
-        test_printf ( "+0123"     , "% +05:6hd", h );
-        test_printf ( "5736 "     , "%-05:7hd", h );
-        test_printf ( "     32767", "%10:8hd", h );
+        REQUIRE_RC( test_printf ( "-32768"    , "%.2:0hd", h ) );
+        REQUIRE_RC( test_printf ( "-2546  "   , "%-07:1hd", h ) );
+        REQUIRE_RC( test_printf ( "-398"      , "% :2hd", h ) );
+        REQUIRE_RC( test_printf ( "-0089"     , "%05:3hd", h ) );
+        REQUIRE_RC( test_printf ( "0000"      , "%04:4hd", h ) );
+        REQUIRE_RC( test_printf ( "+34"       , "%+:5hd", h ) );
+        REQUIRE_RC( test_printf ( "+0123"     , "% +05:6hd", h ) );
+        REQUIRE_RC( test_printf ( "5736 "     , "%-05:7hd", h ) );
+        REQUIRE_RC( test_printf ( "     32767", "%10:8hd", h ) );
         /* 32 bit */
-        test_printf ( "-2,147,483,648", "%,:0d", v );
-        test_printf ( "-0045287957"   , "%011:1d", v );
-        test_printf ( "-100001 "      , "%-8:2d", v );
-        test_printf ( "45"            , "%0:3d", v );
-        test_printf ( "0"             , "%,:4d", v );
-        test_printf ( "106"           , "%:5d", v );
-        test_printf ( "0,007,234"     , "%,09:6d", v );
-        test_printf ( "546963874"     , "%.3:7d", v );
-        test_printf ( "2147483647"    , "%10:8d", v );
+        REQUIRE_RC( test_printf ( "-2,147,483,648", "%,:0d", v ) );
+        REQUIRE_RC( test_printf ( "-0045287957"   , "%011:1d", v ) );
+        REQUIRE_RC( test_printf ( "-100001 "      , "%-8:2d", v ) );
+        REQUIRE_RC( test_printf ( "45"            , "%0:3d", v ) );
+        REQUIRE_RC( test_printf ( "0"             , "%,:4d", v ) );
+        REQUIRE_RC( test_printf ( "106"           , "%:5d", v ) );
+        REQUIRE_RC( test_printf ( "0,007,234"     , "%,09:6d", v ) );
+        REQUIRE_RC( test_printf ( "546963874"     , "%.3:7d", v ) );
+        REQUIRE_RC( test_printf ( "2147483647"    , "%10:8d", v ) );
         /* 64 bit */
-        test_printf ( "-9223372036854775808"    , "%:0ld", l );
-        test_printf ( "-67,283,678,467,328,376" , "%,:1ld", l );
-        test_printf ( "-2837640198         "    , "%-20:2ld", l );
-        test_printf ( "+0"                      , "%+:3ld", l );
-        test_printf ( "00000000187267509872"    , "%020:4ld", l );
-        test_printf ( "9223372036854775807"     , "%.2:5ld", l );
+        REQUIRE_RC( test_printf ( "-9223372036854775808"    , "%:0ld", l ) );
+        REQUIRE_RC( test_printf ( "-67,283,678,467,328,376" , "%,:1ld", l ) );
+        REQUIRE_RC( test_printf ( "-2837640198         "    , "%-20:2ld", l ) );
+        REQUIRE_RC( test_printf ( "+0"                      , "%+:3ld", l ) );
+        REQUIRE_RC( test_printf ( "00000000187267509872"    , "%020:4ld", l ) );
+        REQUIRE_RC( test_printf ( "9223372036854775807"     , "%.2:5ld", l ) );
 
     }
 
@@ -585,32 +541,31 @@ rc_t run ( const char *progname )
        uint32_t u_v [ ] = { 0, 847, 7859, 376859, 86742874, 4294967295 };
        uint64_t u_l [ ] = { 0, 178, 178364, 1783940987, 17836479208762, UINT64_C(18446744073709551615) };
 
-
        /* 8 bit */
-       test_printf ( "    0", "%5:0tu", u_t );
-       test_printf ( "80"   , "%:1tx", u_t );
-       test_printf ( "0x80" , "%#:1tx", u_t );
-       test_printf ( "377"  , "%:2to", u_t );
-       test_printf ( "0377" , "%#:2to", u_t );
+       REQUIRE_RC( test_printf ( "    0", "%5:0tu", u_t ) );
+       REQUIRE_RC( test_printf ( "80"   , "%:1tx", u_t ) );
+       REQUIRE_RC( test_printf ( "0x80" , "%#:1tx", u_t ) );
+       REQUIRE_RC( test_printf ( "377"  , "%:2to", u_t ) );
+       REQUIRE_RC( test_printf ( "0377" , "%#:2to", u_t ) );
        /* 16 bit */
-       test_printf ( "0"        , "%#:0hX", u_h );
-       test_printf ( "00128"    , "%05:1hu", u_h );
-       test_printf ( "0x1502"   , "%-#3:2hx", u_h );
-       test_printf ( "000177777", "%#09:3ho", u_h );
+       REQUIRE_RC( test_printf ( "0"        , "%#:0hX", u_h ) );
+       REQUIRE_RC( test_printf ( "00128"    , "%05:1hu", u_h ) );
+       REQUIRE_RC( test_printf ( "0x1502"   , "%-#3:2hx", u_h ) );
+       REQUIRE_RC( test_printf ( "000177777", "%#09:3ho", u_h ) );
        /* 32 bit */
-       test_printf ( "00000"          , "%05:0u", u_v );
-       test_printf ( "34f"            , "%:1x", u_v );
-       test_printf ( "0X1EB3"         , "%#6:2X", u_v );
-       test_printf ( "1340033"        , "%:3o", u_v );
-       test_printf ( "86742874       ", "%-#15:4u", u_v );
-       test_printf ( "ffffffff"       , "%0:5x", u_v );
+       REQUIRE_RC( test_printf ( "00000"          , "%05:0u", u_v ) );
+       REQUIRE_RC( test_printf ( "34f"            , "%:1x", u_v ) );
+       REQUIRE_RC( test_printf ( "0X1EB3"         , "%#6:2X", u_v ) );
+       REQUIRE_RC( test_printf ( "1340033"        , "%:3o", u_v ) );
+       REQUIRE_RC( test_printf ( "86742874       ", "%-#15:4u", u_v ) );
+       REQUIRE_RC( test_printf ( "ffffffff"       , "%0:5x", u_v ) );
        /* 64 bit */
-       test_printf ( "0    "               , "%-5:0lX", u_l );
-       test_printf ( "0262 "               , "%#-5:1lo", u_l );
-       test_printf ( "178364"              , "%.4:2lu", u_l );
-       test_printf ( "0x006a54c77b"        , "%#012:3lx", u_l );
-       test_printf ( "1038E101DD3A"        , "%.5:4lX", u_l );
-       test_printf ( "18446744073709551615", "%:5lu", u_l );
+       REQUIRE_RC( test_printf ( "0    "               , "%-5:0lX", u_l ) );
+       REQUIRE_RC( test_printf ( "0262 "               , "%#-5:1lo", u_l ) );
+       REQUIRE_RC( test_printf ( "178364"              , "%.4:2lu", u_l ) );
+       REQUIRE_RC( test_printf ( "0x006a54c77b"        , "%#012:3lx", u_l ) );
+       REQUIRE_RC( test_printf ( "1038E101DD3A"        , "%.5:4lX", u_l ) );
+       REQUIRE_RC( test_printf ( "18446744073709551615", "%:5lu", u_l ) );
 
     }
 
@@ -622,64 +577,64 @@ rc_t run ( const char *progname )
         double lf [ ] = { -9223372036854775808.0, -28.37640198 };
 
         /* 32 bit */
-        test_printf ( "  -2.15"             , "%7.2:0hf", f );
-        test_printf ( "-00045.288"          , "%010.3:1hf" , f );
-        test_printf ( "-10000.099609"       , "%:2hf", f );
-        test_printf ( "0"                   , "%.0:3hf", f );
-        test_printf ( "0.000"               , "%-5.3:4hf", f );
-        test_printf ( "1.060000    "        , "%-012:5hf", f );
+        REQUIRE_RC( test_printf ( "  -2.15"             , "%7.2:0hf", f ) );
+        REQUIRE_RC( test_printf ( "-00045.288"          , "%010.3:1hf" , f ) );
+        REQUIRE_RC( test_printf ( "-10000.099609"       , "%:2hf", f ) );
+        REQUIRE_RC( test_printf ( "0"                   , "%.0:3hf", f ) );
+        REQUIRE_RC( test_printf ( "0.000"               , "%-5.3:4hf", f ) );
+        REQUIRE_RC( test_printf ( "1.060000    "        , "%-012:5hf", f ) );
         /* 64 bit */
-        test_printf ( "-9223372036854775808.000000" , "%:0f", lf );
-        test_printf ( "-28.37640198000000069101", "%2.20:1f", lf );
+        REQUIRE_RC( test_printf ( "-9223372036854775808.000000" , "%:0f", lf ) );
+        REQUIRE_RC( test_printf ( "-28.37640198000000069101", "%2.20:1f", lf ) );
     }
 
 
 
     /* s */
-    test_printf ( "There are too many tests" , "%:s"    , "There are too many tests" );
-    test_printf ( "a"                        , "%:6s"   , "There are too many tests" );
+    REQUIRE_RC( test_printf ( "There are too many tests" , "%:s"    , "There are too many tests" ) );
+    REQUIRE_RC( test_printf ( "a"                        , "%:6s"   , "There are too many tests" ) );
 
-    test_printf ( "There"                    , "%:/5s"  , "There are too many tests" );
-    test_printf ( "too m"                    , "%:*/5s" , 10, "There are too many tests" );
-    test_printf ( "There"                    , "%:/*s"  , 5,"There are too many tests" );
-    test_printf ( " too many tests"          , "%:9/16s", "There are too many tests" );
-    test_printf ( "s"                        , "%:$/5s" , "There are too many tests" );
-    test_printf ( "tests"                    , "%:19/$s", "There are too many tests" );
+    REQUIRE_RC( test_printf ( "There"                    , "%:/5s"  , "There are too many tests" ) );
+    REQUIRE_RC( test_printf ( "too m"                    , "%:*/5s" , 10, "There are too many tests" ) );
+    REQUIRE_RC( test_printf ( "There"                    , "%:/*s"  , 5,"There are too many tests" ) );
+    REQUIRE_RC( test_printf ( " too many tests"          , "%:9/16s", "There are too many tests" ) );
+    REQUIRE_RC( test_printf ( "s"                        , "%:$/5s" , "There are too many tests" ) );
+    REQUIRE_RC( test_printf ( "tests"                    , "%:19/$s", "There are too many tests" ) );
 
-    test_printf ( "There"                    , "%:0-4s", "There are too many tests" );
-    test_printf ( "There are too many tests" , "%:-s"  , "There are too many tests" );
-    test_printf ( "too many tests"           , "%:10-s", "There are too many tests" );
-    test_printf ( "There are"                , "%:-8s" , "There are too many tests" );
+    REQUIRE_RC( test_printf ( "There"                    , "%:0-4s", "There are too many tests" ) );
+    REQUIRE_RC( test_printf ( "There are too many tests" , "%:-s"  , "There are too many tests" ) );
+    REQUIRE_RC( test_printf ( "too many tests"           , "%:10-s", "There are too many tests" ) );
+    REQUIRE_RC( test_printf ( "There are"                , "%:-8s" , "There are too many tests" ) );
 
-    test_printf ( "e are too many tests"     , "%:*-s" , 4 , "There are too many tests" );
-    test_printf ( "e are too "               , "%:4-*s", 13, "There are too many tests" );
-    test_printf ( "There are t"              , "%:-*s" , 10, "There are too many tests" );
-    test_printf ( "ere a"                    , "%:*-6s", 2 , "There are too many tests" );
+    REQUIRE_RC( test_printf ( "e are too many tests"     , "%:*-s" , 4 , "There are too many tests" ) );
+    REQUIRE_RC( test_printf ( "e are too "               , "%:4-*s", 13, "There are too many tests" ) );
+    REQUIRE_RC( test_printf ( "There are t"              , "%:-*s" , 10, "There are too many tests" ) );
+    REQUIRE_RC( test_printf ( "ere a"                    , "%:*-6s", 2 , "There are too many tests" ) );
 
-    test_printf ( "s"                        , "%:$s"  , "There are too many tests" );
-    test_printf ( "s"                        , "%:$-s" , "There are too many tests" );
-    test_printf ( "s"                        , "%:$-2s", "There are too many tests" );
-    test_printf ( "There are too many tests" , "%:-$s" , "There are too many tests" );
-    test_printf ( "re are too many tests"    , "%:3-$s", "There are too many tests" );
+    REQUIRE_RC( test_printf ( "s"                        , "%:$s"  , "There are too many tests" ) );
+    REQUIRE_RC( test_printf ( "s"                        , "%:$-s" , "There are too many tests" ) );
+    REQUIRE_RC( test_printf ( "s"                        , "%:$-2s", "There are too many tests" ) );
+    REQUIRE_RC( test_printf ( "There are too many tests" , "%:-$s" , "There are too many tests" ) );
+    REQUIRE_RC( test_printf ( "re are too many tests"    , "%:3-$s", "There are too many tests" ) );
 
     /* with field width, precision, and flags */
-    test_printf ( "There are too many tests" , "%5:s"       , "There are too many tests" );
-    test_printf ( "                   a"     , "%20:6s"     , "There are too many tests" );
-    test_printf ( "There     "               , "%-10:/5s"   , "There are too many tests" );
-    test_printf ( "     too m"               , "%*:*/5s"    , 10, 10, "There are too many tests" );
-    test_printf ( "The"                      , "%.3:/*s"    , 5,"There are too many tests" );
-    test_printf ( " too"                     , "%*.4:9/16s" , 2,  "There are too many tests" );
+    REQUIRE_RC( test_printf ( "There are too many tests" , "%5:s"       , "There are too many tests" ) );
+    REQUIRE_RC( test_printf ( "                   a"     , "%20:6s"     , "There are too many tests" ) );
+    REQUIRE_RC( test_printf ( "There     "               , "%-10:/5s"   , "There are too many tests" ) );
+    REQUIRE_RC( test_printf ( "     too m"               , "%*:*/5s"    , 10, 10, "There are too many tests" ) );
+    REQUIRE_RC( test_printf ( "The"                      , "%.3:/*s"    , 5,"There are too many tests" ) );
+    REQUIRE_RC( test_printf ( " too"                     , "%*.4:9/16s" , 2,  "There are too many tests" ) );
 
-    test_printf ( "There"                          , "%-:0-4s", "There are too many tests" );
-    test_printf ( "There are too many tests      " , "%-30:-s", "There are too many tests" );
-    test_printf ( "too       "                     , "%-10.4:10-s" , "There are too many tests" );
-    test_printf ( "There"                          , "%.*:-8s"  , 5, "There are too many tests" );
-    test_printf ( ""                               , "%s", "" );
+    REQUIRE_RC( test_printf ( "There"                          , "%-:0-4s", "There are too many tests" ) );
+    REQUIRE_RC( test_printf ( "There are too many tests      " , "%-30:-s", "There are too many tests" ) );
+    REQUIRE_RC( test_printf ( "too       "                     , "%-10.4:10-s" , "There are too many tests" ) );
+    REQUIRE_RC( test_printf ( "There"                          , "%.*:-8s"  , 5, "There are too many tests" ) );
+    REQUIRE_RC( test_printf ( ""                               , "%s", "" ) );
 
     {
         String S;
         CONST_STRING ( & S, "My Bonnie lies over the ocean" );
-        test_printf ( "My Bo", "%:0-4S", & S );
+        REQUIRE_RC( test_printf ( "My Bo", "%:0-4S", & S ) );
     }
 
     {
@@ -697,28 +652,28 @@ rc_t run ( const char *progname )
         sym2 -> dad = sym1;
         sym3 -> dad = sym2;
 
-        test_printf ( "outer:inner:leaf", "%N", sym3 );
-        test_printf ( "    outer:inner:leaf", "%20N", sym3 );
-        test_printf ( "outer:inner:leaf    ", "%-20N", sym3 );
-        test_printf ( "outer:inner:leaf    ", "%-20.2N", sym3 );
+        REQUIRE_RC( test_printf ( "outer:inner:leaf", "%N", sym3 ) );
+        REQUIRE_RC( test_printf ( "    outer:inner:leaf", "%20N", sym3 ) );
+        REQUIRE_RC( test_printf ( "outer:inner:leaf    ", "%-20N", sym3 ) );
+        REQUIRE_RC( test_printf ( "outer:inner:leaf    ", "%-20.2N", sym3 ) );
 
         KSymbolWhack ( & sym3 -> n, NULL );
         KSymbolWhack ( & sym2 -> n, NULL );
         KSymbolWhack ( & sym1 -> n, NULL );
     }
 
-    test_printf ( "version 1", "version %V", 0x1000000 );
-    test_printf ( "version ", "version %.V", 0x1000000 );
-    test_printf ( "version     1", "version %5V", 0x1000000 );
-    test_printf ( "version 1.2", "version %V", 0x1020000 );
-    test_printf ( "version   1.2", "version %5V", 0x1020000 );
-    test_printf ( "version 1.2.3", "version %V", 0x1020003 );
-    test_printf ( "version 1.2.3", "version %5V", 0x1020003 );
-    test_printf ( "version 1.2.3 ", "version %-6V", 0x1020003 );
-    test_printf ( "version 1.0", "version %.2V", 0x1000000 );
-    test_printf ( "version 1.0.0", "version %.3V", 0x1000000 );
-    test_printf ( "version 1.0.0", "version %.4V", 0x1000000 );
-    test_printf ( "version 1.0", "version %#.2V", 0x1000000 );
+    REQUIRE_RC( test_printf ( "version 1", "version %V", 0x1000000 ) );
+    REQUIRE_RC( test_printf ( "version ", "version %.V", 0x1000000 ) );
+    REQUIRE_RC( test_printf ( "version     1", "version %5V", 0x1000000 ) );
+    REQUIRE_RC( test_printf ( "version 1.2", "version %V", 0x1020000 ) );
+    REQUIRE_RC( test_printf ( "version   1.2", "version %5V", 0x1020000 ) );
+    REQUIRE_RC( test_printf ( "version 1.2.3", "version %V", 0x1020003 ) );
+    REQUIRE_RC( test_printf ( "version 1.2.3", "version %5V", 0x1020003 ) );
+    REQUIRE_RC( test_printf ( "version 1.2.3 ", "version %-6V", 0x1020003 ) );
+    REQUIRE_RC( test_printf ( "version 1.0", "version %.2V", 0x1000000 ) );
+    REQUIRE_RC( test_printf ( "version 1.0.0", "version %.3V", 0x1000000 ) );
+    REQUIRE_RC( test_printf ( "version 1.0.0", "version %.4V", 0x1000000 ) );
+    REQUIRE_RC( test_printf ( "version 1.0", "version %#.2V", 0x1000000 ) );
 
     /* RC can't be tested due to embedded filename and lineno */
 #if 0
@@ -738,46 +693,25 @@ rc_t run ( const char *progname )
         t . second = 16;
         t . dst = true;
 
-        test_printf ( "3:02:16 PM", "%T", & t );
-        test_printf ( "03:02:16 PM", "%0T", & t );
-        test_printf ( "Fri Oct 29 2011 3:02:16 PM", "%lT", & t );
-        test_printf ( "Fri Oct 29 2011 3:02:16 PM -5", "%zT", & t );
-        test_printf ( "Oct 29 2011", "%hT", & t );
+        REQUIRE_RC( test_printf ( "3:02:16 PM", "%T", & t ) );
+        REQUIRE_RC( test_printf ( "03:02:16 PM", "%0T", & t ) );
+        REQUIRE_RC( test_printf ( "Fri Oct 29 2011 3:02:16 PM", "%lT", & t ) );
+        REQUIRE_RC( test_printf ( "Fri Oct 29 2011 3:02:16 PM -5", "%zT", & t ) );
+        REQUIRE_RC( test_printf ( "Oct 29 2011", "%hT", & t ) );
     }
     { /* insufficient buffer; here we have to bypass test_printf since we need a custom buffer size */
         char buff[10];
         size_t num_writ;
-        rc = string_printf ( buff, 1, &num_writ, "%s", "0123456789" );
-	    if ( rc == 0 )
-	    {
-    	    pLogErr ( klogErr, rc, "string_vprintf returned zero rc with insufficient buffer", "");
-            rc = (rc_t) - 1;
-	    }
-        else
-        {
-            rc = 0;
-        }
+        REQUIRE_RC_FAIL( string_printf ( buff, 1, &num_writ, "%s", "0123456789" ) );
     }
 
 #if LINUX
-    test_printf ( "Success", "%!", 0 );
-    test_printf ( "Operation not permitted", "%!", 1 );
+    REQUIRE_RC( test_printf ( "Success", "%!", 0 ) );
+    REQUIRE_RC( test_printf ( "Operation not permitted", "%!", 1 ) );
 #endif
-
-    return rc;
-
 }
 
-int main( int argc, char *argv [] )
+int main ( int argc, char *argv [] )
 {
-    Args *args;
-    rc_t rc = ArgsMakeAndHandle ( & args, argc, argv, 0 );
-    if ( rc == 0 )
-    {
-        KConfigDisableUserSettings();
-        rc = run ( argv [ 0 ] );
-        ArgsWhack ( args );
-    }
-
-    return (int)rc;
+    return PrintfTestSuite(argc, argv);
 }
