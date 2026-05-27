@@ -1060,24 +1060,12 @@ FIXTURE_TEST_CASE(num_gen_IteratorNext, NumGenFixture)
 // Error reporting
 #if _DEBUGGING
 TEST_CASE(GetUnreadRCInfo_LogRC)
-{ // bug report: only 1 RC is reported at the end of KMane in _DEBUGGING mode
-
-    // create a couple of RCs
-    RC(rcApp, rcFile, rcConstructing, rcFile, rcNull);
-    RC(rcXF, rcFunction, rcExecuting, rcParam, rcInvalid);
+{  // GetUnreadRCInfo deprecated
 
     rc_t rc;
     uint32_t lineno;
     const char *filename, *function;
-    REQUIRE(GetUnreadRCInfo(&rc, &filename, &function, &lineno));
-    // bug: call to pLogErr invokes GetRCFunction (and others alike),
-    // which as a side effect changes "last read RC" to equal "last written
-    // RC"
-    // causing the subsequent call to GetUnreadRCInfo to return "no more
-    // unread RCs"
-    pLogErr(klogWarn, rc, "$(filename):$(lineno) within $(function)",
-            "filename=%s,lineno=%u,function=%s", filename, lineno, function);
-    REQUIRE(GetUnreadRCInfo(&rc, &filename, &function, &lineno));
+    REQUIRE( ! GetUnreadRCInfo(&rc, &filename, &function, &lineno) );
 }
 #endif
 
