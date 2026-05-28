@@ -204,6 +204,13 @@ public:
         THROW_ON_RC ( VCursorCommitRow ( p_cursor ) );
         THROW_ON_RC ( VCursorCloseRow ( p_cursor ) );
     }
+    void WriteEmptyRow ( VCursor * p_cursor, uint32_t p_colIdx )
+    {
+        THROW_ON_RC ( VCursorOpenRow ( p_cursor ) );
+        THROW_ON_RC ( VCursorWrite ( p_cursor, p_colIdx, 8, nullptr, 0, 0 ) );
+        THROW_ON_RC ( VCursorCommitRow ( p_cursor ) );
+        THROW_ON_RC ( VCursorCloseRow ( p_cursor ) );
+    }
 
     static std :: string ToCppString ( const String & p_str)
     {
@@ -263,6 +270,25 @@ public:
         THROW_ON_RC ( KColumnRelease(kcol) );
 
         return rc;
+    }
+
+    template <typename F> void ValidateColumn ( const char* p_table, const char* p_column, F&& p_func )
+    {
+        VDBManager * mgr;
+        THROW_ON_RC ( VDBManagerMakeUpdate ( & mgr, NULL ) );
+        VDBManagerOpenDBRead ( mgr, (const VDatabase**)& m_db, NULL, m_databaseName . c_str () );
+
+        const VCursor* cursor = OpenTable ( p_table );
+
+        uint32_t column_idx;
+        THROW_ON_RC ( VCursorAddColumn ( cursor, & column_idx, p_column ) );
+        THROW_ON_RC ( VCursorOpen ( cursor ) );
+
+        p_func( cursor, column_idx );
+
+        THROW_ON_RC ( VCursorRelease ( cursor ) );
+
+        VDBManagerRelease ( mgr );
     }
 
     std :: string   m_databaseName;
