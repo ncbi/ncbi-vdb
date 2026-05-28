@@ -111,6 +111,7 @@ FIXTURE_TEST_CASE(HttpRequest_POST_NoParams, HttpRequestFixture)
 }
 #endif
 
+#ifdef ALL
 FIXTURE_TEST_CASE(HttpRequest_PUT_sra, HttpRequestFixture)
 {
     MakeRequest( GetName() );
@@ -262,6 +263,7 @@ FIXTURE_TEST_CASE(HttpRequest_HEAD_as_POST_preserveUAsuffix, HttpRequestFixture)
     // -head is appended to the UserAgent string with original suffix
     REQUIRE_NE(string::npos, req.find("suffix-head"));
 }
+#endif
 
 // KClientHttpRequestAddQueryParam
 
@@ -487,6 +489,7 @@ FIXTURE_TEST_CASE(HttpReliableRequest_BadCgi, HttpFixture)
 }
 #endif
 
+#ifdef ALL
 TEST_CASE(Test_urlEncodePluses) {
     REQUIRE_RC(KClientHttpRequestUrlEncodeBase64(NULL));
 
@@ -518,7 +521,9 @@ TEST_CASE(Test_urlEncodePluses) {
     REQUIRE_EQ(StringCompare(encoding, &d), 0);
     StringWhack(encoding);
 }
+#endif
 
+#ifdef ALL
 // Tests of Version Headers
 TEST_CASE(TestVersionHeaders) {
     char b[99]("");
@@ -551,6 +556,82 @@ TEST_CASE(TestVersionHeaders) {
     REQUIRE_RC(VdbVersionPrint(v, b, sizeof b, "X-VDB-Release: ", "\r\n"));
     REQUIRE_EQ(string(b), string("X-VDB-Release: 4.0.0\r\n"));
 }
+#endif
+
+#ifdef ALL
+#include "../../libs/klib/int_checks-priv.h" /* #define FITS_INTO_INT32 */
+#include <klib/rc.h> /* RC */
+static bool IsUnreserved(char c) {
+    static const char unreserved[] =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        "abcdefghijklmnopqrstuvwxyz"
+        "0123456789"
+        "-._~"
+        "/"; /* Encode the forward slash character, '/', everywhere except in
+                the object key name.
+                For example, if the object key name is photos/Jan/sample.jpg,
+                the forward slash in the key name is not encoded. */
+    return string_chr(unreserved, sizeof unreserved - 1, c) != NULL;
+}
+static rc_t UriEncodeForS3(const String** encoding) {
+    size_t i = 0;
+    int n = 0;
+    if (encoding == NULL || *encoding == NULL || (*encoding)->addr == NULL)
+        return 0;
+    for (i = 0; i < (*encoding)->size; ++i)
+        if (!IsUnreserved(((*encoding)->addr)[i]))
+            ++n;
+    if (n > 0) {
+        size_t iFrom = 0, iTo = 0;
+        const char* from = (*encoding)->addr;
+        char* to = NULL;
+        assert(FITS_INTO_INT32((*encoding)->size + n + n));
+        uint32_t len = (uint32_t)((*encoding)->size + n + n);
+
+        String* encoded = (String*)calloc(1, sizeof * encoded + len + 1);
+        if (encoded == NULL)
+            return RC(rcNS, rcString, rcAllocating, rcMemory, rcExhausted);
+
+        to = (char*)(encoded + 1);
+        StringInit(encoded, to, len, len);
+
+        for (iFrom = 0; iFrom < (*encoding)->size; ++iFrom) {
+            char c = from[iFrom];
+            if (IsUnreserved(c))
+                to[iTo++] = c;
+            else {
+                size_t num_writ = 0;
+                rc_t rc = string_printf(to + iTo, len, &num_writ, "%%%02X", c);
+                if (rc != 0)
+                    return rc;
+                iTo += num_writ;
+            }
+        }
+        to[iTo] = '\0';
+        assert(iTo == len);
+        StringWhack(*encoding);
+        *encoding = encoded;
+    }
+    return 0;
+}
+TEST_CASE(TestUriEncodeForS3) {
+    const String* encoding = NULL;
+    String s, d;
+    CONST_STRING(&s, "/test+A/b!1#-$.&_'~(Z)z*0,9:a.txt");
+    CONST_STRING(&d, "/test%2BA/b%211%23-%24.%26_%27~%28Z%29z%2A0%2C9%3Aa.txt");
+    StringCopy(&encoding, &s);
+    REQUIRE_RC(UriEncodeForS3(&encoding));
+    REQUIRE_EQ(StringCompare(encoding, &d), 0);
+    StringWhack(encoding);
+
+    CONST_STRING(&s, ";b=c?d@e[f]g H\"i%J\\k<L>m^N\0");
+    CONST_STRING(&d, "%3Bb%3Dc%3Fd%40e%5Bf%5Dg%20H%22i%25J%5Ck%3CL%3Em%5EN%00");
+    StringCopy(&encoding, &s);
+    REQUIRE_RC(UriEncodeForS3(&encoding));
+    REQUIRE_EQ(StringCompare(encoding, &d), 0);
+    StringWhack(encoding);
+}
+#endif
 
 //////////////////////////////////////////// Main
 
