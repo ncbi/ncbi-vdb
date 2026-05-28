@@ -86,7 +86,7 @@ rc_t DefaultUsage( const Args * args )
     rc_t rc = UsageSummary ( UsageDefaultName );
     if (rc == 0)
     {
-        KOutMsg ("Options:\n");
+        KOutMsg ("\nOptions:\n");
         HelpOptionsStandard();
     }
     return rc;
@@ -94,7 +94,7 @@ rc_t DefaultUsage( const Args * args )
 
 rc_t DefaultUsageSummary( const char * progname )
 {
-    return KOutMsg ("\n"
+    return KOutMsg (
                     "Usage:\n"
                     "  %s [OPTIONS]\n",
                     progname);
@@ -2156,6 +2156,7 @@ rc_t ArgsMakeAndHandleInt ( Args ** pself, int argc, const char ** argv,
             rc = ArgsCheckRequired (self);
             if (rc)
             {
+                OUTMSG(("\n"));
                 MiniUsage(self);
                 break;
             }
@@ -2264,10 +2265,10 @@ void CC HelpVersion (const char * fullpath, ver_t version)
         (sraVersion.version == version && sraVersion.revision == 0 &&
          sraVersion.type == eSraReleaseVersionTypeFinal))
     {
-        OUTMSG (("%s : %.3V\n\n", fullpath, version));
+        OUTMSG (("%s : %.3V\n", fullpath, version));
     }
     else {
-        OUTMSG (("%s : %.3V%s ( %s%s )\n\n",
+        OUTMSG (("%s : %.3V%s ( %s%s )\n",
             fullpath, version, HashSraTools, cSra, HASH_NCBI_VDB));
     }
 }
@@ -2459,7 +2460,7 @@ rc_t CC MiniUsage (const Args * args)
     {
         UsageSummary (progname);
     }
-    KOutMsg ("\nUse option --help for more information.\n\n");
+    KOutMsg ("\nUse option --help for more information.\n");
 
     KOutHandlerSet (w,d);
 
