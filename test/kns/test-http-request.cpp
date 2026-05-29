@@ -88,6 +88,7 @@ public:
     string m_url;
 };
 
+#ifdef ALL
 FIXTURE_TEST_CASE(HttpRequest_POST_Failure, HttpRequestFixture) {
     // Bug: KClientHttpRequestPOST crashed if KStreamRead returned rc
     MakeRequest(GetName());
@@ -99,7 +100,6 @@ FIXTURE_TEST_CASE(HttpRequest_POST_Failure, HttpRequestFixture) {
     TestStream::ForceFailure(false);
 }
 
-#ifdef ALL
 FIXTURE_TEST_CASE(HttpRequest_POST_NoParams, HttpRequestFixture)
 {   // Bug: KClientHttpRequestPOST crashed if request had no parameters
     MakeRequest( GetName() );
@@ -503,19 +503,19 @@ TEST_CASE(Test_urlEncodePluses) {
     String s, d;
 
     CONST_STRING(&s, "");
-    StringCopy(&encoding, &s);
+    REQUIRE_RC(StringCopy(&encoding, &s));
     REQUIRE_RC(KClientHttpRequestUrlEncodeBase64(&encoding));
     REQUIRE_EQ(StringCompare(encoding, &s), 0);
     StringWhack(encoding);
 
     CONST_STRING(&s, "a");
-    StringCopy(&encoding, &s);
+    REQUIRE_RC(StringCopy(&encoding, &s));
     REQUIRE_RC(KClientHttpRequestUrlEncodeBase64(&encoding));
     REQUIRE_EQ(StringCompare(encoding, &s), 0);
     StringWhack(encoding);
 
     CONST_STRING(&s, "+/");
-    StringCopy(&encoding, &s);
+    REQUIRE_RC(StringCopy(&encoding, &s));
     REQUIRE_RC(KClientHttpRequestUrlEncodeBase64(&encoding));
     CONST_STRING(&d, "%2b%2f");
     REQUIRE_EQ(StringCompare(encoding, &d), 0);
@@ -619,17 +619,230 @@ TEST_CASE(TestUriEncodeForS3) {
     String s, d;
     CONST_STRING(&s, "/test+A/b!1#-$.&_'~(Z)z*0,9:a.txt");
     CONST_STRING(&d, "/test%2BA/b%211%23-%24.%26_%27~%28Z%29z%2A0%2C9%3Aa.txt");
-    StringCopy(&encoding, &s);
+    REQUIRE_RC(StringCopy(&encoding, &s));
     REQUIRE_RC(UriEncodeForS3(&encoding));
     REQUIRE_EQ(StringCompare(encoding, &d), 0);
     StringWhack(encoding);
 
     CONST_STRING(&s, ";b=c?d@e[f]g H\"i%J\\k<L>m^N\0");
     CONST_STRING(&d, "%3Bb%3Dc%3Fd%40e%5Bf%5Dg%20H%22i%25J%5Ck%3CL%3Em%5EN%00");
-    StringCopy(&encoding, &s);
+    REQUIRE_RC(StringCopy(&encoding, &s));
     REQUIRE_RC(UriEncodeForS3(&encoding));
     REQUIRE_EQ(StringCompare(encoding, &d), 0);
     StringWhack(encoding);
+}
+
+struct PParameter {
+    BSTNode dad;
+
+    const String* name;
+    const String* value;
+};
+
+struct SParameter {
+    String parameter;
+
+    String name;
+    String value;
+
+    PParameter* encoded;
+};
+
+static rc_t ParameterInit(SParameter* parameter, const char* buf, size_t size) {
+    rc_t rc = 0;
+
+    const char* end = buf + size;
+    char* sep = string_chr(buf, end - buf, '=');
+
+    assert(parameter);
+    memset(parameter, 0, sizeof * parameter);
+
+    StringInit(&parameter->parameter, buf, size, (uint32_t)size);
+
+    if (sep != NULL) {
+        StringInit(&parameter->name, buf, sep - buf, (uint32_t)(sep - buf));
+        StringInit(&parameter->value, sep + 1,
+            end - sep - 1, (uint32_t)(end - sep - 1));
+    }
+    else {
+        StringInit(&parameter->name, buf, end - buf, (uint32_t)(end - buf));
+        StringInit(&parameter->value, "", 0, 0);
+    }
+
+    parameter->encoded = (PParameter*)calloc(1, sizeof * parameter->encoded);
+    if (parameter->encoded == NULL)
+        return RC(rcNS, rcString, rcAllocating, rcMemory, rcExhausted);
+
+    rc = StringCopy(&parameter->encoded->name, &parameter->name);
+    if (rc == 0)
+        rc = UriEncodeForS3(&parameter->encoded->name);
+
+    if (rc == 0)
+        rc = StringCopy(&parameter->encoded->value, &parameter->value);
+    if (rc == 0)
+        rc = UriEncodeForS3(&parameter->encoded->value);
+
+    return rc;
+}
+
+static int64_t CC PParameterSort(const BSTNode* na, const BSTNode* nb) {
+    const PParameter* a = (const PParameter*)na;
+    const PParameter* b = (const PParameter*)nb;
+
+    return StringCaseCompare(a->name, b->name);
+}
+
+static void AddParameter(BSTNode* n, void* data) {
+    PParameter* self = (PParameter*)n;
+    KDataBuffer* buf = (KDataBuffer*)data;
+
+    assert(self && buf);
+
+    KDataBufferPrintf(buf, "%s%S=%S",
+        buf->elem_count != 0 ? "&" : "", self->name, self->value);
+}
+
+static void CC PParameterWhack(BSTNode* n, void* ignore) {
+    PParameter* self = (PParameter*)n;
+
+    assert(self);
+
+    StringWhack(self->name);
+    StringWhack(self->value);
+
+    free(self);
+}
+
+static rc_t BuildCanonicalQueryString(const String* query,
+    KDataBuffer* canonicalQueryString)
+{
+    rc_t rc = 0;
+
+    const char* buf = NULL;
+    const char* end = NULL;
+    char* sep = NULL;
+
+    SParameter parameter;
+
+    BSTree parameters;
+    BSTreeInit(&parameters);
+
+    assert(query && canonicalQueryString);
+
+    buf = query->addr;
+    end = buf + query->size;
+
+    sep = string_chr(buf, end - buf, '&');
+    if (sep == NULL) {
+        rc = ParameterInit(&parameter, buf, query->size);
+        if (rc != 0)
+            return rc;
+        rc = BSTreeInsert(&parameters, &parameter.encoded->dad, PParameterSort);
+        if (rc != 0)
+            return rc;
+    }
+
+    while (sep != NULL) {
+        rc = ParameterInit(&parameter, buf, sep - buf);
+        if (rc != 0)
+            return rc;
+        rc = BSTreeInsert(&parameters, &parameter.encoded->dad, PParameterSort);
+        if (rc != 0)
+            return rc;
+
+        buf = sep + 1;
+        sep = string_chr(buf, end - buf, '&');
+        if (sep == NULL) {
+            rc = ParameterInit(&parameter, buf, end - buf);
+            if (rc != 0)
+                return rc;
+            rc = BSTreeInsert(&parameters, &parameter.encoded->dad,
+                PParameterSort);
+            if (rc != 0)
+                return rc;
+        }
+    }
+
+    BSTreeForEach(&parameters, false, AddParameter, canonicalQueryString);
+    BSTreeWhack(&parameters, PParameterWhack, NULL);
+
+    return rc;
+}
+
+TEST_CASE(TestAbsolutePathComponentOfTheURIExtraction) {
+    String s, q;
+    const String* uri = NULL;
+    /* parse the URL */
+    URLBlock block;
+    memset(&block, 0, sizeof block);
+    const char *url("https://examplebucket.s3.amazonaws.com/photos/photo1.jpg");
+    CONST_STRING(&s, "/photos/photo1.jpg");
+    REQUIRE_RC(ParseUrl(&block, url, string_measure(url, nullptr)));
+    REQUIRE_EQ(StringCompare(&block.path, &s), 0);
+
+    /* Encode URI for S3 */
+    REQUIRE_RC(StringCopy(&uri, &block.path));
+    REQUIRE_RC(UriEncodeForS3(&uri));
+    REQUIRE_EQ(StringCompare(uri, &s), 0);
+    StringWhack(uri);
+
+    /* do not normalize URI paths for requests to Amazon S3 */
+    url = "http://s3.amazonaws.com/my-object//example//photo.user";
+    CONST_STRING(&s, "/my-object//example//photo.user");
+    REQUIRE_RC(ParseUrl(&block, url, string_measure(url, nullptr)));
+    REQUIRE_EQ(StringCompare(&block.path, &s), 0);
+
+    REQUIRE_RC(StringCopy(&uri, &block.path));
+    REQUIRE_RC(UriEncodeForS3(&uri));
+    REQUIRE_EQ(StringCompare(uri, &s), 0);
+    StringWhack(uri);
+
+    url = "http://s3.amazonaws.com/examplebucket"
+        "?prefix=somePrefix&marker=someMarker&max-keys=20";
+    //    12345678101234567 12345678101234567 12345678101
+    //    123456 1234567810 123456 1234567810 12345678 12
+    CONST_STRING(&s, "/examplebucket");
+    REQUIRE_RC(ParseUrl(&block, url, string_measure(url, nullptr)));
+    REQUIRE_EQ(StringCompare(&block.path, &s), 0);
+    CONST_STRING(&q, "prefix=somePrefix&marker=someMarker&max-keys=20");
+    REQUIRE_EQ(StringCompare(&block.query, &q), 0);
+
+    REQUIRE_RC(StringCopy(&uri, &block.path));
+    REQUIRE_RC(UriEncodeForS3(&uri));
+    REQUIRE_EQ(StringCompare(uri, &s), 0);
+    StringWhack(uri);
+
+    KDataBuffer canonicalQueryString;
+
+    REQUIRE_RC(KDataBufferMake(&canonicalQueryString, 8, 0));
+    REQUIRE_RC(BuildCanonicalQueryString(&block.query, &canonicalQueryString));
+    string a((char*)canonicalQueryString.base, 0,
+        canonicalQueryString.elem_count - 1);
+    string e("marker=someMarker&max-keys=20&prefix=somePrefix");
+    REQUIRE_EQ(a, e);
+    KDataBufferWhack(&canonicalQueryString);
+
+    // When a request targets a subresource,
+    // the corresponding query parameter value will be an empty string ("")
+    url = "http://s3.amazonaws.com/examplebucket?acl";
+    CONST_STRING(&s, "/examplebucket");
+    REQUIRE_RC(ParseUrl(&block, url, string_measure(url, nullptr)));
+    REQUIRE_EQ(StringCompare(&block.path, &s), 0);
+    CONST_STRING(&q, "acl");
+    REQUIRE_EQ(StringCompare(&block.query, &q), 0);
+
+    REQUIRE_RC(StringCopy(&uri, &block.path));
+    REQUIRE_RC(UriEncodeForS3(&uri));
+    REQUIRE_EQ(StringCompare(uri, &s), 0);
+    StringWhack(uri);
+
+    REQUIRE_RC(KDataBufferMake(&canonicalQueryString, 8, 0));
+    REQUIRE_RC(BuildCanonicalQueryString(&block.query, &canonicalQueryString));
+    a = string((char*)canonicalQueryString.base, 0,
+        canonicalQueryString.elem_count - 1);
+    e = string("acl=");
+    REQUIRE_EQ(a, e);
+    KDataBufferWhack(&canonicalQueryString);
 }
 #endif
 
