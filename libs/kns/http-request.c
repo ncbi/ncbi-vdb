@@ -128,6 +128,14 @@ KClientHttpRequestGetBody( struct KClientHttpRequest * self )
     return ( const char * ) ( self -> body . base );
 }
 
+const BSTree *
+KClientHttpRequestGetHeaders( const struct KClientHttpRequest * self )
+{
+    assert ( self );
+    return & self -> hdrs;
+}
+
+
 rc_t KClientHttpRequestInit ( KClientHttpRequest * req,
     const URLBlock *b, const KDataBuffer *buf )
 {
