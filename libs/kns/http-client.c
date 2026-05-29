@@ -1176,6 +1176,40 @@ rc_t KClientHttpGetLine ( KClientHttp *self, struct timeout_t *tm )
     return rc;
 }
 
+rc_t StringCopyToLower(const String** cpy, const String* str)
+{
+    if (cpy != NULL)
+    {
+        if (str != NULL)
+        {
+            size_t size = str->size;
+            String* s = malloc(sizeof * s + str->size + 1);
+            if (s != NULL)
+            {
+                char* addr = (char*)(s + 1);
+                StringInit(s, addr, size, str->len);
+                memmove(addr, str->addr, size);
+                addr[size] = 0;
+                *cpy = s;
+
+                /* Convert to lowercase */
+                {
+                    int i = 0;
+                    for (i = 0; i < s->size; ++i)
+                        addr[i] = tolower(s->addr[i]);
+                }
+                return 0;
+            }
+
+            *cpy = NULL;
+            return RC(rcText, rcString, rcCopying, rcMemory, rcInsufficient);
+        }
+
+        *cpy = NULL;
+    }
+    return RC(rcText, rcString, rcCopying, rcParam, rcNull);
+}
+
 /* AddHeaderString
  *  performs task of entering a header into BSTree
  *  or updating an existing node
@@ -1210,9 +1244,38 @@ rc_t KClientHttpAddHeaderString
                 rc = KDataBufferMakeBytes ( & node -> value_storage, 0 );
                 if ( rc == 0 )
                 {
+                    const String* nname = NULL;
+                    rc = StringCopyToLower(&nname, name);
+
+                    /* Remove any leading or trailing whitespace */
+                    if (rc == 0) {
+                        String* nvalue = (String*)value;
+                        char* addr = (char*)value->addr;
+                        size_t size = value->size;
+                        int from = 0, to = 0;
+                        size_t diff = 0;
+
+                        /* remove leading whitespace */
+                        while (isspace(addr[from]) && from < size)
+                            ++from;
+
+                        /* find trailing whitespace */
+                        for (to = size; to > 0 && isspace(addr[to - 1]); --to);
+
+                        for (size = to, to = 0; from < size; ++to, ++from)
+                            addr[to] = addr[from];
+
+                        diff = value->size - to;
+                        if (diff > 0) {
+                            nvalue->size = value->size - diff;
+                            nvalue->len = value->len - diff;
+                        }
+                    }
+
                     /* copy the string data into storage */
-                    rc = KDataBufferPrintf ( & node -> value_storage,
-                                             "%S%S", name, value );
+                    if ( rc == 0 )
+                        rc = KDataBufferPrintf ( & node -> value_storage,
+                                             "%S%S", nname, value );
                     if ( rc == 0 )
                     {
                         /* initialize the Strings to point into KHttpHeader node */
@@ -1223,6 +1286,8 @@ rc_t KClientHttpAddHeaderString
 
                         /* insert into tree, sorted by alphabetical order */
                         BSTreeInsert ( hdrs, & node -> dad, KHttpHeaderSort );
+
+                        StringWhack ( nname );
 
                         return 0;
                     }
