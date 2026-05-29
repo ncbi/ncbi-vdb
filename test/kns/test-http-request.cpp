@@ -696,10 +696,11 @@ static void AddParameter(BSTNode* n, void* data) {
     PParameter* self = (PParameter*)n;
     KDataBuffer* buf = (KDataBuffer*)data;
 
-    assert(self && buf);
+    assert(buf && self && self->name);
 
-    KDataBufferPrintf(buf, "%s%S=%S",
-        buf->elem_count != 0 ? "&" : "", self->name, self->value);
+    if (self->name->size > 0)
+        KDataBufferPrintf(buf, "%s%S=%S",
+            buf->elem_count != 0 ? "&" : "", self->name, self->value);
 }
 
 static void CC PParameterWhack(BSTNode* n, void* ignore) {
@@ -765,6 +766,9 @@ static rc_t BuildCanonicalQueryString(const String* query,
 
     BSTreeForEach(&parameters, false, AddParameter, canonicalQueryString);
     BSTreeWhack(&parameters, PParameterWhack, NULL);
+
+    if (canonicalQueryString->elem_count == 0)
+        rc = KDataBufferPrintf(canonicalQueryString, "%s", "");
 
     return rc;
 }
@@ -841,6 +845,27 @@ TEST_CASE(TestAbsolutePathComponentOfTheURIExtraction) {
     a = string((char*)canonicalQueryString.base, 0,
         canonicalQueryString.elem_count - 1);
     e = string("acl=");
+    REQUIRE_EQ(a, e);
+    KDataBufferWhack(&canonicalQueryString);
+
+    // mo query
+    url = "http://examplebucket.s3.amazonaws.com/test.txt";
+    CONST_STRING(&s, "/test.txt");
+    REQUIRE_RC(ParseUrl(&block, url, string_measure(url, nullptr)));
+    REQUIRE_EQ(StringCompare(&block.path, &s), 0);
+    CONST_STRING(&q, "");
+    REQUIRE_EQ(StringCompare(&block.query, &q), 0);
+
+    REQUIRE_RC(StringCopy(&uri, &block.path));
+    REQUIRE_RC(UriEncodeForS3(&uri));
+    REQUIRE_EQ(StringCompare(uri, &s), 0);
+    StringWhack(uri);
+
+    REQUIRE_RC(KDataBufferMake(&canonicalQueryString, 8, 0));
+    REQUIRE_RC(BuildCanonicalQueryString(&block.query, &canonicalQueryString));
+    a = string((char*)canonicalQueryString.base, 0,
+        canonicalQueryString.elem_count - 1);
+    e = string("");
     REQUIRE_EQ(a, e);
     KDataBufferWhack(&canonicalQueryString);
 }
