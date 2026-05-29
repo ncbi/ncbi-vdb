@@ -871,6 +871,67 @@ TEST_CASE(TestAbsolutePathComponentOfTheURIExtraction) {
 }
 #endif
 
+#ifdef ALL
+static void AddHeader(BSTNode* n, void* data) {
+    KHttpHeader* self = (KHttpHeader*)n;
+    char* b = (char*)data;
+
+    strncat(b, self->name.addr, self->name.size);
+    strcat(b, "=");
+    strncat(b, self->value.addr, self->value.size);
+    strcat(b, ";");
+
+    /*rc_t rc = 0;
+    const String* s = NULL;
+    size_t nameSz = 0;
+    size_t valueSz = 0;
+    char* buf = NULL; malloc(nameSz + valueSz + 1);
+    if (buf == NULL)
+        return;
+    KHttpHeader* canonicalHeader = NULL;
+    assert(canonicalHdrs && self);
+    rc = StringCopy(&s, &self->name);*/
+}
+
+/*struct CanonicalHeadersBuilder {    const BSTree* canonicalHdrs;};
+static rc_t BuildCanonicalHeaders(const BSTree* hdrs) {
+    //KDataBuffer canonicalHeaders;
+    rc_t rc = 0;// KDataBufferMake(&canonicalHeaders, 8, 0);
+    BSTree canonicalHdrs;
+    BSTreeInit(&canonicalHdrs);
+    //if (rc != 0)        return rc;
+    BSTreeForEach(hdrs, false, AddHeader, &canonicalHdrs);
+    return rc;
+}*/
+
+FIXTURE_TEST_CASE(TestHeadersCanonization, HttpRequestFixture) {
+    MakeRequest(GetName());
+
+    REQUIRE_RC(KClientHttpRequestAddHeader(m_req, "X-aMz-DaTe",
+        //                                         1234567810
+        " \t\v\n\r\f20130708T220855Z \t\v\n\r\f"));
+    //              1234567810123456
+
+    REQUIRE_RC(KClientHttpRequestAddHeader(m_req, "x-AmZ-cOnTeNt-ShA256",
+        //                                         12345678101234567820
+        " \t\v\n\r\fe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b9 \t\v\n\r\f"));
+    //              123456781012345678201234567830123456784012345
+
+    REQUIRE_RC(KClientHttpRequestAddHeader(m_req, "simple-header",
+        "simple-value"));
+
+    const BSTree* hdrs(KClientHttpRequestGetHeaders(m_req));
+    char b[512] = "";
+    BSTreeForEach(hdrs, false, AddHeader, b);
+
+    REQUIRE_EQ(string(b), string("simple-header=simple-value;"
+        "x-amz-content-sha256" "="
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b9" ";"
+        "x-amz-date" "=" "20130708T220855Z" ";"));
+    //REQUIRE_RC(BuildCanonicalHeaders(KClientHttpRequestGetHeaders(m_req)));
+}
+#endif
+
 //////////////////////////////////////////// Main
 
 static rc_t argsHandler ( int argc, char * argv [] ) {
