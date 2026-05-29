@@ -1,8 +1,5 @@
 race:CloudMgrGetCurrentCloud
 
-race:KConfigMakeImpl
-race:find_home_directory
-
 race:KDBOpenPathTypeReadInt
 
 race:KDirectoryNativeDir_v1
