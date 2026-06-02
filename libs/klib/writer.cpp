@@ -64,8 +64,8 @@ struct RCCreateLoc
     rc_t rc;
 };
 
-static RCCreateLoc RC_loc_queue [ 3 ];
-static atomic32_t RC_loc_reserve, RC_loc_written, RC_loc_read;
+thread_local static RCCreateLoc RC_loc_queue [ 3 ];
+thread_local static atomic32_t RC_loc_reserve, RC_loc_written, RC_loc_read;
 #define RC_LOC_QUEUE_SIZE ( sizeof RC_loc_queue / sizeof RC_loc_queue [ 0 ] )
 #define RC_LOC_QUEUE_MASK ( RC_LOC_QUEUE_SIZE - 1 )
 
@@ -157,7 +157,7 @@ static
 int64_t CC wrt_nvp_cmp_func(const void *a, const void *b, void * ignored)
 {
     int i = 0;
-    const char *key = a;
+    const char *key = (const char*) a;
     const char *name = ( ( const wrt_nvp_t* ) b ) -> name;
 
     while(key[i] == name[i]) {
@@ -176,8 +176,8 @@ int64_t CC wrt_nvp_cmp_func(const void *a, const void *b, void * ignored)
 static
 int64_t CC wrt_nvp_sort_func(const void *a, const void *b, void * ignored)
 {
-    const wrt_nvp_t *left = a;
-    const wrt_nvp_t *right = b;
+    const wrt_nvp_t *left = (const wrt_nvp_t *)a;
+    const wrt_nvp_t *right = (const wrt_nvp_t *)b;
     return strcmp ( left -> name, right -> name );
 }
 
@@ -191,7 +191,7 @@ LIB_EXPORT void CC wrt_nvp_sort( size_t argc, wrt_nvp_t argv[])
 LIB_EXPORT const wrt_nvp_t* CC wrt_nvp_find( size_t argc, const wrt_nvp_t argv[], const char* key )
 {
     if( argc > 0 ) {
-        return kbsearch(key, argv, argc, sizeof(argv[0]), wrt_nvp_cmp_func, NULL);
+        return (const wrt_nvp_t *) kbsearch(key, argv, argc, sizeof(argv[0]), wrt_nvp_cmp_func, NULL);
     }
     return NULL;
 }
