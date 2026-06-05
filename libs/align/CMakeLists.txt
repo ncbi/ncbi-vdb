@@ -60,7 +60,7 @@ if( FLEX_FOUND AND BISON_FOUND )
         COMPILE_FLAGS "--debug --noline" )
     set( SamExtractScanner ${FLEX_SamExtractFlex_OUTPUTS} )
     BISON_TARGET( SamExtractGrammar samextract-grammar.y ${CMAKE_CURRENT_SOURCE_DIR}/zz_samextract-grammar.c
-        COMPILE_FLAGS "-Wno-other --no-lines -r state -v --defines=${CMAKE_CURRENT_SOURCE_DIR}/zz_samextract-grammar.h" )
+        COMPILE_FLAGS "-Wno-other --no-lines -r state -v --defines=${CMAKE_CURRENT_SOURCE_DIR}/zz_samextract-grammar.h  -Wno-deprecated" )
     set( SamExtractParser ${BISON_SamExtractGrammar_OUTPUT_SOURCE} )
     ADD_FLEX_BISON_DEPENDENCY(SamExtractFlex SamExtractGrammar)
     SET_DIRECTORY_PROPERTIES(PROPERTIES CLEAN_NO_CUSTOM 1)
