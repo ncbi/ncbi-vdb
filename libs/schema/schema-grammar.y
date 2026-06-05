@@ -131,8 +131,7 @@
 
 %}
 
-%define api.prefix "Schema_"
- /*%name-prefix "Schema_"*/
+%define api.prefix {Schema_}
 %parse-param { ctx_t ctx }
 %parse-param { ParseTree** root }
 %parse-param { ErrorReport * errors }

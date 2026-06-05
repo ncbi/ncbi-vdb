@@ -43,7 +43,7 @@ typedef struct KFGScanBlock
 {
     void* scanner;
     void* buffer;
-    void* self; 
+    void* self;
     const char* file;
     KFGToken* lastToken; /* used for error reporting */
     bool (*look_up_var)(void * self, struct KFGToken*);
@@ -51,7 +51,7 @@ typedef struct KFGScanBlock
 } KFGScanBlock;
 
 struct VNamelist;
-typedef union 
+typedef union
 {
 	KFGToken            pb;
 	struct VNamelist*   namelist;

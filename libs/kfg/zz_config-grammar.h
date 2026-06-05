@@ -1,8 +1,8 @@
-/* A Bison parser, made by GNU Bison 3.5.1.  */
+/* A Bison parser, made by GNU Bison 3.8.2.  */
 
 /* Bison interface for Yacc-like parsers in C
 
-   Copyright (C) 1984, 1989-1990, 2000-2015, 2018-2020 Free Software Foundation,
+   Copyright (C) 1984, 1989-1990, 2000-2015, 2018-2021 Free Software Foundation,
    Inc.
 
    This program is free software: you can redistribute it and/or modify
@@ -16,7 +16,7 @@
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
+   along with this program.  If not, see <https://www.gnu.org/licenses/>.  */
 
 /* As a special exception, you may create a larger work that contains
    part or all of the Bison parser skeleton and distribute that work
@@ -31,42 +31,55 @@
    This special exception was added by the Free Software Foundation in
    version 2.2 of Bison.  */
 
-/* Undocumented macros, especially those whose name start with YY_,
-   are private implementation details.  Do not rely on them.  */
+/* DO NOT RELY ON FEATURES THAT ARE NOT DOCUMENTED in the manual,
+   especially those whose name start with YY_ or yy_.  They are
+   private implementation details that can be changed or removed.  */
 
 #ifndef YY_KFG_HOME_BOSHKINS_NCBI_DEVEL_NCBI_VDB_LIBS_KFG_ZZ_CONFIG_GRAMMAR_H_INCLUDED
 # define YY_KFG_HOME_BOSHKINS_NCBI_DEVEL_NCBI_VDB_LIBS_KFG_ZZ_CONFIG_GRAMMAR_H_INCLUDED
 /* Debug traces.  */
-#ifndef YYDEBUG
-# define YYDEBUG 0
-#endif
+#ifndef KFG_DEBUG
+# if defined YYDEBUG
 #if YYDEBUG
-extern int KFG_debug;
+#   define KFG_DEBUG 1
+#  else
+#   define KFG_DEBUG 0
+#  endif
+# else /* ! defined YYDEBUG */
+#  define KFG_DEBUG 0
+# endif /* ! defined YYDEBUG */
+#endif  /* ! defined KFG_DEBUG */
+#if KFG_DEBUG
+extern int Kfg_debug;
 #endif
 
-/* Token type.  */
-#ifndef YYTOKENTYPE
-# define YYTOKENTYPE
-  enum yytokentype
+/* Token kinds.  */
+#ifndef KFG_TOKENTYPE
+# define KFG_TOKENTYPE
+  enum Kfg_tokentype
   {
-    kfgEND_INPUT = 0,
-    kfgEND_LINE = 258,
-    kfgUNTERM_STRING = 259,
-    kfgUNTERM_ESCAPED_STRING = 260,
-    kfgUNRECOGNIZED = 261,
-    kfgVAR_REF = 262,
-    kfgUNTERM_VAR_REF = 263,
-    kfgASSIGN = 264,
-    kfgSTRING = 265,
-    kfgESCAPED_STRING = 266,
-    kfgABS_PATH = 267,
-    kfgREL_PATH = 268
+    KFG_EMPTY = -2,
+    kfgEND_INPUT = 0,              /* kfgEND_INPUT  */
+    KFG_error = 256,               /* error  */
+    KFG_UNDEF = 257,               /* "invalid token"  */
+    kfgEND_LINE = 258,             /* kfgEND_LINE  */
+    kfgUNTERM_STRING = 259,        /* kfgUNTERM_STRING  */
+    kfgUNTERM_ESCAPED_STRING = 260, /* kfgUNTERM_ESCAPED_STRING  */
+    kfgUNRECOGNIZED = 261,         /* kfgUNRECOGNIZED  */
+    kfgVAR_REF = 262,              /* kfgVAR_REF  */
+    kfgUNTERM_VAR_REF = 263,       /* kfgUNTERM_VAR_REF  */
+    kfgASSIGN = 264,               /* kfgASSIGN  */
+    kfgSTRING = 265,               /* kfgSTRING  */
+    kfgESCAPED_STRING = 266,       /* kfgESCAPED_STRING  */
+    kfgABS_PATH = 267,             /* kfgABS_PATH  */
+    kfgREL_PATH = 268              /* kfgREL_PATH  */
   };
+  typedef enum Kfg_tokentype Kfg_token_kind_t;
 #endif
 
 /* Value type.  */
-#if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
-union YYSTYPE
+#if ! defined KFG_STYPE && ! defined KFG_STYPE_IS_DECLARED
+union KFG_STYPE
 {
 
     KFGToken                pb;
@@ -74,13 +87,15 @@ union YYSTYPE
 
 
 };
-typedef union YYSTYPE YYSTYPE;
-# define YYSTYPE_IS_TRIVIAL 1
-# define YYSTYPE_IS_DECLARED 1
+typedef union KFG_STYPE KFG_STYPE;
+# define KFG_STYPE_IS_TRIVIAL 1
+# define KFG_STYPE_IS_DECLARED 1
 #endif
 
 
 
-int KFG_parse (KFGParseBlock* pb, KFGScanBlock* sb);
+
+int Kfg_parse (KFGParseBlock* pb, KFGScanBlock* sb);
+
 
 #endif /* !YY_KFG_HOME_BOSHKINS_NCBI_DEVEL_NCBI_VDB_LIBS_KFG_ZZ_CONFIG_GRAMMAR_H_INCLUDED  */

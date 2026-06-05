@@ -560,7 +560,7 @@ rc_t BAMGetHeaders(SAMExtractor* state)
             size_t sz_tmp = strlen(curline);
             assert( FITS_INTO_INT ( sz_tmp ) );
             curline_len = (int)sz_tmp;
-            SAMparse(state);
+            Sam_parse(state);
             if (state->rc) {
                 ERR("Parser returned error in BAMGetHeaders");
                 return state->rc;

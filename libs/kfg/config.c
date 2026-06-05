@@ -1878,7 +1878,7 @@ rc_t parse_file ( KConfig * self, const char* path, const char * src )
         return RC ( rcKFG, rcMgr, rcParsing, rcMemory, rcExhausted );
     }
 
-    KFG_parse(&pb, &sb); /* may have reported parse errors into log, but we should have been able to extract enough data to proceed regardless */
+    Kfg_parse(&pb, &sb); /* may have reported parse errors into log, but we should have been able to extract enough data to proceed regardless */
     KFGScan_yylex_destroy(&sb);
 
     return 0;

@@ -116,7 +116,7 @@ opttag [A-Za-z][A-Za-z0-9]
 %%
  /* Generic rules */
 {controlchar} {
-    SAMlval.strval=pool_memdup(SAMtext,SAMleng+1);
+    Sam_lval.strval=pool_memdup(SAMtext,SAMleng+1);
     DBG("CONTROLCHAR %d",yytext[0]);
     return CONTROLCHAR; }
 \t { DBG(" tab"); return TAB; }
@@ -141,15 +141,15 @@ opttag [A-Za-z][A-Za-z0-9]
 <INHD>"\tGO:" return HDGO;
 <INHD>\t[A-Z][A-Z]: { ERR("Undefined HD tag %s",yytext+1); yyterminate();}
 <INHD>[0-9]+\.[0-9]+ {
-    SAMlval.strval=pool_memdup(SAMtext,SAMleng+1);
+    Sam_lval.strval=pool_memdup(SAMtext,SAMleng+1);
     DBG(" header version");
     return VALUE; }
 <INHD>unknown|unsorted|queryname|coordinate {
-    SAMlval.strval=pool_memdup(SAMtext,SAMleng+1);
+    Sam_lval.strval=pool_memdup(SAMtext,SAMleng+1);
     DBG(" header SO");
     return VALUE; }
 <INHD>none|query|reference {
-    SAMlval.strval=pool_memdup(SAMtext,SAMleng+1);
+    Sam_lval.strval=pool_memdup(SAMtext,SAMleng+1);
     DBG(" header GO");
     return VALUE; }
 
@@ -160,16 +160,16 @@ opttag [A-Za-z][A-Za-z0-9]
     DBG("SEQUENCE");
     return SEQUENCE;
 }
-<INSQ>"\tSN:" { SAMlval.strval="SN"; return SQSN; }
-<INSQ>"\tLN:" { SAMlval.strval="LN"; return SQLN; }
-<INSQ>"\tAS:" { SAMlval.strval="AS"; return SQAS; }
-<INSQ>"\tM5:" { SAMlval.strval="M5"; return SQM5; }
-<INSQ>"\tMD5:" { WARN("SQ MD5 should be M5"); SAMlval.strval="M5"; return SQM5; }
-<INSQ>"\tSP:" { SAMlval.strval="SP"; return SQSP; }
-<INSQ>"\tUR:" { SAMlval.strval="UR"; return SQUR; }
+<INSQ>"\tSN:" { Sam_lval.strval="SN"; return SQSN; }
+<INSQ>"\tLN:" { Sam_lval.strval="LN"; return SQLN; }
+<INSQ>"\tAS:" { Sam_lval.strval="AS"; return SQAS; }
+<INSQ>"\tM5:" { Sam_lval.strval="M5"; return SQM5; }
+<INSQ>"\tMD5:" { WARN("SQ MD5 should be M5"); Sam_lval.strval="M5"; return SQM5; }
+<INSQ>"\tSP:" { Sam_lval.strval="SP"; return SQSP; }
+<INSQ>"\tUR:" { Sam_lval.strval="UR"; return SQUR; }
 <INSQ>\t[A-Z][A-Z]: { ERR("Undefined SQ tag %s",yytext+1); yyterminate();}
 <INSQ>[^\t\r\n]+ {
-    SAMlval.strval=pool_memdup(SAMtext,SAMleng+1);
+    Sam_lval.strval=pool_memdup(SAMtext,SAMleng+1);
     DBG("SEQ VALUE");
     return VALUE;
 }
@@ -180,24 +180,24 @@ opttag [A-Za-z][A-Za-z0-9]
     DBG("READGROUP");
     return READGROUP;
 }
-<INRG>"\tID:" { SAMlval.strval="ID"; return RGID; }
-<INRG>"\tCN:" { SAMlval.strval="CN"; return RGCN; }
-<INRG>"\tDS:" { SAMlval.strval="DS"; return RGDS; }
-<INRG>"\tDT:" { SAMlval.strval="DT"; return RGDT; }
-<INRG>"\tFO:" { SAMlval.strval="FO"; return RGFO; }
-<INRG>"\tKS:" { SAMlval.strval="KS"; return RGKS; }
-<INRG>"\tLB:" { SAMlval.strval="LB"; return RGLB; }
-<INRG>"\tPG:" { SAMlval.strval="PG"; return RGPG; }
-<INRG>"\tPI:" { SAMlval.strval="PI"; return RGPI; }
-<INRG>"\tPL:" { SAMlval.strval="PL"; return RGPL; }
-<INRG>"\tPM:" { SAMlval.strval="PM"; return RGPM; }
-<INRG>"\tPU:" { SAMlval.strval="PU"; return RGPU; }
-<INRG>"\tSM:" { SAMlval.strval="SM"; return RGSM; }
+<INRG>"\tID:" { Sam_lval.strval="ID"; return RGID; }
+<INRG>"\tCN:" { Sam_lval.strval="CN"; return RGCN; }
+<INRG>"\tDS:" { Sam_lval.strval="DS"; return RGDS; }
+<INRG>"\tDT:" { Sam_lval.strval="DT"; return RGDT; }
+<INRG>"\tFO:" { Sam_lval.strval="FO"; return RGFO; }
+<INRG>"\tKS:" { Sam_lval.strval="KS"; return RGKS; }
+<INRG>"\tLB:" { Sam_lval.strval="LB"; return RGLB; }
+<INRG>"\tPG:" { Sam_lval.strval="PG"; return RGPG; }
+<INRG>"\tPI:" { Sam_lval.strval="PI"; return RGPI; }
+<INRG>"\tPL:" { Sam_lval.strval="PL"; return RGPL; }
+<INRG>"\tPM:" { Sam_lval.strval="PM"; return RGPM; }
+<INRG>"\tPU:" { Sam_lval.strval="PU"; return RGPU; }
+<INRG>"\tSM:" { Sam_lval.strval="SM"; return RGSM; }
 <INRG>\t[A-Z][A-Z]: { ERR("Undefined RG tag:%s",yytext+1); yyterminate();}
 <INRG>"\tLNID:" { WARN("LNID is improper RG tag");}
 <INRG>\t[^: -~]+: { ERR("Undefined long RG tag: %s",yytext+1); yyterminate();}
 <INRG>[^\t\r\n]+ {
-    SAMlval.strval=pool_memdup(SAMtext,SAMleng+1);
+    Sam_lval.strval=pool_memdup(SAMtext,SAMleng+1);
     DBG("readgroup value:%s",yytext);
     return VALUE;
  }
@@ -209,19 +209,19 @@ opttag [A-Za-z][A-Za-z0-9]
     DBG("PROGRAM");
     return PROGRAM;
 }
-<INPG>"\tID:" { SAMlval.strval="ID"; return PGID; }
-<INPG>"\tPN:" { SAMlval.strval="PN"; return PGPN; }
-<INPG>"\tCL:" { SAMlval.strval="CL"; return PGCL; }
-<INPG>"\tPP:" { SAMlval.strval="PP"; return PGPP; }
-<INPG>"\tDS:" { SAMlval.strval="DS"; return PGDS; }
-<INPG>"\tVN:" { SAMlval.strval="VN"; return PGVN; }
+<INPG>"\tID:" { Sam_lval.strval="ID"; return PGID; }
+<INPG>"\tPN:" { Sam_lval.strval="PN"; return PGPN; }
+<INPG>"\tCL:" { Sam_lval.strval="CL"; return PGCL; }
+<INPG>"\tPP:" { Sam_lval.strval="PP"; return PGPP; }
+<INPG>"\tDS:" { Sam_lval.strval="DS"; return PGDS; }
+<INPG>"\tVN:" { Sam_lval.strval="VN"; return PGVN; }
 <INPG>\t[A-Z][A-Z]: { ERR("Undefined PG tag %s",yytext+1); yyterminate();}
 <INPG>\t[a-z_]{3,} {
     WARN("Not a PG tag:%s",yytext+1);
-    SAMlval.strval=pool_memdup(SAMtext+1, SAMleng);
+    Sam_lval.strval=pool_memdup(SAMtext+1, SAMleng);
     return VALUE; }
 <INPG>[^\t\r\n]+ {
-    SAMlval.strval=pool_memdup(SAMtext,SAMleng+1);
+    Sam_lval.strval=pool_memdup(SAMtext,SAMleng+1);
     DBG("program value:%s",yytext);
     return VALUE;
  }
@@ -234,57 +234,57 @@ opttag [A-Za-z][A-Za-z0-9]
  /* Alignments */
 <INITIAL>^{qname} {
     BEGIN ALIGNQNAME;
-    SAMlval.strval=pool_memdup(SAMtext, SAMleng+1);
-    DBG(" alignment qname '%s' %d '%s'", SAMtext, SAMleng, SAMlval.strval);
+    Sam_lval.strval=pool_memdup(SAMtext, SAMleng+1);
+    DBG(" alignment qname '%s' %d '%s'", SAMtext, SAMleng, Sam_lval.strval);
     return QNAME; }
 <ALIGNQNAME>\t{flag} {
     BEGIN ALIGNFLAG;
-    SAMlval.strval=pool_memdup(SAMtext+1, SAMleng);
+    Sam_lval.strval=pool_memdup(SAMtext+1, SAMleng);
     DBG(" alignment flag");
     return FLAG; }
 <ALIGNFLAG>\t{rname} {
     BEGIN ALIGNRNAME;
-    SAMlval.strval=pool_memdup(SAMtext+1, SAMleng);
+    Sam_lval.strval=pool_memdup(SAMtext+1, SAMleng);
     DBG(" alignment rname");
     return RNAME; }
 <ALIGNRNAME>\t{pos} {
     BEGIN ALIGNPOS;
-    SAMlval.strval=pool_memdup(SAMtext+1, SAMleng);
+    Sam_lval.strval=pool_memdup(SAMtext+1, SAMleng);
     DBG(" alignment pos");
     return POS; }
 <ALIGNPOS>\t{mapq} {
     BEGIN ALIGNMAPQ;
-    SAMlval.strval=pool_memdup(SAMtext+1, SAMleng);
+    Sam_lval.strval=pool_memdup(SAMtext+1, SAMleng);
     DBG(" alignment mapq");
     return MAPQ; }
 <ALIGNMAPQ>\t{cigar} {
     BEGIN ALIGNCIGAR;
-    SAMlval.strval=pool_memdup(SAMtext+1, SAMleng);
+    Sam_lval.strval=pool_memdup(SAMtext+1, SAMleng);
     DBG(" alignment cigar");
     return CIGAR; }
 <ALIGNCIGAR>\t{rnext} {
     BEGIN ALIGNRNEXT;
-    SAMlval.strval=pool_memdup(SAMtext+1, SAMleng);
+    Sam_lval.strval=pool_memdup(SAMtext+1, SAMleng);
     DBG(" alignment rnext");
     return RNEXT; }
 <ALIGNRNEXT>\t{pnext} {
     BEGIN ALIGNPNEXT;
-    SAMlval.strval=pool_memdup(SAMtext+1, SAMleng);
+    Sam_lval.strval=pool_memdup(SAMtext+1, SAMleng);
     DBG(" alignment pnext ");
     return PNEXT; }
 <ALIGNPNEXT>\t{tlen} {
     BEGIN ALIGNTLEN;
-    SAMlval.strval=pool_memdup(SAMtext+1, SAMleng);
+    Sam_lval.strval=pool_memdup(SAMtext+1, SAMleng);
     DBG(" alignment tlen");
     return TLEN; }
 <ALIGNTLEN>\t{seq} {
     BEGIN ALIGNSEQ;
-    SAMlval.strval=pool_memdup(SAMtext+1, SAMleng);
+    Sam_lval.strval=pool_memdup(SAMtext+1, SAMleng);
     DBG(" alignment seq");
     return SEQ; }
 <ALIGNSEQ>\t{qual} {
     BEGIN ALIGNOPT;
-    SAMlval.strval=pool_memdup(SAMtext+1, SAMleng);
+    Sam_lval.strval=pool_memdup(SAMtext+1, SAMleng);
     DBG(" alignment qual");
     return QUAL; }
 
@@ -292,84 +292,84 @@ opttag [A-Za-z][A-Za-z0-9]
  /* Reserved and Locally defined tags */
 <ALIGNOPT>\t(GC|GQ|GS|MF|SQ|X[A-Za-z0-9]|Y[A-Za-z0-9]|Z[A-Za-z0-9]) {
     BEGIN ALIGNOPTTYPE;
-    SAMlval.strval=pool_memdup(SAMtext+1, 3);
+    Sam_lval.strval=pool_memdup(SAMtext+1, 3);
     DBG(" alignment opt reserved");
     return OPTTAG; }
 
  /* Only types iZB have optioanl standardized tags */
 <ALIGNOPT>\t(AM|AS|CM|CP|FI|H0|H1|H2|HI|IH|MQ|NH|NM|OP|PQ|SM|TC|UQ) {
     BEGIN ALIGNOPTTYPE;
-    SAMlval.strval=pool_memdup(SAMtext+1, 3);
-    DBG(" alignment opt '%s'", SAMlval.strval);
+    Sam_lval.strval=pool_memdup(SAMtext+1, 3);
+    DBG(" alignment opt '%s'", Sam_lval.strval);
     return OPTITAG; }
 
 <ALIGNOPT>\t(BC|BQ|CC|CO|CQ|CS|CT|E2|FS|LB|MC|MD|OC|OQ|PG|PT|PU|QT|Q2|R2|RG|RT|SZ|U2) {
     BEGIN ALIGNOPTTYPE;
     DBG(" alignment opt %d '%s'", SAMleng+1, SAMtext);
-    SAMlval.strval=pool_memdup(SAMtext+1, 3);
-    DBG(" alignment opt '%s'", SAMlval.strval);
+    Sam_lval.strval=pool_memdup(SAMtext+1, 3);
+    DBG(" alignment opt '%s'", Sam_lval.strval);
     return OPTZTAG; }
 
 <ALIGNOPT>\t(FZ) {
     BEGIN ALIGNOPTTYPE;
-    SAMlval.strval=pool_memdup(SAMtext+1, 3);
-    DBG(" alignment opt '%s'", SAMlval.strval);
+    Sam_lval.strval=pool_memdup(SAMtext+1, 3);
+    DBG(" alignment opt '%s'", Sam_lval.strval);
     return OPTBTAG; }
 
 <ALIGNOPT>\t{opttag} {
     BEGIN ALIGNOPTTYPE;
-    SAMlval.strval=pool_memdup(SAMtext+1, 3);
-    DBG(" alignment opt '%s'", SAMlval.strval);
+    Sam_lval.strval=pool_memdup(SAMtext+1, 3);
+    DBG(" alignment opt '%s'", Sam_lval.strval);
     return OPTTAG; }
 
 <ALIGNOPTTYPE>":A:" {
     BEGIN ALIGNOPTAVALUE;
-    SAMlval.strval="A";
+    Sam_lval.strval="A";
     return OPTATYPE; }
 <ALIGNOPTTYPE>":i:" {
     BEGIN ALIGNOPTIVALUE;
-    SAMlval.strval="i";
+    Sam_lval.strval="i";
     return OPTITYPE; }
 <ALIGNOPTTYPE>":f:" {
     BEGIN ALIGNOPTFVALUE;
-    SAMlval.strval="f";
+    Sam_lval.strval="f";
     return OPTFTYPE; }
 <ALIGNOPTTYPE>":Z:" {
     BEGIN ALIGNOPTZVALUE;
-    SAMlval.strval="Z";
+    Sam_lval.strval="Z";
     return OPTZTYPE; }
 <ALIGNOPTTYPE>":H:" {
     BEGIN ALIGNOPTHVALUE;
-    SAMlval.strval="H";
+    Sam_lval.strval="H";
     return OPTHTYPE; }
 <ALIGNOPTTYPE>":B:" {
     BEGIN ALIGNOPTBVALUE;
-    SAMlval.strval="B";
+    Sam_lval.strval="B";
     return OPTBTYPE; }
 
 <ALIGNOPTAVALUE>[!-~] {
     BEGIN ALIGNOPT;
-    SAMlval.strval=pool_memdup(SAMtext,2);
+    Sam_lval.strval=pool_memdup(SAMtext,2);
     return OPTAVALUE; }
 <ALIGNOPTIVALUE>{integer} {
     BEGIN ALIGNOPT;
-    SAMlval.strval=pool_memdup(SAMtext,SAMleng+1);
+    Sam_lval.strval=pool_memdup(SAMtext,SAMleng+1);
     return OPTIVALUE; }
 <ALIGNOPTFVALUE>{float} {
     BEGIN ALIGNOPT;
-    SAMlval.strval=pool_memdup(SAMtext,SAMleng+1);
+    Sam_lval.strval=pool_memdup(SAMtext,SAMleng+1);
     return OPTFVALUE; }
 <ALIGNOPTZVALUE>[ -~]* {
     BEGIN ALIGNOPT;
-    SAMlval.strval=pool_memdup(SAMtext,SAMleng+1);
+    Sam_lval.strval=pool_memdup(SAMtext,SAMleng+1);
     return OPTZVALUE; }
 <ALIGNOPTHVALUE>([0-9A-Fa-f][0-9A-Fa-f])* {
     BEGIN ALIGNOPT;
-    SAMlval.strval=pool_memdup(SAMtext,SAMleng+1);
+    Sam_lval.strval=pool_memdup(SAMtext,SAMleng+1);
     return OPTHVALUE; }
 <ALIGNOPTBVALUE>cCsSiIf](,[-+]?[0-9]*\\.?[0-9]+(eE][-+]?[0-9]+)?)+ {
     BEGIN ALIGNOPT;
-    SAMlval.strval=pool_memdup(SAMtext,SAMleng+1);
+    Sam_lval.strval=pool_memdup(SAMtext,SAMleng+1);
     return OPTBVALUE; }
 
 

@@ -34,20 +34,20 @@
 
     #include "schema-ast.hpp"
 
-    #define AST_lex NextToken
+    #define Ast_lex NextToken
     static int NextToken ( YYSTYPE * p_token, ParseTreeScanner & p_sb )
     {
         return p_sb . NextToken ( p_token -> tok );
     }
 
-    void AST_error ( ctx_t ctx, void * p_parser, ASTBuilder & p_builder, ParseTreeScanner & p_sb, const char * p_msg )
+    void Ast_error ( ctx_t ctx, void * p_parser, ASTBuilder & p_builder, ParseTreeScanner & p_sb, const char * p_msg )
     {
         INTERNAL_ERROR ( xcUnexpected, "%s: %s", p_sb . GetSourceFileName (), p_msg );
     }
 
 %}
 
-%name-prefix "AST_"
+%define api.prefix {Ast_}
 %parse-param { ctx_t ctx }
 %parse-param { AST*& p_ast }
 %parse-param { ASTBuilder& p_builder }

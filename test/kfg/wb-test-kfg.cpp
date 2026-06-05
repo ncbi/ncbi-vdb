@@ -441,7 +441,7 @@ public:
         sb.look_up_var=lookup_var;
         sb.report_error=report_error;
         errorMsg.clear();
-        KFG_parse(&pb, &sb);
+        Kfg_parse(&pb, &sb);
 
         KFGScan_yylex_destroy(&sb);
 
