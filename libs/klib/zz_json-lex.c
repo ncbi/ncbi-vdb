@@ -23,239 +23,239 @@
 
 /* %if-c-only */
 #ifdef yy_create_buffer
-#define JsonScan_yy_create_buffer_ALREADY_DEFINED
+#define json_yy_create_buffer_ALREADY_DEFINED
 #else
-#define yy_create_buffer JsonScan_yy_create_buffer
+#define yy_create_buffer json_yy_create_buffer
 #endif
 
 #ifdef yy_delete_buffer
-#define JsonScan_yy_delete_buffer_ALREADY_DEFINED
+#define json_yy_delete_buffer_ALREADY_DEFINED
 #else
-#define yy_delete_buffer JsonScan_yy_delete_buffer
+#define yy_delete_buffer json_yy_delete_buffer
 #endif
 
 #ifdef yy_scan_buffer
-#define JsonScan_yy_scan_buffer_ALREADY_DEFINED
+#define json_yy_scan_buffer_ALREADY_DEFINED
 #else
-#define yy_scan_buffer JsonScan_yy_scan_buffer
+#define yy_scan_buffer json_yy_scan_buffer
 #endif
 
 #ifdef yy_scan_string
-#define JsonScan_yy_scan_string_ALREADY_DEFINED
+#define json_yy_scan_string_ALREADY_DEFINED
 #else
-#define yy_scan_string JsonScan_yy_scan_string
+#define yy_scan_string json_yy_scan_string
 #endif
 
 #ifdef yy_scan_bytes
-#define JsonScan_yy_scan_bytes_ALREADY_DEFINED
+#define json_yy_scan_bytes_ALREADY_DEFINED
 #else
-#define yy_scan_bytes JsonScan_yy_scan_bytes
+#define yy_scan_bytes json_yy_scan_bytes
 #endif
 
 #ifdef yy_init_buffer
-#define JsonScan_yy_init_buffer_ALREADY_DEFINED
+#define json_yy_init_buffer_ALREADY_DEFINED
 #else
-#define yy_init_buffer JsonScan_yy_init_buffer
+#define yy_init_buffer json_yy_init_buffer
 #endif
 
 #ifdef yy_flush_buffer
-#define JsonScan_yy_flush_buffer_ALREADY_DEFINED
+#define json_yy_flush_buffer_ALREADY_DEFINED
 #else
-#define yy_flush_buffer JsonScan_yy_flush_buffer
+#define yy_flush_buffer json_yy_flush_buffer
 #endif
 
 #ifdef yy_load_buffer_state
-#define JsonScan_yy_load_buffer_state_ALREADY_DEFINED
+#define json_yy_load_buffer_state_ALREADY_DEFINED
 #else
-#define yy_load_buffer_state JsonScan_yy_load_buffer_state
+#define yy_load_buffer_state json_yy_load_buffer_state
 #endif
 
 #ifdef yy_switch_to_buffer
-#define JsonScan_yy_switch_to_buffer_ALREADY_DEFINED
+#define json_yy_switch_to_buffer_ALREADY_DEFINED
 #else
-#define yy_switch_to_buffer JsonScan_yy_switch_to_buffer
+#define yy_switch_to_buffer json_yy_switch_to_buffer
 #endif
 
 #ifdef yypush_buffer_state
-#define JsonScan_yypush_buffer_state_ALREADY_DEFINED
+#define json_yypush_buffer_state_ALREADY_DEFINED
 #else
-#define yypush_buffer_state JsonScan_yypush_buffer_state
+#define yypush_buffer_state json_yypush_buffer_state
 #endif
 
 #ifdef yypop_buffer_state
-#define JsonScan_yypop_buffer_state_ALREADY_DEFINED
+#define json_yypop_buffer_state_ALREADY_DEFINED
 #else
-#define yypop_buffer_state JsonScan_yypop_buffer_state
+#define yypop_buffer_state json_yypop_buffer_state
 #endif
 
 #ifdef yyensure_buffer_stack
-#define JsonScan_yyensure_buffer_stack_ALREADY_DEFINED
+#define json_yyensure_buffer_stack_ALREADY_DEFINED
 #else
-#define yyensure_buffer_stack JsonScan_yyensure_buffer_stack
+#define yyensure_buffer_stack json_yyensure_buffer_stack
 #endif
 
 #ifdef yylex
-#define JsonScan_yylex_ALREADY_DEFINED
+#define json_yylex_ALREADY_DEFINED
 #else
-#define yylex JsonScan_yylex
+#define yylex json_yylex
 #endif
 
 #ifdef yyrestart
-#define JsonScan_yyrestart_ALREADY_DEFINED
+#define json_yyrestart_ALREADY_DEFINED
 #else
-#define yyrestart JsonScan_yyrestart
+#define yyrestart json_yyrestart
 #endif
 
 #ifdef yylex_init
-#define JsonScan_yylex_init_ALREADY_DEFINED
+#define json_yylex_init_ALREADY_DEFINED
 #else
-#define yylex_init JsonScan_yylex_init
+#define yylex_init json_yylex_init
 #endif
 
 #ifdef yylex_init_extra
-#define JsonScan_yylex_init_extra_ALREADY_DEFINED
+#define json_yylex_init_extra_ALREADY_DEFINED
 #else
-#define yylex_init_extra JsonScan_yylex_init_extra
+#define yylex_init_extra json_yylex_init_extra
 #endif
 
 #ifdef yylex_destroy
-#define JsonScan_yylex_destroy_ALREADY_DEFINED
+#define json_yylex_destroy_ALREADY_DEFINED
 #else
-#define yylex_destroy JsonScan_yylex_destroy
+#define yylex_destroy json_yylex_destroy
 #endif
 
 #ifdef yyget_debug
-#define JsonScan_yyget_debug_ALREADY_DEFINED
+#define json_yyget_debug_ALREADY_DEFINED
 #else
-#define yyget_debug JsonScan_yyget_debug
+#define yyget_debug json_yyget_debug
 #endif
 
 #ifdef yyset_debug
-#define JsonScan_yyset_debug_ALREADY_DEFINED
+#define json_yyset_debug_ALREADY_DEFINED
 #else
-#define yyset_debug JsonScan_yyset_debug
+#define yyset_debug json_yyset_debug
 #endif
 
 #ifdef yyget_extra
-#define JsonScan_yyget_extra_ALREADY_DEFINED
+#define json_yyget_extra_ALREADY_DEFINED
 #else
-#define yyget_extra JsonScan_yyget_extra
+#define yyget_extra json_yyget_extra
 #endif
 
 #ifdef yyset_extra
-#define JsonScan_yyset_extra_ALREADY_DEFINED
+#define json_yyset_extra_ALREADY_DEFINED
 #else
-#define yyset_extra JsonScan_yyset_extra
+#define yyset_extra json_yyset_extra
 #endif
 
 #ifdef yyget_in
-#define JsonScan_yyget_in_ALREADY_DEFINED
+#define json_yyget_in_ALREADY_DEFINED
 #else
-#define yyget_in JsonScan_yyget_in
+#define yyget_in json_yyget_in
 #endif
 
 #ifdef yyset_in
-#define JsonScan_yyset_in_ALREADY_DEFINED
+#define json_yyset_in_ALREADY_DEFINED
 #else
-#define yyset_in JsonScan_yyset_in
+#define yyset_in json_yyset_in
 #endif
 
 #ifdef yyget_out
-#define JsonScan_yyget_out_ALREADY_DEFINED
+#define json_yyget_out_ALREADY_DEFINED
 #else
-#define yyget_out JsonScan_yyget_out
+#define yyget_out json_yyget_out
 #endif
 
 #ifdef yyset_out
-#define JsonScan_yyset_out_ALREADY_DEFINED
+#define json_yyset_out_ALREADY_DEFINED
 #else
-#define yyset_out JsonScan_yyset_out
+#define yyset_out json_yyset_out
 #endif
 
 #ifdef yyget_leng
-#define JsonScan_yyget_leng_ALREADY_DEFINED
+#define json_yyget_leng_ALREADY_DEFINED
 #else
-#define yyget_leng JsonScan_yyget_leng
+#define yyget_leng json_yyget_leng
 #endif
 
 #ifdef yyget_text
-#define JsonScan_yyget_text_ALREADY_DEFINED
+#define json_yyget_text_ALREADY_DEFINED
 #else
-#define yyget_text JsonScan_yyget_text
+#define yyget_text json_yyget_text
 #endif
 
 #ifdef yyget_lineno
-#define JsonScan_yyget_lineno_ALREADY_DEFINED
+#define json_yyget_lineno_ALREADY_DEFINED
 #else
-#define yyget_lineno JsonScan_yyget_lineno
+#define yyget_lineno json_yyget_lineno
 #endif
 
 #ifdef yyset_lineno
-#define JsonScan_yyset_lineno_ALREADY_DEFINED
+#define json_yyset_lineno_ALREADY_DEFINED
 #else
-#define yyset_lineno JsonScan_yyset_lineno
+#define yyset_lineno json_yyset_lineno
 #endif
 
 #ifdef yyget_column
-#define JsonScan_yyget_column_ALREADY_DEFINED
+#define json_yyget_column_ALREADY_DEFINED
 #else
-#define yyget_column JsonScan_yyget_column
+#define yyget_column json_yyget_column
 #endif
 
 #ifdef yyset_column
-#define JsonScan_yyset_column_ALREADY_DEFINED
+#define json_yyset_column_ALREADY_DEFINED
 #else
-#define yyset_column JsonScan_yyset_column
+#define yyset_column json_yyset_column
 #endif
 
 #ifdef yywrap
-#define JsonScan_yywrap_ALREADY_DEFINED
+#define json_yywrap_ALREADY_DEFINED
 #else
-#define yywrap JsonScan_yywrap
+#define yywrap json_yywrap
 #endif
 
 /* %endif */
 
 #ifdef yyget_lval
-#define JsonScan_yyget_lval_ALREADY_DEFINED
+#define json_yyget_lval_ALREADY_DEFINED
 #else
-#define yyget_lval JsonScan_yyget_lval
+#define yyget_lval json_yyget_lval
 #endif
 
 #ifdef yyset_lval
-#define JsonScan_yyset_lval_ALREADY_DEFINED
+#define json_yyset_lval_ALREADY_DEFINED
 #else
-#define yyset_lval JsonScan_yyset_lval
+#define yyset_lval json_yyset_lval
 #endif
 
 #ifdef yyget_lloc
-#define JsonScan_yyget_lloc_ALREADY_DEFINED
+#define json_yyget_lloc_ALREADY_DEFINED
 #else
-#define yyget_lloc JsonScan_yyget_lloc
+#define yyget_lloc json_yyget_lloc
 #endif
 
 #ifdef yyset_lloc
-#define JsonScan_yyset_lloc_ALREADY_DEFINED
+#define json_yyset_lloc_ALREADY_DEFINED
 #else
-#define yyset_lloc JsonScan_yyset_lloc
+#define yyset_lloc json_yyset_lloc
 #endif
 
 #ifdef yyalloc
-#define JsonScan_yyalloc_ALREADY_DEFINED
+#define json_yyalloc_ALREADY_DEFINED
 #else
-#define yyalloc JsonScan_yyalloc
+#define yyalloc json_yyalloc
 #endif
 
 #ifdef yyrealloc
-#define JsonScan_yyrealloc_ALREADY_DEFINED
+#define json_yyrealloc_ALREADY_DEFINED
 #else
-#define yyrealloc JsonScan_yyrealloc
+#define yyrealloc json_yyrealloc
 #endif
 
 #ifdef yyfree
-#define JsonScan_yyfree_ALREADY_DEFINED
+#define json_yyfree_ALREADY_DEFINED
 #else
-#define yyfree JsonScan_yyfree
+#define yyfree json_yyfree
 #endif
 
 /* %if-c-only */
@@ -270,6 +270,7 @@
 #include <string.h>
 #include <errno.h>
 #include <stdlib.h>
+#include <assert.h>
 /* %endif */
 
 /* %if-tables-serialization */
@@ -636,7 +637,7 @@ void yyfree ( void * , yyscan_t yyscanner );
 /* %% [1.0] yytext/yyin/yyout/yy_state_type/yylineno etc. def's & init go here */
 /* Begin user sect3 */
 
-#define JsonScan_yywrap(yyscanner) (/*CONSTCOND*/1)
+#define json_yywrap(yyscanner) (/*CONSTCOND*/1)
 #define YY_SKIP_YYWRAP
 
 #define FLEX_DEBUG
@@ -789,8 +790,8 @@ static const flex_int32_t yy_rule_can_match_eol[19] =
 
 static const flex_int16_t yy_rule_linenum[18] =
     {   0,
-       88,   89,   90,   91,   92,   93,   94,   95,   98,   99,
-      100,  102,  103,  104,  105,  107,  110
+       82,   83,   84,   85,   86,   87,   88,   89,   92,   93,
+       94,   96,   97,   98,   99,  101,  104
     } ;
 
 /* The intent behind this definition is that it'll catch
@@ -827,12 +828,6 @@ static const flex_int16_t yy_rule_linenum[18] =
 */
 
 #define YYDEBUG 1
-#undef yylex_init
-#undef yylex_destroy
-#undef yylex
-
-#define YYSTYPE JsonToken
-#define YYLTYPE JSON_LTYPE
 
 #include "json-lex.h"
 
@@ -2786,7 +2781,8 @@ void
 JsonScan_yylex_init ( JsonScanBlock* sb, const char *str, size_t len )
 {
     yylex_init ( & sb -> scanner );
-    sb -> buffer = yy_scan_bytes ( ( yyconst char * ) str, len, sb -> scanner );
+    assert ( 0 == ( len & (~((size_t)((unsigned int)~0 >> 1))) ) );
+    sb -> buffer = yy_scan_bytes ( ( yyconst char * ) str, (int) len, sb -> scanner );
     ( ( struct yyguts_t * ) sb -> scanner ) -> yyextra_r = sb; /* back pointer to the scan block */
     sb -> error = NULL;
 }
@@ -2810,10 +2806,10 @@ JsonScan_set_debug ( JsonScanBlock* sb, int on )
     yyset_debug ( on ? 1 : 0, sb->scanner );
 }
 
-int
+enum yytokentype
 JsonScan_yylex ( YYSTYPE *lvalp, YYLTYPE *llocp, JsonScanBlock* sb )
 {
-    int ret = yylex ( lvalp, llocp, sb -> scanner );
+    enum yytokentype ret = ( enum yytokentype ) yylex ( lvalp, llocp, sb -> scanner );
     lvalp -> type       = ret;
     lvalp -> value      = ( ( struct yyguts_t * ) sb -> scanner ) -> yytext_r;
     lvalp -> value_len  = ( ( struct yyguts_t * ) sb -> scanner ) -> yyleng_r;

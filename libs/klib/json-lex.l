@@ -27,12 +27,6 @@
 %{
 
 #define YYDEBUG 1
-#undef yylex_init
-#undef yylex_destroy
-#undef yylex
-
-#define YYSTYPE JsonToken
-#define YYLTYPE JSON_LTYPE
 
 #include "json-lex.h"
 
@@ -57,7 +51,7 @@
 
 %option bison-locations
 
-%option prefix="JsonScan_yy"
+%option prefix="json_yy"
 
 /* re-entrant scanner */
 %option reentrant
@@ -138,10 +132,10 @@ JsonScan_set_debug ( JsonScanBlock* sb, int on )
     yyset_debug ( on ? 1 : 0, sb->scanner );
 }
 
-int
+enum yytokentype
 JsonScan_yylex ( YYSTYPE *lvalp, YYLTYPE *llocp, JsonScanBlock* sb )
 {
-    int ret = yylex ( lvalp, llocp, sb -> scanner );
+    enum yytokentype ret = ( enum yytokentype ) yylex ( lvalp, llocp, sb -> scanner );
     lvalp -> type       = ret;
     lvalp -> value      = ( ( struct yyguts_t * ) sb -> scanner ) -> yytext_r;
     lvalp -> value_len  = ( ( struct yyguts_t * ) sb -> scanner ) -> yyleng_r;

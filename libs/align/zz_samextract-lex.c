@@ -2417,7 +2417,7 @@ do_action:	/* This label is used only to access EOF actions. */
 case 1:
 YY_RULE_SETUP
 {
-    Sam_lval.strval=pool_memdup(SAMtext,SAMleng+1);
+    SAMlval.strval=pool_memdup(SAMtext,SAMleng+1);
     DBG("CONTROLCHAR %d",yytext[0]);
     return CONTROLCHAR; }
 	YY_BREAK
@@ -2466,21 +2466,21 @@ YY_RULE_SETUP
 case 9:
 YY_RULE_SETUP
 {
-    Sam_lval.strval=pool_memdup(SAMtext,SAMleng+1);
+    SAMlval.strval=pool_memdup(SAMtext,SAMleng+1);
     DBG(" header version");
     return VALUE; }
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
 {
-    Sam_lval.strval=pool_memdup(SAMtext,SAMleng+1);
+    SAMlval.strval=pool_memdup(SAMtext,SAMleng+1);
     DBG(" header SO");
     return VALUE; }
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
 {
-    Sam_lval.strval=pool_memdup(SAMtext,SAMleng+1);
+    SAMlval.strval=pool_memdup(SAMtext,SAMleng+1);
     DBG(" header GO");
     return VALUE; }
 	YY_BREAK
@@ -2495,31 +2495,31 @@ YY_RULE_SETUP
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
-{ Sam_lval.strval="SN"; return SQSN; }
+{ SAMlval.strval="SN"; return SQSN; }
 	YY_BREAK
 case 14:
 YY_RULE_SETUP
-{ Sam_lval.strval="LN"; return SQLN; }
+{ SAMlval.strval="LN"; return SQLN; }
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
-{ Sam_lval.strval="AS"; return SQAS; }
+{ SAMlval.strval="AS"; return SQAS; }
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
-{ Sam_lval.strval="M5"; return SQM5; }
+{ SAMlval.strval="M5"; return SQM5; }
 	YY_BREAK
 case 17:
 YY_RULE_SETUP
-{ WARN("SQ MD5 should be M5"); Sam_lval.strval="M5"; return SQM5; }
+{ WARN("SQ MD5 should be M5"); SAMlval.strval="M5"; return SQM5; }
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
-{ Sam_lval.strval="SP"; return SQSP; }
+{ SAMlval.strval="SP"; return SQSP; }
 	YY_BREAK
 case 19:
 YY_RULE_SETUP
-{ Sam_lval.strval="UR"; return SQUR; }
+{ SAMlval.strval="UR"; return SQUR; }
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
@@ -2528,7 +2528,7 @@ YY_RULE_SETUP
 case 21:
 YY_RULE_SETUP
 {
-    Sam_lval.strval=pool_memdup(SAMtext,SAMleng+1);
+    SAMlval.strval=pool_memdup(SAMtext,SAMleng+1);
     DBG("SEQ VALUE");
     return VALUE;
 }
@@ -2544,55 +2544,55 @@ YY_RULE_SETUP
 	YY_BREAK
 case 23:
 YY_RULE_SETUP
-{ Sam_lval.strval="ID"; return RGID; }
+{ SAMlval.strval="ID"; return RGID; }
 	YY_BREAK
 case 24:
 YY_RULE_SETUP
-{ Sam_lval.strval="CN"; return RGCN; }
+{ SAMlval.strval="CN"; return RGCN; }
 	YY_BREAK
 case 25:
 YY_RULE_SETUP
-{ Sam_lval.strval="DS"; return RGDS; }
+{ SAMlval.strval="DS"; return RGDS; }
 	YY_BREAK
 case 26:
 YY_RULE_SETUP
-{ Sam_lval.strval="DT"; return RGDT; }
+{ SAMlval.strval="DT"; return RGDT; }
 	YY_BREAK
 case 27:
 YY_RULE_SETUP
-{ Sam_lval.strval="FO"; return RGFO; }
+{ SAMlval.strval="FO"; return RGFO; }
 	YY_BREAK
 case 28:
 YY_RULE_SETUP
-{ Sam_lval.strval="KS"; return RGKS; }
+{ SAMlval.strval="KS"; return RGKS; }
 	YY_BREAK
 case 29:
 YY_RULE_SETUP
-{ Sam_lval.strval="LB"; return RGLB; }
+{ SAMlval.strval="LB"; return RGLB; }
 	YY_BREAK
 case 30:
 YY_RULE_SETUP
-{ Sam_lval.strval="PG"; return RGPG; }
+{ SAMlval.strval="PG"; return RGPG; }
 	YY_BREAK
 case 31:
 YY_RULE_SETUP
-{ Sam_lval.strval="PI"; return RGPI; }
+{ SAMlval.strval="PI"; return RGPI; }
 	YY_BREAK
 case 32:
 YY_RULE_SETUP
-{ Sam_lval.strval="PL"; return RGPL; }
+{ SAMlval.strval="PL"; return RGPL; }
 	YY_BREAK
 case 33:
 YY_RULE_SETUP
-{ Sam_lval.strval="PM"; return RGPM; }
+{ SAMlval.strval="PM"; return RGPM; }
 	YY_BREAK
 case 34:
 YY_RULE_SETUP
-{ Sam_lval.strval="PU"; return RGPU; }
+{ SAMlval.strval="PU"; return RGPU; }
 	YY_BREAK
 case 35:
 YY_RULE_SETUP
-{ Sam_lval.strval="SM"; return RGSM; }
+{ SAMlval.strval="SM"; return RGSM; }
 	YY_BREAK
 case 36:
 YY_RULE_SETUP
@@ -2610,7 +2610,7 @@ YY_RULE_SETUP
 case 39:
 YY_RULE_SETUP
 {
-    Sam_lval.strval=pool_memdup(SAMtext,SAMleng+1);
+    SAMlval.strval=pool_memdup(SAMtext,SAMleng+1);
     DBG("readgroup value:%s",yytext);
     return VALUE;
  }
@@ -2626,27 +2626,27 @@ YY_RULE_SETUP
 	YY_BREAK
 case 41:
 YY_RULE_SETUP
-{ Sam_lval.strval="ID"; return PGID; }
+{ SAMlval.strval="ID"; return PGID; }
 	YY_BREAK
 case 42:
 YY_RULE_SETUP
-{ Sam_lval.strval="PN"; return PGPN; }
+{ SAMlval.strval="PN"; return PGPN; }
 	YY_BREAK
 case 43:
 YY_RULE_SETUP
-{ Sam_lval.strval="CL"; return PGCL; }
+{ SAMlval.strval="CL"; return PGCL; }
 	YY_BREAK
 case 44:
 YY_RULE_SETUP
-{ Sam_lval.strval="PP"; return PGPP; }
+{ SAMlval.strval="PP"; return PGPP; }
 	YY_BREAK
 case 45:
 YY_RULE_SETUP
-{ Sam_lval.strval="DS"; return PGDS; }
+{ SAMlval.strval="DS"; return PGDS; }
 	YY_BREAK
 case 46:
 YY_RULE_SETUP
-{ Sam_lval.strval="VN"; return PGVN; }
+{ SAMlval.strval="VN"; return PGVN; }
 	YY_BREAK
 case 47:
 YY_RULE_SETUP
@@ -2656,13 +2656,13 @@ case 48:
 YY_RULE_SETUP
 {
     WARN("Not a PG tag:%s",yytext+1);
-    Sam_lval.strval=pool_memdup(SAMtext+1, SAMleng);
+    SAMlval.strval=pool_memdup(SAMtext+1, SAMleng);
     return VALUE; }
 	YY_BREAK
 case 49:
 YY_RULE_SETUP
 {
-    Sam_lval.strval=pool_memdup(SAMtext,SAMleng+1);
+    SAMlval.strval=pool_memdup(SAMtext,SAMleng+1);
     DBG("program value:%s",yytext);
     return VALUE;
  }
@@ -2678,15 +2678,15 @@ case 51:
 YY_RULE_SETUP
 {
     BEGIN ALIGNQNAME;
-    Sam_lval.strval=pool_memdup(SAMtext, SAMleng+1);
-    DBG(" alignment qname '%s' %d '%s'", SAMtext, SAMleng, Sam_lval.strval);
+    SAMlval.strval=pool_memdup(SAMtext, SAMleng+1);
+    DBG(" alignment qname '%s' %d '%s'", SAMtext, SAMleng, SAMlval.strval);
     return QNAME; }
 	YY_BREAK
 case 52:
 YY_RULE_SETUP
 {
     BEGIN ALIGNFLAG;
-    Sam_lval.strval=pool_memdup(SAMtext+1, SAMleng);
+    SAMlval.strval=pool_memdup(SAMtext+1, SAMleng);
     DBG(" alignment flag");
     return FLAG; }
 	YY_BREAK
@@ -2694,7 +2694,7 @@ case 53:
 YY_RULE_SETUP
 {
     BEGIN ALIGNRNAME;
-    Sam_lval.strval=pool_memdup(SAMtext+1, SAMleng);
+    SAMlval.strval=pool_memdup(SAMtext+1, SAMleng);
     DBG(" alignment rname");
     return RNAME; }
 	YY_BREAK
@@ -2702,7 +2702,7 @@ case 54:
 YY_RULE_SETUP
 {
     BEGIN ALIGNPOS;
-    Sam_lval.strval=pool_memdup(SAMtext+1, SAMleng);
+    SAMlval.strval=pool_memdup(SAMtext+1, SAMleng);
     DBG(" alignment pos");
     return POS; }
 	YY_BREAK
@@ -2710,7 +2710,7 @@ case 55:
 YY_RULE_SETUP
 {
     BEGIN ALIGNMAPQ;
-    Sam_lval.strval=pool_memdup(SAMtext+1, SAMleng);
+    SAMlval.strval=pool_memdup(SAMtext+1, SAMleng);
     DBG(" alignment mapq");
     return MAPQ; }
 	YY_BREAK
@@ -2718,7 +2718,7 @@ case 56:
 YY_RULE_SETUP
 {
     BEGIN ALIGNCIGAR;
-    Sam_lval.strval=pool_memdup(SAMtext+1, SAMleng);
+    SAMlval.strval=pool_memdup(SAMtext+1, SAMleng);
     DBG(" alignment cigar");
     return CIGAR; }
 	YY_BREAK
@@ -2726,7 +2726,7 @@ case 57:
 YY_RULE_SETUP
 {
     BEGIN ALIGNRNEXT;
-    Sam_lval.strval=pool_memdup(SAMtext+1, SAMleng);
+    SAMlval.strval=pool_memdup(SAMtext+1, SAMleng);
     DBG(" alignment rnext");
     return RNEXT; }
 	YY_BREAK
@@ -2734,7 +2734,7 @@ case 58:
 YY_RULE_SETUP
 {
     BEGIN ALIGNPNEXT;
-    Sam_lval.strval=pool_memdup(SAMtext+1, SAMleng);
+    SAMlval.strval=pool_memdup(SAMtext+1, SAMleng);
     DBG(" alignment pnext ");
     return PNEXT; }
 	YY_BREAK
@@ -2742,7 +2742,7 @@ case 59:
 YY_RULE_SETUP
 {
     BEGIN ALIGNTLEN;
-    Sam_lval.strval=pool_memdup(SAMtext+1, SAMleng);
+    SAMlval.strval=pool_memdup(SAMtext+1, SAMleng);
     DBG(" alignment tlen");
     return TLEN; }
 	YY_BREAK
@@ -2750,7 +2750,7 @@ case 60:
 YY_RULE_SETUP
 {
     BEGIN ALIGNSEQ;
-    Sam_lval.strval=pool_memdup(SAMtext+1, SAMleng);
+    SAMlval.strval=pool_memdup(SAMtext+1, SAMleng);
     DBG(" alignment seq");
     return SEQ; }
 	YY_BREAK
@@ -2758,7 +2758,7 @@ case 61:
 YY_RULE_SETUP
 {
     BEGIN ALIGNOPT;
-    Sam_lval.strval=pool_memdup(SAMtext+1, SAMleng);
+    SAMlval.strval=pool_memdup(SAMtext+1, SAMleng);
     DBG(" alignment qual");
     return QUAL; }
 	YY_BREAK
@@ -2768,7 +2768,7 @@ case 62:
 YY_RULE_SETUP
 {
     BEGIN ALIGNOPTTYPE;
-    Sam_lval.strval=pool_memdup(SAMtext+1, 3);
+    SAMlval.strval=pool_memdup(SAMtext+1, 3);
     DBG(" alignment opt reserved");
     return OPTTAG; }
 	YY_BREAK
@@ -2777,8 +2777,8 @@ case 63:
 YY_RULE_SETUP
 {
     BEGIN ALIGNOPTTYPE;
-    Sam_lval.strval=pool_memdup(SAMtext+1, 3);
-    DBG(" alignment opt '%s'", Sam_lval.strval);
+    SAMlval.strval=pool_memdup(SAMtext+1, 3);
+    DBG(" alignment opt '%s'", SAMlval.strval);
     return OPTITAG; }
 	YY_BREAK
 case 64:
@@ -2786,108 +2786,108 @@ YY_RULE_SETUP
 {
     BEGIN ALIGNOPTTYPE;
     DBG(" alignment opt %d '%s'", SAMleng+1, SAMtext);
-    Sam_lval.strval=pool_memdup(SAMtext+1, 3);
-    DBG(" alignment opt '%s'", Sam_lval.strval);
+    SAMlval.strval=pool_memdup(SAMtext+1, 3);
+    DBG(" alignment opt '%s'", SAMlval.strval);
     return OPTZTAG; }
 	YY_BREAK
 case 65:
 YY_RULE_SETUP
 {
     BEGIN ALIGNOPTTYPE;
-    Sam_lval.strval=pool_memdup(SAMtext+1, 3);
-    DBG(" alignment opt '%s'", Sam_lval.strval);
+    SAMlval.strval=pool_memdup(SAMtext+1, 3);
+    DBG(" alignment opt '%s'", SAMlval.strval);
     return OPTBTAG; }
 	YY_BREAK
 case 66:
 YY_RULE_SETUP
 {
     BEGIN ALIGNOPTTYPE;
-    Sam_lval.strval=pool_memdup(SAMtext+1, 3);
-    DBG(" alignment opt '%s'", Sam_lval.strval);
+    SAMlval.strval=pool_memdup(SAMtext+1, 3);
+    DBG(" alignment opt '%s'", SAMlval.strval);
     return OPTTAG; }
 	YY_BREAK
 case 67:
 YY_RULE_SETUP
 {
     BEGIN ALIGNOPTAVALUE;
-    Sam_lval.strval="A";
+    SAMlval.strval="A";
     return OPTATYPE; }
 	YY_BREAK
 case 68:
 YY_RULE_SETUP
 {
     BEGIN ALIGNOPTIVALUE;
-    Sam_lval.strval="i";
+    SAMlval.strval="i";
     return OPTITYPE; }
 	YY_BREAK
 case 69:
 YY_RULE_SETUP
 {
     BEGIN ALIGNOPTFVALUE;
-    Sam_lval.strval="f";
+    SAMlval.strval="f";
     return OPTFTYPE; }
 	YY_BREAK
 case 70:
 YY_RULE_SETUP
 {
     BEGIN ALIGNOPTZVALUE;
-    Sam_lval.strval="Z";
+    SAMlval.strval="Z";
     return OPTZTYPE; }
 	YY_BREAK
 case 71:
 YY_RULE_SETUP
 {
     BEGIN ALIGNOPTHVALUE;
-    Sam_lval.strval="H";
+    SAMlval.strval="H";
     return OPTHTYPE; }
 	YY_BREAK
 case 72:
 YY_RULE_SETUP
 {
     BEGIN ALIGNOPTBVALUE;
-    Sam_lval.strval="B";
+    SAMlval.strval="B";
     return OPTBTYPE; }
 	YY_BREAK
 case 73:
 YY_RULE_SETUP
 {
     BEGIN ALIGNOPT;
-    Sam_lval.strval=pool_memdup(SAMtext,2);
+    SAMlval.strval=pool_memdup(SAMtext,2);
     return OPTAVALUE; }
 	YY_BREAK
 case 74:
 YY_RULE_SETUP
 {
     BEGIN ALIGNOPT;
-    Sam_lval.strval=pool_memdup(SAMtext,SAMleng+1);
+    SAMlval.strval=pool_memdup(SAMtext,SAMleng+1);
     return OPTIVALUE; }
 	YY_BREAK
 case 75:
 YY_RULE_SETUP
 {
     BEGIN ALIGNOPT;
-    Sam_lval.strval=pool_memdup(SAMtext,SAMleng+1);
+    SAMlval.strval=pool_memdup(SAMtext,SAMleng+1);
     return OPTFVALUE; }
 	YY_BREAK
 case 76:
 YY_RULE_SETUP
 {
     BEGIN ALIGNOPT;
-    Sam_lval.strval=pool_memdup(SAMtext,SAMleng+1);
+    SAMlval.strval=pool_memdup(SAMtext,SAMleng+1);
     return OPTZVALUE; }
 	YY_BREAK
 case 77:
 YY_RULE_SETUP
 {
     BEGIN ALIGNOPT;
-    Sam_lval.strval=pool_memdup(SAMtext,SAMleng+1);
+    SAMlval.strval=pool_memdup(SAMtext,SAMleng+1);
     return OPTHVALUE; }
 	YY_BREAK
 case 78:
 YY_RULE_SETUP
 {
     BEGIN ALIGNOPT;
-    Sam_lval.strval=pool_memdup(SAMtext,SAMleng+1);
+    SAMlval.strval=pool_memdup(SAMtext,SAMleng+1);
     return OPTBVALUE; }
 	YY_BREAK
 case 79:

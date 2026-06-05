@@ -59,9 +59,9 @@ typedef struct bamalign
 #ifdef __cplusplus
 extern "C" {
 #endif
-int Sam_parse(SAMExtractor* state);
-void Sam_error(SAMExtractor* state, const char* TODOmsg);
-int Sam_lex_destroy(void);
+int SAMparse(SAMExtractor* state);
+void SAMerror(SAMExtractor* state, const char* TODOmsg);
+int SAMlex_destroy(void);
 void logmsg(const char* fname, int line, const char* func,
             const char* severity, const char* fmt, ...);
 int moredata(char* buf, int* numbytes, size_t maxbytes);

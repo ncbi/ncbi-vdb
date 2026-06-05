@@ -1,8 +1,8 @@
-/* A Bison parser, made by GNU Bison 3.8.2.  */
+/* A Bison parser, made by GNU Bison 3.5.1.  */
 
 /* Bison implementation for Yacc-like parsers in C
 
-   Copyright (C) 1984, 1989-1990, 2000-2015, 2018-2021 Free Software Foundation,
+   Copyright (C) 1984, 1989-1990, 2000-2015, 2018-2020 Free Software Foundation,
    Inc.
 
    This program is free software: you can redistribute it and/or modify
@@ -16,7 +16,7 @@
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <https://www.gnu.org/licenses/>.  */
+   along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 /* As a special exception, you may create a larger work that contains
    part or all of the Bison parser skeleton and distribute that work
@@ -34,10 +34,6 @@
 /* C LALR(1) parser skeleton written by Richard Stallman, by
    simplifying the original so-called "semantic" parser.  */
 
-/* DO NOT RELY ON FEATURES THAT ARE NOT DOCUMENTED in the manual,
-   especially those whose name start with YY_ or yy_.  They are
-   private implementation details that can be changed or removed.  */
-
 /* All symbols defined below should begin with yy or YY, to avoid
    infringing on user name space.  This should be done even for local
    variables, as they might otherwise be expanded by user macros.
@@ -45,11 +41,14 @@
    define necessary library symbols; they are noted "INFRINGES ON
    USER NAME SPACE" below.  */
 
-/* Identify Bison output, and Bison version.  */
-#define YYBISON 30802
+/* Undocumented macros, especially those whose name start with YY_,
+   are private implementation details.  Do not rely on them.  */
 
-/* Bison version string.  */
-#define YYBISON_VERSION "3.8.2"
+/* Identify Bison output.  */
+#define YYBISON 1
+
+/* Bison version.  */
+#define YYBISON_VERSION "3.5.1"
 
 /* Skeleton name.  */
 #define YYSKELETON_NAME "yacc.c"
@@ -202,300 +201,204 @@
 #  endif
 # endif
 
-#include "zz_schema-grammar.hpp"
-/* Symbol kind.  */
-enum yysymbol_kind_t
-{
-  YYSYMBOL_YYEMPTY = -2,
-  YYSYMBOL_YYEOF = 0,                      /* "end of source"  */
-  YYSYMBOL_YYerror = 1,                    /* error  */
-  YYSYMBOL_YYUNDEF = 2,                    /* "invalid token"  */
-  YYSYMBOL_UNRECOGNIZED = 3,               /* UNRECOGNIZED  */
-  YYSYMBOL_ELLIPSIS = 4,                   /* ELLIPSIS  */
-  YYSYMBOL_INCREMENT = 5,                  /* INCREMENT  */
-  YYSYMBOL_DECIMAL = 6,                    /* DECIMAL  */
-  YYSYMBOL_OCTAL = 7,                      /* OCTAL  */
-  YYSYMBOL_HEX = 8,                        /* HEX  */
-  YYSYMBOL_FLOAT_ = 9,                     /* FLOAT_  */
-  YYSYMBOL_EXP_FLOAT = 10,                 /* EXP_FLOAT  */
-  YYSYMBOL_STRING = 11,                    /* STRING  */
-  YYSYMBOL_ESCAPED_STRING = 12,            /* ESCAPED_STRING  */
-  YYSYMBOL_IDENTIFIER_1_0 = 13,            /* IDENTIFIER_1_0  */
-  YYSYMBOL_PHYSICAL_IDENTIFIER_1_0 = 14,   /* PHYSICAL_IDENTIFIER_1_0  */
-  YYSYMBOL_VERSION = 15,                   /* VERSION  */
-  YYSYMBOL_UNTERM_STRING = 16,             /* UNTERM_STRING  */
-  YYSYMBOL_UNTERM_ESCAPED_STRING = 17,     /* UNTERM_ESCAPED_STRING  */
-  YYSYMBOL_VERS_1_0 = 18,                  /* VERS_1_0  */
-  YYSYMBOL_VERS_2_0 = 19,                  /* VERS_2_0  */
-  YYSYMBOL_KW___no_header = 20,            /* KW___no_header  */
-  YYSYMBOL_KW___row_length = 21,           /* KW___row_length  */
-  YYSYMBOL_KW___untyped = 22,              /* KW___untyped  */
-  YYSYMBOL_KW_alias = 23,                  /* KW_alias  */
-  YYSYMBOL_KW_column = 24,                 /* KW_column  */
-  YYSYMBOL_KW_const = 25,                  /* KW_const  */
-  YYSYMBOL_KW_control = 26,                /* KW_control  */
-  YYSYMBOL_KW_database = 27,               /* KW_database  */
-  YYSYMBOL_KW_decode = 28,                 /* KW_decode  */
-  YYSYMBOL_KW_default = 29,                /* KW_default  */
-  YYSYMBOL_KW_encode = 30,                 /* KW_encode  */
-  YYSYMBOL_KW_extern = 31,                 /* KW_extern  */
-  YYSYMBOL_KW_false = 32,                  /* KW_false  */
-  YYSYMBOL_KW_fmtdef = 33,                 /* KW_fmtdef  */
-  YYSYMBOL_KW_function = 34,               /* KW_function  */
-  YYSYMBOL_KW_include = 35,                /* KW_include  */
-  YYSYMBOL_KW_limit = 36,                  /* KW_limit  */
-  YYSYMBOL_KW_physical = 37,               /* KW_physical  */
-  YYSYMBOL_KW_read = 38,                   /* KW_read  */
-  YYSYMBOL_KW_readonly = 39,               /* KW_readonly  */
-  YYSYMBOL_KW_return = 40,                 /* KW_return  */
-  YYSYMBOL_KW_schema = 41,                 /* KW_schema  */
-  YYSYMBOL_KW_static = 42,                 /* KW_static  */
-  YYSYMBOL_KW_table = 43,                  /* KW_table  */
-  YYSYMBOL_KW_template = 44,               /* KW_template  */
-  YYSYMBOL_KW_trigger = 45,                /* KW_trigger  */
-  YYSYMBOL_KW_true = 46,                   /* KW_true  */
-  YYSYMBOL_KW_type = 47,                   /* KW_type  */
-  YYSYMBOL_KW_typedef = 48,                /* KW_typedef  */
-  YYSYMBOL_KW_typeset = 49,                /* KW_typeset  */
-  YYSYMBOL_KW_validate = 50,               /* KW_validate  */
-  YYSYMBOL_KW_version = 51,                /* KW_version  */
-  YYSYMBOL_KW_view = 52,                   /* KW_view  */
-  YYSYMBOL_KW_virtual = 53,                /* KW_virtual  */
-  YYSYMBOL_KW_void = 54,                   /* KW_void  */
-  YYSYMBOL_KW_write = 55,                  /* KW_write  */
-  YYSYMBOL_PT_ASTLIST = 56,                /* PT_ASTLIST  */
-  YYSYMBOL_PT_PARSE = 57,                  /* PT_PARSE  */
-  YYSYMBOL_PT_SOURCE = 58,                 /* PT_SOURCE  */
-  YYSYMBOL_PT_VERSION_1_0 = 59,            /* PT_VERSION_1_0  */
-  YYSYMBOL_PT_VERSION_2 = 60,              /* PT_VERSION_2  */
-  YYSYMBOL_PT_SCHEMA_1_0 = 61,             /* PT_SCHEMA_1_0  */
-  YYSYMBOL_PT_SCHEMA_2_0 = 62,             /* PT_SCHEMA_2_0  */
-  YYSYMBOL_PT_INCLUDE = 63,                /* PT_INCLUDE  */
-  YYSYMBOL_PT_TYPEDEF = 64,                /* PT_TYPEDEF  */
-  YYSYMBOL_PT_FQN = 65,                    /* PT_FQN  */
-  YYSYMBOL_PT_IDENT = 66,                  /* PT_IDENT  */
-  YYSYMBOL_PT_PHYSIDENT = 67,              /* PT_PHYSIDENT  */
-  YYSYMBOL_PT_UINT = 68,                   /* PT_UINT  */
-  YYSYMBOL_PT_TYPESET = 69,                /* PT_TYPESET  */
-  YYSYMBOL_PT_TYPESETDEF = 70,             /* PT_TYPESETDEF  */
-  YYSYMBOL_PT_FORMAT = 71,                 /* PT_FORMAT  */
-  YYSYMBOL_PT_CONST = 72,                  /* PT_CONST  */
-  YYSYMBOL_PT_ALIAS = 73,                  /* PT_ALIAS  */
-  YYSYMBOL_PT_EXTERN = 74,                 /* PT_EXTERN  */
-  YYSYMBOL_PT_FUNCTION = 75,               /* PT_FUNCTION  */
-  YYSYMBOL_PT_UNTYPED = 76,                /* PT_UNTYPED  */
-  YYSYMBOL_PT_ROWLENGTH = 77,              /* PT_ROWLENGTH  */
-  YYSYMBOL_PT_FUNCDECL = 78,               /* PT_FUNCDECL  */
-  YYSYMBOL_PT_EMPTY = 79,                  /* PT_EMPTY  */
-  YYSYMBOL_PT_SCHEMASIG = 80,              /* PT_SCHEMASIG  */
-  YYSYMBOL_PT_SCHEMAFORMAL = 81,           /* PT_SCHEMAFORMAL  */
-  YYSYMBOL_PT_RETURNTYPE = 82,             /* PT_RETURNTYPE  */
-  YYSYMBOL_PT_FACTSIG = 83,                /* PT_FACTSIG  */
-  YYSYMBOL_PT_FUNCSIG = 84,                /* PT_FUNCSIG  */
-  YYSYMBOL_PT_FUNCPARAMS = 85,             /* PT_FUNCPARAMS  */
-  YYSYMBOL_PT_FORMALPARAM = 86,            /* PT_FORMALPARAM  */
-  YYSYMBOL_PT_ELLIPSIS = 87,               /* PT_ELLIPSIS  */
-  YYSYMBOL_PT_FUNCPROLOGUE = 88,           /* PT_FUNCPROLOGUE  */
-  YYSYMBOL_PT_RETURN = 89,                 /* PT_RETURN  */
-  YYSYMBOL_PT_PRODSTMT = 90,               /* PT_PRODSTMT  */
-  YYSYMBOL_PT_PRODTRIGGER = 91,            /* PT_PRODTRIGGER  */
-  YYSYMBOL_PT_SCHEMA = 92,                 /* PT_SCHEMA  */
-  YYSYMBOL_PT_VALIDATE = 93,               /* PT_VALIDATE  */
-  YYSYMBOL_PT_PHYSICAL = 94,               /* PT_PHYSICAL  */
-  YYSYMBOL_PT_PHYSPROLOGUE = 95,           /* PT_PHYSPROLOGUE  */
-  YYSYMBOL_PT_PHYSSTMT = 96,               /* PT_PHYSSTMT  */
-  YYSYMBOL_PT_PHYSBODYSTMT = 97,           /* PT_PHYSBODYSTMT  */
-  YYSYMBOL_PT_TABLE = 98,                  /* PT_TABLE  */
-  YYSYMBOL_PT_TABLEPARENTS = 99,           /* PT_TABLEPARENTS  */
-  YYSYMBOL_PT_TABLEBODY = 100,             /* PT_TABLEBODY  */
-  YYSYMBOL_PT_FUNCEXPR = 101,              /* PT_FUNCEXPR  */
-  YYSYMBOL_PT_FACTPARMS = 102,             /* PT_FACTPARMS  */
-  YYSYMBOL_PT_COLUMN = 103,                /* PT_COLUMN  */
-  YYSYMBOL_PT_COLUMNEXPR = 104,            /* PT_COLUMNEXPR  */
-  YYSYMBOL_PT_COLDECL = 105,               /* PT_COLDECL  */
-  YYSYMBOL_PT_TYPEDCOL = 106,              /* PT_TYPEDCOL  */
-  YYSYMBOL_PT_COLSTMT = 107,               /* PT_COLSTMT  */
-  YYSYMBOL_PT_DFLTVIEW = 108,              /* PT_DFLTVIEW  */
-  YYSYMBOL_PT_PHYSMBR = 109,               /* PT_PHYSMBR  */
-  YYSYMBOL_PT_PHYSCOL = 110,               /* PT_PHYSCOL  */
-  YYSYMBOL_PT_PHYSCOLDEF = 111,            /* PT_PHYSCOLDEF  */
-  YYSYMBOL_PT_COLSCHEMAPARMS = 112,        /* PT_COLSCHEMAPARMS  */
-  YYSYMBOL_PT_COLSCHEMAPARAM = 113,        /* PT_COLSCHEMAPARAM  */
-  YYSYMBOL_PT_COLUNTYPED = 114,            /* PT_COLUNTYPED  */
-  YYSYMBOL_PT_DATABASE = 115,              /* PT_DATABASE  */
-  YYSYMBOL_PT_TYPEEXPR = 116,              /* PT_TYPEEXPR  */
-  YYSYMBOL_PT_DBBODY = 117,                /* PT_DBBODY  */
-  YYSYMBOL_PT_DBDAD = 118,                 /* PT_DBDAD  */
-  YYSYMBOL_PT_DBMEMBER = 119,              /* PT_DBMEMBER  */
-  YYSYMBOL_PT_TBLMEMBER = 120,             /* PT_TBLMEMBER  */
-  YYSYMBOL_PT_NOHEADER = 121,              /* PT_NOHEADER  */
-  YYSYMBOL_PT_CASTEXPR = 122,              /* PT_CASTEXPR  */
-  YYSYMBOL_PT_CONSTVECT = 123,             /* PT_CONSTVECT  */
-  YYSYMBOL_PT_NEGATE = 124,                /* PT_NEGATE  */
-  YYSYMBOL_PT_UNARYPLUS = 125,             /* PT_UNARYPLUS  */
-  YYSYMBOL_PT_VERSNAME = 126,              /* PT_VERSNAME  */
-  YYSYMBOL_PT_ARRAY = 127,                 /* PT_ARRAY  */
-  YYSYMBOL_PT_PHYSENCREF = 128,            /* PT_PHYSENCREF  */
-  YYSYMBOL_PT_TYPEDCOLEXPR = 129,          /* PT_TYPEDCOLEXPR  */
-  YYSYMBOL_PT_VIEW = 130,                  /* PT_VIEW  */
-  YYSYMBOL_PT_VIEWPARAM = 131,             /* PT_VIEWPARAM  */
-  YYSYMBOL_PT_VIEWPARENTS = 132,           /* PT_VIEWPARENTS  */
-  YYSYMBOL_PT_VIEWPARENT = 133,            /* PT_VIEWPARENT  */
-  YYSYMBOL_PT_MEMBEREXPR = 134,            /* PT_MEMBEREXPR  */
-  YYSYMBOL_PT_JOINEXPR = 135,              /* PT_JOINEXPR  */
-  YYSYMBOL_PT_ALIASMEMBER = 136,           /* PT_ALIASMEMBER  */
-  YYSYMBOL_PT_VIEWSPEC = 137,              /* PT_VIEWSPEC  */
-  YYSYMBOL_138_ = 138,                     /* ';'  */
-  YYSYMBOL_139_ = 139,                     /* ','  */
-  YYSYMBOL_140_ = 140,                     /* '{'  */
-  YYSYMBOL_141_ = 141,                     /* '}'  */
-  YYSYMBOL_142_ = 142,                     /* '['  */
-  YYSYMBOL_143_ = 143,                     /* ']'  */
-  YYSYMBOL_144_ = 144,                     /* '*'  */
-  YYSYMBOL_145_ = 145,                     /* '='  */
-  YYSYMBOL_146_ = 146,                     /* '('  */
-  YYSYMBOL_147_ = 147,                     /* ')'  */
-  YYSYMBOL_148_ = 148,                     /* '<'  */
-  YYSYMBOL_149_ = 149,                     /* '>'  */
-  YYSYMBOL_150_ = 150,                     /* '|'  */
-  YYSYMBOL_151_ = 151,                     /* '@'  */
-  YYSYMBOL_152_ = 152,                     /* '-'  */
-  YYSYMBOL_153_ = 153,                     /* '+'  */
-  YYSYMBOL_154_ = 154,                     /* '/'  */
-  YYSYMBOL_155_ = 155,                     /* '.'  */
-  YYSYMBOL_156_ = 156,                     /* ':'  */
-  YYSYMBOL_YYACCEPT = 157,                 /* $accept  */
-  YYSYMBOL_parse = 158,                    /* parse  */
-  YYSYMBOL_source = 159,                   /* source  */
-  YYSYMBOL_version_1_0 = 160,              /* version_1_0  */
-  YYSYMBOL_schema_1_0_opt = 161,           /* schema_1_0_opt  */
-  YYSYMBOL_schema_1_0 = 162,               /* schema_1_0  */
-  YYSYMBOL_schema_1_0_decl = 163,          /* schema_1_0_decl  */
-  YYSYMBOL_typedef_1_0_decl = 164,         /* typedef_1_0_decl  */
-  YYSYMBOL_typedef_1_0_new_name_list = 165, /* typedef_1_0_new_name_list  */
-  YYSYMBOL_typeset_1_0_decl = 166,         /* typeset_1_0_decl  */
-  YYSYMBOL_typeset_1_0_new_name = 167,     /* typeset_1_0_new_name  */
-  YYSYMBOL_typeset_1_0_def = 168,          /* typeset_1_0_def  */
-  YYSYMBOL_typespec_1_0_list = 169,        /* typespec_1_0_list  */
-  YYSYMBOL_typespec_1_0 = 170,             /* typespec_1_0  */
-  YYSYMBOL_dim_1_0 = 171,                  /* dim_1_0  */
-  YYSYMBOL_format_1_0_decl = 172,          /* format_1_0_decl  */
-  YYSYMBOL_format_1_0_new_name = 173,      /* format_1_0_new_name  */
-  YYSYMBOL_format_1_0_name = 174,          /* format_1_0_name  */
-  YYSYMBOL_const_1_0_decl = 175,           /* const_1_0_decl  */
-  YYSYMBOL_alias_1_0_decl = 176,           /* alias_1_0_decl  */
-  YYSYMBOL_alias_1_0_new_name = 177,       /* alias_1_0_new_name  */
-  YYSYMBOL_function_1_0_decl = 178,        /* function_1_0_decl  */
-  YYSYMBOL_func_1_0_decl = 179,            /* func_1_0_decl  */
-  YYSYMBOL_untyped_func_1_0_decl = 180,    /* untyped_func_1_0_decl  */
-  YYSYMBOL_row_length_func_1_0_decl = 181, /* row_length_func_1_0_decl  */
-  YYSYMBOL_opt_func_1_0_schema_sig = 182,  /* opt_func_1_0_schema_sig  */
-  YYSYMBOL_func_1_0_schema_sig = 183,      /* func_1_0_schema_sig  */
-  YYSYMBOL_func_1_0_schema_formals = 184,  /* func_1_0_schema_formals  */
-  YYSYMBOL_func_1_0_schema_formal = 185,   /* func_1_0_schema_formal  */
-  YYSYMBOL_func_1_0_return_type = 186,     /* func_1_0_return_type  */
-  YYSYMBOL_opt_func_1_0_fact_sig = 187,    /* opt_func_1_0_fact_sig  */
-  YYSYMBOL_func_1_0_fact_sig = 188,        /* func_1_0_fact_sig  */
-  YYSYMBOL_func_1_0_fact_signature = 189,  /* func_1_0_fact_signature  */
-  YYSYMBOL_func_1_0_fact_params = 190,     /* func_1_0_fact_params  */
-  YYSYMBOL_fact_param_1_0 = 191,           /* fact_param_1_0  */
-  YYSYMBOL_func_1_0_param_sig = 192,       /* func_1_0_param_sig  */
-  YYSYMBOL_func_1_0_param_signature = 193, /* func_1_0_param_signature  */
-  YYSYMBOL_func_1_0_formal_params = 194,   /* func_1_0_formal_params  */
-  YYSYMBOL_formal_param_1_0 = 195,         /* formal_param_1_0  */
-  YYSYMBOL_func_1_0_vararg_formals = 196,  /* func_1_0_vararg_formals  */
-  YYSYMBOL_func_1_0_prologue = 197,        /* func_1_0_prologue  */
-  YYSYMBOL_script_1_0_stmt_seq = 198,      /* script_1_0_stmt_seq  */
-  YYSYMBOL_script_1_0_stmt = 199,          /* script_1_0_stmt  */
-  YYSYMBOL_extern_1_0_decl = 200,          /* extern_1_0_decl  */
-  YYSYMBOL_ext_func_1_0_decl = 201,        /* ext_func_1_0_decl  */
-  YYSYMBOL_script_1_0_decl = 202,          /* script_1_0_decl  */
-  YYSYMBOL_validate_1_0_decl = 203,        /* validate_1_0_decl  */
-  YYSYMBOL_physical_1_0_decl = 204,        /* physical_1_0_decl  */
-  YYSYMBOL_phys_1_0_return_type = 205,     /* phys_1_0_return_type  */
-  YYSYMBOL_phys_1_0_prologue = 206,        /* phys_1_0_prologue  */
-  YYSYMBOL_phys_1_0_body = 207,            /* phys_1_0_body  */
-  YYSYMBOL_phys_1_0_body_stmt = 208,       /* phys_1_0_body_stmt  */
-  YYSYMBOL_phys_1_0_stmt = 209,            /* phys_1_0_stmt  */
-  YYSYMBOL_table_1_0_decl = 210,           /* table_1_0_decl  */
-  YYSYMBOL_opt_tbl_1_0_parents = 211,      /* opt_tbl_1_0_parents  */
-  YYSYMBOL_tbl_1_0_parents = 212,          /* tbl_1_0_parents  */
-  YYSYMBOL_tbl_1_0_body = 213,             /* tbl_1_0_body  */
-  YYSYMBOL_tbl_1_0_stmt_seq = 214,         /* tbl_1_0_stmt_seq  */
-  YYSYMBOL_tbl_1_0_stmt = 215,             /* tbl_1_0_stmt  */
-  YYSYMBOL_production_1_0_stmt = 216,      /* production_1_0_stmt  */
-  YYSYMBOL_col_1_0_modifiers = 217,        /* col_1_0_modifiers  */
-  YYSYMBOL_col_1_0_modifier_seq = 218,     /* col_1_0_modifier_seq  */
-  YYSYMBOL_col_1_0_modifier = 219,         /* col_1_0_modifier  */
-  YYSYMBOL_col_1_0_decl = 220,             /* col_1_0_decl  */
-  YYSYMBOL_phys_enc_ref = 221,             /* phys_enc_ref  */
-  YYSYMBOL_typed_column_decl_1_0 = 222,    /* typed_column_decl_1_0  */
-  YYSYMBOL_col_ident = 223,                /* col_ident  */
-  YYSYMBOL_phys_ident = 224,               /* phys_ident  */
-  YYSYMBOL_opt_column_body_1_0 = 225,      /* opt_column_body_1_0  */
-  YYSYMBOL_column_body_1_0 = 226,          /* column_body_1_0  */
-  YYSYMBOL_column_stmt_1_0 = 227,          /* column_stmt_1_0  */
-  YYSYMBOL_default_view_1_0_decl = 228,    /* default_view_1_0_decl  */
-  YYSYMBOL_physmbr_1_0_decl = 229,         /* physmbr_1_0_decl  */
-  YYSYMBOL_phys_coldef_1_0 = 230,          /* phys_coldef_1_0  */
-  YYSYMBOL_opt_col_schema_parms_1_0 = 231, /* opt_col_schema_parms_1_0  */
-  YYSYMBOL_col_schema_parms_1_0 = 232,     /* col_schema_parms_1_0  */
-  YYSYMBOL_col_schema_parm_1_0 = 233,      /* col_schema_parm_1_0  */
-  YYSYMBOL_col_schema_value_1_0 = 234,     /* col_schema_value_1_0  */
-  YYSYMBOL_cond_expr_1_0 = 235,            /* cond_expr_1_0  */
-  YYSYMBOL_expression_1_0 = 236,           /* expression_1_0  */
-  YYSYMBOL_primary_expr_1_0 = 237,         /* primary_expr_1_0  */
-  YYSYMBOL_func_expr_1_0 = 238,            /* func_expr_1_0  */
-  YYSYMBOL_schema_parms_1_0 = 239,         /* schema_parms_1_0  */
-  YYSYMBOL_schema_parm_1_0 = 240,          /* schema_parm_1_0  */
-  YYSYMBOL_opt_factory_parms_1_0 = 241,    /* opt_factory_parms_1_0  */
-  YYSYMBOL_factory_parms_1_0 = 242,        /* factory_parms_1_0  */
-  YYSYMBOL_factory_parms = 243,            /* factory_parms  */
-  YYSYMBOL_opt_func_1_0_parms = 244,       /* opt_func_1_0_parms  */
-  YYSYMBOL_func_1_0_parms = 245,           /* func_1_0_parms  */
-  YYSYMBOL_uint_expr_1_0 = 246,            /* uint_expr_1_0  */
-  YYSYMBOL_float_expr_1_0 = 247,           /* float_expr_1_0  */
-  YYSYMBOL_string_expr_1_0 = 248,          /* string_expr_1_0  */
-  YYSYMBOL_const_vect_expr_1_0 = 249,      /* const_vect_expr_1_0  */
-  YYSYMBOL_opt_const_vect_exprlist_1_0 = 250, /* opt_const_vect_exprlist_1_0  */
-  YYSYMBOL_const_vect_exprlist_1_0 = 251,  /* const_vect_exprlist_1_0  */
-  YYSYMBOL_bool_expr_1_0 = 252,            /* bool_expr_1_0  */
-  YYSYMBOL_type_expr_1_0 = 253,            /* type_expr_1_0  */
-  YYSYMBOL_member_expr_2_0 = 254,          /* member_expr_2_0  */
-  YYSYMBOL_join_expr_2_0 = 255,            /* join_expr_2_0  */
-  YYSYMBOL_database_1_0_decl = 256,        /* database_1_0_decl  */
-  YYSYMBOL_opt_database_dad_1_0 = 257,     /* opt_database_dad_1_0  */
-  YYSYMBOL_database_body_1_0 = 258,        /* database_body_1_0  */
-  YYSYMBOL_database_members_1_0 = 259,     /* database_members_1_0  */
-  YYSYMBOL_database_member_1_0 = 260,      /* database_member_1_0  */
-  YYSYMBOL_opt_template_1_0 = 261,         /* opt_template_1_0  */
-  YYSYMBOL_db_member_1_0 = 262,            /* db_member_1_0  */
-  YYSYMBOL_table_member_1_0 = 263,         /* table_member_1_0  */
-  YYSYMBOL_alias_member_1_0 = 264,         /* alias_member_1_0  */
-  YYSYMBOL_view_spec = 265,                /* view_spec  */
-  YYSYMBOL_view_parms = 266,               /* view_parms  */
-  YYSYMBOL_include_directive = 267,        /* include_directive  */
-  YYSYMBOL_fqn_1_0 = 268,                  /* fqn_1_0  */
-  YYSYMBOL_ident_1_0 = 269,                /* ident_1_0  */
-  YYSYMBOL_empty = 270,                    /* empty  */
-  YYSYMBOL_fqn_vers = 271,                 /* fqn_vers  */
-  YYSYMBOL_fqn_opt_vers = 272,             /* fqn_opt_vers  */
-  YYSYMBOL_version_2_0 = 273,              /* version_2_0  */
-  YYSYMBOL_schema_2_0_opt = 274,           /* schema_2_0_opt  */
-  YYSYMBOL_schema_2_0 = 275,               /* schema_2_0  */
-  YYSYMBOL_schema_2_0_decl = 276,          /* schema_2_0_decl  */
-  YYSYMBOL_view_2_0_decl = 277,            /* view_2_0_decl  */
-  YYSYMBOL_view_parm = 278,                /* view_parm  */
-  YYSYMBOL_opt_view_body = 279,            /* opt_view_body  */
-  YYSYMBOL_view_body = 280,                /* view_body  */
-  YYSYMBOL_view_member = 281,              /* view_member  */
-  YYSYMBOL_opt_view_parents = 282,         /* opt_view_parents  */
-  YYSYMBOL_view_parents = 283,             /* view_parents  */
-  YYSYMBOL_view_parent = 284,              /* view_parent  */
-  YYSYMBOL_view_parent_parms = 285         /* view_parent_parms  */
-};
-typedef enum yysymbol_kind_t yysymbol_kind_t;
+/* Enabling verbose error messages.  */
+#ifdef YYERROR_VERBOSE
+# undef YYERROR_VERBOSE
+# define YYERROR_VERBOSE 1
+#else
+# define YYERROR_VERBOSE 1
+#endif
 
+/* Use api.header.include to #include this header
+   instead of duplicating it here.  */
+#ifndef YY_SCHEMA_HOME_BOSHKINS_NCBI_DEVEL_NCBI_VDB_LIBS_SCHEMA_ZZ_SCHEMA_GRAMMAR_HPP_INCLUDED
+# define YY_SCHEMA_HOME_BOSHKINS_NCBI_DEVEL_NCBI_VDB_LIBS_SCHEMA_ZZ_SCHEMA_GRAMMAR_HPP_INCLUDED
+/* Debug traces.  */
+#ifndef SCHEMA_DEBUG
+# if defined YYDEBUG
+#if YYDEBUG
+#   define SCHEMA_DEBUG 1
+#  else
+#   define SCHEMA_DEBUG 0
+#  endif
+# else /* ! defined YYDEBUG */
+#  define SCHEMA_DEBUG 0
+# endif /* ! defined YYDEBUG */
+#endif  /* ! defined SCHEMA_DEBUG */
+#if SCHEMA_DEBUG
+extern int Schema_debug;
+#endif
+
+/* Token type.  */
+#ifndef SCHEMA_TOKENTYPE
+# define SCHEMA_TOKENTYPE
+  enum Schema_tokentype
+  {
+    END_SOURCE = 0,
+    UNRECOGNIZED = 258,
+    ELLIPSIS = 259,
+    INCREMENT = 260,
+    DECIMAL = 261,
+    OCTAL = 262,
+    HEX = 263,
+    FLOAT_ = 264,
+    EXP_FLOAT = 265,
+    STRING = 266,
+    ESCAPED_STRING = 267,
+    IDENTIFIER_1_0 = 268,
+    PHYSICAL_IDENTIFIER_1_0 = 269,
+    VERSION = 270,
+    UNTERM_STRING = 271,
+    UNTERM_ESCAPED_STRING = 272,
+    VERS_1_0 = 273,
+    VERS_2_0 = 274,
+    KW___no_header = 275,
+    KW___row_length = 276,
+    KW___untyped = 277,
+    KW_alias = 278,
+    KW_column = 279,
+    KW_const = 280,
+    KW_control = 281,
+    KW_database = 282,
+    KW_decode = 283,
+    KW_default = 284,
+    KW_encode = 285,
+    KW_extern = 286,
+    KW_false = 287,
+    KW_fmtdef = 288,
+    KW_function = 289,
+    KW_include = 290,
+    KW_limit = 291,
+    KW_physical = 292,
+    KW_read = 293,
+    KW_readonly = 294,
+    KW_return = 295,
+    KW_schema = 296,
+    KW_static = 297,
+    KW_table = 298,
+    KW_template = 299,
+    KW_trigger = 300,
+    KW_true = 301,
+    KW_type = 302,
+    KW_typedef = 303,
+    KW_typeset = 304,
+    KW_validate = 305,
+    KW_version = 306,
+    KW_view = 307,
+    KW_virtual = 308,
+    KW_void = 309,
+    KW_write = 310,
+    PT_ASTLIST = 311,
+    PT_PARSE = 312,
+    PT_SOURCE = 313,
+    PT_VERSION_1_0 = 314,
+    PT_VERSION_2 = 315,
+    PT_SCHEMA_1_0 = 316,
+    PT_SCHEMA_2_0 = 317,
+    PT_INCLUDE = 318,
+    PT_TYPEDEF = 319,
+    PT_FQN = 320,
+    PT_IDENT = 321,
+    PT_PHYSIDENT = 322,
+    PT_UINT = 323,
+    PT_TYPESET = 324,
+    PT_TYPESETDEF = 325,
+    PT_FORMAT = 326,
+    PT_CONST = 327,
+    PT_ALIAS = 328,
+    PT_EXTERN = 329,
+    PT_FUNCTION = 330,
+    PT_UNTYPED = 331,
+    PT_ROWLENGTH = 332,
+    PT_FUNCDECL = 333,
+    PT_EMPTY = 334,
+    PT_SCHEMASIG = 335,
+    PT_SCHEMAFORMAL = 336,
+    PT_RETURNTYPE = 337,
+    PT_FACTSIG = 338,
+    PT_FUNCSIG = 339,
+    PT_FUNCPARAMS = 340,
+    PT_FORMALPARAM = 341,
+    PT_ELLIPSIS = 342,
+    PT_FUNCPROLOGUE = 343,
+    PT_RETURN = 344,
+    PT_PRODSTMT = 345,
+    PT_PRODTRIGGER = 346,
+    PT_SCHEMA = 347,
+    PT_VALIDATE = 348,
+    PT_PHYSICAL = 349,
+    PT_PHYSPROLOGUE = 350,
+    PT_PHYSSTMT = 351,
+    PT_PHYSBODYSTMT = 352,
+    PT_TABLE = 353,
+    PT_TABLEPARENTS = 354,
+    PT_TABLEBODY = 355,
+    PT_FUNCEXPR = 356,
+    PT_FACTPARMS = 357,
+    PT_COLUMN = 358,
+    PT_COLUMNEXPR = 359,
+    PT_COLDECL = 360,
+    PT_TYPEDCOL = 361,
+    PT_COLSTMT = 362,
+    PT_DFLTVIEW = 363,
+    PT_PHYSMBR = 364,
+    PT_PHYSCOL = 365,
+    PT_PHYSCOLDEF = 366,
+    PT_COLSCHEMAPARMS = 367,
+    PT_COLSCHEMAPARAM = 368,
+    PT_COLUNTYPED = 369,
+    PT_DATABASE = 370,
+    PT_TYPEEXPR = 371,
+    PT_DBBODY = 372,
+    PT_DBDAD = 373,
+    PT_DBMEMBER = 374,
+    PT_TBLMEMBER = 375,
+    PT_NOHEADER = 376,
+    PT_CASTEXPR = 377,
+    PT_CONSTVECT = 378,
+    PT_NEGATE = 379,
+    PT_UNARYPLUS = 380,
+    PT_VERSNAME = 381,
+    PT_ARRAY = 382,
+    PT_PHYSENCREF = 383,
+    PT_TYPEDCOLEXPR = 384,
+    PT_VIEW = 385,
+    PT_VIEWPARAM = 386,
+    PT_VIEWPARENTS = 387,
+    PT_VIEWPARENT = 388,
+    PT_MEMBEREXPR = 389,
+    PT_JOINEXPR = 390,
+    PT_ALIASMEMBER = 391,
+    PT_VIEWSPEC = 392
+  };
+#endif
+
+/* Value type.  */
+#if ! defined SCHEMA_STYPE && ! defined SCHEMA_STYPE_IS_DECLARED
+typedef SchemaToken SCHEMA_STYPE;
+# define SCHEMA_STYPE_IS_TRIVIAL 1
+# define SCHEMA_STYPE_IS_DECLARED 1
+#endif
+
+/* Location type.  */
+#if ! defined SCHEMA_LTYPE && ! defined SCHEMA_LTYPE_IS_DECLARED
+typedef struct SCHEMA_LTYPE SCHEMA_LTYPE;
+struct SCHEMA_LTYPE
+{
+  int first_line;
+  int first_column;
+  int last_line;
+  int last_column;
+};
+# define SCHEMA_LTYPE_IS_DECLARED 1
+# define SCHEMA_LTYPE_IS_TRIVIAL 1
+#endif
+
+
+
+int Schema_parse (ctx_t ctx, ParseTree** root, ErrorReport * errors, struct SchemaScanBlock* sb);
+
+#endif /* !YY_SCHEMA_HOME_BOSHKINS_NCBI_DEVEL_NCBI_VDB_LIBS_SCHEMA_ZZ_SCHEMA_GRAMMAR_HPP_INCLUDED  */
 
 
 
@@ -534,18 +437,6 @@ typedef __INT_LEAST16_TYPE__ yytype_int16;
 typedef int_least16_t yytype_int16;
 #else
 typedef short yytype_int16;
-#endif
-
-/* Work around bug in HP-UX 11.23, which defines these macros
-   incorrectly for preprocessor constants.  This workaround can likely
-   be removed in 2023, as HPE has promised support for HP-UX 11.23
-   (aka HP-UX 11i v2) only through the end of 2022; see Table 2 of
-   <https://h20195.www2.hpe.com/V2/getpdf.aspx/4AA4-7673ENW.pdf>.  */
-#ifdef __hpux
-# undef UINT_LEAST8_MAX
-# undef UINT_LEAST16_MAX
-# define UINT_LEAST8_MAX 255
-# define UINT_LEAST16_MAX 65535
 #endif
 
 #if defined __UINT_LEAST8_MAX__ && __UINT_LEAST8_MAX__ <= __INT_MAX__
@@ -607,7 +498,6 @@ typedef int yytype_uint16;
 
 #define YYSIZEOF(X) YY_CAST (YYPTRDIFF_T, sizeof (X))
 
-
 /* Stored state numbers (used for stacks). */
 typedef yytype_int16 yy_state_t;
 
@@ -625,7 +515,6 @@ typedef int yy_state_fast_t;
 #  define YY_(Msgid) Msgid
 # endif
 #endif
-
 
 #ifndef YY_ATTRIBUTE_PURE
 # if defined __GNUC__ && 2 < __GNUC__ + (96 <= __GNUC_MINOR__)
@@ -645,23 +534,17 @@ typedef int yy_state_fast_t;
 
 /* Suppress unused-variable warnings by "using" E.  */
 #if ! defined lint || defined __GNUC__
-# define YY_USE(E) ((void) (E))
+# define YYUSE(E) ((void) (E))
 #else
-# define YY_USE(E) /* empty */
+# define YYUSE(E) /* empty */
 #endif
 
+#if defined __GNUC__ && ! defined __ICC && 407 <= __GNUC__ * 100 + __GNUC_MINOR__
 /* Suppress an incorrect diagnostic about yylval being uninitialized.  */
-#if defined __GNUC__ && ! defined __ICC && 406 <= __GNUC__ * 100 + __GNUC_MINOR__
-# if __GNUC__ * 100 + __GNUC_MINOR__ < 407
-#  define YY_IGNORE_MAYBE_UNINITIALIZED_BEGIN                           \
-    _Pragma ("GCC diagnostic push")                                     \
-    _Pragma ("GCC diagnostic ignored \"-Wuninitialized\"")
-# else
-#  define YY_IGNORE_MAYBE_UNINITIALIZED_BEGIN                           \
+# define YY_IGNORE_MAYBE_UNINITIALIZED_BEGIN                            \
     _Pragma ("GCC diagnostic push")                                     \
     _Pragma ("GCC diagnostic ignored \"-Wuninitialized\"")              \
     _Pragma ("GCC diagnostic ignored \"-Wmaybe-uninitialized\"")
-# endif
 # define YY_IGNORE_MAYBE_UNINITIALIZED_END      \
     _Pragma ("GCC diagnostic pop")
 #else
@@ -690,7 +573,7 @@ typedef int yy_state_fast_t;
 
 #define YY_ASSERT(E) ((void) (0 && (E)))
 
-#if 1
+#if ! defined yyoverflow || YYERROR_VERBOSE
 
 /* The parser invokes alloca or malloc; define the necessary symbols.  */
 
@@ -755,7 +638,8 @@ void free (void *); /* INFRINGES ON USER NAME SPACE */
 #   endif
 #  endif
 # endif
-#endif /* 1 */
+#endif /* ! defined yyoverflow || YYERROR_VERBOSE */
+
 
 #if (! defined yyoverflow \
      && (! defined __cplusplus \
@@ -834,16 +718,14 @@ union yyalloc
 /* YYNSTATES -- Number of states.  */
 #define YYNSTATES  540
 
-/* YYMAXUTOK -- Last valid token kind.  */
+#define YYUNDEFTOK  2
 #define YYMAXUTOK   392
 
 
 /* YYTRANSLATE(TOKEN-NUM) -- Symbol number corresponding to TOKEN-NUM
    as returned by yylex, with out-of-bounds checking.  */
-#define YYTRANSLATE(YYX)                                \
-  (0 <= (YYX) && (YYX) <= YYMAXUTOK                     \
-   ? YY_CAST (yysymbol_kind_t, yytranslate[YYX])        \
-   : YYSYMBOL_YYUNDEF)
+#define YYTRANSLATE(YYX)                                                \
+  (0 <= (YYX) && (YYX) <= YYMAXUTOK ? yytranslate[YYX] : YYUNDEFTOK)
 
 /* YYTRANSLATE[TOKEN-NUM] -- Symbol number corresponding to TOKEN-NUM
    as returned by yylex.  */
@@ -892,73 +774,66 @@ static const yytype_uint8 yytranslate[] =
 };
 
 #if SCHEMA_DEBUG
-/* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
+  /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_int16 yyrline[] =
 {
-       0,   315,   315,   316,   320,   321,   322,   328,   332,   333,
-     337,   338,   342,   343,   344,   345,   346,   347,   348,   349,
-     350,   351,   352,   353,   354,   355,   361,   369,   370,   376,
-     381,   385,   392,   393,   397,   398,   402,   403,   409,   411,
-     416,   420,   427,   434,   439,   445,   449,   450,   451,   461,
-     466,   471,   472,   476,   480,   481,   485,   486,   490,   491,
-     495,   496,   500,   504,   505,   507,   509,   511,   516,   517,
-     521,   525,   529,   530,   532,   534,   536,   541,   542,   546,
-     547,   552,   553,   557,   559,   561,   566,   567,   571,   572,
-     579,   584,   591,   593,   601,   608,   618,   619,   623,   625,
-     630,   631,   635,   637,   639,   641,   646,   653,   661,   662,
-     666,   667,   671,   673,   678,   679,   683,   684,   685,   687,
-     689,   690,   691,   692,   693,   695,   699,   701,   706,   707,
-     711,   712,   716,   717,   718,   722,   724,   729,   731,   733,
-     738,   740,   742,   747,   748,   752,   756,   757,   761,   762,
-     766,   767,   768,   769,   773,   778,   780,   782,   784,   789,
-     794,   795,   799,   800,   804,   805,   809,   810,   817,   818,
-     822,   823,   827,   828,   829,   830,   831,   832,   833,   834,
-     835,   836,   837,   838,   839,   843,   850,   859,   860,   864,
-     865,   866,   870,   871,   875,   879,   880,   884,   885,   889,
-     890,   894,   895,   896,   900,   901,   905,   906,   910,   914,
-     915,   919,   920,   924,   925,   929,   930,   934,   935,   939,
-     941,   948,   956,   957,   961,   962,   966,   967,   971,   972,
-     973,   974,   978,   979,   983,   988,   993,   998,  1003,  1004,
-    1011,  1019,  1020,  1022,  1023,  1024,  1025,  1026,  1027,  1028,
-    1029,  1033,  1037,  1041,  1045,  1046,  1052,  1056,  1057,  1061,
-    1062,  1066,  1067,  1071,  1076,  1077,  1081,  1085,  1086,  1090,
-    1091,  1095,  1097,  1099,  1103,  1104,  1108,  1109,  1113,  1118,
-    1119
+       0,   316,   316,   317,   321,   322,   323,   329,   333,   334,
+     338,   339,   343,   344,   345,   346,   347,   348,   349,   350,
+     351,   352,   353,   354,   355,   356,   362,   370,   371,   377,
+     382,   386,   393,   394,   398,   399,   403,   404,   410,   412,
+     417,   421,   428,   435,   440,   446,   450,   451,   452,   462,
+     467,   472,   473,   477,   481,   482,   486,   487,   491,   492,
+     496,   497,   501,   505,   506,   508,   510,   512,   517,   518,
+     522,   526,   530,   531,   533,   535,   537,   542,   543,   547,
+     548,   553,   554,   558,   560,   562,   567,   568,   572,   573,
+     580,   585,   592,   594,   602,   609,   619,   620,   624,   626,
+     631,   632,   636,   638,   640,   642,   647,   654,   662,   663,
+     667,   668,   672,   674,   679,   680,   684,   685,   686,   688,
+     690,   691,   692,   693,   694,   696,   700,   702,   707,   708,
+     712,   713,   717,   718,   719,   723,   725,   730,   732,   734,
+     739,   741,   743,   748,   749,   753,   757,   758,   762,   763,
+     767,   768,   769,   770,   774,   779,   781,   783,   785,   790,
+     795,   796,   800,   801,   805,   806,   810,   811,   818,   819,
+     823,   824,   828,   829,   830,   831,   832,   833,   834,   835,
+     836,   837,   838,   839,   840,   844,   851,   860,   861,   865,
+     866,   867,   871,   872,   876,   880,   881,   885,   886,   890,
+     891,   895,   896,   897,   901,   902,   906,   907,   911,   915,
+     916,   920,   921,   925,   926,   930,   931,   935,   936,   940,
+     942,   949,   957,   958,   962,   963,   967,   968,   972,   973,
+     974,   975,   979,   980,   984,   989,   994,   999,  1004,  1005,
+    1012,  1020,  1021,  1023,  1024,  1025,  1026,  1027,  1028,  1029,
+    1030,  1034,  1038,  1042,  1046,  1047,  1053,  1057,  1058,  1062,
+    1063,  1067,  1068,  1072,  1077,  1078,  1082,  1086,  1087,  1091,
+    1092,  1096,  1098,  1100,  1104,  1105,  1109,  1110,  1114,  1119,
+    1120
 };
 #endif
 
-/** Accessing symbol of state STATE.  */
-#define YY_ACCESSING_SYMBOL(State) YY_CAST (yysymbol_kind_t, yystos[State])
-
-#if 1
-/* The user-facing name of the symbol whose (internal) number is
-   YYSYMBOL.  No bounds checking.  */
-static const char *yysymbol_name (yysymbol_kind_t yysymbol) YY_ATTRIBUTE_UNUSED;
-
+#if SCHEMA_DEBUG || YYERROR_VERBOSE || 1
 /* YYTNAME[SYMBOL-NUM] -- String name of the symbol SYMBOL-NUM.
    First, the terminals, then, starting at YYNTOKENS, nonterminals.  */
 static const char *const yytname[] =
 {
-  "\"end of source\"", "error", "\"invalid token\"", "UNRECOGNIZED",
-  "ELLIPSIS", "INCREMENT", "DECIMAL", "OCTAL", "HEX", "FLOAT_",
-  "EXP_FLOAT", "STRING", "ESCAPED_STRING", "IDENTIFIER_1_0",
-  "PHYSICAL_IDENTIFIER_1_0", "VERSION", "UNTERM_STRING",
-  "UNTERM_ESCAPED_STRING", "VERS_1_0", "VERS_2_0", "KW___no_header",
-  "KW___row_length", "KW___untyped", "KW_alias", "KW_column", "KW_const",
-  "KW_control", "KW_database", "KW_decode", "KW_default", "KW_encode",
-  "KW_extern", "KW_false", "KW_fmtdef", "KW_function", "KW_include",
-  "KW_limit", "KW_physical", "KW_read", "KW_readonly", "KW_return",
-  "KW_schema", "KW_static", "KW_table", "KW_template", "KW_trigger",
-  "KW_true", "KW_type", "KW_typedef", "KW_typeset", "KW_validate",
-  "KW_version", "KW_view", "KW_virtual", "KW_void", "KW_write",
-  "PT_ASTLIST", "PT_PARSE", "PT_SOURCE", "PT_VERSION_1_0", "PT_VERSION_2",
-  "PT_SCHEMA_1_0", "PT_SCHEMA_2_0", "PT_INCLUDE", "PT_TYPEDEF", "PT_FQN",
-  "PT_IDENT", "PT_PHYSIDENT", "PT_UINT", "PT_TYPESET", "PT_TYPESETDEF",
-  "PT_FORMAT", "PT_CONST", "PT_ALIAS", "PT_EXTERN", "PT_FUNCTION",
-  "PT_UNTYPED", "PT_ROWLENGTH", "PT_FUNCDECL", "PT_EMPTY", "PT_SCHEMASIG",
-  "PT_SCHEMAFORMAL", "PT_RETURNTYPE", "PT_FACTSIG", "PT_FUNCSIG",
-  "PT_FUNCPARAMS", "PT_FORMALPARAM", "PT_ELLIPSIS", "PT_FUNCPROLOGUE",
-  "PT_RETURN", "PT_PRODSTMT", "PT_PRODTRIGGER", "PT_SCHEMA", "PT_VALIDATE",
+  "\"end of source\"", "error", "$undefined", "UNRECOGNIZED", "ELLIPSIS",
+  "INCREMENT", "DECIMAL", "OCTAL", "HEX", "FLOAT_", "EXP_FLOAT", "STRING",
+  "ESCAPED_STRING", "IDENTIFIER_1_0", "PHYSICAL_IDENTIFIER_1_0", "VERSION",
+  "UNTERM_STRING", "UNTERM_ESCAPED_STRING", "VERS_1_0", "VERS_2_0",
+  "KW___no_header", "KW___row_length", "KW___untyped", "KW_alias",
+  "KW_column", "KW_const", "KW_control", "KW_database", "KW_decode",
+  "KW_default", "KW_encode", "KW_extern", "KW_false", "KW_fmtdef",
+  "KW_function", "KW_include", "KW_limit", "KW_physical", "KW_read",
+  "KW_readonly", "KW_return", "KW_schema", "KW_static", "KW_table",
+  "KW_template", "KW_trigger", "KW_true", "KW_type", "KW_typedef",
+  "KW_typeset", "KW_validate", "KW_version", "KW_view", "KW_virtual",
+  "KW_void", "KW_write", "PT_ASTLIST", "PT_PARSE", "PT_SOURCE",
+  "PT_VERSION_1_0", "PT_VERSION_2", "PT_SCHEMA_1_0", "PT_SCHEMA_2_0",
+  "PT_INCLUDE", "PT_TYPEDEF", "PT_FQN", "PT_IDENT", "PT_PHYSIDENT",
+  "PT_UINT", "PT_TYPESET", "PT_TYPESETDEF", "PT_FORMAT", "PT_CONST",
+  "PT_ALIAS", "PT_EXTERN", "PT_FUNCTION", "PT_UNTYPED", "PT_ROWLENGTH",
+  "PT_FUNCDECL", "PT_EMPTY", "PT_SCHEMASIG", "PT_SCHEMAFORMAL",
+  "PT_RETURNTYPE", "PT_FACTSIG", "PT_FUNCSIG", "PT_FUNCPARAMS",
+  "PT_FORMALPARAM", "PT_ELLIPSIS", "PT_FUNCPROLOGUE", "PT_RETURN",
+  "PT_PRODSTMT", "PT_PRODTRIGGER", "PT_SCHEMA", "PT_VALIDATE",
   "PT_PHYSICAL", "PT_PHYSPROLOGUE", "PT_PHYSSTMT", "PT_PHYSBODYSTMT",
   "PT_TABLE", "PT_TABLEPARENTS", "PT_TABLEBODY", "PT_FUNCEXPR",
   "PT_FACTPARMS", "PT_COLUMN", "PT_COLUMNEXPR", "PT_COLDECL",
@@ -1013,13 +888,31 @@ static const char *const yytname[] =
   "view_body", "view_member", "opt_view_parents", "view_parents",
   "view_parent", "view_parent_parms", YY_NULLPTR
 };
-
-static const char *
-yysymbol_name (yysymbol_kind_t yysymbol)
-{
-  return yytname[yysymbol];
-}
 #endif
+
+# ifdef YYPRINT
+/* YYTOKNUM[NUM] -- (External) token number corresponding to the
+   (internal) symbol number NUM (which must be that of a token).  */
+static const yytype_int16 yytoknum[] =
+{
+       0,   256,   257,   258,   259,   260,   261,   262,   263,   264,
+     265,   266,   267,   268,   269,   270,   271,   272,   273,   274,
+     275,   276,   277,   278,   279,   280,   281,   282,   283,   284,
+     285,   286,   287,   288,   289,   290,   291,   292,   293,   294,
+     295,   296,   297,   298,   299,   300,   301,   302,   303,   304,
+     305,   306,   307,   308,   309,   310,   311,   312,   313,   314,
+     315,   316,   317,   318,   319,   320,   321,   322,   323,   324,
+     325,   326,   327,   328,   329,   330,   331,   332,   333,   334,
+     335,   336,   337,   338,   339,   340,   341,   342,   343,   344,
+     345,   346,   347,   348,   349,   350,   351,   352,   353,   354,
+     355,   356,   357,   358,   359,   360,   361,   362,   363,   364,
+     365,   366,   367,   368,   369,   370,   371,   372,   373,   374,
+     375,   376,   377,   378,   379,   380,   381,   382,   383,   384,
+     385,   386,   387,   388,   389,   390,   391,   392,    59,    44,
+     123,   125,    91,    93,    42,    61,    40,    41,    60,    62,
+     124,    64,    45,    43,    47,    46,    58
+};
+# endif
 
 #define YYPACT_NINF (-369)
 
@@ -1031,8 +924,8 @@ yysymbol_name (yysymbol_kind_t yysymbol)
 #define yytable_value_is_error(Yyn) \
   0
 
-/* YYPACT[STATE-NUM] -- Index in YYTABLE of the portion describing
-   STATE-NUM.  */
+  /* YYPACT[STATE-NUM] -- Index in YYTABLE of the portion describing
+     STATE-NUM.  */
 static const yytype_int16 yypact[] =
 {
      521,  -369,     8,     8,     8,    98,     8,    59,   168,    57,
@@ -1091,9 +984,9 @@ static const yytype_int16 yypact[] =
     -369,  -369,  -369,  -369,  -369,   486,   210,   213,  -369,  -369
 };
 
-/* YYDEFACT[STATE-NUM] -- Default reduction number in state STATE-NUM.
-   Performed when YYTABLE does not specify something else to do.  Zero
-   means the default is an error.  */
+  /* YYDEFACT[STATE-NUM] -- Default reduction number in state STATE-NUM.
+     Performed when YYTABLE does not specify something else to do.  Zero
+     means the default is an error.  */
 static const yytype_int16 yydefact[] =
 {
        0,     2,     0,     0,     0,     0,     0,   252,     0,   252,
@@ -1152,7 +1045,7 @@ static const yytype_int16 yydefact[] =
       89,   152,   150,   151,   280,     0,     0,     0,   271,   272
 };
 
-/* YYPGOTO[NTERM-NUM].  */
+  /* YYPGOTO[NTERM-NUM].  */
 static const yytype_int16 yypgoto[] =
 {
     -369,  -369,  -369,  -369,  -369,   546,   197,  -369,  -369,  -369,
@@ -1170,10 +1063,10 @@ static const yytype_int16 yypgoto[] =
     -369,   290,  -369,  -369,   108,  -369,  -369,   113,  -369
 };
 
-/* YYDEFGOTO[NTERM-NUM].  */
+  /* YYDEFGOTO[NTERM-NUM].  */
 static const yytype_int16 yydefgoto[] =
 {
-       0,    17,    18,    19,    70,    20,    21,    22,   111,    23,
+      -1,    17,    18,    19,    70,    20,    21,    22,   111,    23,
       63,   114,   184,    96,   147,    24,    45,    46,    25,    26,
       82,    27,    51,    52,    53,    54,    55,    97,    98,   102,
      224,   225,   275,   276,   277,   280,   341,   342,   343,   336,
@@ -1188,9 +1081,9 @@ static const yytype_int16 yydefgoto[] =
       80,   253,   490,   491,   492,   384,   439,   440,   512
 };
 
-/* YYTABLE[YYPACT[STATE-NUM]] -- What to do in state STATE-NUM.  If
-   positive, shift that token.  If negative, reduce the rule whose
-   number is the opposite.  If YYTABLE_NINF, syntax error.  */
+  /* YYTABLE[YYPACT[STATE-NUM]] -- What to do in state STATE-NUM.  If
+     positive, shift that token.  If negative, reduce the rule whose
+     number is the opposite.  If YYTABLE_NINF, syntax error.  */
 static const yytype_int16 yytable[] =
 {
       37,    40,    41,   379,    47,    36,    86,   -41,    42,    41,
@@ -1367,8 +1260,8 @@ static const yytype_int16 yycheck[] =
       -1,    -1,    -1,    -1,    -1,    -1,    -1,   138
 };
 
-/* YYSTOS[STATE-NUM] -- The symbol kind of the accessing symbol of
-   state STATE-NUM.  */
+  /* YYSTOS[STATE-NUM] -- The (internal number of the) accessing
+     symbol of state STATE-NUM.  */
 static const yytype_int16 yystos[] =
 {
        0,     0,    23,    25,    27,    31,    33,    34,    35,    37,
@@ -1427,7 +1320,7 @@ static const yytype_int16 yystos[] =
      138,   138,   138,   138,   269,   145,   235,   235,   138,   138
 };
 
-/* YYR1[RULE-NUM] -- Symbol kind of the left-hand side of rule RULE-NUM.  */
+  /* YYR1[YYN] -- Symbol number of symbol that rule YYN derives.  */
 static const yytype_int16 yyr1[] =
 {
        0,   157,   158,   158,   159,   159,   159,   160,   161,   161,
@@ -1461,7 +1354,7 @@ static const yytype_int16 yyr1[] =
      285
 };
 
-/* YYR2[RULE-NUM] -- Number of symbols on the right-hand side of rule RULE-NUM.  */
+  /* YYR2[YYN] -- Number of symbols on the right hand side of rule YYN.  */
 static const yytype_int8 yyr2[] =
 {
        0,     2,     1,     2,     1,     2,     2,     3,     1,     1,
@@ -1496,22 +1389,21 @@ static const yytype_int8 yyr2[] =
 };
 
 
-enum { YYENOMEM = -2 };
-
 #define yyerrok         (yyerrstatus = 0)
-#define yyclearin       (yychar = SCHEMA_EMPTY)
+#define yyclearin       (yychar = YYEMPTY)
+#define YYEMPTY         (-2)
+#define YYEOF           0
 
 #define YYACCEPT        goto yyacceptlab
 #define YYABORT         goto yyabortlab
 #define YYERROR         goto yyerrorlab
-#define YYNOMEM         goto yyexhaustedlab
 
 
 #define YYRECOVERING()  (!!yyerrstatus)
 
 #define YYBACKUP(Token, Value)                                    \
   do                                                              \
-    if (yychar == SCHEMA_EMPTY)                                        \
+    if (yychar == YYEMPTY)                                        \
       {                                                           \
         yychar = (Token);                                         \
         yylval = (Value);                                         \
@@ -1526,9 +1418,10 @@ enum { YYENOMEM = -2 };
       }                                                           \
   while (0)
 
-/* Backward compatibility with an undocumented macro.
-   Use SCHEMA_error or SCHEMA_UNDEF. */
-#define YYERRCODE SCHEMA_UNDEF
+/* Error token number */
+#define YYTERROR        1
+#define YYERRCODE       256
+
 
 /* YYLLOC_DEFAULT -- Set CURRENT to span from RHS[1] to RHS[N].
    If N is 0, then set CURRENT to the empty location which ends
@@ -1572,19 +1465,12 @@ do {                                            \
 } while (0)
 
 
-/* YYLOCATION_PRINT -- Print the location on the stream.
+/* YY_LOCATION_PRINT -- Print the location on the stream.
    This macro was not mandated originally: define only if we know
    we won't break user code: when these are the locations we know.  */
 
-# ifndef YYLOCATION_PRINT
-
-#  if defined YY_LOCATION_PRINT
-
-   /* Temporary convenience wrapper in case some people defined the
-      undocumented and private YY_LOCATION_PRINT macros.  */
-#   define YYLOCATION_PRINT(File, Loc)  YY_LOCATION_PRINT(File, *(Loc))
-
-#  elif defined SCHEMA_LTYPE_IS_TRIVIAL && SCHEMA_LTYPE_IS_TRIVIAL
+#ifndef YY_LOCATION_PRINT
+# if defined SCHEMA_LTYPE_IS_TRIVIAL && SCHEMA_LTYPE_IS_TRIVIAL
 
 /* Print *YYLOCP on YYO.  Private, do not rely on its existence. */
 
@@ -1612,32 +1498,24 @@ yy_location_print_ (FILE *yyo, YYLTYPE const * const yylocp)
         res += YYFPRINTF (yyo, "-%d", end_col);
     }
   return res;
-}
+ }
 
-#   define YYLOCATION_PRINT  yy_location_print_
+#  define YY_LOCATION_PRINT(File, Loc)          \
+  yy_location_print_ (File, &(Loc))
 
-    /* Temporary convenience wrapper in case some people defined the
-       undocumented and private YY_LOCATION_PRINT macros.  */
-#   define YY_LOCATION_PRINT(File, Loc)  YYLOCATION_PRINT(File, &(Loc))
-
-#  else
-
-#   define YYLOCATION_PRINT(File, Loc) ((void) 0)
-    /* Temporary convenience wrapper in case some people defined the
-       undocumented and private YY_LOCATION_PRINT macros.  */
-#   define YY_LOCATION_PRINT  YYLOCATION_PRINT
-
-#  endif
-# endif /* !defined YYLOCATION_PRINT */
+# else
+#  define YY_LOCATION_PRINT(File, Loc) ((void) 0)
+# endif
+#endif
 
 
-# define YY_SYMBOL_PRINT(Title, Kind, Value, Location)                    \
+# define YY_SYMBOL_PRINT(Title, Type, Value, Location)                    \
 do {                                                                      \
   if (yydebug)                                                            \
     {                                                                     \
       YYFPRINTF (stderr, "%s ", Title);                                   \
       yy_symbol_print (stderr,                                            \
-                  Kind, Value, Location, ctx, root, errors, sb); \
+                  Type, Value, Location, ctx, root, errors, sb); \
       YYFPRINTF (stderr, "\n");                                           \
     }                                                                     \
 } while (0)
@@ -1648,20 +1526,23 @@ do {                                                                      \
 `-----------------------------------*/
 
 static void
-yy_symbol_value_print (FILE *yyo,
-                       yysymbol_kind_t yykind, YYSTYPE const * const yyvaluep, YYLTYPE const * const yylocationp, ctx_t ctx, ParseTree** root, ErrorReport * errors, struct SchemaScanBlock* sb)
+yy_symbol_value_print (FILE *yyo, int yytype, YYSTYPE const * const yyvaluep, YYLTYPE const * const yylocationp, ctx_t ctx, ParseTree** root, ErrorReport * errors, struct SchemaScanBlock* sb)
 {
   FILE *yyoutput = yyo;
-  YY_USE (yyoutput);
-  YY_USE (yylocationp);
-  YY_USE (ctx);
-  YY_USE (root);
-  YY_USE (errors);
-  YY_USE (sb);
+  YYUSE (yyoutput);
+  YYUSE (yylocationp);
+  YYUSE (ctx);
+  YYUSE (root);
+  YYUSE (errors);
+  YYUSE (sb);
   if (!yyvaluep)
     return;
+# ifdef YYPRINT
+  if (yytype < YYNTOKENS)
+    YYPRINT (yyo, yytoknum[yytype], *yyvaluep);
+# endif
   YY_IGNORE_MAYBE_UNINITIALIZED_BEGIN
-  YY_USE (yykind);
+  YYUSE (yytype);
   YY_IGNORE_MAYBE_UNINITIALIZED_END
 }
 
@@ -1671,15 +1552,14 @@ yy_symbol_value_print (FILE *yyo,
 `---------------------------*/
 
 static void
-yy_symbol_print (FILE *yyo,
-                 yysymbol_kind_t yykind, YYSTYPE const * const yyvaluep, YYLTYPE const * const yylocationp, ctx_t ctx, ParseTree** root, ErrorReport * errors, struct SchemaScanBlock* sb)
+yy_symbol_print (FILE *yyo, int yytype, YYSTYPE const * const yyvaluep, YYLTYPE const * const yylocationp, ctx_t ctx, ParseTree** root, ErrorReport * errors, struct SchemaScanBlock* sb)
 {
   YYFPRINTF (yyo, "%s %s (",
-             yykind < YYNTOKENS ? "token" : "nterm", yysymbol_name (yykind));
+             yytype < YYNTOKENS ? "token" : "nterm", yytname[yytype]);
 
-  YYLOCATION_PRINT (yyo, yylocationp);
+  YY_LOCATION_PRINT (yyo, *yylocationp);
   YYFPRINTF (yyo, ": ");
-  yy_symbol_value_print (yyo, yykind, yyvaluep, yylocationp, ctx, root, errors, sb);
+  yy_symbol_value_print (yyo, yytype, yyvaluep, yylocationp, ctx, root, errors, sb);
   YYFPRINTF (yyo, ")");
 }
 
@@ -1712,8 +1592,7 @@ do {                                                            \
 `------------------------------------------------*/
 
 static void
-yy_reduce_print (yy_state_t *yyssp, YYSTYPE *yyvsp, YYLTYPE *yylsp,
-                 int yyrule, ctx_t ctx, ParseTree** root, ErrorReport * errors, struct SchemaScanBlock* sb)
+yy_reduce_print (yy_state_t *yyssp, YYSTYPE *yyvsp, YYLTYPE *yylsp, int yyrule, ctx_t ctx, ParseTree** root, ErrorReport * errors, struct SchemaScanBlock* sb)
 {
   int yylno = yyrline[yyrule];
   int yynrhs = yyr2[yyrule];
@@ -1725,9 +1604,9 @@ yy_reduce_print (yy_state_t *yyssp, YYSTYPE *yyvsp, YYLTYPE *yylsp,
     {
       YYFPRINTF (stderr, "   $%d = ", yyi + 1);
       yy_symbol_print (stderr,
-                       YY_ACCESSING_SYMBOL (+yyssp[yyi + 1 - yynrhs]),
-                       &yyvsp[(yyi + 1) - (yynrhs)],
-                       &(yylsp[(yyi + 1) - (yynrhs)]), ctx, root, errors, sb);
+                       yystos[+yyssp[yyi + 1 - yynrhs]],
+                       &yyvsp[(yyi + 1) - (yynrhs)]
+                       , &(yylsp[(yyi + 1) - (yynrhs)])                       , ctx, root, errors, sb);
       YYFPRINTF (stderr, "\n");
     }
 }
@@ -1742,8 +1621,8 @@ do {                                    \
    multiple parsers can coexist.  */
 int yydebug;
 #else /* !SCHEMA_DEBUG */
-# define YYDPRINTF(Args) ((void) 0)
-# define YY_SYMBOL_PRINT(Title, Kind, Value, Location)
+# define YYDPRINTF(Args)
+# define YY_SYMBOL_PRINT(Title, Type, Value, Location)
 # define YY_STACK_PRINT(Bottom, Top)
 # define YY_REDUCE_PRINT(Rule)
 #endif /* !SCHEMA_DEBUG */
@@ -1766,61 +1645,12 @@ int yydebug;
 #endif
 
 
-/* Context of a parse error.  */
-typedef struct
-{
-  yy_state_t *yyssp;
-  yysymbol_kind_t yytoken;
-  YYLTYPE *yylloc;
-} yypcontext_t;
+#if YYERROR_VERBOSE
 
-/* Put in YYARG at most YYARGN of the expected tokens given the
-   current YYCTX, and return the number of tokens stored in YYARG.  If
-   YYARG is null, return the number of expected tokens (guaranteed to
-   be less than YYNTOKENS).  Return YYENOMEM on memory exhaustion.
-   Return 0 if there are more than YYARGN expected tokens, yet fill
-   YYARG up to YYARGN. */
-static int
-yypcontext_expected_tokens (const yypcontext_t *yyctx,
-                            yysymbol_kind_t yyarg[], int yyargn)
-{
-  /* Actual size of YYARG. */
-  int yycount = 0;
-  int yyn = yypact[+*yyctx->yyssp];
-  if (!yypact_value_is_default (yyn))
-    {
-      /* Start YYX at -YYN if negative to avoid negative indexes in
-         YYCHECK.  In other words, skip the first -YYN actions for
-         this state because they are default actions.  */
-      int yyxbegin = yyn < 0 ? -yyn : 0;
-      /* Stay within bounds of both yycheck and yytname.  */
-      int yychecklim = YYLAST - yyn + 1;
-      int yyxend = yychecklim < YYNTOKENS ? yychecklim : YYNTOKENS;
-      int yyx;
-      for (yyx = yyxbegin; yyx < yyxend; ++yyx)
-        if (yycheck[yyx + yyn] == yyx && yyx != YYSYMBOL_YYerror
-            && !yytable_value_is_error (yytable[yyx + yyn]))
-          {
-            if (!yyarg)
-              ++yycount;
-            else if (yycount == yyargn)
-              return 0;
-            else
-              yyarg[yycount++] = YY_CAST (yysymbol_kind_t, yyx);
-          }
-    }
-  if (yyarg && yycount == 0 && 0 < yyargn)
-    yyarg[0] = YYSYMBOL_YYEMPTY;
-  return yycount;
-}
-
-
-
-
-#ifndef yystrlen
-# if defined __GLIBC__ && defined _STRING_H
-#  define yystrlen(S) (YY_CAST (YYPTRDIFF_T, strlen (S)))
-# else
+# ifndef yystrlen
+#  if defined __GLIBC__ && defined _STRING_H
+#   define yystrlen(S) (YY_CAST (YYPTRDIFF_T, strlen (S)))
+#  else
 /* Return the length of YYSTR.  */
 static YYPTRDIFF_T
 yystrlen (const char *yystr)
@@ -1830,13 +1660,13 @@ yystrlen (const char *yystr)
     continue;
   return yylen;
 }
+#  endif
 # endif
-#endif
 
-#ifndef yystpcpy
-# if defined __GLIBC__ && defined _STRING_H && defined _GNU_SOURCE
-#  define yystpcpy stpcpy
-# else
+# ifndef yystpcpy
+#  if defined __GLIBC__ && defined _STRING_H && defined _GNU_SOURCE
+#   define yystpcpy stpcpy
+#  else
 /* Copy YYSRC to YYDEST, returning the address of the terminating '\0' in
    YYDEST.  */
 static char *
@@ -1850,10 +1680,10 @@ yystpcpy (char *yydest, const char *yysrc)
 
   return yyd - 1;
 }
+#  endif
 # endif
-#endif
 
-#ifndef yytnamerr
+# ifndef yytnamerr
 /* Copy to YYRES the contents of YYSTR after stripping away unnecessary
    quotes and backslashes, so that it's suitable for yyerror.  The
    heuristic is that double-quoting is unnecessary unless the string
@@ -1868,6 +1698,7 @@ yytnamerr (char *yyres, const char *yystr)
     {
       YYPTRDIFF_T yyn = 0;
       char const *yyp = yystr;
+
       for (;;)
         switch (*++yyp)
           {
@@ -1901,15 +1732,31 @@ yytnamerr (char *yyres, const char *yystr)
   else
     return yystrlen (yystr);
 }
-#endif
+# endif
 
+/* Copy into *YYMSG, which is of size *YYMSG_ALLOC, an error message
+   about the unexpected token YYTOKEN for the state stack whose top is
+   YYSSP.
 
+   Return 0 if *YYMSG was successfully written.  Return 1 if *YYMSG is
+   not large enough to hold the message.  In that case, also set
+   *YYMSG_ALLOC to the required number of bytes.  Return 2 if the
+   required number of bytes is too large to store.  */
 static int
-yy_syntax_error_arguments (const yypcontext_t *yyctx,
-                           yysymbol_kind_t yyarg[], int yyargn)
+yysyntax_error (YYPTRDIFF_T *yymsg_alloc, char **yymsg,
+                yy_state_t *yyssp, int yytoken)
 {
+  enum { YYERROR_VERBOSE_ARGS_MAXIMUM = 5 };
+  /* Internationalized format string. */
+  const char *yyformat = YY_NULLPTR;
+  /* Arguments of yyformat: reported tokens (one for the "unexpected",
+     one per "expected"). */
+  char const *yyarg[YYERROR_VERBOSE_ARGS_MAXIMUM];
   /* Actual size of YYARG. */
   int yycount = 0;
+  /* Cumulated lengths of YYARG.  */
+  YYPTRDIFF_T yysize = 0;
+
   /* There are many possibilities here to consider:
      - If this state is a consistent state with a default action, then
        the only way this function was invoked is if the default action
@@ -1933,54 +1780,52 @@ yy_syntax_error_arguments (const yypcontext_t *yyctx,
        one exception: it will still contain any token that will not be
        accepted due to an error action in a later state.
   */
-  if (yyctx->yytoken != YYSYMBOL_YYEMPTY)
+  if (yytoken != YYEMPTY)
     {
-      int yyn;
-      if (yyarg)
-        yyarg[yycount] = yyctx->yytoken;
-      ++yycount;
-      yyn = yypcontext_expected_tokens (yyctx,
-                                        yyarg ? yyarg + 1 : yyarg, yyargn - 1);
-      if (yyn == YYENOMEM)
-        return YYENOMEM;
-      else
-        yycount += yyn;
+      int yyn = yypact[+*yyssp];
+      YYPTRDIFF_T yysize0 = yytnamerr (YY_NULLPTR, yytname[yytoken]);
+      yysize = yysize0;
+      yyarg[yycount++] = yytname[yytoken];
+      if (!yypact_value_is_default (yyn))
+        {
+          /* Start YYX at -YYN if negative to avoid negative indexes in
+             YYCHECK.  In other words, skip the first -YYN actions for
+             this state because they are default actions.  */
+          int yyxbegin = yyn < 0 ? -yyn : 0;
+          /* Stay within bounds of both yycheck and yytname.  */
+          int yychecklim = YYLAST - yyn + 1;
+          int yyxend = yychecklim < YYNTOKENS ? yychecklim : YYNTOKENS;
+          int yyx;
+
+          for (yyx = yyxbegin; yyx < yyxend; ++yyx)
+            if (yycheck[yyx + yyn] == yyx && yyx != YYTERROR
+                && !yytable_value_is_error (yytable[yyx + yyn]))
+              {
+                if (yycount == YYERROR_VERBOSE_ARGS_MAXIMUM)
+                  {
+                    yycount = 1;
+                    yysize = yysize0;
+                    break;
+                  }
+                yyarg[yycount++] = yytname[yyx];
+                {
+                  YYPTRDIFF_T yysize1
+                    = yysize + yytnamerr (YY_NULLPTR, yytname[yyx]);
+                  if (yysize <= yysize1 && yysize1 <= YYSTACK_ALLOC_MAXIMUM)
+                    yysize = yysize1;
+                  else
+                    return 2;
+                }
+              }
+        }
     }
-  return yycount;
-}
-
-/* Copy into *YYMSG, which is of size *YYMSG_ALLOC, an error message
-   about the unexpected token YYTOKEN for the state stack whose top is
-   YYSSP.
-
-   Return 0 if *YYMSG was successfully written.  Return -1 if *YYMSG is
-   not large enough to hold the message.  In that case, also set
-   *YYMSG_ALLOC to the required number of bytes.  Return YYENOMEM if the
-   required number of bytes is too large to store.  */
-static int
-yysyntax_error (YYPTRDIFF_T *yymsg_alloc, char **yymsg,
-                const yypcontext_t *yyctx)
-{
-  enum { YYARGS_MAX = 5 };
-  /* Internationalized format string. */
-  const char *yyformat = YY_NULLPTR;
-  /* Arguments of yyformat: reported tokens (one for the "unexpected",
-     one per "expected"). */
-  yysymbol_kind_t yyarg[YYARGS_MAX];
-  /* Cumulated lengths of YYARG.  */
-  YYPTRDIFF_T yysize = 0;
-
-  /* Actual size of YYARG. */
-  int yycount = yy_syntax_error_arguments (yyctx, yyarg, YYARGS_MAX);
-  if (yycount == YYENOMEM)
-    return YYENOMEM;
 
   switch (yycount)
     {
-#define YYCASE_(N, S)                       \
+# define YYCASE_(N, S)                      \
       case N:                               \
         yyformat = S;                       \
-        break
+      break
     default: /* Avoid compiler warnings. */
       YYCASE_(0, YY_("syntax error"));
       YYCASE_(1, YY_("syntax error, unexpected %s"));
@@ -1988,23 +1833,17 @@ yysyntax_error (YYPTRDIFF_T *yymsg_alloc, char **yymsg,
       YYCASE_(3, YY_("syntax error, unexpected %s, expecting %s or %s"));
       YYCASE_(4, YY_("syntax error, unexpected %s, expecting %s or %s or %s"));
       YYCASE_(5, YY_("syntax error, unexpected %s, expecting %s or %s or %s or %s"));
-#undef YYCASE_
+# undef YYCASE_
     }
 
-  /* Compute error message size.  Don't count the "%s"s, but reserve
-     room for the terminator.  */
-  yysize = yystrlen (yyformat) - 2 * yycount + 1;
   {
-    int yyi;
-    for (yyi = 0; yyi < yycount; ++yyi)
-      {
-        YYPTRDIFF_T yysize1
-          = yysize + yytnamerr (YY_NULLPTR, yytname[yyarg[yyi]]);
-        if (yysize <= yysize1 && yysize1 <= YYSTACK_ALLOC_MAXIMUM)
-          yysize = yysize1;
-        else
-          return YYENOMEM;
-      }
+    /* Don't count the "%s"s in the final size, but reserve room for
+       the terminator.  */
+    YYPTRDIFF_T yysize1 = yysize + (yystrlen (yyformat) - 2 * yycount) + 1;
+    if (yysize <= yysize1 && yysize1 <= YYSTACK_ALLOC_MAXIMUM)
+      yysize = yysize1;
+    else
+      return 2;
   }
 
   if (*yymsg_alloc < yysize)
@@ -2013,7 +1852,7 @@ yysyntax_error (YYPTRDIFF_T *yymsg_alloc, char **yymsg,
       if (! (yysize <= *yymsg_alloc
              && *yymsg_alloc <= YYSTACK_ALLOC_MAXIMUM))
         *yymsg_alloc = YYSTACK_ALLOC_MAXIMUM;
-      return -1;
+      return 1;
     }
 
   /* Avoid sprintf, as that infringes on the user's name space.
@@ -2025,7 +1864,7 @@ yysyntax_error (YYPTRDIFF_T *yymsg_alloc, char **yymsg,
     while ((*yyp = *yyformat) != '\0')
       if (*yyp == '%' && yyformat[1] == 's' && yyi < yycount)
         {
-          yyp += yytnamerr (yyp, yytname[yyarg[yyi++]]);
+          yyp += yytnamerr (yyp, yyarg[yyi++]);
           yyformat += 2;
         }
       else
@@ -2036,30 +1875,29 @@ yysyntax_error (YYPTRDIFF_T *yymsg_alloc, char **yymsg,
   }
   return 0;
 }
-
+#endif /* YYERROR_VERBOSE */
 
 /*-----------------------------------------------.
 | Release the memory associated to this symbol.  |
 `-----------------------------------------------*/
 
 static void
-yydestruct (const char *yymsg,
-            yysymbol_kind_t yykind, YYSTYPE *yyvaluep, YYLTYPE *yylocationp, ctx_t ctx, ParseTree** root, ErrorReport * errors, struct SchemaScanBlock* sb)
+yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocationp, ctx_t ctx, ParseTree** root, ErrorReport * errors, struct SchemaScanBlock* sb)
 {
-  YY_USE (yyvaluep);
-  YY_USE (yylocationp);
-  YY_USE (ctx);
-  YY_USE (root);
-  YY_USE (errors);
-  YY_USE (sb);
+  YYUSE (yyvaluep);
+  YYUSE (yylocationp);
+  YYUSE (ctx);
+  YYUSE (root);
+  YYUSE (errors);
+  YYUSE (sb);
   if (!yymsg)
     yymsg = "Deleting";
-  YY_SYMBOL_PRINT (yymsg, yykind, yyvaluep, yylocationp);
+  YY_SYMBOL_PRINT (yymsg, yytype, yyvaluep, yylocationp);
 
   YY_IGNORE_MAYBE_UNINITIALIZED_BEGIN
-  switch (yykind)
+  switch (yytype)
     {
-    case YYSYMBOL_YYEOF: /* "end of source"  */
+    case 0: /* "end of source"  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2072,7 +1910,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_UNRECOGNIZED: /* UNRECOGNIZED  */
+    case 3: /* UNRECOGNIZED  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2085,7 +1923,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_ELLIPSIS: /* ELLIPSIS  */
+    case 4: /* ELLIPSIS  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2098,7 +1936,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_INCREMENT: /* INCREMENT  */
+    case 5: /* INCREMENT  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2111,7 +1949,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_DECIMAL: /* DECIMAL  */
+    case 6: /* DECIMAL  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2124,7 +1962,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_OCTAL: /* OCTAL  */
+    case 7: /* OCTAL  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2137,7 +1975,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_HEX: /* HEX  */
+    case 8: /* HEX  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2150,7 +1988,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_FLOAT_: /* FLOAT_  */
+    case 9: /* FLOAT_  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2163,7 +2001,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_EXP_FLOAT: /* EXP_FLOAT  */
+    case 10: /* EXP_FLOAT  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2176,7 +2014,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_STRING: /* STRING  */
+    case 11: /* STRING  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2189,7 +2027,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_ESCAPED_STRING: /* ESCAPED_STRING  */
+    case 12: /* ESCAPED_STRING  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2202,7 +2040,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_IDENTIFIER_1_0: /* IDENTIFIER_1_0  */
+    case 13: /* IDENTIFIER_1_0  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2215,7 +2053,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PHYSICAL_IDENTIFIER_1_0: /* PHYSICAL_IDENTIFIER_1_0  */
+    case 14: /* PHYSICAL_IDENTIFIER_1_0  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2228,7 +2066,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_VERSION: /* VERSION  */
+    case 15: /* VERSION  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2241,7 +2079,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_UNTERM_STRING: /* UNTERM_STRING  */
+    case 16: /* UNTERM_STRING  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2254,7 +2092,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_UNTERM_ESCAPED_STRING: /* UNTERM_ESCAPED_STRING  */
+    case 17: /* UNTERM_ESCAPED_STRING  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2267,7 +2105,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_VERS_1_0: /* VERS_1_0  */
+    case 18: /* VERS_1_0  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2280,7 +2118,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_VERS_2_0: /* VERS_2_0  */
+    case 19: /* VERS_2_0  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2293,7 +2131,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_KW___no_header: /* KW___no_header  */
+    case 20: /* KW___no_header  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2306,7 +2144,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_KW___row_length: /* KW___row_length  */
+    case 21: /* KW___row_length  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2319,7 +2157,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_KW___untyped: /* KW___untyped  */
+    case 22: /* KW___untyped  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2332,7 +2170,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_KW_alias: /* KW_alias  */
+    case 23: /* KW_alias  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2345,7 +2183,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_KW_column: /* KW_column  */
+    case 24: /* KW_column  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2358,7 +2196,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_KW_const: /* KW_const  */
+    case 25: /* KW_const  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2371,7 +2209,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_KW_control: /* KW_control  */
+    case 26: /* KW_control  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2384,7 +2222,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_KW_database: /* KW_database  */
+    case 27: /* KW_database  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2397,7 +2235,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_KW_decode: /* KW_decode  */
+    case 28: /* KW_decode  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2410,7 +2248,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_KW_default: /* KW_default  */
+    case 29: /* KW_default  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2423,7 +2261,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_KW_encode: /* KW_encode  */
+    case 30: /* KW_encode  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2436,7 +2274,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_KW_extern: /* KW_extern  */
+    case 31: /* KW_extern  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2449,7 +2287,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_KW_false: /* KW_false  */
+    case 32: /* KW_false  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2462,7 +2300,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_KW_fmtdef: /* KW_fmtdef  */
+    case 33: /* KW_fmtdef  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2475,7 +2313,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_KW_function: /* KW_function  */
+    case 34: /* KW_function  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2488,7 +2326,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_KW_include: /* KW_include  */
+    case 35: /* KW_include  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2501,7 +2339,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_KW_limit: /* KW_limit  */
+    case 36: /* KW_limit  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2514,7 +2352,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_KW_physical: /* KW_physical  */
+    case 37: /* KW_physical  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2527,7 +2365,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_KW_read: /* KW_read  */
+    case 38: /* KW_read  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2540,7 +2378,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_KW_readonly: /* KW_readonly  */
+    case 39: /* KW_readonly  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2553,7 +2391,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_KW_return: /* KW_return  */
+    case 40: /* KW_return  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2566,7 +2404,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_KW_schema: /* KW_schema  */
+    case 41: /* KW_schema  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2579,7 +2417,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_KW_static: /* KW_static  */
+    case 42: /* KW_static  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2592,7 +2430,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_KW_table: /* KW_table  */
+    case 43: /* KW_table  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2605,7 +2443,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_KW_template: /* KW_template  */
+    case 44: /* KW_template  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2618,7 +2456,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_KW_trigger: /* KW_trigger  */
+    case 45: /* KW_trigger  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2631,7 +2469,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_KW_true: /* KW_true  */
+    case 46: /* KW_true  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2644,7 +2482,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_KW_type: /* KW_type  */
+    case 47: /* KW_type  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2657,7 +2495,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_KW_typedef: /* KW_typedef  */
+    case 48: /* KW_typedef  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2670,7 +2508,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_KW_typeset: /* KW_typeset  */
+    case 49: /* KW_typeset  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2683,7 +2521,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_KW_validate: /* KW_validate  */
+    case 50: /* KW_validate  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2696,7 +2534,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_KW_version: /* KW_version  */
+    case 51: /* KW_version  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2709,7 +2547,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_KW_view: /* KW_view  */
+    case 52: /* KW_view  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2722,7 +2560,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_KW_virtual: /* KW_virtual  */
+    case 53: /* KW_virtual  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2735,7 +2573,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_KW_void: /* KW_void  */
+    case 54: /* KW_void  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2748,7 +2586,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_KW_write: /* KW_write  */
+    case 55: /* KW_write  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2761,7 +2599,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_ASTLIST: /* PT_ASTLIST  */
+    case 56: /* PT_ASTLIST  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2774,7 +2612,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_PARSE: /* PT_PARSE  */
+    case 57: /* PT_PARSE  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2787,7 +2625,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_SOURCE: /* PT_SOURCE  */
+    case 58: /* PT_SOURCE  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2800,7 +2638,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_VERSION_1_0: /* PT_VERSION_1_0  */
+    case 59: /* PT_VERSION_1_0  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2813,7 +2651,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_VERSION_2: /* PT_VERSION_2  */
+    case 60: /* PT_VERSION_2  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2826,7 +2664,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_SCHEMA_1_0: /* PT_SCHEMA_1_0  */
+    case 61: /* PT_SCHEMA_1_0  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2839,7 +2677,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_SCHEMA_2_0: /* PT_SCHEMA_2_0  */
+    case 62: /* PT_SCHEMA_2_0  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2852,7 +2690,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_INCLUDE: /* PT_INCLUDE  */
+    case 63: /* PT_INCLUDE  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2865,7 +2703,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_TYPEDEF: /* PT_TYPEDEF  */
+    case 64: /* PT_TYPEDEF  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2878,7 +2716,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_FQN: /* PT_FQN  */
+    case 65: /* PT_FQN  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2891,7 +2729,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_IDENT: /* PT_IDENT  */
+    case 66: /* PT_IDENT  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2904,7 +2742,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_PHYSIDENT: /* PT_PHYSIDENT  */
+    case 67: /* PT_PHYSIDENT  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2917,7 +2755,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_UINT: /* PT_UINT  */
+    case 68: /* PT_UINT  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2930,7 +2768,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_TYPESET: /* PT_TYPESET  */
+    case 69: /* PT_TYPESET  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2943,7 +2781,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_TYPESETDEF: /* PT_TYPESETDEF  */
+    case 70: /* PT_TYPESETDEF  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2956,7 +2794,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_FORMAT: /* PT_FORMAT  */
+    case 71: /* PT_FORMAT  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2969,7 +2807,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_CONST: /* PT_CONST  */
+    case 72: /* PT_CONST  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2982,7 +2820,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_ALIAS: /* PT_ALIAS  */
+    case 73: /* PT_ALIAS  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -2995,7 +2833,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_EXTERN: /* PT_EXTERN  */
+    case 74: /* PT_EXTERN  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3008,7 +2846,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_FUNCTION: /* PT_FUNCTION  */
+    case 75: /* PT_FUNCTION  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3021,7 +2859,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_UNTYPED: /* PT_UNTYPED  */
+    case 76: /* PT_UNTYPED  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3034,7 +2872,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_ROWLENGTH: /* PT_ROWLENGTH  */
+    case 77: /* PT_ROWLENGTH  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3047,7 +2885,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_FUNCDECL: /* PT_FUNCDECL  */
+    case 78: /* PT_FUNCDECL  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3060,7 +2898,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_EMPTY: /* PT_EMPTY  */
+    case 79: /* PT_EMPTY  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3073,7 +2911,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_SCHEMASIG: /* PT_SCHEMASIG  */
+    case 80: /* PT_SCHEMASIG  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3086,7 +2924,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_SCHEMAFORMAL: /* PT_SCHEMAFORMAL  */
+    case 81: /* PT_SCHEMAFORMAL  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3099,7 +2937,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_RETURNTYPE: /* PT_RETURNTYPE  */
+    case 82: /* PT_RETURNTYPE  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3112,7 +2950,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_FACTSIG: /* PT_FACTSIG  */
+    case 83: /* PT_FACTSIG  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3125,7 +2963,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_FUNCSIG: /* PT_FUNCSIG  */
+    case 84: /* PT_FUNCSIG  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3138,7 +2976,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_FUNCPARAMS: /* PT_FUNCPARAMS  */
+    case 85: /* PT_FUNCPARAMS  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3151,7 +2989,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_FORMALPARAM: /* PT_FORMALPARAM  */
+    case 86: /* PT_FORMALPARAM  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3164,7 +3002,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_ELLIPSIS: /* PT_ELLIPSIS  */
+    case 87: /* PT_ELLIPSIS  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3177,7 +3015,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_FUNCPROLOGUE: /* PT_FUNCPROLOGUE  */
+    case 88: /* PT_FUNCPROLOGUE  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3190,7 +3028,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_RETURN: /* PT_RETURN  */
+    case 89: /* PT_RETURN  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3203,7 +3041,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_PRODSTMT: /* PT_PRODSTMT  */
+    case 90: /* PT_PRODSTMT  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3216,7 +3054,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_PRODTRIGGER: /* PT_PRODTRIGGER  */
+    case 91: /* PT_PRODTRIGGER  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3229,7 +3067,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_SCHEMA: /* PT_SCHEMA  */
+    case 92: /* PT_SCHEMA  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3242,7 +3080,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_VALIDATE: /* PT_VALIDATE  */
+    case 93: /* PT_VALIDATE  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3255,7 +3093,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_PHYSICAL: /* PT_PHYSICAL  */
+    case 94: /* PT_PHYSICAL  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3268,7 +3106,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_PHYSPROLOGUE: /* PT_PHYSPROLOGUE  */
+    case 95: /* PT_PHYSPROLOGUE  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3281,7 +3119,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_PHYSSTMT: /* PT_PHYSSTMT  */
+    case 96: /* PT_PHYSSTMT  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3294,7 +3132,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_PHYSBODYSTMT: /* PT_PHYSBODYSTMT  */
+    case 97: /* PT_PHYSBODYSTMT  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3307,7 +3145,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_TABLE: /* PT_TABLE  */
+    case 98: /* PT_TABLE  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3320,7 +3158,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_TABLEPARENTS: /* PT_TABLEPARENTS  */
+    case 99: /* PT_TABLEPARENTS  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3333,7 +3171,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_TABLEBODY: /* PT_TABLEBODY  */
+    case 100: /* PT_TABLEBODY  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3346,7 +3184,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_FUNCEXPR: /* PT_FUNCEXPR  */
+    case 101: /* PT_FUNCEXPR  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3359,7 +3197,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_FACTPARMS: /* PT_FACTPARMS  */
+    case 102: /* PT_FACTPARMS  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3372,7 +3210,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_COLUMN: /* PT_COLUMN  */
+    case 103: /* PT_COLUMN  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3385,7 +3223,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_COLUMNEXPR: /* PT_COLUMNEXPR  */
+    case 104: /* PT_COLUMNEXPR  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3398,7 +3236,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_COLDECL: /* PT_COLDECL  */
+    case 105: /* PT_COLDECL  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3411,7 +3249,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_TYPEDCOL: /* PT_TYPEDCOL  */
+    case 106: /* PT_TYPEDCOL  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3424,7 +3262,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_COLSTMT: /* PT_COLSTMT  */
+    case 107: /* PT_COLSTMT  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3437,7 +3275,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_DFLTVIEW: /* PT_DFLTVIEW  */
+    case 108: /* PT_DFLTVIEW  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3450,7 +3288,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_PHYSMBR: /* PT_PHYSMBR  */
+    case 109: /* PT_PHYSMBR  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3463,7 +3301,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_PHYSCOL: /* PT_PHYSCOL  */
+    case 110: /* PT_PHYSCOL  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3476,7 +3314,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_PHYSCOLDEF: /* PT_PHYSCOLDEF  */
+    case 111: /* PT_PHYSCOLDEF  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3489,7 +3327,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_COLSCHEMAPARMS: /* PT_COLSCHEMAPARMS  */
+    case 112: /* PT_COLSCHEMAPARMS  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3502,7 +3340,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_COLSCHEMAPARAM: /* PT_COLSCHEMAPARAM  */
+    case 113: /* PT_COLSCHEMAPARAM  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3515,7 +3353,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_COLUNTYPED: /* PT_COLUNTYPED  */
+    case 114: /* PT_COLUNTYPED  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3528,7 +3366,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_DATABASE: /* PT_DATABASE  */
+    case 115: /* PT_DATABASE  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3541,7 +3379,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_TYPEEXPR: /* PT_TYPEEXPR  */
+    case 116: /* PT_TYPEEXPR  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3554,7 +3392,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_DBBODY: /* PT_DBBODY  */
+    case 117: /* PT_DBBODY  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3567,7 +3405,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_DBDAD: /* PT_DBDAD  */
+    case 118: /* PT_DBDAD  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3580,7 +3418,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_DBMEMBER: /* PT_DBMEMBER  */
+    case 119: /* PT_DBMEMBER  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3593,7 +3431,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_TBLMEMBER: /* PT_TBLMEMBER  */
+    case 120: /* PT_TBLMEMBER  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3606,7 +3444,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_NOHEADER: /* PT_NOHEADER  */
+    case 121: /* PT_NOHEADER  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3619,7 +3457,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_CASTEXPR: /* PT_CASTEXPR  */
+    case 122: /* PT_CASTEXPR  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3632,7 +3470,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_CONSTVECT: /* PT_CONSTVECT  */
+    case 123: /* PT_CONSTVECT  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3645,7 +3483,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_NEGATE: /* PT_NEGATE  */
+    case 124: /* PT_NEGATE  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3658,7 +3496,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_UNARYPLUS: /* PT_UNARYPLUS  */
+    case 125: /* PT_UNARYPLUS  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3671,7 +3509,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_VERSNAME: /* PT_VERSNAME  */
+    case 126: /* PT_VERSNAME  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3684,7 +3522,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_ARRAY: /* PT_ARRAY  */
+    case 127: /* PT_ARRAY  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3697,7 +3535,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_PHYSENCREF: /* PT_PHYSENCREF  */
+    case 128: /* PT_PHYSENCREF  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3710,7 +3548,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_TYPEDCOLEXPR: /* PT_TYPEDCOLEXPR  */
+    case 129: /* PT_TYPEDCOLEXPR  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3723,7 +3561,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_VIEW: /* PT_VIEW  */
+    case 130: /* PT_VIEW  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3736,7 +3574,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_VIEWPARAM: /* PT_VIEWPARAM  */
+    case 131: /* PT_VIEWPARAM  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3749,7 +3587,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_VIEWPARENTS: /* PT_VIEWPARENTS  */
+    case 132: /* PT_VIEWPARENTS  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3762,7 +3600,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_VIEWPARENT: /* PT_VIEWPARENT  */
+    case 133: /* PT_VIEWPARENT  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3775,7 +3613,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_MEMBEREXPR: /* PT_MEMBEREXPR  */
+    case 134: /* PT_MEMBEREXPR  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3788,7 +3626,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_JOINEXPR: /* PT_JOINEXPR  */
+    case 135: /* PT_JOINEXPR  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3801,7 +3639,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_ALIASMEMBER: /* PT_ALIASMEMBER  */
+    case 136: /* PT_ALIASMEMBER  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3814,7 +3652,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_PT_VIEWSPEC: /* PT_VIEWSPEC  */
+    case 137: /* PT_VIEWSPEC  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3827,7 +3665,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_138_: /* ';'  */
+    case 138: /* ';'  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3840,7 +3678,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_139_: /* ','  */
+    case 139: /* ','  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3853,7 +3691,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_140_: /* '{'  */
+    case 140: /* '{'  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3866,7 +3704,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_141_: /* '}'  */
+    case 141: /* '}'  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3879,7 +3717,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_142_: /* '['  */
+    case 142: /* '['  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3892,7 +3730,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_143_: /* ']'  */
+    case 143: /* ']'  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3905,7 +3743,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_144_: /* '*'  */
+    case 144: /* '*'  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3918,7 +3756,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_145_: /* '='  */
+    case 145: /* '='  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3931,7 +3769,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_146_: /* '('  */
+    case 146: /* '('  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3944,7 +3782,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_147_: /* ')'  */
+    case 147: /* ')'  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3957,7 +3795,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_148_: /* '<'  */
+    case 148: /* '<'  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3970,7 +3808,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_149_: /* '>'  */
+    case 149: /* '>'  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3983,7 +3821,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_150_: /* '|'  */
+    case 150: /* '|'  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -3996,7 +3834,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_151_: /* '@'  */
+    case 151: /* '@'  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4009,7 +3847,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_152_: /* '-'  */
+    case 152: /* '-'  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4022,7 +3860,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_153_: /* '+'  */
+    case 153: /* '+'  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4035,7 +3873,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_154_: /* '/'  */
+    case 154: /* '/'  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4048,7 +3886,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_155_: /* '.'  */
+    case 155: /* '.'  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4061,7 +3899,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_156_: /* ':'  */
+    case 156: /* ':'  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4074,7 +3912,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_parse: /* parse  */
+    case 158: /* parse  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4087,7 +3925,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_source: /* source  */
+    case 159: /* source  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4100,7 +3938,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_version_1_0: /* version_1_0  */
+    case 160: /* version_1_0  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4113,7 +3951,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_schema_1_0_opt: /* schema_1_0_opt  */
+    case 161: /* schema_1_0_opt  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4126,7 +3964,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_schema_1_0: /* schema_1_0  */
+    case 162: /* schema_1_0  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4139,7 +3977,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_schema_1_0_decl: /* schema_1_0_decl  */
+    case 163: /* schema_1_0_decl  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4152,7 +3990,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_typedef_1_0_decl: /* typedef_1_0_decl  */
+    case 164: /* typedef_1_0_decl  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4165,7 +4003,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_typedef_1_0_new_name_list: /* typedef_1_0_new_name_list  */
+    case 165: /* typedef_1_0_new_name_list  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4178,7 +4016,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_typeset_1_0_decl: /* typeset_1_0_decl  */
+    case 166: /* typeset_1_0_decl  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4191,7 +4029,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_typeset_1_0_new_name: /* typeset_1_0_new_name  */
+    case 167: /* typeset_1_0_new_name  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4204,7 +4042,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_typeset_1_0_def: /* typeset_1_0_def  */
+    case 168: /* typeset_1_0_def  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4217,7 +4055,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_typespec_1_0_list: /* typespec_1_0_list  */
+    case 169: /* typespec_1_0_list  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4230,7 +4068,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_typespec_1_0: /* typespec_1_0  */
+    case 170: /* typespec_1_0  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4243,7 +4081,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_dim_1_0: /* dim_1_0  */
+    case 171: /* dim_1_0  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4256,7 +4094,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_format_1_0_decl: /* format_1_0_decl  */
+    case 172: /* format_1_0_decl  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4269,7 +4107,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_format_1_0_new_name: /* format_1_0_new_name  */
+    case 173: /* format_1_0_new_name  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4282,7 +4120,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_format_1_0_name: /* format_1_0_name  */
+    case 174: /* format_1_0_name  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4295,7 +4133,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_const_1_0_decl: /* const_1_0_decl  */
+    case 175: /* const_1_0_decl  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4308,7 +4146,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_alias_1_0_decl: /* alias_1_0_decl  */
+    case 176: /* alias_1_0_decl  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4321,7 +4159,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_alias_1_0_new_name: /* alias_1_0_new_name  */
+    case 177: /* alias_1_0_new_name  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4334,7 +4172,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_function_1_0_decl: /* function_1_0_decl  */
+    case 178: /* function_1_0_decl  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4347,7 +4185,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_func_1_0_decl: /* func_1_0_decl  */
+    case 179: /* func_1_0_decl  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4360,7 +4198,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_untyped_func_1_0_decl: /* untyped_func_1_0_decl  */
+    case 180: /* untyped_func_1_0_decl  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4373,7 +4211,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_row_length_func_1_0_decl: /* row_length_func_1_0_decl  */
+    case 181: /* row_length_func_1_0_decl  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4386,7 +4224,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_opt_func_1_0_schema_sig: /* opt_func_1_0_schema_sig  */
+    case 182: /* opt_func_1_0_schema_sig  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4399,7 +4237,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_func_1_0_schema_sig: /* func_1_0_schema_sig  */
+    case 183: /* func_1_0_schema_sig  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4412,7 +4250,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_func_1_0_schema_formals: /* func_1_0_schema_formals  */
+    case 184: /* func_1_0_schema_formals  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4425,7 +4263,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_func_1_0_schema_formal: /* func_1_0_schema_formal  */
+    case 185: /* func_1_0_schema_formal  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4438,7 +4276,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_func_1_0_return_type: /* func_1_0_return_type  */
+    case 186: /* func_1_0_return_type  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4451,7 +4289,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_opt_func_1_0_fact_sig: /* opt_func_1_0_fact_sig  */
+    case 187: /* opt_func_1_0_fact_sig  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4464,7 +4302,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_func_1_0_fact_sig: /* func_1_0_fact_sig  */
+    case 188: /* func_1_0_fact_sig  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4477,7 +4315,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_func_1_0_fact_signature: /* func_1_0_fact_signature  */
+    case 189: /* func_1_0_fact_signature  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4490,7 +4328,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_func_1_0_fact_params: /* func_1_0_fact_params  */
+    case 190: /* func_1_0_fact_params  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4503,7 +4341,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_fact_param_1_0: /* fact_param_1_0  */
+    case 191: /* fact_param_1_0  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4516,7 +4354,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_func_1_0_param_sig: /* func_1_0_param_sig  */
+    case 192: /* func_1_0_param_sig  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4529,7 +4367,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_func_1_0_param_signature: /* func_1_0_param_signature  */
+    case 193: /* func_1_0_param_signature  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4542,7 +4380,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_func_1_0_formal_params: /* func_1_0_formal_params  */
+    case 194: /* func_1_0_formal_params  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4555,7 +4393,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_formal_param_1_0: /* formal_param_1_0  */
+    case 195: /* formal_param_1_0  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4568,7 +4406,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_func_1_0_vararg_formals: /* func_1_0_vararg_formals  */
+    case 196: /* func_1_0_vararg_formals  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4581,7 +4419,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_func_1_0_prologue: /* func_1_0_prologue  */
+    case 197: /* func_1_0_prologue  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4594,7 +4432,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_script_1_0_stmt_seq: /* script_1_0_stmt_seq  */
+    case 198: /* script_1_0_stmt_seq  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4607,7 +4445,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_script_1_0_stmt: /* script_1_0_stmt  */
+    case 199: /* script_1_0_stmt  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4620,7 +4458,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_extern_1_0_decl: /* extern_1_0_decl  */
+    case 200: /* extern_1_0_decl  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4633,7 +4471,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_ext_func_1_0_decl: /* ext_func_1_0_decl  */
+    case 201: /* ext_func_1_0_decl  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4646,7 +4484,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_script_1_0_decl: /* script_1_0_decl  */
+    case 202: /* script_1_0_decl  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4659,7 +4497,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_validate_1_0_decl: /* validate_1_0_decl  */
+    case 203: /* validate_1_0_decl  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4672,7 +4510,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_physical_1_0_decl: /* physical_1_0_decl  */
+    case 204: /* physical_1_0_decl  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4685,7 +4523,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_phys_1_0_return_type: /* phys_1_0_return_type  */
+    case 205: /* phys_1_0_return_type  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4698,7 +4536,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_phys_1_0_prologue: /* phys_1_0_prologue  */
+    case 206: /* phys_1_0_prologue  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4711,7 +4549,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_phys_1_0_body: /* phys_1_0_body  */
+    case 207: /* phys_1_0_body  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4724,7 +4562,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_phys_1_0_body_stmt: /* phys_1_0_body_stmt  */
+    case 208: /* phys_1_0_body_stmt  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4737,7 +4575,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_phys_1_0_stmt: /* phys_1_0_stmt  */
+    case 209: /* phys_1_0_stmt  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4750,7 +4588,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_table_1_0_decl: /* table_1_0_decl  */
+    case 210: /* table_1_0_decl  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4763,7 +4601,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_opt_tbl_1_0_parents: /* opt_tbl_1_0_parents  */
+    case 211: /* opt_tbl_1_0_parents  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4776,7 +4614,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_tbl_1_0_parents: /* tbl_1_0_parents  */
+    case 212: /* tbl_1_0_parents  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4789,7 +4627,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_tbl_1_0_body: /* tbl_1_0_body  */
+    case 213: /* tbl_1_0_body  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4802,7 +4640,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_tbl_1_0_stmt_seq: /* tbl_1_0_stmt_seq  */
+    case 214: /* tbl_1_0_stmt_seq  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4815,7 +4653,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_tbl_1_0_stmt: /* tbl_1_0_stmt  */
+    case 215: /* tbl_1_0_stmt  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4828,7 +4666,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_production_1_0_stmt: /* production_1_0_stmt  */
+    case 216: /* production_1_0_stmt  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4841,7 +4679,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_col_1_0_modifiers: /* col_1_0_modifiers  */
+    case 217: /* col_1_0_modifiers  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4854,7 +4692,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_col_1_0_modifier_seq: /* col_1_0_modifier_seq  */
+    case 218: /* col_1_0_modifier_seq  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4867,7 +4705,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_col_1_0_modifier: /* col_1_0_modifier  */
+    case 219: /* col_1_0_modifier  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4880,7 +4718,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_col_1_0_decl: /* col_1_0_decl  */
+    case 220: /* col_1_0_decl  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4893,7 +4731,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_phys_enc_ref: /* phys_enc_ref  */
+    case 221: /* phys_enc_ref  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4906,7 +4744,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_typed_column_decl_1_0: /* typed_column_decl_1_0  */
+    case 222: /* typed_column_decl_1_0  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4919,7 +4757,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_col_ident: /* col_ident  */
+    case 223: /* col_ident  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4932,7 +4770,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_phys_ident: /* phys_ident  */
+    case 224: /* phys_ident  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4945,7 +4783,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_opt_column_body_1_0: /* opt_column_body_1_0  */
+    case 225: /* opt_column_body_1_0  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4958,7 +4796,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_column_body_1_0: /* column_body_1_0  */
+    case 226: /* column_body_1_0  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4971,7 +4809,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_column_stmt_1_0: /* column_stmt_1_0  */
+    case 227: /* column_stmt_1_0  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4984,7 +4822,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_default_view_1_0_decl: /* default_view_1_0_decl  */
+    case 228: /* default_view_1_0_decl  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -4997,7 +4835,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_physmbr_1_0_decl: /* physmbr_1_0_decl  */
+    case 229: /* physmbr_1_0_decl  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -5010,7 +4848,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_phys_coldef_1_0: /* phys_coldef_1_0  */
+    case 230: /* phys_coldef_1_0  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -5023,7 +4861,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_opt_col_schema_parms_1_0: /* opt_col_schema_parms_1_0  */
+    case 231: /* opt_col_schema_parms_1_0  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -5036,7 +4874,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_col_schema_parms_1_0: /* col_schema_parms_1_0  */
+    case 232: /* col_schema_parms_1_0  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -5049,7 +4887,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_col_schema_parm_1_0: /* col_schema_parm_1_0  */
+    case 233: /* col_schema_parm_1_0  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -5062,7 +4900,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_col_schema_value_1_0: /* col_schema_value_1_0  */
+    case 234: /* col_schema_value_1_0  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -5075,7 +4913,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_cond_expr_1_0: /* cond_expr_1_0  */
+    case 235: /* cond_expr_1_0  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -5088,7 +4926,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_expression_1_0: /* expression_1_0  */
+    case 236: /* expression_1_0  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -5101,7 +4939,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_primary_expr_1_0: /* primary_expr_1_0  */
+    case 237: /* primary_expr_1_0  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -5114,7 +4952,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_func_expr_1_0: /* func_expr_1_0  */
+    case 238: /* func_expr_1_0  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -5127,7 +4965,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_schema_parms_1_0: /* schema_parms_1_0  */
+    case 239: /* schema_parms_1_0  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -5140,7 +4978,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_schema_parm_1_0: /* schema_parm_1_0  */
+    case 240: /* schema_parm_1_0  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -5153,7 +4991,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_opt_factory_parms_1_0: /* opt_factory_parms_1_0  */
+    case 241: /* opt_factory_parms_1_0  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -5166,7 +5004,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_factory_parms_1_0: /* factory_parms_1_0  */
+    case 242: /* factory_parms_1_0  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -5179,7 +5017,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_factory_parms: /* factory_parms  */
+    case 243: /* factory_parms  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -5192,7 +5030,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_opt_func_1_0_parms: /* opt_func_1_0_parms  */
+    case 244: /* opt_func_1_0_parms  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -5205,7 +5043,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_func_1_0_parms: /* func_1_0_parms  */
+    case 245: /* func_1_0_parms  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -5218,7 +5056,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_uint_expr_1_0: /* uint_expr_1_0  */
+    case 246: /* uint_expr_1_0  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -5231,7 +5069,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_float_expr_1_0: /* float_expr_1_0  */
+    case 247: /* float_expr_1_0  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -5244,7 +5082,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_string_expr_1_0: /* string_expr_1_0  */
+    case 248: /* string_expr_1_0  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -5257,7 +5095,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_const_vect_expr_1_0: /* const_vect_expr_1_0  */
+    case 249: /* const_vect_expr_1_0  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -5270,7 +5108,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_opt_const_vect_exprlist_1_0: /* opt_const_vect_exprlist_1_0  */
+    case 250: /* opt_const_vect_exprlist_1_0  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -5283,7 +5121,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_const_vect_exprlist_1_0: /* const_vect_exprlist_1_0  */
+    case 251: /* const_vect_exprlist_1_0  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -5296,7 +5134,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_bool_expr_1_0: /* bool_expr_1_0  */
+    case 252: /* bool_expr_1_0  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -5309,7 +5147,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_type_expr_1_0: /* type_expr_1_0  */
+    case 253: /* type_expr_1_0  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -5322,7 +5160,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_member_expr_2_0: /* member_expr_2_0  */
+    case 254: /* member_expr_2_0  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -5335,7 +5173,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_join_expr_2_0: /* join_expr_2_0  */
+    case 255: /* join_expr_2_0  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -5348,7 +5186,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_database_1_0_decl: /* database_1_0_decl  */
+    case 256: /* database_1_0_decl  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -5361,7 +5199,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_opt_database_dad_1_0: /* opt_database_dad_1_0  */
+    case 257: /* opt_database_dad_1_0  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -5374,7 +5212,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_database_body_1_0: /* database_body_1_0  */
+    case 258: /* database_body_1_0  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -5387,7 +5225,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_database_members_1_0: /* database_members_1_0  */
+    case 259: /* database_members_1_0  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -5400,7 +5238,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_database_member_1_0: /* database_member_1_0  */
+    case 260: /* database_member_1_0  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -5413,7 +5251,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_opt_template_1_0: /* opt_template_1_0  */
+    case 261: /* opt_template_1_0  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -5426,7 +5264,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_db_member_1_0: /* db_member_1_0  */
+    case 262: /* db_member_1_0  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -5439,7 +5277,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_table_member_1_0: /* table_member_1_0  */
+    case 263: /* table_member_1_0  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -5452,7 +5290,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_alias_member_1_0: /* alias_member_1_0  */
+    case 264: /* alias_member_1_0  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -5465,7 +5303,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_view_spec: /* view_spec  */
+    case 265: /* view_spec  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -5478,7 +5316,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_view_parms: /* view_parms  */
+    case 266: /* view_parms  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -5491,7 +5329,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_include_directive: /* include_directive  */
+    case 267: /* include_directive  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -5504,7 +5342,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_fqn_1_0: /* fqn_1_0  */
+    case 268: /* fqn_1_0  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -5517,7 +5355,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_ident_1_0: /* ident_1_0  */
+    case 269: /* ident_1_0  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -5530,7 +5368,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_empty: /* empty  */
+    case 270: /* empty  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -5543,7 +5381,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_fqn_vers: /* fqn_vers  */
+    case 271: /* fqn_vers  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -5556,7 +5394,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_fqn_opt_vers: /* fqn_opt_vers  */
+    case 272: /* fqn_opt_vers  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -5569,7 +5407,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_version_2_0: /* version_2_0  */
+    case 273: /* version_2_0  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -5582,7 +5420,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_schema_2_0_opt: /* schema_2_0_opt  */
+    case 274: /* schema_2_0_opt  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -5595,7 +5433,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_schema_2_0: /* schema_2_0  */
+    case 275: /* schema_2_0  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -5608,7 +5446,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_schema_2_0_decl: /* schema_2_0_decl  */
+    case 276: /* schema_2_0_decl  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -5621,7 +5459,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_view_2_0_decl: /* view_2_0_decl  */
+    case 277: /* view_2_0_decl  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -5634,7 +5472,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_view_parm: /* view_parm  */
+    case 278: /* view_parm  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -5647,7 +5485,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_opt_view_body: /* opt_view_body  */
+    case 279: /* opt_view_body  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -5660,7 +5498,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_view_body: /* view_body  */
+    case 280: /* view_body  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -5673,7 +5511,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_view_member: /* view_member  */
+    case 281: /* view_member  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -5686,7 +5524,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_opt_view_parents: /* opt_view_parents  */
+    case 282: /* opt_view_parents  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -5699,7 +5537,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_view_parents: /* view_parents  */
+    case 283: /* view_parents  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -5712,7 +5550,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_view_parent: /* view_parent  */
+    case 284: /* view_parent  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -5725,7 +5563,7 @@ yydestruct (const char *yymsg,
 }
         break;
 
-    case YYSYMBOL_view_parent_parms: /* view_parent_parms  */
+    case 285: /* view_parent_parms  */
             {
     if ( (*yyvaluep) . subtree != NULL )
     {
@@ -5747,8 +5585,6 @@ yydestruct (const char *yymsg,
 
 
 
-
-
 /*----------.
 | yyparse.  |
 `----------*/
@@ -5756,7 +5592,7 @@ yydestruct (const char *yymsg,
 int
 yyparse (ctx_t ctx, ParseTree** root, ErrorReport * errors, struct SchemaScanBlock* sb)
 {
-/* Lookahead token kind.  */
+/* The lookahead symbol.  */
 int yychar;
 
 
@@ -5775,50 +5611,55 @@ static YYLTYPE yyloc_default
 YYLTYPE yylloc = yyloc_default;
 
     /* Number of syntax errors so far.  */
-    int yynerrs = 0;
+    int yynerrs;
 
-    yy_state_fast_t yystate = 0;
+    yy_state_fast_t yystate;
     /* Number of tokens to shift before error messages enabled.  */
-    int yyerrstatus = 0;
+    int yyerrstatus;
 
-    /* Refer to the stacks through separate pointers, to allow yyoverflow
+    /* The stacks and their tools:
+       'yyss': related to states.
+       'yyvs': related to semantic values.
+       'yyls': related to locations.
+
+       Refer to the stacks through separate pointers, to allow yyoverflow
        to reallocate them elsewhere.  */
 
-    /* Their size.  */
-    YYPTRDIFF_T yystacksize = YYINITDEPTH;
-
-    /* The state stack: array, bottom, top.  */
+    /* The state stack.  */
     yy_state_t yyssa[YYINITDEPTH];
-    yy_state_t *yyss = yyssa;
-    yy_state_t *yyssp = yyss;
+    yy_state_t *yyss;
+    yy_state_t *yyssp;
 
-    /* The semantic value stack: array, bottom, top.  */
+    /* The semantic value stack.  */
     YYSTYPE yyvsa[YYINITDEPTH];
-    YYSTYPE *yyvs = yyvsa;
-    YYSTYPE *yyvsp = yyvs;
+    YYSTYPE *yyvs;
+    YYSTYPE *yyvsp;
 
-    /* The location stack: array, bottom, top.  */
+    /* The location stack.  */
     YYLTYPE yylsa[YYINITDEPTH];
-    YYLTYPE *yyls = yylsa;
-    YYLTYPE *yylsp = yyls;
+    YYLTYPE *yyls;
+    YYLTYPE *yylsp;
+
+    /* The locations where the error started and ended.  */
+    YYLTYPE yyerror_range[3];
+
+    YYPTRDIFF_T yystacksize;
 
   int yyn;
-  /* The return value of yyparse.  */
   int yyresult;
-  /* Lookahead symbol kind.  */
-  yysymbol_kind_t yytoken = YYSYMBOL_YYEMPTY;
+  /* Lookahead token as an internal (translated) token number.  */
+  int yytoken = 0;
   /* The variables used to return semantic value and location from the
      action routines.  */
   YYSTYPE yyval;
   YYLTYPE yyloc;
 
-  /* The locations where the error started and ended.  */
-  YYLTYPE yyerror_range[3];
-
+#if YYERROR_VERBOSE
   /* Buffer for error messages, and its allocated size.  */
   char yymsgbuf[128];
   char *yymsg = yymsgbuf;
   YYPTRDIFF_T yymsg_alloc = sizeof yymsgbuf;
+#endif
 
 #define YYPOPSTACK(N)   (yyvsp -= (N), yyssp -= (N), yylsp -= (N))
 
@@ -5826,10 +5667,17 @@ YYLTYPE yylloc = yyloc_default;
      Keep to zero when no symbol should be popped.  */
   int yylen = 0;
 
+  yyssp = yyss = yyssa;
+  yyvsp = yyvs = yyvsa;
+  yylsp = yyls = yylsa;
+  yystacksize = YYINITDEPTH;
+
   YYDPRINTF ((stderr, "Starting parse\n"));
 
-  yychar = SCHEMA_EMPTY; /* Cause a token to be read.  */
-
+  yystate = 0;
+  yyerrstatus = 0;
+  yynerrs = 0;
+  yychar = YYEMPTY; /* Cause a token to be read.  */
   yylsp[0] = yylloc;
   goto yysetstate;
 
@@ -5852,11 +5700,10 @@ yysetstate:
   YY_IGNORE_USELESS_CAST_BEGIN
   *yyssp = YY_CAST (yy_state_t, yystate);
   YY_IGNORE_USELESS_CAST_END
-  YY_STACK_PRINT (yyss, yyssp);
 
   if (yyss + yystacksize - 1 <= yyssp)
 #if !defined yyoverflow && !defined YYSTACK_RELOCATE
-    YYNOMEM;
+    goto yyexhaustedlab;
 #else
     {
       /* Get the current used size of the three stacks, in elements.  */
@@ -5887,7 +5734,7 @@ yysetstate:
 # else /* defined YYSTACK_RELOCATE */
       /* Extend the stack our own way.  */
       if (YYMAXDEPTH <= yystacksize)
-        YYNOMEM;
+        goto yyexhaustedlab;
       yystacksize *= 2;
       if (YYMAXDEPTH < yystacksize)
         yystacksize = YYMAXDEPTH;
@@ -5898,11 +5745,11 @@ yysetstate:
           YY_CAST (union yyalloc *,
                    YYSTACK_ALLOC (YY_CAST (YYSIZE_T, YYSTACK_BYTES (yystacksize))));
         if (! yyptr)
-          YYNOMEM;
+          goto yyexhaustedlab;
         YYSTACK_RELOCATE (yyss_alloc, yyss);
         YYSTACK_RELOCATE (yyvs_alloc, yyvs);
         YYSTACK_RELOCATE (yyls_alloc, yyls);
-#  undef YYSTACK_RELOCATE
+# undef YYSTACK_RELOCATE
         if (yyss1 != yyssa)
           YYSTACK_FREE (yyss1);
       }
@@ -5921,7 +5768,6 @@ yysetstate:
         YYABORT;
     }
 #endif /* !defined yyoverflow && !defined YYSTACK_RELOCATE */
-
 
   if (yystate == YYFINAL)
     YYACCEPT;
@@ -5943,29 +5789,17 @@ yybackup:
 
   /* Not known => get a lookahead token if don't already have one.  */
 
-  /* YYCHAR is either empty, or end-of-input, or a valid lookahead.  */
-  if (yychar == SCHEMA_EMPTY)
+  /* YYCHAR is either YYEMPTY or YYEOF or a valid lookahead symbol.  */
+  if (yychar == YYEMPTY)
     {
-      YYDPRINTF ((stderr, "Reading a token\n"));
+      YYDPRINTF ((stderr, "Reading a token: "));
       yychar = yylex (&yylval, &yylloc, sb);
     }
 
-  if (yychar <= END_SOURCE)
+  if (yychar <= YYEOF)
     {
-      yychar = END_SOURCE;
-      yytoken = YYSYMBOL_YYEOF;
+      yychar = yytoken = YYEOF;
       YYDPRINTF ((stderr, "Now at end of input.\n"));
-    }
-  else if (yychar == SCHEMA_error)
-    {
-      /* The scanner already issued an error message, process directly
-         to error recovery.  But do not keep the error token as
-         lookahead, it is too special and may lead us to an endless
-         loop in error recovery. */
-      yychar = SCHEMA_UNDEF;
-      yytoken = YYSYMBOL_YYerror;
-      yyerror_range[1] = yylloc;
-      goto yyerrlab1;
     }
   else
     {
@@ -6001,7 +5835,7 @@ yybackup:
   *++yylsp = yylloc;
 
   /* Discard the shifted token.  */
-  yychar = SCHEMA_EMPTY;
+  yychar = YYEMPTY;
   goto yynewstate;
 
 
@@ -6038,1119 +5872,1119 @@ yyreduce:
   YY_REDUCE_PRINT (yyn);
   switch (yyn)
     {
-  case 2: /* parse: "end of source"  */
+  case 2:
                                 { *root = MakeTree ( ctx, PT_PARSE, T ( ctx, yyvsp[0] ) );              yyval . subtree = 0; yyval . leading_ws = 0;  }
     break;
 
-  case 3: /* parse: source "end of source"  */
+  case 3:
                                 { *root = MakeTree ( ctx, PT_PARSE, P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) );    yyval . subtree = 0; yyval . leading_ws = 0; }
     break;
 
-  case 4: /* source: schema_1_0  */
+  case 4:
                                     { yyval . subtree = MakeTree ( ctx, PT_SOURCE, P ( yyvsp[0] ) ); }
     break;
 
-  case 5: /* source: version_1_0 schema_1_0_opt  */
+  case 5:
                                     { yyval . subtree = MakeTree ( ctx, PT_SOURCE, P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 6: /* source: version_2_0 schema_2_0_opt  */
+  case 6:
                                     { yyval . subtree = MakeTree ( ctx, PT_SOURCE, P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 7: /* version_1_0: KW_version VERS_1_0 ';'  */
+  case 7:
                                 { yyval . subtree = MakeTree ( ctx, PT_VERSION_1_0, T ( ctx, yyvsp[-2] ), T ( ctx, yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 8: /* schema_1_0_opt: schema_1_0  */
+  case 8:
                     { yyval . subtree = P ( yyvsp[0] ); }
     break;
 
-  case 9: /* schema_1_0_opt: empty  */
+  case 9:
                     { yyval = yyvsp[0]; }
     break;
 
-  case 10: /* schema_1_0: schema_1_0_decl  */
+  case 10:
                                    { yyval . subtree = MakeTree ( ctx, PT_SCHEMA_1_0, P ( yyvsp[0] ) ); }
     break;
 
-  case 11: /* schema_1_0: schema_1_0 schema_1_0_decl  */
+  case 11:
                                    { yyval . subtree = AddToList ( ctx, P ( yyvsp[-1] ) , P ( yyvsp[0] ) ); }
     break;
 
-  case 12: /* schema_1_0_decl: typedef_1_0_decl  */
+  case 12:
                             { yyval = yyvsp[0]; }
     break;
 
-  case 13: /* schema_1_0_decl: typeset_1_0_decl  */
+  case 13:
                             { yyval = yyvsp[0]; }
     break;
 
-  case 14: /* schema_1_0_decl: format_1_0_decl  */
+  case 14:
                             { yyval = yyvsp[0]; }
     break;
 
-  case 15: /* schema_1_0_decl: const_1_0_decl  */
+  case 15:
                             { yyval = yyvsp[0]; }
     break;
 
-  case 16: /* schema_1_0_decl: alias_1_0_decl  */
+  case 16:
                             { yyval = yyvsp[0]; }
     break;
 
-  case 17: /* schema_1_0_decl: function_1_0_decl  */
+  case 17:
                             { yyval = yyvsp[0]; }
     break;
 
-  case 18: /* schema_1_0_decl: extern_1_0_decl  */
+  case 18:
                             { yyval = yyvsp[0]; }
     break;
 
-  case 19: /* schema_1_0_decl: script_1_0_decl  */
+  case 19:
                             { yyval = yyvsp[0]; }
     break;
 
-  case 20: /* schema_1_0_decl: validate_1_0_decl  */
+  case 20:
                             { yyval = yyvsp[0]; }
     break;
 
-  case 21: /* schema_1_0_decl: physical_1_0_decl  */
+  case 21:
                             { yyval = yyvsp[0]; }
     break;
 
-  case 22: /* schema_1_0_decl: table_1_0_decl  */
+  case 22:
                             { yyval = yyvsp[0]; }
     break;
 
-  case 23: /* schema_1_0_decl: database_1_0_decl  */
+  case 23:
                             { yyval = yyvsp[0]; }
     break;
 
-  case 24: /* schema_1_0_decl: include_directive  */
+  case 24:
                             { yyval = yyvsp[0]; }
     break;
 
-  case 25: /* schema_1_0_decl: ';'  */
+  case 25:
                             { yyval . subtree = T ( ctx, yyvsp[0] ); }
     break;
 
-  case 26: /* typedef_1_0_decl: KW_typedef fqn_1_0 typedef_1_0_new_name_list ';'  */
+  case 26:
                             { yyval . subtree = MakeTree ( ctx, PT_TYPEDEF, T ( ctx, yyvsp[-3] ), P ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 27: /* typedef_1_0_new_name_list: typespec_1_0  */
+  case 27:
                                                     { yyval . subtree = MakeList ( ctx, yyvsp[0] ); }
     break;
 
-  case 28: /* typedef_1_0_new_name_list: typedef_1_0_new_name_list ',' typespec_1_0  */
+  case 28:
                                                     { yyval . subtree = AddToList ( ctx, P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 29: /* typeset_1_0_decl: KW_typeset typeset_1_0_new_name typeset_1_0_def ';'  */
+  case 29:
                             { yyval . subtree = MakeTree ( ctx, PT_TYPESET, T ( ctx, yyvsp[-3] ), P ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 30: /* typeset_1_0_new_name: fqn_1_0  */
+  case 30:
                             { yyval = yyvsp[0]; }
     break;
 
-  case 31: /* typeset_1_0_def: '{' typespec_1_0_list '}'  */
+  case 31:
             { yyval . subtree = MakeTree ( ctx, PT_TYPESETDEF, T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 32: /* typespec_1_0_list: typespec_1_0  */
+  case 32:
                                             { yyval . subtree = MakeList ( ctx, yyvsp[0] ); }
     break;
 
-  case 33: /* typespec_1_0_list: typespec_1_0_list ',' typespec_1_0  */
+  case 33:
                                             { yyval . subtree = AddToList ( ctx, P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 34: /* typespec_1_0: fqn_1_0  */
+  case 34:
                                 { yyval = yyvsp[0]; }
     break;
 
-  case 35: /* typespec_1_0: fqn_1_0 '[' dim_1_0 ']'  */
+  case 35:
                                 { yyval . subtree = MakeTree ( ctx, PT_ARRAY, P ( yyvsp[-3] ), T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 36: /* dim_1_0: expression_1_0  */
+  case 36:
                         { yyval = yyvsp[0]; }
     break;
 
-  case 37: /* dim_1_0: '*'  */
+  case 37:
                         { yyval . subtree = T ( ctx, yyvsp[0] ); }
     break;
 
-  case 38: /* format_1_0_decl: KW_fmtdef format_1_0_new_name ';'  */
+  case 38:
                                     { yyval . subtree = MakeTree ( ctx, PT_FORMAT, T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 39: /* format_1_0_decl: KW_fmtdef format_1_0_name format_1_0_new_name ';'  */
+  case 39:
                                     { yyval . subtree = MakeTree ( ctx, PT_FORMAT, T ( ctx, yyvsp[-3] ), P ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 40: /* format_1_0_new_name: fqn_1_0  */
+  case 40:
                                     { yyval = yyvsp[0]; }
     break;
 
-  case 41: /* format_1_0_name: fqn_1_0  */
+  case 41:
                                     { yyval = yyvsp[0]; }
     break;
 
-  case 42: /* const_1_0_decl: KW_const typespec_1_0 fqn_1_0 '=' expression_1_0 ';'  */
+  case 42:
             { yyval . subtree = MakeTree ( ctx, PT_CONST, T ( ctx, yyvsp[-5] ), P ( yyvsp[-4] ), P ( yyvsp[-3] ), T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 43: /* alias_1_0_decl: KW_alias fqn_1_0 alias_1_0_new_name ';'  */
+  case 43:
             { yyval . subtree = MakeTree ( ctx, PT_ALIAS, T ( ctx, yyvsp[-3] ), P ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 44: /* alias_1_0_new_name: fqn_1_0  */
+  case 44:
                                     { yyval = yyvsp[0]; }
     break;
 
-  case 45: /* function_1_0_decl: KW_function func_1_0_decl  */
+  case 45:
                                      { yyval . subtree = MakeTree ( ctx, PT_FUNCTION, T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 46: /* func_1_0_decl: untyped_func_1_0_decl  */
+  case 46:
                                      { yyval = yyvsp[0]; }
     break;
 
-  case 47: /* func_1_0_decl: row_length_func_1_0_decl  */
+  case 47:
                                      { yyval = yyvsp[0]; }
     break;
 
-  case 48: /* func_1_0_decl: opt_func_1_0_schema_sig func_1_0_return_type fqn_opt_vers opt_func_1_0_fact_sig func_1_0_param_sig func_1_0_prologue  */
+  case 48:
             { yyval . subtree = MakeTree ( ctx, PT_FUNCDECL, P ( yyvsp[-5] ), P ( yyvsp[-4] ), P ( yyvsp[-3] ), P ( yyvsp[-2] ), P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 49: /* untyped_func_1_0_decl: KW___untyped fqn_1_0 '(' ')'  */
+  case 49:
             { yyval . subtree = MakeTree ( ctx, PT_UNTYPED, T ( ctx, yyvsp[-3] ), P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 50: /* row_length_func_1_0_decl: KW___row_length fqn_1_0 '(' ')'  */
+  case 50:
             { yyval . subtree = MakeTree ( ctx, PT_ROWLENGTH, T ( ctx, yyvsp[-3] ), P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 51: /* opt_func_1_0_schema_sig: empty  */
+  case 51:
                                 { yyval = yyvsp[0]; }
     break;
 
-  case 52: /* opt_func_1_0_schema_sig: func_1_0_schema_sig  */
+  case 52:
                                 { yyval = yyvsp[0]; }
     break;
 
-  case 53: /* func_1_0_schema_sig: '<' func_1_0_schema_formals '>'  */
+  case 53:
                                             { yyval . subtree = MakeTree ( ctx, PT_SCHEMASIG, T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 54: /* func_1_0_schema_formals: func_1_0_schema_formal  */
+  case 54:
                                                             { yyval . subtree = MakeList ( ctx, yyvsp[0] ); }
     break;
 
-  case 55: /* func_1_0_schema_formals: func_1_0_schema_formals ',' func_1_0_schema_formal  */
+  case 55:
                                                             { yyval . subtree = AddToList ( ctx, P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 56: /* func_1_0_schema_formal: KW_type ident_1_0  */
+  case 56:
                                 { yyval . subtree = MakeTree ( ctx, PT_SCHEMAFORMAL, T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 57: /* func_1_0_schema_formal: type_expr_1_0 ident_1_0  */
+  case 57:
                                 { yyval . subtree = MakeTree ( ctx, PT_SCHEMAFORMAL, P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 58: /* func_1_0_return_type: KW_void  */
+  case 58:
                         { yyval . subtree = MakeTree ( ctx, PT_RETURNTYPE, T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 59: /* func_1_0_return_type: type_expr_1_0  */
+  case 59:
                         { yyval . subtree = MakeTree ( ctx, PT_RETURNTYPE, P ( yyvsp[0] ) ); }
     break;
 
-  case 60: /* opt_func_1_0_fact_sig: empty  */
+  case 60:
                                 { yyval = yyvsp[0]; }
     break;
 
-  case 61: /* opt_func_1_0_fact_sig: func_1_0_fact_sig  */
+  case 61:
                                 { yyval = yyvsp[0]; }
     break;
 
-  case 62: /* func_1_0_fact_sig: '<' func_1_0_fact_signature '>'  */
+  case 62:
                                        { yyval . subtree = MakeTree ( ctx, PT_FACTSIG, T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 63: /* func_1_0_fact_signature: empty  */
+  case 63:
                             { yyval = yyvsp[0]; }
     break;
 
-  case 64: /* func_1_0_fact_signature: func_1_0_fact_params func_1_0_vararg_formals  */
+  case 64:
                             { yyval . subtree = MakeTree ( ctx, PT_FUNCPARAMS, P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 65: /* func_1_0_fact_signature: '*' func_1_0_fact_params func_1_0_vararg_formals  */
+  case 65:
                             { yyval . subtree = MakeTree ( ctx, PT_FUNCPARAMS, T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 66: /* func_1_0_fact_signature: func_1_0_fact_params '*' func_1_0_fact_params func_1_0_vararg_formals  */
+  case 66:
                             { yyval . subtree = MakeTree ( ctx, PT_FUNCPARAMS, P ( yyvsp[-3] ), T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 67: /* func_1_0_fact_signature: func_1_0_fact_params ',' '*' func_1_0_fact_params func_1_0_vararg_formals  */
+  case 67:
                             { yyval . subtree = MakeTree ( ctx, PT_FUNCPARAMS, P ( yyvsp[-4] ), T ( ctx, yyvsp[-3] ), T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 68: /* func_1_0_fact_params: fact_param_1_0  */
+  case 68:
                                                     { yyval . subtree = MakeList ( ctx, yyvsp[0] ); }
     break;
 
-  case 69: /* func_1_0_fact_params: func_1_0_fact_params ',' fact_param_1_0  */
+  case 69:
                                                     { yyval . subtree = AddToList ( ctx, P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 70: /* fact_param_1_0: typespec_1_0 IDENTIFIER_1_0  */
+  case 70:
                                         { yyval . subtree = MakeTree ( ctx, PT_FORMALPARAM, P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 71: /* func_1_0_param_sig: '(' func_1_0_param_signature ')'  */
+  case 71:
                                         { yyval . subtree = MakeTree ( ctx, PT_FUNCSIG, T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 72: /* func_1_0_param_signature: empty  */
+  case 72:
                             { yyval = yyvsp[0]; }
     break;
 
-  case 73: /* func_1_0_param_signature: func_1_0_formal_params func_1_0_vararg_formals  */
+  case 73:
                             { yyval . subtree = MakeTree ( ctx, PT_FUNCPARAMS, P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 74: /* func_1_0_param_signature: '*' func_1_0_formal_params func_1_0_vararg_formals  */
+  case 74:
                             { yyval . subtree = MakeTree ( ctx, PT_FUNCPARAMS, T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 75: /* func_1_0_param_signature: func_1_0_formal_params '*' func_1_0_formal_params func_1_0_vararg_formals  */
+  case 75:
                             { yyval . subtree = MakeTree ( ctx, PT_FUNCPARAMS, P ( yyvsp[-3] ), T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 76: /* func_1_0_param_signature: func_1_0_formal_params ',' '*' func_1_0_formal_params func_1_0_vararg_formals  */
+  case 76:
                             { yyval . subtree = MakeTree ( ctx, PT_FUNCPARAMS, P ( yyvsp[-4] ), T ( ctx, yyvsp[-3] ), T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 77: /* func_1_0_formal_params: formal_param_1_0  */
+  case 77:
                                                         { yyval . subtree = MakeList ( ctx, yyvsp[0] ); }
     break;
 
-  case 78: /* func_1_0_formal_params: func_1_0_formal_params ',' formal_param_1_0  */
+  case 78:
                                                         { yyval . subtree = AddToList ( ctx, P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 79: /* formal_param_1_0: typespec_1_0 IDENTIFIER_1_0  */
+  case 79:
                                         { yyval . subtree = MakeTree ( ctx, PT_FORMALPARAM, P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 80: /* formal_param_1_0: KW_control typespec_1_0 IDENTIFIER_1_0  */
+  case 80:
                                         { yyval . subtree = MakeTree ( ctx, PT_FORMALPARAM, T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 81: /* func_1_0_vararg_formals: empty  */
+  case 81:
                                 { yyval = yyvsp[0]; }
     break;
 
-  case 82: /* func_1_0_vararg_formals: ',' ELLIPSIS  */
+  case 82:
                                 { yyval . subtree = MakeTree ( ctx, PT_ELLIPSIS, T ( ctx, yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 83: /* func_1_0_prologue: ';'  */
+  case 83:
                                 { yyval . subtree = MakeTree ( ctx, PT_FUNCPROLOGUE, T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 84: /* func_1_0_prologue: '=' fqn_1_0 ';'  */
+  case 84:
                                 { yyval . subtree = MakeTree ( ctx, PT_FUNCPROLOGUE, T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 85: /* func_1_0_prologue: '{' script_1_0_stmt_seq '}'  */
+  case 85:
                                 { yyval . subtree = MakeTree ( ctx, PT_FUNCPROLOGUE, T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 86: /* script_1_0_stmt_seq: script_1_0_stmt  */
+  case 86:
                                             { yyval . subtree = MakeList ( ctx, yyvsp[0] ); }
     break;
 
-  case 87: /* script_1_0_stmt_seq: script_1_0_stmt_seq script_1_0_stmt  */
+  case 87:
                                             { yyval . subtree = AddToList ( ctx, P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 88: /* script_1_0_stmt: KW_return cond_expr_1_0 ';'  */
+  case 88:
                                     { yyval . subtree = MakeTree ( ctx, PT_RETURN, T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 89: /* script_1_0_stmt: type_expr_1_0 ident_1_0 '=' cond_expr_1_0 ';'  */
+  case 89:
                                      { yyval . subtree = MakeTree ( ctx, PT_PRODSTMT, P ( yyvsp[-4] ), P ( yyvsp[-3] ), T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 90: /* extern_1_0_decl: KW_extern ext_func_1_0_decl  */
+  case 90:
             { yyval . subtree = MakeTree ( ctx, PT_EXTERN, T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 91: /* ext_func_1_0_decl: function_1_0_decl  */
+  case 91:
                                     { yyval = yyvsp[0]; }
     break;
 
-  case 92: /* script_1_0_decl: KW_schema func_1_0_decl  */
+  case 92:
                             { yyval . subtree = MakeTree ( ctx, PT_SCHEMA, T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 93: /* script_1_0_decl: KW_schema KW_function func_1_0_decl  */
+  case 93:
                             { yyval . subtree = MakeTree ( ctx, PT_SCHEMA, T ( ctx, yyvsp[-2] ), T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 94: /* validate_1_0_decl: KW_validate function_1_0_decl  */
+  case 94:
                             { yyval . subtree = MakeTree ( ctx, PT_VALIDATE, T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 95: /* physical_1_0_decl: KW_physical opt_func_1_0_schema_sig phys_1_0_return_type fqn_vers opt_func_1_0_fact_sig phys_1_0_prologue  */
+  case 95:
             { yyval . subtree = MakeTree ( ctx, PT_PHYSICAL, T ( ctx, yyvsp[-5] ), P ( yyvsp[-4] ), P ( yyvsp[-3] ), P ( yyvsp[-2] ), P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 96: /* phys_1_0_return_type: func_1_0_return_type  */
+  case 96:
                                             { yyval = yyvsp[0]; }
     break;
 
-  case 97: /* phys_1_0_return_type: KW___no_header func_1_0_return_type  */
+  case 97:
                                             { yyval . subtree = MakeTree ( ctx, PT_NOHEADER, T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 98: /* phys_1_0_prologue: '=' phys_1_0_stmt  */
+  case 98:
             { yyval . subtree = MakeTree ( ctx, PT_PHYSPROLOGUE, T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 99: /* phys_1_0_prologue: '{' phys_1_0_body '}'  */
+  case 99:
             { yyval . subtree = MakeTree ( ctx, PT_PHYSPROLOGUE, T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 100: /* phys_1_0_body: phys_1_0_body_stmt  */
+  case 100:
                                             { yyval . subtree = MakeList ( ctx, yyvsp[0] ); }
     break;
 
-  case 101: /* phys_1_0_body: phys_1_0_body phys_1_0_body_stmt  */
+  case 101:
                                             { yyval . subtree = AddToList ( ctx, P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 102: /* phys_1_0_body_stmt: ';'  */
+  case 102:
             { yyval . subtree = MakeTree ( ctx, PT_PHYSBODYSTMT, T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 103: /* phys_1_0_body_stmt: KW_decode phys_1_0_stmt  */
+  case 103:
             { yyval . subtree = MakeTree ( ctx, PT_PHYSBODYSTMT, T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 104: /* phys_1_0_body_stmt: KW_encode phys_1_0_stmt  */
+  case 104:
             { yyval . subtree = MakeTree ( ctx, PT_PHYSBODYSTMT, T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 105: /* phys_1_0_body_stmt: KW___row_length '=' fqn_1_0 '(' ')'  */
+  case 105:
             { yyval . subtree = MakeTree ( ctx, PT_PHYSBODYSTMT, T ( ctx, yyvsp[-4] ), T ( ctx, yyvsp[-3] ), P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 106: /* phys_1_0_stmt: '{' script_1_0_stmt_seq '}'  */
+  case 106:
             { yyval . subtree = MakeTree ( ctx, PT_PHYSSTMT, T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 107: /* table_1_0_decl: KW_table fqn_vers opt_tbl_1_0_parents tbl_1_0_body  */
+  case 107:
             { yyval . subtree = MakeTree ( ctx, PT_TABLE, T ( ctx, yyvsp[-3] ), P ( yyvsp[-2] ), P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 108: /* opt_tbl_1_0_parents: empty  */
+  case 108:
                                 { yyval = yyvsp[0]; }
     break;
 
-  case 109: /* opt_tbl_1_0_parents: '=' tbl_1_0_parents  */
+  case 109:
                                 { yyval . subtree = MakeTree ( ctx, PT_TABLEPARENTS, T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 110: /* tbl_1_0_parents: fqn_opt_vers  */
+  case 110:
                                           { yyval . subtree = MakeList ( ctx, yyvsp[0] ); }
     break;
 
-  case 111: /* tbl_1_0_parents: tbl_1_0_parents ',' fqn_opt_vers  */
+  case 111:
                                           { yyval . subtree = AddToList ( ctx, P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 112: /* tbl_1_0_body: '{' tbl_1_0_stmt_seq '}'  */
+  case 112:
             { yyval . subtree = MakeTree ( ctx, PT_TABLEBODY, T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 113: /* tbl_1_0_body: '{' '}'  */
+  case 113:
             { yyval . subtree = MakeTree ( ctx, PT_TABLEBODY, T ( ctx, yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 114: /* tbl_1_0_stmt_seq: tbl_1_0_stmt  */
+  case 114:
                                         { yyval . subtree = MakeList ( ctx, yyvsp[0] ); }
     break;
 
-  case 115: /* tbl_1_0_stmt_seq: tbl_1_0_stmt_seq tbl_1_0_stmt  */
+  case 115:
                                         { yyval . subtree = AddToList ( ctx, P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 116: /* tbl_1_0_stmt: production_1_0_stmt  */
+  case 116:
                                                 { yyval = yyvsp[0]; }
     break;
 
-  case 117: /* tbl_1_0_stmt: col_1_0_modifiers col_1_0_decl  */
+  case 117:
                                                 { yyval . subtree = MakeTree ( ctx, PT_COLUMN, P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 118: /* tbl_1_0_stmt: KW_column KW_limit '=' expression_1_0 ';'  */
+  case 118:
                         { yyval . subtree = MakeTree ( ctx, PT_COLUMNEXPR, T ( ctx, yyvsp[-4] ), T ( ctx, yyvsp[-3] ), T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 119: /* tbl_1_0_stmt: KW_column KW_default KW_limit '=' expression_1_0 ';'  */
+  case 119:
                         { yyval . subtree = MakeTree ( ctx, PT_COLUMNEXPR, T ( ctx, yyvsp[-5] ), T ( ctx, yyvsp[-4] ), T ( ctx, yyvsp[-3] ), T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 120: /* tbl_1_0_stmt: KW_static physmbr_1_0_decl  */
+  case 120:
                                                 { yyval . subtree = MakeTree ( ctx, PT_PHYSCOL, T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 121: /* tbl_1_0_stmt: KW_physical physmbr_1_0_decl  */
+  case 121:
                                                 { yyval . subtree = MakeTree ( ctx, PT_PHYSCOL, T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 122: /* tbl_1_0_stmt: KW_static KW_physical physmbr_1_0_decl  */
+  case 122:
                                                 { yyval . subtree = MakeTree ( ctx, PT_PHYSCOL, T ( ctx, yyvsp[-2] ), T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 123: /* tbl_1_0_stmt: default_view_1_0_decl  */
+  case 123:
                                                 { yyval = yyvsp[0]; }
     break;
 
-  case 124: /* tbl_1_0_stmt: KW___untyped '=' fqn_1_0 '(' ')' ';'  */
+  case 124:
                         { yyval . subtree = MakeTree ( ctx, PT_COLUNTYPED, T ( ctx, yyvsp[-5] ), T ( ctx, yyvsp[-4] ), P ( yyvsp[-3] ), T ( ctx, yyvsp[-2] ), T ( ctx, yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 125: /* tbl_1_0_stmt: ';'  */
+  case 125:
                                                 { yyval . subtree = T ( ctx, yyvsp[0] ); }
     break;
 
-  case 126: /* production_1_0_stmt: typespec_1_0 ident_1_0 '=' cond_expr_1_0 ';'  */
+  case 126:
                                      { yyval . subtree = MakeTree ( ctx, PT_PRODSTMT, P ( yyvsp[-4] ), P ( yyvsp[-3] ), T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 127: /* production_1_0_stmt: KW_trigger ident_1_0 '=' cond_expr_1_0 ';'  */
+  case 127:
                                      { yyval . subtree = MakeTree ( ctx, PT_PRODTRIGGER, T ( ctx, yyvsp[-4] ), P ( yyvsp[-3] ), T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 128: /* col_1_0_modifiers: KW_column  */
+  case 128:
                                         { yyval . subtree = T ( ctx, yyvsp[0] ); }
     break;
 
-  case 129: /* col_1_0_modifiers: col_1_0_modifier_seq KW_column  */
+  case 129:
                                         { yyval = yyvsp[-1]; AddToList ( ctx, P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 130: /* col_1_0_modifier_seq: col_1_0_modifier  */
+  case 130:
                                                 { yyval . subtree = MakeList ( ctx, yyvsp[0] ); }
     break;
 
-  case 131: /* col_1_0_modifier_seq: col_1_0_modifier_seq col_1_0_modifier  */
+  case 131:
                                                 { yyval . subtree = AddToList ( ctx, P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 132: /* col_1_0_modifier: KW_default  */
+  case 132:
                         { yyval . subtree = T ( ctx, yyvsp[0] ); }
     break;
 
-  case 133: /* col_1_0_modifier: KW_extern  */
+  case 133:
                         { yyval . subtree = T ( ctx, yyvsp[0] ); }
     break;
 
-  case 134: /* col_1_0_modifier: KW_readonly  */
+  case 134:
                         { yyval . subtree = T ( ctx, yyvsp[0] ); }
     break;
 
-  case 135: /* col_1_0_decl: typespec_1_0 typed_column_decl_1_0  */
+  case 135:
             { yyval . subtree = MakeTree ( ctx, PT_COLDECL, P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 136: /* col_1_0_decl: phys_enc_ref typed_column_decl_1_0  */
+  case 136:
             { yyval . subtree = MakeTree ( ctx, PT_COLDECL, P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 137: /* phys_enc_ref: '<' schema_parms_1_0 '>' fqn_opt_vers opt_factory_parms_1_0  */
+  case 137:
             { yyval . subtree = MakeTree ( ctx, PT_PHYSENCREF, T ( ctx, yyvsp[-4] ), P ( yyvsp[-3] ), T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 138: /* phys_enc_ref: fqn_vers opt_factory_parms_1_0  */
+  case 138:
             { yyval . subtree = MakeTree ( ctx, PT_PHYSENCREF, P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 139: /* phys_enc_ref: fqn_1_0 factory_parms_1_0  */
+  case 139:
             { yyval . subtree = MakeTree ( ctx, PT_PHYSENCREF, P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 140: /* typed_column_decl_1_0: col_ident '{' opt_column_body_1_0 '}'  */
+  case 140:
             { yyval . subtree = MakeTree ( ctx, PT_TYPEDCOL, P ( yyvsp[-3] ), T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 141: /* typed_column_decl_1_0: col_ident '=' cond_expr_1_0 ';'  */
+  case 141:
             { yyval . subtree = MakeTree ( ctx, PT_TYPEDCOLEXPR, P ( yyvsp[-3] ), T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 142: /* typed_column_decl_1_0: col_ident ';'  */
+  case 142:
             { yyval . subtree = MakeTree ( ctx, PT_TYPEDCOL, P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 143: /* col_ident: ident_1_0  */
+  case 143:
                                     { yyval = yyvsp[0]; }
     break;
 
-  case 144: /* col_ident: phys_ident  */
+  case 144:
                                     { yyval = yyvsp[0]; }
     break;
 
-  case 145: /* phys_ident: PHYSICAL_IDENTIFIER_1_0  */
+  case 145:
                                     { yyval . subtree = T ( ctx, yyvsp[0] ); }
     break;
 
-  case 146: /* opt_column_body_1_0: empty  */
+  case 146:
                         { yyval = yyvsp[0]; }
     break;
 
-  case 147: /* opt_column_body_1_0: column_body_1_0  */
+  case 147:
                         { yyval = yyvsp[0]; }
     break;
 
-  case 148: /* column_body_1_0: column_stmt_1_0  */
+  case 148:
                                         { yyval . subtree = MakeList ( ctx, yyvsp[0] ); }
     break;
 
-  case 149: /* column_body_1_0: column_body_1_0 column_stmt_1_0  */
+  case 149:
                                         { yyval . subtree = AddToList ( ctx, P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 150: /* column_stmt_1_0: KW_read '=' cond_expr_1_0 ';'  */
+  case 150:
                                         { yyval . subtree = MakeTree ( ctx, PT_COLSTMT, T ( ctx, yyvsp[-3] ), T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 151: /* column_stmt_1_0: KW_validate '=' cond_expr_1_0 ';'  */
+  case 151:
                                         { yyval . subtree = MakeTree ( ctx, PT_COLSTMT, T ( ctx, yyvsp[-3] ), T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 152: /* column_stmt_1_0: KW_limit '=' uint_expr_1_0 ';'  */
+  case 152:
                                         { yyval . subtree = MakeTree ( ctx, PT_COLSTMT, T ( ctx, yyvsp[-3] ), T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 153: /* column_stmt_1_0: ';'  */
+  case 153:
                                         { yyval . subtree = T ( ctx, yyvsp[0] ); }
     break;
 
-  case 154: /* default_view_1_0_decl: KW_default KW_view STRING ';'  */
+  case 154:
             { yyval . subtree = MakeTree ( ctx, PT_DFLTVIEW, T ( ctx, yyvsp[-3] ), T ( ctx, yyvsp[-2] ), T ( ctx, yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 155: /* physmbr_1_0_decl: phys_coldef_1_0 PHYSICAL_IDENTIFIER_1_0 ';'  */
+  case 155:
             { yyval . subtree = MakeTree ( ctx, PT_PHYSMBR, P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 156: /* physmbr_1_0_decl: phys_coldef_1_0 PHYSICAL_IDENTIFIER_1_0 '=' cond_expr_1_0 ';'  */
+  case 156:
             { yyval . subtree = MakeTree ( ctx, PT_PHYSMBR, P ( yyvsp[-4] ), T ( ctx, yyvsp[-3] ), T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 157: /* physmbr_1_0_decl: KW_column phys_coldef_1_0 PHYSICAL_IDENTIFIER_1_0 ';'  */
+  case 157:
             { yyval . subtree = MakeTree ( ctx, PT_PHYSMBR, T ( ctx, yyvsp[-3] ), P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 158: /* physmbr_1_0_decl: KW_column phys_coldef_1_0 PHYSICAL_IDENTIFIER_1_0 '=' cond_expr_1_0 ';'  */
+  case 158:
             { yyval . subtree = MakeTree ( ctx, PT_PHYSMBR, T ( ctx, yyvsp[-5] ), P ( yyvsp[-4] ), T ( ctx, yyvsp[-3] ), T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 159: /* phys_coldef_1_0: opt_col_schema_parms_1_0 fqn_opt_vers opt_factory_parms_1_0  */
+  case 159:
             { yyval . subtree = MakeTree ( ctx, PT_PHYSCOLDEF, P ( yyvsp[-2] ), P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 160: /* opt_col_schema_parms_1_0: empty  */
+  case 160:
                                         { yyval = yyvsp[0]; }
     break;
 
-  case 161: /* opt_col_schema_parms_1_0: '<' col_schema_parms_1_0 '>'  */
+  case 161:
                                         { yyval . subtree = MakeTree ( ctx, PT_COLSCHEMAPARMS, T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 162: /* col_schema_parms_1_0: col_schema_parm_1_0  */
+  case 162:
                                                     { yyval . subtree = MakeList ( ctx, yyvsp[0] ); }
     break;
 
-  case 163: /* col_schema_parms_1_0: col_schema_parms_1_0 ',' col_schema_parm_1_0  */
+  case 163:
                                                     { yyval . subtree = AddToList ( ctx, P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 164: /* col_schema_parm_1_0: fqn_1_0 '=' col_schema_value_1_0  */
+  case 164:
                                             { yyval . subtree = MakeTree ( ctx, PT_COLSCHEMAPARAM, P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 165: /* col_schema_parm_1_0: col_schema_value_1_0  */
+  case 165:
                                             { yyval = yyvsp[0]; }
     break;
 
-  case 166: /* col_schema_value_1_0: fqn_1_0  */
+  case 166:
                                             { yyval = yyvsp[0]; }
     break;
 
-  case 167: /* col_schema_value_1_0: uint_expr_1_0  */
+  case 167:
                                             { yyval = yyvsp[0]; }
     break;
 
-  case 168: /* cond_expr_1_0: expression_1_0  */
+  case 168:
                                             { yyval . subtree = MakeList ( ctx, yyvsp[0] ); }
     break;
 
-  case 169: /* cond_expr_1_0: cond_expr_1_0 '|' expression_1_0  */
+  case 169:
                                             { yyval . subtree = AddToList ( ctx, P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 170: /* expression_1_0: primary_expr_1_0  */
+  case 170:
                                             { yyval = yyvsp[0]; }
     break;
 
-  case 171: /* expression_1_0: '(' type_expr_1_0 ')' expression_1_0  */
+  case 171:
                                             { yyval . subtree = MakeTree ( ctx, PT_CASTEXPR, T ( ctx, yyvsp[-3] ), P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 172: /* primary_expr_1_0: fqn_1_0  */
+  case 172:
                                 { yyval = yyvsp[0]; }
     break;
 
-  case 173: /* primary_expr_1_0: phys_ident  */
+  case 173:
                                 { yyval = yyvsp[0]; }
     break;
 
-  case 174: /* primary_expr_1_0: '@'  */
+  case 174:
                                 { yyval . subtree = T ( ctx, yyvsp[0] ); }
     break;
 
-  case 175: /* primary_expr_1_0: func_expr_1_0  */
+  case 175:
                                 { yyval = yyvsp[0]; }
     break;
 
-  case 176: /* primary_expr_1_0: uint_expr_1_0  */
+  case 176:
                                 { yyval = yyvsp[0]; }
     break;
 
-  case 177: /* primary_expr_1_0: float_expr_1_0  */
+  case 177:
                                 { yyval = yyvsp[0]; }
     break;
 
-  case 178: /* primary_expr_1_0: string_expr_1_0  */
+  case 178:
                                 { yyval = yyvsp[0]; }
     break;
 
-  case 179: /* primary_expr_1_0: const_vect_expr_1_0  */
+  case 179:
                                 { yyval = yyvsp[0]; }
     break;
 
-  case 180: /* primary_expr_1_0: bool_expr_1_0  */
+  case 180:
                                 { yyval = yyvsp[0]; }
     break;
 
-  case 181: /* primary_expr_1_0: '-' expression_1_0  */
+  case 181:
                                 { yyval . subtree = MakeTree ( ctx, PT_NEGATE, T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 182: /* primary_expr_1_0: '+' expression_1_0  */
+  case 182:
                                 { yyval . subtree = MakeTree ( ctx, PT_UNARYPLUS, T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 183: /* primary_expr_1_0: member_expr_2_0  */
+  case 183:
                                 { yyval = yyvsp[0]; }
     break;
 
-  case 184: /* primary_expr_1_0: join_expr_2_0  */
+  case 184:
                                 { yyval = yyvsp[0]; }
     break;
 
-  case 185: /* func_expr_1_0: '<' schema_parms_1_0 '>' fqn_opt_vers opt_factory_parms_1_0 '(' opt_func_1_0_parms ')'  */
+  case 185:
              { yyval . subtree = MakeTree ( ctx, PT_FUNCEXPR, T ( ctx, yyvsp[-7] ), P ( yyvsp[-6] ), T ( ctx, yyvsp[-5] ), P ( yyvsp[-4] ), P ( yyvsp[-3] ), T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 186: /* func_expr_1_0: fqn_opt_vers opt_factory_parms_1_0 '(' opt_func_1_0_parms ')'  */
+  case 186:
              { yyval . subtree = MakeTree ( ctx, PT_FUNCEXPR, P ( yyvsp[-4] ), P ( yyvsp[-3] ), T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 187: /* schema_parms_1_0: schema_parm_1_0  */
+  case 187:
                                             { yyval . subtree = MakeList ( ctx, yyvsp[0] ); }
     break;
 
-  case 188: /* schema_parms_1_0: schema_parms_1_0 ',' schema_parm_1_0  */
+  case 188:
                                             { yyval . subtree = AddToList ( ctx, P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 189: /* schema_parm_1_0: fqn_1_0  */
+  case 189:
                                 { yyval = yyvsp[0]; }
     break;
 
-  case 190: /* schema_parm_1_0: fqn_1_0 '[' dim_1_0 ']'  */
+  case 190:
                                 { yyval . subtree = MakeTree ( ctx, PT_ARRAY, P ( yyvsp[-3] ), T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 191: /* schema_parm_1_0: uint_expr_1_0  */
+  case 191:
                                 { yyval = yyvsp[0]; }
     break;
 
-  case 192: /* opt_factory_parms_1_0: empty  */
+  case 192:
                         { yyval = yyvsp[0]; }
     break;
 
-  case 193: /* opt_factory_parms_1_0: factory_parms_1_0  */
+  case 193:
                         { yyval = yyvsp[0]; }
     break;
 
-  case 194: /* factory_parms_1_0: '<' factory_parms '>'  */
+  case 194:
                             { yyval . subtree = MakeTree ( ctx, PT_FACTPARMS, T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 195: /* factory_parms: expression_1_0  */
+  case 195:
                                         { yyval . subtree = MakeList ( ctx, yyvsp[0] ); }
     break;
 
-  case 196: /* factory_parms: factory_parms ',' expression_1_0  */
+  case 196:
                                         { yyval . subtree = AddToList ( ctx, P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 197: /* opt_func_1_0_parms: empty  */
+  case 197:
                                             { yyval = yyvsp[0]; }
     break;
 
-  case 198: /* opt_func_1_0_parms: func_1_0_parms  */
+  case 198:
                                             { yyval = yyvsp[0]; }
     break;
 
-  case 199: /* func_1_0_parms: expression_1_0  */
+  case 199:
                                             { yyval . subtree = MakeList ( ctx, yyvsp[0] ); }
     break;
 
-  case 200: /* func_1_0_parms: func_1_0_parms ',' expression_1_0  */
+  case 200:
                                             { yyval . subtree = AddToList ( ctx, P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 201: /* uint_expr_1_0: DECIMAL  */
+  case 201:
                                             { yyval . subtree = MakeTree ( ctx, PT_UINT, T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 202: /* uint_expr_1_0: HEX  */
+  case 202:
                                             { yyval . subtree = MakeTree ( ctx, PT_UINT, T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 203: /* uint_expr_1_0: OCTAL  */
+  case 203:
                                             { yyval . subtree = MakeTree ( ctx, PT_UINT, T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 204: /* float_expr_1_0: FLOAT_  */
+  case 204:
                                  { yyval . subtree = T ( ctx, yyvsp[0] ); }
     break;
 
-  case 205: /* float_expr_1_0: EXP_FLOAT  */
+  case 205:
                                 { yyval . subtree = T ( ctx, yyvsp[0] ); }
     break;
 
-  case 206: /* string_expr_1_0: STRING  */
+  case 206:
                                 { yyval . subtree = T ( ctx, yyvsp[0] ); }
     break;
 
-  case 207: /* string_expr_1_0: ESCAPED_STRING  */
+  case 207:
                                 { yyval . subtree = T ( ctx, yyvsp[0] ); }
     break;
 
-  case 208: /* const_vect_expr_1_0: '[' opt_const_vect_exprlist_1_0 ']'  */
+  case 208:
                                                { yyval . subtree = MakeTree ( ctx, PT_CONSTVECT, T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 209: /* opt_const_vect_exprlist_1_0: empty  */
+  case 209:
                                 { yyval = yyvsp[0]; }
     break;
 
-  case 210: /* opt_const_vect_exprlist_1_0: const_vect_exprlist_1_0  */
+  case 210:
                                 { yyval = yyvsp[0]; }
     break;
 
-  case 211: /* const_vect_exprlist_1_0: expression_1_0  */
+  case 211:
                                                     { yyval . subtree = MakeList ( ctx, yyvsp[0] ); }
     break;
 
-  case 212: /* const_vect_exprlist_1_0: const_vect_exprlist_1_0 ',' expression_1_0  */
+  case 212:
                                                     { yyval . subtree = AddToList ( ctx, P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 213: /* bool_expr_1_0: KW_true  */
+  case 213:
                                 { yyval . subtree = T ( ctx, yyvsp[0] ); }
     break;
 
-  case 214: /* bool_expr_1_0: KW_false  */
+  case 214:
                                 { yyval . subtree = T ( ctx, yyvsp[0] ); }
     break;
 
-  case 215: /* type_expr_1_0: typespec_1_0  */
+  case 215:
                                 { yyval = yyvsp[0]; }
     break;
 
-  case 216: /* type_expr_1_0: fqn_1_0 '/' fqn_1_0  */
+  case 216:
                                 { yyval . subtree = MakeTree ( ctx, PT_TYPEEXPR, P ( yyvsp[-2] ), T ( ctx, yyvsp[-1]), P ( yyvsp[0] ) ); }
     break;
 
-  case 217: /* member_expr_2_0: ident_1_0 '.' ident_1_0  */
+  case 217:
                                         { yyval . subtree = MakeTree ( ctx, PT_MEMBEREXPR, P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 218: /* member_expr_2_0: ident_1_0 PHYSICAL_IDENTIFIER_1_0  */
+  case 218:
                                         { yyval . subtree = MakeTree ( ctx, PT_MEMBEREXPR, P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 219: /* join_expr_2_0: ident_1_0 '[' cond_expr_1_0 ']' '.' ident_1_0  */
+  case 219:
         { yyval . subtree = MakeTree ( ctx, PT_JOINEXPR, P ( yyvsp[-5] ), T ( ctx, yyvsp[-4] ), P ( yyvsp[-3] ), T ( ctx, yyvsp[-2] ), T ( ctx, yyvsp[-1] ), P (yyvsp[0] ) ); }
     break;
 
-  case 220: /* join_expr_2_0: ident_1_0 '[' cond_expr_1_0 ']' PHYSICAL_IDENTIFIER_1_0  */
+  case 220:
         { yyval . subtree = MakeTree ( ctx, PT_JOINEXPR, P ( yyvsp[-4] ), T ( ctx, yyvsp[-3] ), P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 221: /* database_1_0_decl: KW_database fqn_vers opt_database_dad_1_0 database_body_1_0  */
+  case 221:
             { yyval . subtree = MakeTree ( ctx, PT_DATABASE, T ( ctx, yyvsp[-3] ), P ( yyvsp[-2]), P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 222: /* opt_database_dad_1_0: empty  */
+  case 222:
                                     { yyval = yyvsp[0]; }
     break;
 
-  case 223: /* opt_database_dad_1_0: '=' fqn_opt_vers  */
+  case 223:
                                     { yyval . subtree = MakeTree ( ctx, PT_DBDAD, T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 224: /* database_body_1_0: '{' '}'  */
+  case 224:
                                     { yyval . subtree = MakeTree ( ctx, PT_DBBODY, T ( ctx, yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 225: /* database_body_1_0: '{' database_members_1_0 '}'  */
+  case 225:
                                     { yyval . subtree = MakeTree ( ctx, PT_DBBODY, T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 226: /* database_members_1_0: database_member_1_0  */
+  case 226:
                                                 { yyval . subtree = MakeList ( ctx, yyvsp[0] ); }
     break;
 
-  case 227: /* database_members_1_0: database_members_1_0 database_member_1_0  */
+  case 227:
                                                 { yyval . subtree = AddToList ( ctx, P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 228: /* database_member_1_0: db_member_1_0  */
+  case 228:
                                 { yyval = yyvsp[0]; }
     break;
 
-  case 229: /* database_member_1_0: table_member_1_0  */
+  case 229:
                                 { yyval = yyvsp[0]; }
     break;
 
-  case 230: /* database_member_1_0: alias_member_1_0  */
+  case 230:
                                 { yyval = yyvsp[0]; }
     break;
 
-  case 231: /* database_member_1_0: ';'  */
+  case 231:
                                 { yyval . subtree = T ( ctx, yyvsp[0] ); }
     break;
 
-  case 232: /* opt_template_1_0: empty  */
+  case 232:
                                 { yyval = yyvsp[0]; }
     break;
 
-  case 233: /* opt_template_1_0: KW_template  */
+  case 233:
                                 { yyval . subtree = T ( ctx, yyvsp[0] ); }
     break;
 
-  case 234: /* db_member_1_0: opt_template_1_0 KW_database fqn_opt_vers ident_1_0 ';'  */
+  case 234:
             { yyval . subtree = MakeTree ( ctx, PT_DBMEMBER, P ( yyvsp[-4] ), T ( ctx, yyvsp[-3] ), P ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 235: /* table_member_1_0: opt_template_1_0 KW_table fqn_opt_vers ident_1_0 ';'  */
+  case 235:
             { yyval . subtree = MakeTree ( ctx, PT_TBLMEMBER, P ( yyvsp[-4] ), T ( ctx, yyvsp[-3] ), P ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 236: /* alias_member_1_0: KW_alias view_spec ident_1_0 ';'  */
+  case 236:
             { yyval . subtree = MakeTree ( ctx, PT_ALIASMEMBER, T ( ctx, yyvsp[-3] ), P ( yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 237: /* view_spec: fqn_opt_vers '<' view_parms '>'  */
+  case 237:
         { yyval . subtree = MakeTree ( ctx, PT_VIEWSPEC, P ( yyvsp[-3] ), T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 238: /* view_parms: ident_1_0  */
+  case 238:
                                { yyval . subtree = MakeList ( ctx, yyvsp[0] ); }
     break;
 
-  case 239: /* view_parms: view_parms ',' ident_1_0  */
+  case 239:
                                { yyval . subtree = AddToList ( ctx, P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 240: /* include_directive: KW_include STRING  */
+  case 240:
                             { yyval . subtree = MakeTree ( ctx, PT_INCLUDE, T ( ctx, yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 241: /* fqn_1_0: ident_1_0  */
+  case 241:
                                 { yyval . subtree = MakeTree ( ctx, PT_FQN, P ( yyvsp[0] ) ); }
     break;
 
-  case 242: /* fqn_1_0: fqn_1_0 ':' ident_1_0  */
+  case 242:
                                 { yyval . subtree = AddToList ( ctx, P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 243: /* fqn_1_0: fqn_1_0 ':' KW_database  */
+  case 243:
                                 { yyvsp[0] . type = IDENTIFIER_1_0; yyval . subtree = AddToList ( ctx, P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), MakeTree ( ctx, PT_IDENT, T ( ctx, yyvsp[0] ) ) ); }
     break;
 
-  case 244: /* fqn_1_0: fqn_1_0 ':' KW_decode  */
+  case 244:
                                 { yyvsp[0] . type = IDENTIFIER_1_0; yyval . subtree = AddToList ( ctx, P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), MakeTree ( ctx, PT_IDENT, T ( ctx, yyvsp[0] ) ) ); }
     break;
 
-  case 245: /* fqn_1_0: fqn_1_0 ':' KW_encode  */
+  case 245:
                                 { yyvsp[0] . type = IDENTIFIER_1_0; yyval . subtree = AddToList ( ctx, P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), MakeTree ( ctx, PT_IDENT, T ( ctx, yyvsp[0] ) ) ); }
     break;
 
-  case 246: /* fqn_1_0: fqn_1_0 ':' KW_read  */
+  case 246:
                                 { yyvsp[0] . type = IDENTIFIER_1_0; yyval . subtree = AddToList ( ctx, P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), MakeTree ( ctx, PT_IDENT, T ( ctx, yyvsp[0] ) ) ); }
     break;
 
-  case 247: /* fqn_1_0: fqn_1_0 ':' KW_table  */
+  case 247:
                                 { yyvsp[0] . type = IDENTIFIER_1_0; yyval . subtree = AddToList ( ctx, P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), MakeTree ( ctx, PT_IDENT, T ( ctx, yyvsp[0] ) ) ); }
     break;
 
-  case 248: /* fqn_1_0: fqn_1_0 ':' KW_type  */
+  case 248:
                                 { yyvsp[0] . type = IDENTIFIER_1_0; yyval . subtree = AddToList ( ctx, P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), MakeTree ( ctx, PT_IDENT, T ( ctx, yyvsp[0] ) ) ); }
     break;
 
-  case 249: /* fqn_1_0: fqn_1_0 ':' KW_view  */
+  case 249:
                                 { yyvsp[0] . type = IDENTIFIER_1_0; yyval . subtree = AddToList ( ctx, P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), MakeTree ( ctx, PT_IDENT, T ( ctx, yyvsp[0] ) ) ); }
     break;
 
-  case 250: /* fqn_1_0: fqn_1_0 ':' KW_write  */
+  case 250:
                                 { yyvsp[0] . type = IDENTIFIER_1_0; yyval . subtree = AddToList ( ctx, P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), MakeTree ( ctx, PT_IDENT, T ( ctx, yyvsp[0] ) ) ); }
     break;
 
-  case 251: /* ident_1_0: IDENTIFIER_1_0  */
+  case 251:
                         { yyval . subtree = MakeTree ( ctx, PT_IDENT, T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 252: /* empty: %empty  */
+  case 252:
                 { yyval . subtree = MakeTree ( ctx, PT_EMPTY ); }
     break;
 
-  case 253: /* fqn_vers: fqn_1_0 VERSION  */
+  case 253:
                             { yyval . subtree = MakeTree ( ctx, PT_VERSNAME, P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 254: /* fqn_opt_vers: fqn_1_0  */
+  case 254:
                      { yyval = yyvsp[0]; }
     break;
 
-  case 255: /* fqn_opt_vers: fqn_vers  */
+  case 255:
                      { yyval = yyvsp[0]; }
     break;
 
-  case 256: /* version_2_0: KW_version VERS_2_0 ';'  */
+  case 256:
                                    { yyval . subtree = MakeTree ( ctx, PT_VERSION_2, T ( ctx, yyvsp[-2] ), T ( ctx, yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 257: /* schema_2_0_opt: schema_2_0  */
+  case 257:
                     { yyval . subtree = P ( yyvsp[0] ); }
     break;
 
-  case 258: /* schema_2_0_opt: empty  */
+  case 258:
                     { yyval = yyvsp[0]; }
     break;
 
-  case 259: /* schema_2_0: schema_2_0_decl  */
+  case 259:
                                    { yyval . subtree = MakeTree ( ctx, PT_SCHEMA_2_0, P ( yyvsp[0] ) ); }
     break;
 
-  case 260: /* schema_2_0: schema_2_0 schema_2_0_decl  */
+  case 260:
                                    { yyval . subtree = AddToList ( ctx, P ( yyvsp[-1] ) , P ( yyvsp[0] ) ); }
     break;
 
-  case 261: /* schema_2_0_decl: schema_1_0_decl  */
+  case 261:
                         { yyval = yyvsp[0]; }
     break;
 
-  case 262: /* schema_2_0_decl: view_2_0_decl  */
+  case 262:
                         { yyval = yyvsp[0]; }
     break;
 
-  case 263: /* view_2_0_decl: KW_view fqn_vers '<' view_parms '>' opt_view_parents '{' opt_view_body '}'  */
+  case 263:
         { yyval . subtree = MakeTree ( ctx, PT_VIEW, T ( ctx, yyvsp[-8] ), P ( yyvsp[-7] ), T ( ctx, yyvsp[-6] ), P ( yyvsp[-5] ), T ( ctx, yyvsp[-4] ), P ( yyvsp[-3] ), T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 264: /* view_parms: view_parm  */
+  case 264:
                                 { yyval . subtree = MakeList ( ctx, yyvsp[0] ); }
     break;
 
-  case 265: /* view_parms: view_parms ',' view_parm  */
+  case 265:
                                 { yyval . subtree = AddToList ( ctx, P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 266: /* view_parm: fqn_opt_vers ident_1_0  */
+  case 266:
                                 { yyval . subtree = MakeTree ( ctx, PT_VIEWPARAM, P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 267: /* opt_view_body: empty  */
+  case 267:
                 { yyval = yyvsp[0]; }
     break;
 
-  case 268: /* opt_view_body: view_body  */
+  case 268:
                 { yyval = yyvsp[0]; }
     break;
 
-  case 269: /* view_body: view_member  */
+  case 269:
                             { yyval . subtree = MakeList ( ctx, yyvsp[0] ); }
     break;
 
-  case 270: /* view_body: view_body view_member  */
+  case 270:
                             { yyval . subtree = AddToList ( ctx, P ( yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 271: /* view_member: typespec_1_0 ident_1_0 '=' cond_expr_1_0 ';'  */
+  case 271:
             { yyval . subtree = MakeTree ( ctx, PT_PRODSTMT, P ( yyvsp[-4] ), P ( yyvsp[-3] ), T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 272: /* view_member: KW_column typespec_1_0 ident_1_0 '=' cond_expr_1_0 ';'  */
+  case 272:
             { yyval . subtree = MakeTree ( ctx, PT_COLUMN, T ( ctx, yyvsp[-5] ), P ( yyvsp[-4] ), P ( yyvsp[-3] ), T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 273: /* view_member: ';'  */
+  case 273:
             { yyval . subtree = T ( ctx, yyvsp[0] ); }
     break;
 
-  case 274: /* opt_view_parents: empty  */
+  case 274:
                                 { yyval = yyvsp[0]; }
     break;
 
-  case 275: /* opt_view_parents: '=' view_parents  */
+  case 275:
                                 { yyval . subtree = MakeTree ( ctx, PT_VIEWPARENTS, T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 276: /* view_parents: view_parent  */
+  case 276:
                                    { yyval . subtree = MakeList ( ctx, yyvsp[0] ); }
     break;
 
-  case 277: /* view_parents: view_parents ',' view_parent  */
+  case 277:
                                    { yyval . subtree = AddToList ( ctx, P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
-  case 278: /* view_parent: fqn_opt_vers '<' view_parent_parms '>'  */
+  case 278:
         { yyval . subtree = MakeTree ( ctx, PT_VIEWPARENT, P ( yyvsp[-3] ), T ( ctx, yyvsp[-2] ), P ( yyvsp[-1] ), T ( ctx, yyvsp[0] ) ); }
     break;
 
-  case 279: /* view_parent_parms: ident_1_0  */
+  case 279:
                                         { yyval . subtree = MakeList ( ctx, yyvsp[0] ); }
     break;
 
-  case 280: /* view_parent_parms: view_parent_parms ',' ident_1_0  */
+  case 280:
                                         { yyval . subtree = AddToList ( ctx, P ( yyvsp[-2] ), T ( ctx, yyvsp[-1] ), P ( yyvsp[0] ) ); }
     break;
 
@@ -7169,10 +7003,11 @@ yyreduce:
      case of YYERROR or YYBACKUP, subsequent parser actions might lead
      to an incorrect destructor call or verbose syntax error message
      before the lookahead is translated.  */
-  YY_SYMBOL_PRINT ("-> $$ =", YY_CAST (yysymbol_kind_t, yyr1[yyn]), &yyval, &yyloc);
+  YY_SYMBOL_PRINT ("-> $$ =", yyr1[yyn], &yyval, &yyloc);
 
   YYPOPSTACK (yylen);
   yylen = 0;
+  YY_STACK_PRINT (yyss, yyssp);
 
   *++yyvsp = yyval;
   *++yylsp = yyloc;
@@ -7197,61 +7032,66 @@ yyreduce:
 yyerrlab:
   /* Make sure we have latest lookahead translation.  See comments at
      user semantic actions for why this is necessary.  */
-  yytoken = yychar == SCHEMA_EMPTY ? YYSYMBOL_YYEMPTY : YYTRANSLATE (yychar);
+  yytoken = yychar == YYEMPTY ? YYEMPTY : YYTRANSLATE (yychar);
+
   /* If not already recovering from an error, report this error.  */
   if (!yyerrstatus)
     {
       ++yynerrs;
+#if ! YYERROR_VERBOSE
+      yyerror (&yylloc, ctx, root, errors, sb, YY_("syntax error"));
+#else
+# define YYSYNTAX_ERROR yysyntax_error (&yymsg_alloc, &yymsg, \
+                                        yyssp, yytoken)
       {
-        yypcontext_t yyctx
-          = {yyssp, yytoken, &yylloc};
         char const *yymsgp = YY_("syntax error");
         int yysyntax_error_status;
-        yysyntax_error_status = yysyntax_error (&yymsg_alloc, &yymsg, &yyctx);
+        yysyntax_error_status = YYSYNTAX_ERROR;
         if (yysyntax_error_status == 0)
           yymsgp = yymsg;
-        else if (yysyntax_error_status == -1)
+        else if (yysyntax_error_status == 1)
           {
             if (yymsg != yymsgbuf)
               YYSTACK_FREE (yymsg);
-            yymsg = YY_CAST (char *,
-                             YYSTACK_ALLOC (YY_CAST (YYSIZE_T, yymsg_alloc)));
-            if (yymsg)
-              {
-                yysyntax_error_status
-                  = yysyntax_error (&yymsg_alloc, &yymsg, &yyctx);
-                yymsgp = yymsg;
-              }
-            else
+            yymsg = YY_CAST (char *, YYSTACK_ALLOC (YY_CAST (YYSIZE_T, yymsg_alloc)));
+            if (!yymsg)
               {
                 yymsg = yymsgbuf;
                 yymsg_alloc = sizeof yymsgbuf;
-                yysyntax_error_status = YYENOMEM;
+                yysyntax_error_status = 2;
+              }
+            else
+              {
+                yysyntax_error_status = YYSYNTAX_ERROR;
+                yymsgp = yymsg;
               }
           }
         yyerror (&yylloc, ctx, root, errors, sb, yymsgp);
-        if (yysyntax_error_status == YYENOMEM)
-          YYNOMEM;
+        if (yysyntax_error_status == 2)
+          goto yyexhaustedlab;
       }
+# undef YYSYNTAX_ERROR
+#endif
     }
 
   yyerror_range[1] = yylloc;
+
   if (yyerrstatus == 3)
     {
       /* If just tried and failed to reuse lookahead token after an
          error, discard it.  */
 
-      if (yychar <= END_SOURCE)
+      if (yychar <= YYEOF)
         {
           /* Return failure if at end of input.  */
-          if (yychar == END_SOURCE)
+          if (yychar == YYEOF)
             YYABORT;
         }
       else
         {
           yydestruct ("Error: discarding",
                       yytoken, &yylval, &yylloc, ctx, root, errors, sb);
-          yychar = SCHEMA_EMPTY;
+          yychar = YYEMPTY;
         }
     }
 
@@ -7268,7 +7108,6 @@ yyerrorlab:
      label yyerrorlab therefore never appears in user code.  */
   if (0)
     YYERROR;
-  ++yynerrs;
 
   /* Do not reclaim the symbols of the rule whose action triggered
      this YYERROR.  */
@@ -7285,14 +7124,13 @@ yyerrorlab:
 yyerrlab1:
   yyerrstatus = 3;      /* Each real token shifted decrements this.  */
 
-  /* Pop stack until we find a state that shifts the error token.  */
   for (;;)
     {
       yyn = yypact[yystate];
       if (!yypact_value_is_default (yyn))
         {
-          yyn += YYSYMBOL_YYerror;
-          if (0 <= yyn && yyn <= YYLAST && yycheck[yyn] == YYSYMBOL_YYerror)
+          yyn += YYTERROR;
+          if (0 <= yyn && yyn <= YYLAST && yycheck[yyn] == YYTERROR)
             {
               yyn = yytable[yyn];
               if (0 < yyn)
@@ -7306,7 +7144,7 @@ yyerrlab1:
 
       yyerror_range[1] = *yylsp;
       yydestruct ("Error: popping",
-                  YY_ACCESSING_SYMBOL (yystate), yyvsp, yylsp, ctx, root, errors, sb);
+                  yystos[yystate], yyvsp, yylsp, ctx, root, errors, sb);
       YYPOPSTACK (1);
       yystate = *yyssp;
       YY_STACK_PRINT (yyss, yyssp);
@@ -7317,11 +7155,13 @@ yyerrlab1:
   YY_IGNORE_MAYBE_UNINITIALIZED_END
 
   yyerror_range[2] = yylloc;
-  ++yylsp;
-  YYLLOC_DEFAULT (*yylsp, yyerror_range, 2);
+  /* Using YYLLOC is tempting, but would change the location of
+     the lookahead.  YYLOC is available though.  */
+  YYLLOC_DEFAULT (yyloc, yyerror_range, 2);
+  *++yylsp = yyloc;
 
   /* Shift the error token.  */
-  YY_SYMBOL_PRINT ("Shifting", YY_ACCESSING_SYMBOL (yyn), yyvsp, yylsp);
+  YY_SYMBOL_PRINT ("Shifting", yystos[yyn], yyvsp, yylsp);
 
   yystate = yyn;
   goto yynewstate;
@@ -7332,7 +7172,7 @@ yyerrlab1:
 `-------------------------------------*/
 yyacceptlab:
   yyresult = 0;
-  goto yyreturnlab;
+  goto yyreturn;
 
 
 /*-----------------------------------.
@@ -7340,23 +7180,25 @@ yyacceptlab:
 `-----------------------------------*/
 yyabortlab:
   yyresult = 1;
-  goto yyreturnlab;
+  goto yyreturn;
 
 
-/*-----------------------------------------------------------.
-| yyexhaustedlab -- YYNOMEM (memory exhaustion) comes here.  |
-`-----------------------------------------------------------*/
+#if !defined yyoverflow || YYERROR_VERBOSE
+/*-------------------------------------------------.
+| yyexhaustedlab -- memory exhaustion comes here.  |
+`-------------------------------------------------*/
 yyexhaustedlab:
   yyerror (&yylloc, ctx, root, errors, sb, YY_("memory exhausted"));
   yyresult = 2;
-  goto yyreturnlab;
+  /* Fall through.  */
+#endif
 
 
-/*----------------------------------------------------------.
-| yyreturnlab -- parsing is finished, clean up and return.  |
-`----------------------------------------------------------*/
-yyreturnlab:
-  if (yychar != SCHEMA_EMPTY)
+/*-----------------------------------------------------.
+| yyreturn -- parsing is finished, return the result.  |
+`-----------------------------------------------------*/
+yyreturn:
+  if (yychar != YYEMPTY)
     {
       /* Make sure we have latest lookahead translation.  See comments at
          user semantic actions for why this is necessary.  */
@@ -7371,15 +7213,16 @@ yyreturnlab:
   while (yyssp != yyss)
     {
       yydestruct ("Cleanup: popping",
-                  YY_ACCESSING_SYMBOL (+*yyssp), yyvsp, yylsp, ctx, root, errors, sb);
+                  yystos[+*yyssp], yyvsp, yylsp, ctx, root, errors, sb);
       YYPOPSTACK (1);
     }
 #ifndef yyoverflow
   if (yyss != yyssa)
     YYSTACK_FREE (yyss);
 #endif
+#if YYERROR_VERBOSE
   if (yymsg != yymsgbuf)
     YYSTACK_FREE (yymsg);
+#endif
   return yyresult;
 }
-

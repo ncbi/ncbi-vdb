@@ -38,30 +38,22 @@
 #ifndef YY_AST_HOME_BOSHKINS_NCBI_DEVEL_NCBI_VDB_LIBS_SCHEMA_ZZ_SCHEMA_AST_HPP_INCLUDED
 # define YY_AST_HOME_BOSHKINS_NCBI_DEVEL_NCBI_VDB_LIBS_SCHEMA_ZZ_SCHEMA_AST_HPP_INCLUDED
 /* Debug traces.  */
-#ifndef AST_DEBUG
-# if defined YYDEBUG
+#ifndef YYDEBUG
+# define YYDEBUG 0
+#endif
 #if YYDEBUG
-#   define AST_DEBUG 1
-#  else
-#   define AST_DEBUG 0
-#  endif
-# else /* ! defined YYDEBUG */
-#  define AST_DEBUG 0
-# endif /* ! defined YYDEBUG */
-#endif  /* ! defined AST_DEBUG */
-#if AST_DEBUG
-extern int Ast_debug;
+extern int AST_debug;
 #endif
 
 /* Token kinds.  */
-#ifndef AST_TOKENTYPE
-# define AST_TOKENTYPE
-  enum Ast_tokentype
+#ifndef YYTOKENTYPE
+# define YYTOKENTYPE
+  enum yytokentype
   {
-    AST_EMPTY = -2,
+    YYEMPTY = -2,
     END_SOURCE = 0,                /* "end of source"  */
-    AST_error = 256,               /* error  */
-    AST_UNDEF = 257,               /* "invalid token"  */
+    YYerror = 256,                 /* error  */
+    YYUNDEF = 257,                 /* "invalid token"  */
     UNRECOGNIZED = 258,            /* UNRECOGNIZED  */
     ELLIPSIS = 259,                /* ELLIPSIS  */
     INCREMENT = 260,               /* INCREMENT  */
@@ -198,12 +190,12 @@ extern int Ast_debug;
     PT_ALIASMEMBER = 391,          /* PT_ALIASMEMBER  */
     PT_VIEWSPEC = 392              /* PT_VIEWSPEC  */
   };
-  typedef enum Ast_tokentype Ast_token_kind_t;
+  typedef enum yytokentype yytoken_kind_t;
 #endif
 
 /* Value type.  */
-#if ! defined AST_STYPE && ! defined AST_STYPE_IS_DECLARED
-union AST_STYPE
+#if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
+union YYSTYPE
 {
 
   const Token*  tok;
@@ -213,15 +205,15 @@ union AST_STYPE
 
 
 };
-typedef union AST_STYPE AST_STYPE;
-# define AST_STYPE_IS_TRIVIAL 1
-# define AST_STYPE_IS_DECLARED 1
+typedef union YYSTYPE YYSTYPE;
+# define YYSTYPE_IS_TRIVIAL 1
+# define YYSTYPE_IS_DECLARED 1
 #endif
 
 
 
 
-int Ast_parse (ctx_t ctx, AST*& p_ast, ASTBuilder& p_builder, ParseTreeScanner& p_sb);
+int AST_parse (ctx_t ctx, AST*& p_ast, ASTBuilder& p_builder, ParseTreeScanner& p_sb);
 
 
 #endif /* !YY_AST_HOME_BOSHKINS_NCBI_DEVEL_NCBI_VDB_LIBS_SCHEMA_ZZ_SCHEMA_AST_HPP_INCLUDED  */

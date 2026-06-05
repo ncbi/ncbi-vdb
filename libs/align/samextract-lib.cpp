@@ -87,7 +87,7 @@ void logmsg( const char * fname, int line, const char * func,
 rc_t SAM_parseline( SAMExtractor * state )
 {
     DBG( "Parsing line (%d bytes): '%s'", strlen( curline ), curline );
-    Sam_parse( state );
+    SAMparse( state );
     return state->rc;
 }
 
@@ -604,7 +604,7 @@ LIB_EXPORT rc_t CC SAMExtractorMake( SAMExtractor ** state, const KFile * fin,
 LIB_EXPORT rc_t CC SAMExtractorRelease( SAMExtractor * s )
 {
     DBG( "complete release_Extractor" );
-    Sam_lex_destroy();
+    SAMlex_destroy();
 
     SAMExtractorInvalidateHeaders( s );
     SAMExtractorInvalidateAlignments( s );

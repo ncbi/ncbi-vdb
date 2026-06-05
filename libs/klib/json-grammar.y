@@ -36,8 +36,9 @@
     #include <klib/text.h>
     #include <klib/printf.h>
 
-    extern int JsonScan_yylex ( JsonToken *lvalp, JSON_LTYPE *llocp, JsonScanBlock* sb );
     #define Json_lex JsonScan_yylex
+
+    extern enum yytokentype JsonScan_yylex ( YYSTYPE *lvalp, YYLTYPE *llocp, JsonScanBlock* sb );
 
     void Json_error ( YYLTYPE *                 p_llocp,
                       struct KJsonValue **      p_root,
@@ -80,7 +81,7 @@
 
 %}
 
-%define api.prefix {Json_}
+%name-prefix "Json_"
 %parse-param { struct KJsonValue ** root }
 %param { struct JsonScanBlock* sb }
 

@@ -39,7 +39,7 @@
     #include "samextract-pool.h"
     #include <align/samextract-lib.h>
     #include <klib/rc.h>
-    int Sam_lex(SAMExtractor *);
+    int SAMlex(SAMExtractor *);
 %}
 
 /* Bison Declarations */
@@ -47,7 +47,7 @@
  char * strval;
 }
 
-%define api.prefix {Sam_}
+%name-prefix "SAM"
 %param { SAMExtractor * state}
 %require "3.0"
 %define parse.error verbose
@@ -387,7 +387,7 @@ rg:  RGID VALUE {
         ; }
    | VALUE VALUE {
         WARN("Unknown readgroup (RG) tag:%s", $1);
-
+        
         ;
         }
    | TAB TAB EOL {

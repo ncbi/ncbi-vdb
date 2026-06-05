@@ -30,26 +30,26 @@
     #include <klib/rc.h>
     #include <klib/namelist.h>
 
-    #undef YYSTYPE
+    #define YYSTYPE_IS_DECLARED
     #define YYSTYPE KFGSymbol
     #include "config-grammar.h"
 
-    #define Kfg_lex KFGScan_yylex
+    #define KFG_lex KFGScan_yylex
 
     /* required parameter to VNamelistMake */
     #define NAMELIST_ALLOC_BLKSIZE 10
 
     static void ReportRc(KFGParseBlock* pb, KFGScanBlock* sb, rc_t rc);
     static void AppendName(KFGScanBlock* sb, VNamelist*, const KFGToken*);
-    static void Kfg_error(KFGParseBlock* pb, KFGScanBlock* sb, const char* msg);
+    static void KFG_error(KFGParseBlock* pb, KFGScanBlock* sb, const char* msg);
 %}
 
-%define api.pure
+%pure-parser
 %parse-param {KFGParseBlock* pb }
 %lex-param {KFGToken* sb}
 %parse-param {KFGScanBlock* sb }
 
-%define api.prefix {Kfg_}
+%name-prefix="KFG_"
 
  /* tokens without textual representation or internal for the scanner */
 %token kfgEND_INPUT 0
@@ -132,7 +132,7 @@ line_end
 #include <klib/token.h>
 #include <klib/writer.h>
 
-void Kfg_error(KFGParseBlock* pb, KFGScanBlock* sb, const char* msg)
+void KFG_error(KFGParseBlock* pb, KFGScanBlock* sb, const char* msg)
 {
     sb->report_error(sb, msg);
 }

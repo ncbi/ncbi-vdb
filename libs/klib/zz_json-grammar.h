@@ -1,8 +1,8 @@
-/* A Bison parser, made by GNU Bison 3.8.2.  */
+/* A Bison parser, made by GNU Bison 3.5.1.  */
 
 /* Bison interface for Yacc-like parsers in C
 
-   Copyright (C) 1984, 1989-1990, 2000-2015, 2018-2021 Free Software Foundation,
+   Copyright (C) 1984, 1989-1990, 2000-2015, 2018-2020 Free Software Foundation,
    Inc.
 
    This program is free software: you can redistribute it and/or modify
@@ -16,7 +16,7 @@
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <https://www.gnu.org/licenses/>.  */
+   along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 /* As a special exception, you may create a larger work that contains
    part or all of the Bison parser skeleton and distribute that work
@@ -31,72 +31,57 @@
    This special exception was added by the Free Software Foundation in
    version 2.2 of Bison.  */
 
-/* DO NOT RELY ON FEATURES THAT ARE NOT DOCUMENTED in the manual,
-   especially those whose name start with YY_ or yy_.  They are
-   private implementation details that can be changed or removed.  */
+/* Undocumented macros, especially those whose name start with YY_,
+   are private implementation details.  Do not rely on them.  */
 
 #ifndef YY_JSON_HOME_BOSHKINS_NCBI_DEVEL_NCBI_VDB_LIBS_KLIB_ZZ_JSON_GRAMMAR_H_INCLUDED
 # define YY_JSON_HOME_BOSHKINS_NCBI_DEVEL_NCBI_VDB_LIBS_KLIB_ZZ_JSON_GRAMMAR_H_INCLUDED
 /* Debug traces.  */
-#ifndef JSON_DEBUG
-# if defined YYDEBUG
+#ifndef YYDEBUG
+# define YYDEBUG 0
+#endif
 #if YYDEBUG
-#   define JSON_DEBUG 1
-#  else
-#   define JSON_DEBUG 0
-#  endif
-# else /* ! defined YYDEBUG */
-#  define JSON_DEBUG 0
-# endif /* ! defined YYDEBUG */
-#endif  /* ! defined JSON_DEBUG */
-#if JSON_DEBUG
 extern int Json_debug;
 #endif
 
-/* Token kinds.  */
-#ifndef JSON_TOKENTYPE
-# define JSON_TOKENTYPE
-  enum Json_tokentype
+/* Token type.  */
+#ifndef YYTOKENTYPE
+# define YYTOKENTYPE
+  enum yytokentype
   {
-    JSON_EMPTY = -2,
-    END_SOURCE = 0,                /* "end of source"  */
-    JSON_error = 256,              /* error  */
-    JSON_UNDEF = 257,              /* "invalid token"  */
-    UNRECOGNIZED = 258,            /* "unrecognized token"  */
-    jsonSTRING = 259,              /* "string"  */
-    jsonNUMBER = 260,              /* "number"  */
-    jsonTRUE = 261,                /* "true"  */
-    jsonFALSE = 262,               /* "false"  */
-    jsonNULL = 263                 /* "null"  */
+    END_SOURCE = 0,
+    UNRECOGNIZED = 258,
+    jsonSTRING = 259,
+    jsonNUMBER = 260,
+    jsonTRUE = 261,
+    jsonFALSE = 262,
+    jsonNULL = 263
   };
-  typedef enum Json_tokentype Json_token_kind_t;
 #endif
 
 /* Value type.  */
-#if ! defined JSON_STYPE && ! defined JSON_STYPE_IS_DECLARED
-typedef JsonToken JSON_STYPE;
-# define JSON_STYPE_IS_TRIVIAL 1
-# define JSON_STYPE_IS_DECLARED 1
+#if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
+typedef JsonToken YYSTYPE;
+# define YYSTYPE_IS_TRIVIAL 1
+# define YYSTYPE_IS_DECLARED 1
 #endif
 
 /* Location type.  */
-#if ! defined JSON_LTYPE && ! defined JSON_LTYPE_IS_DECLARED
-typedef struct JSON_LTYPE JSON_LTYPE;
-struct JSON_LTYPE
+#if ! defined YYLTYPE && ! defined YYLTYPE_IS_DECLARED
+typedef struct YYLTYPE YYLTYPE;
+struct YYLTYPE
 {
   int first_line;
   int first_column;
   int last_line;
   int last_column;
 };
-# define JSON_LTYPE_IS_DECLARED 1
-# define JSON_LTYPE_IS_TRIVIAL 1
+# define YYLTYPE_IS_DECLARED 1
+# define YYLTYPE_IS_TRIVIAL 1
 #endif
 
 
 
-
 int Json_parse (struct KJsonValue ** root, struct JsonScanBlock* sb);
-
 
 #endif /* !YY_JSON_HOME_BOSHKINS_NCBI_DEVEL_NCBI_VDB_LIBS_KLIB_ZZ_JSON_GRAMMAR_H_INCLUDED  */

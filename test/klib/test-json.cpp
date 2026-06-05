@@ -45,9 +45,9 @@
 #define YYDEBUG 0
 #include "../../libs/klib/json-lex.h"
 #include "../../libs/klib/json-grammar.h"
-#include "../../libs/klib/json-priv.h"
-extern "C" int JsonScan_yylex ( JsonToken *lvalp, JSON_LTYPE *llocp, JsonScanBlock* sb );
+extern "C" enum yytokentype JsonScan_yylex ( YYSTYPE *lvalp, YYLTYPE *llocp, JsonScanBlock* sb );
 
+#include "../../libs/klib/json-priv.h"
 
 using namespace std;
 
@@ -62,8 +62,8 @@ Scan( const char * p_input, string * p_value = 0, bool p_debug = false )
     JsonScanBlock sb;
     JsonScan_yylex_init ( & sb, p_input, string_size ( p_input ) );
     JsonScan_set_debug ( & sb, p_debug );
-    JSON_STYPE lvalp;
-    JSON_LTYPE llocp;
+    YYSTYPE lvalp;
+    YYLTYPE llocp;
     int ret = JsonScan_yylex ( & lvalp, & llocp, & sb );
     if ( p_value != 0 )
     {
@@ -80,9 +80,9 @@ VerifyNumber( const char * p_input, bool p_debug = false )
     JsonScanBlock sb;
     JsonScan_yylex_init ( & sb, p_input, string_size ( p_input ) );
     JsonScan_set_debug ( & sb, p_debug );
-    JSON_LTYPE llocp;
+    YYLTYPE llocp;
 
-    JSON_STYPE token;
+    YYSTYPE token;
     int type = JsonScan_yylex ( & token, & llocp, & sb );
 
     THROW_ON_FALSE ( jsonNUMBER == type );

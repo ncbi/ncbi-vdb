@@ -116,9 +116,9 @@ ASTBuilder :: Build ( ctx_t ctx, const ParseTree& p_root, const char * p_source,
 {
     FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     AST* ret = 0;
-    Ast_debug = p_debugParse;
+    AST_debug = p_debugParse;
     ParseTreeScanner scanner ( ctx, p_root, p_source );
-    if ( Ast_parse ( ctx, ret, * this, scanner ) == 0 )
+    if ( AST_parse ( ctx, ret, * this, scanner ) == 0 )
     {
         return ret;
     }
