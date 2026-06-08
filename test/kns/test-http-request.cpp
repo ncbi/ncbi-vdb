@@ -714,7 +714,7 @@ static void CC PParameterWhack(BSTNode* n, void* ignore) {
     free(self);
 }
 
-static rc_t BuildCanonicalQueryString(const String* query,
+static rc_t PrepareCanonicalQueryString(const String* query,
     KDataBuffer* canonicalQueryString)
 {
     rc_t rc = 0;
@@ -819,7 +819,7 @@ TEST_CASE(TestAbsolutePathComponentOfTheURIExtraction) {
     KDataBuffer canonicalQueryString;
 
     REQUIRE_RC(KDataBufferMake(&canonicalQueryString, 8, 0));
-    REQUIRE_RC(BuildCanonicalQueryString(&block.query, &canonicalQueryString));
+    REQUIRE_RC(PrepareCanonicalQueryString(&block.query, &canonicalQueryString));
     string a((char*)canonicalQueryString.base, 0,
         canonicalQueryString.elem_count - 1);
     string e("marker=someMarker&max-keys=20&prefix=somePrefix");
@@ -841,7 +841,7 @@ TEST_CASE(TestAbsolutePathComponentOfTheURIExtraction) {
     StringWhack(uri);
 
     REQUIRE_RC(KDataBufferMake(&canonicalQueryString, 8, 0));
-    REQUIRE_RC(BuildCanonicalQueryString(&block.query, &canonicalQueryString));
+    REQUIRE_RC(PrepareCanonicalQueryString(&block.query, &canonicalQueryString));
     a = string((char*)canonicalQueryString.base, 0,
         canonicalQueryString.elem_count - 1);
     e = string("acl=");
@@ -862,7 +862,7 @@ TEST_CASE(TestAbsolutePathComponentOfTheURIExtraction) {
     StringWhack(uri);
 
     REQUIRE_RC(KDataBufferMake(&canonicalQueryString, 8, 0));
-    REQUIRE_RC(BuildCanonicalQueryString(&block.query, &canonicalQueryString));
+    REQUIRE_RC(PrepareCanonicalQueryString(&block.query, &canonicalQueryString));
     a = string((char*)canonicalQueryString.base, 0,
         canonicalQueryString.elem_count - 1);
     e = string("");
@@ -894,7 +894,7 @@ static void AddHeader(BSTNode* n, void* data) {
 }
 
 /*struct CanonicalHeadersBuilder {    const BSTree* canonicalHdrs;};
-static rc_t BuildCanonicalHeaders(const BSTree* hdrs) {
+static rc_t PrepareCanonicalHeaders(const BSTree* hdrs) {
     //KDataBuffer canonicalHeaders;
     rc_t rc = 0;// KDataBufferMake(&canonicalHeaders, 8, 0);
     BSTree canonicalHdrs;
@@ -928,10 +928,14 @@ FIXTURE_TEST_CASE(TestHeadersCanonization, HttpRequestFixture) {
         "x-amz-content-sha256" "="
         "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b9" ";"
         "x-amz-date" "=" "20130708T220855Z" ";"));
-    //REQUIRE_RC(BuildCanonicalHeaders(KClientHttpRequestGetHeaders(m_req)));
+    //REQUIRE_RC(PrepareCanonicalHeaders(KClientHttpRequestGetHeaders(m_req)));
 }
 #endif
 
+#ifdef ALL
+FIXTURE_TEST_CASE(TestPrepareCanonicalHeaders, HttpRequestFixture) {
+}
+#endif
 //////////////////////////////////////////// Main
 
 static rc_t argsHandler ( int argc, char * argv [] ) {
