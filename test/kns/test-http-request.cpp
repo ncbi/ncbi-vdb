@@ -648,7 +648,9 @@ struct SParameter {
     PParameter* encoded;
 };
 
-static rc_t ParameterInit(SParameter* parameter, const char* buf, size_t size) {
+static rc_t
+ParameterInit(SParameter* parameter, const char* buf, size_t size)
+{
     rc_t rc = 0;
 
     const char* end = buf + size;
