@@ -380,7 +380,7 @@ rc_t KClientHttpProxyConnect ( KClientHttp * self, const String * hostname, uint
         {
             rc = KDataBufferPrintf( & buffer,
                 "CONNECT %S:%u HTTP/1.1\r\n"
-                "Host: %S:%u\r\n\r\n"
+                "host: %S:%u\r\n\r\n"
                 , &hostname_copy
                 , port
                 , &hostname_copy
@@ -1459,12 +1459,12 @@ rc_t KClientHttpGetHeaderLine ( KClientHttp *self, timeout_t *tm, BSTree *hdrs,
 
                 switch ( name . size )
                 {
-                case sizeof "Connection" - 1:
+                case sizeof "connection" - 1:
                     if ( value . size == sizeof "close" - 1 )
                     {
                         if ( tolower ( name . addr [ 0 ] ) == 'c' && tolower ( value . addr [ 0 ] ) == 'c' )
                         {
-                            if ( strcase_cmp ( name . addr, name . size, "Connection", name . size, ( uint32_t ) name . size ) == 0 &&
+                            if ( strcase_cmp ( name . addr, name . size, "connection", name . size, ( uint32_t ) name . size ) == 0 &&
                                  strcase_cmp ( value . addr, value . size, "close", value . size, ( uint32_t ) value . size ) == 0 )
                             {
                                 DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS ),
@@ -1474,12 +1474,12 @@ rc_t KClientHttpGetHeaderLine ( KClientHttp *self, timeout_t *tm, BSTree *hdrs,
                         }
                     }
                     break;
-                case sizeof "Content-Length" - 1:
+                case sizeof "content-length" - 1:
                     if ( value . size == sizeof "0" - 1 )
                     {
                         if ( tolower ( name . addr [ 0 ] ) == 'c' && value . addr [ 0 ] == '0' )
                         {
-                            if ( strcase_cmp ( name . addr, name . size, "Content-Length", name . size, ( uint32_t ) name . size ) == 0 )
+                            if ( strcase_cmp ( name . addr, name . size, "content-length", name . size, ( uint32_t ) name . size ) == 0 )
                             {
                                 * len_zero = true;
                             }
@@ -2278,7 +2278,7 @@ LIB_EXPORT bool CC KClientHttpResultKeepAlive ( const KClientHttpResult *self )
             size_t bsize = sizeof buffer;
 
             /* retreive the node that has the keep-alive property */
-            rc = KClientHttpResultGetHeader ( self, "Connection", buffer, bsize, & num_writ );
+            rc = KClientHttpResultGetHeader ( self, "connection", buffer, bsize, & num_writ );
             if ( rc == 0 )
             {
                 String keep_alive, compare;
@@ -2318,10 +2318,10 @@ rc_t KClientHttpResultHandleContentRange ( const KClientHttpResult *self, uint64
     char buffer [ 1024 ];
     const size_t bsize = sizeof buffer;
 
-    /* get Content-Range
+    /* get content-range
      *  expect: "bytes <first-position>-<last-position>/<total-size>"
      */
-    rc = KClientHttpResultGetHeader ( self, "Content-Range", buffer, bsize, & num_read );
+    rc = KClientHttpResultGetHeader ( self, "content-range", buffer, bsize, & num_read );
     if ( rc == 0 )
     {
         char * sep;
@@ -2333,7 +2333,7 @@ rc_t KClientHttpResultHandleContentRange ( const KClientHttpResult *self, uint64
         if ( sep == NULL )
         {
             rc = RC ( rcNS, rcNoTarg, rcParsing, rcNoObj, rcNotFound );
-            TRACE ( "badly formed Content-Range header: '%.*s': lacks a space separator\n", ( int ) ( end - buffer ), buffer );
+            TRACE ( "badly formed content-range header: '%.*s': lacks a space separator\n", ( int ) ( end - buffer ), buffer );
         }
         else
         {
@@ -2350,7 +2350,7 @@ rc_t KClientHttpResultHandleContentRange ( const KClientHttpResult *self, uint64
             if ( sep == buf || * sep != '-' )
             {
                 rc =  RC ( rcNS, rcNoTarg, rcParsing, rcNoObj, rcNotFound );
-                TRACE ( "badly formed Content-Range header: '%.*s': numeral ends on '%c'\n", ( int ) ( end - buffer ), buffer, ( sep == buffer ) ? 0 : * sep );
+                TRACE ( "badly formed content-range header: '%.*s': numeral ends on '%c'\n", ( int ) ( end - buffer ), buffer, ( sep == buffer ) ? 0 : * sep );
             }
             else
             {
@@ -2361,7 +2361,7 @@ rc_t KClientHttpResultHandleContentRange ( const KClientHttpResult *self, uint64
                 if ( sep == buf || * sep != '/' )
                 {
                     rc =  RC ( rcNS, rcNoTarg, rcParsing, rcNoObj, rcNotFound );
-                    TRACE ( "badly formed Content-Range header: '%.*s': numeral ends on '%c'\n", ( int ) ( end - buffer ), buffer, ( sep == buffer ) ? 0 : * sep );
+                    TRACE ( "badly formed content-range header: '%.*s': numeral ends on '%c'\n", ( int ) ( end - buffer ), buffer, ( sep == buffer ) ? 0 : * sep );
                 }
                 else
                 {
@@ -2372,7 +2372,7 @@ rc_t KClientHttpResultHandleContentRange ( const KClientHttpResult *self, uint64
                     if ( sep == buf || * sep != 0 )
                     {
                         rc =  RC ( rcNS, rcNoTarg, rcParsing, rcNoObj, rcNotFound );
-                        TRACE ( "badly formed Content-Range header: '%.*s': numeral ends on '%c'\n", ( int ) ( end - buffer ), buffer, ( sep == buffer ) ? 0 : * sep );
+                        TRACE ( "badly formed content-range header: '%.*s': numeral ends on '%c'\n", ( int ) ( end - buffer ), buffer, ( sep == buffer ) ? 0 : * sep );
                     }
                     else
                     {
@@ -2383,27 +2383,27 @@ rc_t KClientHttpResultHandleContentRange ( const KClientHttpResult *self, uint64
                              end_pos > total )
                         {
                             rc = RC ( rcNS, rcNoTarg, rcParsing, rcNoObj, rcNotFound );
-                            TRACE ( "badly formed Content-Range header: total=%lu, start_pos=%lu, end_pos=%lu\n", total, start_pos, end_pos );
+                            TRACE ( "badly formed content-range header: total=%lu, start_pos=%lu, end_pos=%lu\n", total, start_pos, end_pos );
                             if ( total == 0 )
-                                TRACE ( "badly formed Content-Range header: total==0 : ERROR%c", '\n' );
+                                TRACE ( "badly formed content-range header: total==0 : ERROR%c", '\n' );
                             if ( start_pos > total )
-                                TRACE ( "badly formed Content-Range header: start_pos=%lu > total=%lu : ERROR\n", start_pos, total );
+                                TRACE ( "badly formed content-range header: start_pos=%lu > total=%lu : ERROR\n", start_pos, total );
                             if ( end_pos < start_pos )
-                                TRACE ( "badly formed Content-Range header: end_pos=%lu < start_pos=%lu : ERROR\n", end_pos, start_pos );
+                                TRACE ( "badly formed content-range header: end_pos=%lu < start_pos=%lu : ERROR\n", end_pos, start_pos );
                             if ( end_pos > total )
-                                TRACE ( "badly formed Content-Range header: end_pos=%lu > total=%lu : ERROR\n", end_pos, total );
+                                TRACE ( "badly formed content-range header: end_pos=%lu > total=%lu : ERROR\n", end_pos, total );
                         }
                         else
                         {
                             uint64_t length;
 
                             /* get content-length to confirm bytes sent */
-                            rc = KClientHttpResultGetHeader ( self, "Content-Length", buffer, bsize, & num_read );
+                            rc = KClientHttpResultGetHeader ( self, "content-length", buffer, bsize, & num_read );
                             if ( rc != 0 )
                             {
 
                                 /* remember that we can have chunked encoding,
-                                   so "Content-Length" may not exist. */
+                                   so "content-length" may not exist. */
                                 * pos = start_pos;
                                 * bytes = end_pos - start_pos + 1;
                                 if ( _total != NULL )
@@ -2422,7 +2422,7 @@ rc_t KClientHttpResultHandleContentRange ( const KClientHttpResult *self, uint64
                             if ( sep == buf || * sep != 0 )
                             {
                                 rc =  RC ( rcNS, rcNoTarg, rcParsing, rcNoObj, rcNotFound );
-                                TRACE ( "badly formed Content-Length header: '%.*s': numeral ends on '%c'\n", ( int ) ( end - buffer ), buffer, ( sep == buffer ) ? 0 : * sep );
+                                TRACE ( "badly formed content-length header: '%.*s': numeral ends on '%c'\n", ( int ) ( end - buffer ), buffer, ( sep == buffer ) ? 0 : * sep );
                             }
                             else
                             {
@@ -2431,13 +2431,13 @@ rc_t KClientHttpResultHandleContentRange ( const KClientHttpResult *self, uint64
                                      ( length > total ) )
                                 {
                                     rc = RC ( rcNS, rcNoTarg, rcParsing, rcNoObj, rcNotFound );
-                                    TRACE ( "badly formed Content-Length header: length=%lu, range_len=%lu, total=%lu\n", length, ( end_pos - start_pos ) + 1, total );
+                                    TRACE ( "badly formed content-length header: length=%lu, range_len=%lu, total=%lu\n", length, ( end_pos - start_pos ) + 1, total );
                                     if ( length != ( end_pos - start_pos ) + 1 )
-                                        TRACE ( "badly formed Content-Length header: length=%lu != 0 : ERROR\n", length );
+                                        TRACE ( "badly formed content-length header: length=%lu != 0 : ERROR\n", length );
                                     if ( start_pos > total )
-                                        TRACE ( "badly formed Content-Length header: start_pos=%lu > range_len=%lu : ERROR\n", length, ( end_pos - start_pos ) + 1 );
+                                        TRACE ( "badly formed content-length header: start_pos=%lu > range_len=%lu : ERROR\n", length, ( end_pos - start_pos ) + 1 );
                                     if ( length > total )
-                                        TRACE ( "badly formed Content-Length header: length=%lu > total=%lu : ERROR\n", length, total );
+                                        TRACE ( "badly formed content-length header: length=%lu > total=%lu : ERROR\n", length, total );
                                 }
                                 else
                                 {
@@ -2530,7 +2530,7 @@ LIB_EXPORT bool CC KClientHttpResultSize ( const KClientHttpResult *self, uint64
         }
 
         /* check for content-length */
-        rc = KClientHttpResultGetHeader ( self, "Content-Length", buffer, bsize, & num_read );
+        rc = KClientHttpResultGetHeader ( self, "content-length", buffer, bsize, & num_read );
         if ( rc == 0 )
         {
             char * sep;
@@ -2540,7 +2540,7 @@ LIB_EXPORT bool CC KClientHttpResultSize ( const KClientHttpResult *self, uint64
             if ( sep == buffer || * sep != 0 )
             {
                 rc =  RC ( rcNS, rcNoTarg, rcParsing, rcNoObj, rcNotFound );
-                TRACE ( "badly formed Content-Length header: '%.*s': numeral ends on '%c'\n", ( int ) num_read, buffer, ( sep == buffer ) ? 0 : * sep );
+                TRACE ( "badly formed content-length header: '%.*s': numeral ends on '%c'\n", ( int ) num_read, buffer, ( sep == buffer ) ? 0 : * sep );
             }
             else
             {

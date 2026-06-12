@@ -58,7 +58,8 @@ TEST_SUITE( HttpRequestVerifyURLSuite );
 using namespace std;
 using namespace ncbi::NK;
 
-#define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); if (rc2 != 0 && rc == 0) { rc = rc2; } obj = NULL; } while (false)
+#define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
+              if (rc2 != 0 && rc == 0) { rc = rc2; } obj = NULL; } while (false)
 
 class HttpRequestFixture : public HttpFixture
 {
@@ -130,8 +131,8 @@ FIXTURE_TEST_CASE(HttpRequest_PUT_sra, HttpRequestFixture)
         expected += "http://HttpRequest_PUT_sra.com";
     expected +=
         "/blah HTTP/1.1\r\n"
-        "Host: HttpRequest_PUT_sra.com\r\n"
-        "Accept: */*\r\n"
+        "host: HttpRequest_PUT_sra.com\r\n"
+        "accept: */*\r\n"
         "X-SRA-Release: " + string(version) + "\r\n"
         "X-VDB-Release: " + string(version) + "\r\n"
         "User-Agent: ";
@@ -163,7 +164,7 @@ FIXTURE_TEST_CASE(HttpRequest_PUT_non_sra, HttpRequestFixture)
         expected += "http://HttpRequest_PUT_non_sra.com";
     expected +=
         "/blah HTTP/1.1\r\n"
-        "Host: HttpRequest_PUT_non_sra.com\r\n"
+        "host: HttpRequest_PUT_non_sra.com\r\n"
         "\r\n";
     assert(!expected.empty());
 
@@ -186,8 +187,8 @@ FIXTURE_TEST_CASE(HttpRequest_head_as_get, HttpRequestFixture)
 
     TestStream::AddResponse(
         "HTTP/1.1 206 Partial Content\r\n"
-        "Content-Range: bytes 0-6/7\r\n"
-        "Content-Length: 7\r\n"
+        "content-range: bytes 0-6/7\r\n"
+        "content-length: 7\r\n"
         "\r\n"
         "1234567"
         "\r\n");
@@ -214,8 +215,8 @@ FIXTURE_TEST_CASE(HttpRequest_head_as_post, HttpRequestFixture)
 
     TestStream::AddResponse(
         "HTTP/1.1 206 Partial Content\r\n"
-        "Content-Range: bytes 0-6/7\r\n"
-        "Content-Length: 7\r\n"
+        "content-range: bytes 0-6/7\r\n"
+        "content-length: 7\r\n"
         "\r\n"
         "1234567"
         "\r\n");
@@ -243,8 +244,8 @@ FIXTURE_TEST_CASE(HttpRequest_HEAD_as_POST_preserveUAsuffix, HttpRequestFixture)
 
     TestStream::AddResponse(
         "HTTP/1.1 206 Partial Content\r\n"
-        "Content-Range: bytes 0-6/7\r\n"
-        "Content-Length: 7\r\n"
+        "content-range: bytes 0-6/7\r\n"
+        "content-length: 7\r\n"
         "\r\n"
         "1234567"
         "\r\n");
@@ -338,11 +339,11 @@ FIXTURE_TEST_CASE(HttpRequestAddQueryParam_URL_encoding, HttpRequestFixture)
 FIXTURE_TEST_CASE(HttpRequestAddHeader, HttpRequestFixture)
 {
     MakeRequest( GetName() );
-    REQUIRE_RC( KClientHttpRequestAddHeader(m_req, "Accept", "text/html") );
+    REQUIRE_RC( KClientHttpRequestAddHeader(m_req, "accept", "text/html") );
     KDataBuffer buffer;
     THROW_ON_RC( KDataBufferMake( & buffer, 8, 0 ) );
     REQUIRE_RC( KClientHttpRequestFormatMsg(m_req, & buffer, "HEAD") );
-    REQUIRE( strstr((char*)buffer.base, "Accept: */*") == NULL) ;
+    REQUIRE( strstr((char*)buffer.base, "accept: */*") == NULL) ;
     REQUIRE_RC ( KDataBufferWhack( &buffer ) );
 }
 
@@ -881,7 +882,7 @@ static void AddHeader(BSTNode* n, void* data) {
     strncat(b, self->name.addr, self->name.size);
     strcat(b, "=");
     strncat(b, self->value.addr, self->value.size);
-    strcat(b, ";");
+    strcat(b, "\n");
 
     /*rc_t rc = 0;
     const String* s = NULL;
@@ -919,17 +920,18 @@ FIXTURE_TEST_CASE(TestHeadersCanonization, HttpRequestFixture) {
         " \t\v\n\r\fe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b9 \t\v\n\r\f"));
     //              123456781012345678201234567830123456784012345
 
-    REQUIRE_RC(KClientHttpRequestAddHeader(m_req, "simple-header",
-        "simple-value"));
+    REQUIRE_RC(KClientHttpRequestAddHeader(m_req,
+        "simple-header", "simple-value"));
 
     const BSTree* hdrs(KClientHttpRequestGetHeaders(m_req));
     char b[512] = "";
     BSTreeForEach(hdrs, false, AddHeader, b);
 
-    REQUIRE_EQ(string(b), string("simple-header=simple-value;"
+    REQUIRE_EQ(string(b), string(
+        "simple-header=simple-value\n"
         "x-amz-content-sha256" "="
-        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b9" ";"
-        "x-amz-date" "=" "20130708T220855Z" ";"));
+                            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b9" "\n"
+        "x-amz-date" "=" "20130708T220855Z" "\n"));
     //REQUIRE_RC(PrepareCanonicalHeaders(KClientHttpRequestGetHeaders(m_req)));
 }
 #endif

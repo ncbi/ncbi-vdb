@@ -473,8 +473,8 @@ LIB_EXPORT rc_t CC KClientHttpRequestConnection ( KClientHttpRequest *self, bool
     {
         String name, value;
 
-        CONST_STRING ( & name, "Connection" );
-        /* if version is 1.1 and close is true, add 'close' to Connection header value. */
+        CONST_STRING ( & name, "connection" );
+        /* if version is 1.1 and close is true, add 'close' to connection header value. */
         /* if version if 1.1 default is false - no action needed */
         if ( self -> http -> vers == 0x01010000 && close == true )
             CONST_STRING ( & value, "close" );
@@ -574,7 +574,7 @@ LIB_EXPORT rc_t CC KClientHttpRequestAddHeader ( KClientHttpRequest *self,
             va_list args;
             va_start ( args, val );
 
-            /* disallow setting of "Host" and other headers */
+            /* disallow setting of "host" and other headers */
             name_size = string_size ( name );
 
 #define CSTRLEN( str ) \
@@ -587,20 +587,20 @@ LIB_EXPORT rc_t CC KClientHttpRequestAddHeader ( KClientHttpRequest *self,
 
             switch ( name_size )
             {
-            case CSTRLEN ( "Host" ):
-                if ( NAMEIS ( "Host" ) )
+            case CSTRLEN ( "host" ):
+                if ( NAMEIS ( "host" ) )
                     rc = RC ( rcNS, rcNoTarg, rcComparing, rcParam, rcUnsupported );
                 break;
-            case CSTRLEN ( "Content-Length" ):
-                if ( NAMEIS ( "Content-Length" ) )
+            case CSTRLEN ( "content-length" ):
+                if ( NAMEIS ( "content-length" ) )
                     rc = RC ( rcNS, rcNoTarg, rcComparing, rcParam, rcUnsupported );
                 break;
-            case CSTRLEN ( "If-None-Match" ):
-                if ( NAMEIS ( "If-None-Match" ) )
+            case CSTRLEN ( "if-none-match" ):
+                if ( NAMEIS ( "if-none-match" ) )
                     accept_not_modified = true;
                 break;
-            case CSTRLEN ( "If-Modified-Since" ):
-                if ( NAMEIS ( "If-Modified-Since" ) )
+            case CSTRLEN ( "if-modified-since" ):
+                if ( NAMEIS ( "if-modified-since" ) )
                     accept_not_modified = true;
                 break;
             }
@@ -1126,7 +1126,7 @@ static rc_t KClientHttpRequestFormatMsgBegin (
     if ( ! http -> proxy_ep )
     {   /* direct connection */
         rc = KDataBufferPrintf ( buffer,
-                             "%s %S%s%S HTTP/%.2V\r\nHost: %S\r\n"
+                             "%s %S%s%S HTTP/%.2V\r\nhost: %S\r\n"
                              , method
                              , & self -> url_block . path
                              , has_query
@@ -1363,7 +1363,7 @@ rc_t CC KClientHttpRequestFormatMsgInt( const KClientHttpRequest *self,
          return RC ( rcNS, rcNoTarg, rcReading, rcParam, rcNull );
     }
 
-    CONST_STRING ( &accept_string     , "Accept" );        /*  6 */
+    CONST_STRING ( &accept_string     , "accept" );        /*  6 */
     CONST_STRING ( &sra_release_string, "X-SRA-Release" ); /* 13 */
     CONST_STRING ( &vdb_release_string, "X-VDB-Release" ); /* 13 */
     CONST_STRING ( &user_agent_string , "User-Agent" );    /* 10 */
@@ -1393,7 +1393,7 @@ rc_t CC KClientHttpRequestFormatMsgInt( const KClientHttpRequest *self,
             if ( StringCaseCompare ( & node -> name, & user_agent_string ) == 0 )
                 have_user_agent = true;
         }
-        /* look for "Accept" */
+        /* look for "accept" */
         else if (!have_accept && node->name.len == 6) {
             if (StringCaseCompare(&node->name, &accept_string) == 0)
                 have_accept = true;
@@ -1421,9 +1421,9 @@ rc_t CC KClientHttpRequestFormatMsgInt( const KClientHttpRequest *self,
         SraReleaseVersion version;
         rc_t rs = SraReleaseVersionGet(&version);
 
-        /* add an Accept header if we did not find one already in the header tree */
+        /* add an accept header if we did not find one already in the header tree */
         if (!have_accept) {
-            r2 = KDataBufferPrintf(buffer, "Accept: */*\r\n");
+            r2 = KDataBufferPrintf(buffer, "accept: */*\r\n");
             if (rc == 0 && r2 != 0)
                 rc = r2;
         }
@@ -1595,7 +1595,7 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
 
     uint32_t uriForm = 1;
 
-    /* TBD - may want to prevent a Content-Type or other headers here */
+    /* TBD - may want to prevent a content-type or other headers here */
 
     if ( self -> body . elem_count != 0 )
         return RC ( rcNS, rcNoTarg, rcValidating, rcNoObj, rcIncorrect );
@@ -1649,7 +1649,7 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
         case 206:
             return 0;
         case 304:
-            /* check for "If-Modified-Since" or "If-None-Match" header in request and allow if present */
+            /* check for "if-modified-since" or "if-none-match" header in request and allow if present */
             if ( self -> accept_not_modified )
                 return 0;
             break;
@@ -1891,20 +1891,20 @@ rc_t CC KClientHttpRequestPOST_Int ( KClientHttpRequest *self, KClientHttpResult
     {
         /* "body" contains data plus NUL byte */
         rc = KClientHttpReplaceHeader ( & self -> hdrs,
-            "Content-Length", "%lu", self -> body . elem_count - 1 );
+            "content-length", "%lu", self -> body . elem_count - 1 );
         if ( rc == 0 )
         {
             String Content_Type;
             const KHttpHeader *node;
 
-            CONST_STRING ( & Content_Type, "Content-Type" );
+            CONST_STRING ( & Content_Type, "content-type" );
 
             node = ( const KHttpHeader* ) BSTreeFind ( & self -> hdrs, & Content_Type, KHttpHeaderCmp );
             if ( node == NULL )
             {
                 /* add content type for form parameters */
                 /* TBD - before general application, need to perform URL-encoding! */
-                rc = KClientHttpAddHeader ( & self -> hdrs, "Content-Type", "application/x-www-form-urlencoded" );
+                rc = KClientHttpAddHeader ( & self -> hdrs, "content-type", "application/x-www-form-urlencoded" );
             }
         }
 
@@ -1971,7 +1971,7 @@ rc_t CC KClientHttpRequestPOST_Int ( KClientHttpRequest *self, KClientHttpResult
             expiration = NULL;
             return 0;
         case 304:
-            /* check for "If-Modified-Since" or "If-None-Match" header in request and allow if present */
+            /* check for "if-modified-since" or "if-none-match" header in request and allow if present */
             if ( self -> accept_not_modified )
                 return 0;
             break;
@@ -1990,13 +1990,13 @@ rc_t CC KClientHttpRequestPOST_Int ( KClientHttpRequest *self, KClientHttpResult
             rc = KDataBufferResize ( & self -> body , 0 ); /* drop POST parameters */
             if (rc == 0 )
             {
-                rc = KClientHttpReplaceHeader ( & self -> hdrs, "Content-Length", "0" );
+                rc = KClientHttpReplaceHeader ( & self -> hdrs, "content-length", "0" );
                 if ( rc == 0 )
                 {
                    String Content_Type;
                    BSTNode *node;
 
-                   CONST_STRING ( & Content_Type, "Content-Type" );
+                   CONST_STRING ( & Content_Type, "content-type" );
 
                    node = BSTreeFind ( & self -> hdrs, & Content_Type, KHttpHeaderCmp );
                    if ( node != NULL )
