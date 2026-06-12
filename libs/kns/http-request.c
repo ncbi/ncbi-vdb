@@ -1138,11 +1138,11 @@ static rc_t KClientHttpRequestFormatMsgBegin (
     else { /* using proxy */
         http -> uf = EUriFormGuess ( & hostname, uriForm, http -> uf );
         if ( http -> uf == eUFOrigin ||
-	     ( http -> uf == eUFOriginNoPort && http -> port != 443 ) )
-	{
+	       ( http -> uf == eUFOriginNoPort && http -> port != 443 ) )
+        {
 /* the host does not like absoluteURI: use abs_path ( origin-form ) with port */
             rc = KDataBufferPrintf ( buffer,
-                             "%s %S%s%S HTTP/%.2V\r\nHost: %S:%u\r\n"
+                             "%s %S%s%S HTTP/%.2V\r\nhost: %S:%u\r\n"
                              , method
                              , & self -> url_block . path
                              , has_query
@@ -1157,7 +1157,7 @@ static rc_t KClientHttpRequestFormatMsgBegin (
         {   /* the host does not like absoluteURI:
 	       use abs_path ( origin-form ) without port */
             rc = KDataBufferPrintf ( buffer,
-                             "%s %S%s%S HTTP/%.2V\r\nHost: %S\r\n"
+                             "%s %S%s%S HTTP/%.2V\r\nhost: %S\r\n"
                              , method
                              , & self -> url_block . path
                              , has_query
@@ -1167,7 +1167,7 @@ static rc_t KClientHttpRequestFormatMsgBegin (
         }
         else if ( http -> port != 80 ) { /* absoluteURI: non-default port */
             rc = KDataBufferPrintf ( buffer,
-                             "%s %S://%S:%u%S%s%S HTTP/%.2V\r\nHost: %S\r\n"
+                             "%s %S://%S:%u%S%s%S HTTP/%.2V\r\nhost: %S\r\n"
                              , method
                              , & self -> url_block . scheme
                              , & hostname
