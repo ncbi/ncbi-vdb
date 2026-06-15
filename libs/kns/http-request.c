@@ -1181,7 +1181,7 @@ static rc_t KClientHttpRequestFormatMsgBegin (
         }
         else {                           /* absoluteURI: default port */
             rc = KDataBufferPrintf ( buffer,
-                             "%s %S://%S%S%s%S HTTP/%.2V\r\nHost: %S\r\n"
+                             "%s %S://%S%S%s%S HTTP/%.2V\r\nhost: %S\r\n"
                              , method
                              , & self -> url_block . scheme
                              , & hostname
