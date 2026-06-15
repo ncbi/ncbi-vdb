@@ -698,17 +698,17 @@ TEST_CASE ( RepeatedHeader ) {
                 < const KHttpHeader * > ( BSTNodeNext ( & hdr -> dad ) )
         )
     {
-        if ( StringEqual ( & hdr -> name, & s_v . AcceptRanges ) )  {
+        if ( StringCaseEqual ( & hdr -> name, & s_v . AcceptRanges ) )  {
             REQUIRE_EQ ( string ( hdr -> value . addr, hdr -> value . size ),
                          s_v . bytes );
             repeatedChecked = true;
         }
-        else if ( StringEqual ( & hdr -> name, & Server ) )  {
+        else if ( StringCaseEqual ( & hdr -> name, & Server ) )  {
             REQUIRE_EQ ( string ( hdr -> value . addr, hdr -> value . size ),
                          Apache );
             singleChecked = true;
         }
-        else if ( StringEqual ( & hdr -> name, & Via ) ) {
+        else if ( StringCaseEqual ( & hdr -> name, & Via ) ) {
             REQUIRE_EQ ( string ( hdr -> value . addr, hdr -> value . size ),
                          via );
             doubleChecked = true;
