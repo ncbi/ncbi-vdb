@@ -64,11 +64,10 @@ struct RCCreateLoc
     rc_t rc;
 };
 
-static RCCreateLoc RC_loc_queue [ 3 ];
-static atomic32_t RC_loc_reserve, RC_loc_written, RC_loc_read;
+thread_local static RCCreateLoc RC_loc_queue [ 3 ];
+thread_local static atomic32_t RC_loc_reserve, RC_loc_written, RC_loc_read;
 #define RC_LOC_QUEUE_SIZE ( sizeof RC_loc_queue / sizeof RC_loc_queue [ 0 ] )
 #define RC_LOC_QUEUE_MASK ( RC_LOC_QUEUE_SIZE - 1 )
-static bool reporting_unread = false;
 
 /*
  *  "appname" [ IN ] - identity of executable, usually argv[0]
@@ -158,7 +157,7 @@ static
 int64_t CC wrt_nvp_cmp_func(const void *a, const void *b, void * ignored)
 {
     int i = 0;
-    const char *key = a;
+    const char *key = (const char*) a;
     const char *name = ( ( const wrt_nvp_t* ) b ) -> name;
 
     while(key[i] == name[i]) {
@@ -177,8 +176,8 @@ int64_t CC wrt_nvp_cmp_func(const void *a, const void *b, void * ignored)
 static
 int64_t CC wrt_nvp_sort_func(const void *a, const void *b, void * ignored)
 {
-    const wrt_nvp_t *left = a;
-    const wrt_nvp_t *right = b;
+    const wrt_nvp_t *left = (const wrt_nvp_t *)a;
+    const wrt_nvp_t *right = (const wrt_nvp_t *)b;
     return strcmp ( left -> name, right -> name );
 }
 
@@ -192,7 +191,7 @@ LIB_EXPORT void CC wrt_nvp_sort( size_t argc, wrt_nvp_t argv[])
 LIB_EXPORT const wrt_nvp_t* CC wrt_nvp_find( size_t argc, const wrt_nvp_t argv[], const char* key )
 {
     if( argc > 0 ) {
-        return kbsearch(key, argv, argc, sizeof(argv[0]), wrt_nvp_cmp_func, NULL);
+        return (const wrt_nvp_t *) kbsearch(key, argv, argc, sizeof(argv[0]), wrt_nvp_cmp_func, NULL);
     }
     return NULL;
 }
@@ -239,7 +238,7 @@ LIB_EXPORT rc_t CC RCExplain2 ( rc_t rc, char *buffer, size_t bsize, size_t *num
                                 enum ERCExplain2Options options )
 {
     bool noMessageIfNoError =
-        (options == eRCExOpt_NoMessageIfNoError || 
+        (options == eRCExOpt_NoMessageIfNoError ||
          options == eRCExOpt_ObjAndStateOnlyIfError);
     int len;
     size_t total = 0;
@@ -425,10 +424,7 @@ static
 uint32_t read_rc_loc_head ( void )
 {
     int32_t idx = atomic32_read ( & RC_loc_written );
-    if ( ! reporting_unread )
-    {
-        atomic32_set ( & RC_loc_read, idx );
-    }
+    atomic32_set ( & RC_loc_read, idx );
     return idx;
 }
 
@@ -601,51 +597,9 @@ LIB_EXPORT rc_t CC SetRCFileFuncLine ( rc_t rc, const char *filename, const char
 
 /* GetUnreadRCInfo
  *  expected to be called after all threads are quiet
+ * Deprecated.
  */
 LIB_EXPORT bool CC GetUnreadRCInfo ( rc_t *rc, const char **filename, const char **funcname, uint32_t *lineno )
 {
-    int32_t last_writ;
-
-    reporting_unread = true;
-
-    /* these are not atomic, but the ordering is important */
-    last_writ = atomic32_read ( & RC_loc_written );
-    if ( last_writ > 0 )
-    {
-        /* this arrangement attempts to make the access to
-           RC_loc_read dependent upon access to RC_loc_written */
-        int32_t last_read = atomic32_read ( & RC_loc_read );
-        if ( last_read < last_writ )
-        {
-            /* check reserved slots */
-            int32_t rsrv = atomic32_read ( & RC_loc_reserve );
-
-            /* adjust last read */
-            if ( last_writ - last_read > RC_LOC_QUEUE_SIZE )
-                last_read = last_writ - RC_LOC_QUEUE_SIZE;
-
-            /* any reserved rows must be considered overwritten */
-            last_read += rsrv - last_writ;
-
-            /* these are the rows we can report */
-            if ( last_read < last_writ )
-            {
-                int32_t idx = last_read + 1;
-                atomic32_set ( & RC_loc_read, idx );
-
-                if ( filename != NULL )
-                    * filename = get_rc_filename ( idx );
-                if ( funcname != NULL )
-                    * funcname = get_rc_function ( idx );
-                if ( lineno != NULL )
-                    * lineno = get_rc_lineno ( idx );
-                if ( rc != NULL )
-                    * rc = get_rc_code ( idx );
-
-                return true;
-            }
-        }
-    }
-    reporting_unread = false;
     return false;
 }

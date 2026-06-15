@@ -42,12 +42,13 @@ extern "C" {
 #endif
 
 
-struct KSrvRespObj;
+struct KDataBuffer;
 struct KNSManager;
 struct KRepositoryMgr;
 struct KService;
 struct ServicesCache;
 struct KSrvRespFile;
+struct KSrvRespObj;
 struct KSrvResponse;
 struct Locations;
 struct Response4;
@@ -238,6 +239,8 @@ rc_t VFSManagerGetCachedKSrvResponse
 /* exposed internal function for testing */
 rc_t _VPathGetId(const VPath* self, const String** newId,
     String* oldId, const struct VFSManager* mgr);
+rc_t MaskSdlRequestArg(const String* arg, KDataBuffer* out);
+rc_t MaskSdlResponse(const char* in, KDataBuffer* out);
 
 #ifdef __cplusplus
 }
