@@ -1867,7 +1867,7 @@ static rc_t VCursorParamsLookupOrCreate(struct VCursorParams const *cself,
             return RC(rcVDB, rcCursor, rcAccessing, rcMemory, rcExhausted);
 
 #ifdef WINDOWS
-        strcpy_s((char *)(&node[1]), name_len, Name);
+        strcpy_s((char *)(&node[1]), name_len + 1, Name);
 #else
         strcpy((char *)(&node[1]), Name);
 #endif
