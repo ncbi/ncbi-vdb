@@ -63,9 +63,7 @@ static int string_buffer_add(KDataBuffer *const self,
             dst[i] = name[i];
         dst[len] = '\0';
     }
-#if 1
-    PLOGMSG(klogInfo, (klogInfo, "New spot group '$(NAME)'", "NAME=%.*s", (int)len, name));
-#endif
+    PLOGMSG(klogDebug, (klogDebug, "New spot group '$(NAME)'", "NAME=%.*s", (int)len, name));
 
     return (int)rslt;
 }
