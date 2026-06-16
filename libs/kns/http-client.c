@@ -1222,32 +1222,32 @@ rc_t StringCopyToLower(const String** cpy, const String* str)
  */
 static
 rc_t KClientHttpAddHeaderString
-( BSTree *hdrs, bool add, const String *name, const String *value )
+(BSTree* hdrs, bool add, const String* name, const String* value)
 {
     rc_t rc = 0;
 
     /* if there is no name - error */
-    if ( name -> size == 0 )
-        rc = RC ( rcNS, rcNoTarg, rcValidating, rcParam, rcInsufficient );
+    if (name->size == 0)
+        rc = RC(rcNS, rcNoTarg, rcValidating, rcParam, rcInsufficient);
     else
     {
         /* test for previous existence of node by name */
-        const String * nname = NULL;
-        rc = StringCopyToLower ( & nname, name );
-        if ( rc == 0 ) {
-         KHttpHeader * node
-              = ( KHttpHeader * ) BSTreeFind ( hdrs, nname, KHttpHeaderCmp );
-         if ( node == NULL ) {
-            /* node doesnt exist - allocate memory for a new one */
-            node = ( KHttpHeader * ) calloc ( 1, sizeof * node );
-            if ( node == NULL )
-                rc = RC ( rcNS, rcNoTarg, rcAllocating, rcMemory, rcNull );
-            else
-            {
-                rc = KDataBufferMakeBytes ( & node -> value_storage, 0 );
-                if ( rc == 0 )
+        const String* nname = NULL;
+        rc = StringCopyToLower(&nname, name);
+        if (rc == 0) {
+            KHttpHeader* node
+                = (KHttpHeader*)BSTreeFind(hdrs, nname, KHttpHeaderCmp);
+            if (node == NULL) {
+                /* node doesnt exist - allocate memory for a new one */
+                node = (KHttpHeader*)calloc(1, sizeof * node);
+                if (node == NULL)
+                    rc = RC(rcNS, rcNoTarg, rcAllocating, rcMemory, rcNull);
+                else
                 {
-                    /* Remove any leading or trailing whitespace */
+                    rc = KDataBufferMakeBytes(&node->value_storage, 0);
+                    if (rc == 0)
+                    {
+                        /* Remove any leading or trailing whitespace */
                         String* nvalue = (String*)value;
                         char* addr = (char*)value->addr;
                         size_t size = value->size;
@@ -1270,77 +1270,82 @@ rc_t KClientHttpAddHeaderString
                             nvalue->len = value->len - diff;
                         }
 
-                    /* copy the string data into storage */
-                    if ( rc == 0 )
-                        rc = KDataBufferPrintf ( & node -> value_storage,
-                                             "%S%S", nname, value );
-                    if ( rc == 0 )
-                    {
-                        /* initialize the Strings to point into KHttpHeader node */
-                        StringInit ( & node -> name,
-                            ( const char * ) node -> value_storage . base,
-                            name -> size, name -> len );
-                        StringInit ( & node -> value, node -> name . addr + name -> size, value -> size, value -> len );
+                        /* copy the string data into storage */
+                        if (rc == 0)
+                            rc = KDataBufferPrintf(&node->value_storage,
+                                "%S%S", nname, value);
+                        if (rc == 0)
+                        {
+                     /* initialize the Strings to point into KHttpHeader node */
+                            StringInit(&node->name,
+                                (const char*)node->value_storage.base,
+                                name->size, name->len);
+                            StringInit(&node->value,
+                                node->name.addr + name->size,
+                                value->size, value->len);
 
-                        /* insert into tree, sorted by alphabetical order */
-                        BSTreeInsert ( hdrs, & node -> dad, KHttpHeaderSort );
+                            /* insert into tree, sorted by alphabetical order */
+                            BSTreeInsert(hdrs, &node->dad, KHttpHeaderSort);
 
-                        StringWhack ( nname );
+                            StringWhack(nname);
 
-                        return 0;
+                            return 0;
+                        }
+
+                        KDataBufferWhack(&node->value_storage);
                     }
 
-                    KDataBufferWhack ( & node -> value_storage );
-                }
-
-                free ( node );
-            }
-         }
-
-         /* node exists; check that value param has data */
-         else if ( value -> size != 0 ) {
-          if ( add ) { /* add value to node -> value
-                          do not add value if node -> value == value */
-            if ( ! StringEqual ( & node -> value, value ) )
-            {
-                rc = KDataBufferPrintf( & node -> value_storage, ",%S", value );
-                if ( rc == 0 )
-                {
-                    /* update size and len of value in the node */
-                    node -> value . size += value -> size + 1;
-                    node -> value . len += value -> len + 1;
-
-                    StringWhack ( nname );
-
-                    return 0;
-
+                    free(node);
                 }
             }
-          } else { /* replace value with node -> value */
-            if ( ! StringEqual ( & node -> value, value ) )
-            /* values are not equal - need to replace */
-            {
-                rc = KDataBufferWhack ( & node -> value_storage );
-                if ( rc == 0 )
-                {
-                    rc = KDataBufferPrintf( & node -> value_storage, "%S%S", nname, value );
-                    if ( rc == 0 )
+
+            /* node exists; check that value param has data */
+            else if (value->size != 0) {
+                if (add) { /* add value to node -> value
+                                do not add value if node -> value == value */
+                    if (!StringEqual(&node->value, value))
                     {
-                        /* initialize the Strings to point into KHttpHeader node */
-                        StringInit ( & node -> name,
-                            ( const char * ) node -> value_storage . base,
-                            name -> size, name -> len );
-                        StringInit ( & node -> value,
-                            node -> name . addr + name -> size,
-                            value -> size, value -> len );
+                        rc = KDataBufferPrintf(
+                            &node->value_storage, ",%S", value);
+                        if (rc == 0)
+                        {
+                            /* update size and len of value in the node */
+                            node->value.size += value->size + 1;
+                            node->value.len += value->len + 1;
+
+                            StringWhack(nname);
+
+                            return 0;
+
+                        }
+                    }
+                }
+                else { /* replace value with node -> value */
+                    if (!StringEqual(&node->value, value))
+                        /* values are not equal - need to replace */
+                    {
+                        rc = KDataBufferWhack(&node->value_storage);
+                        if (rc == 0)
+                        {
+                            rc = KDataBufferPrintf(
+                                &node->value_storage, "%S%S", nname, value);
+                            if (rc == 0)
+                            {
+                     /* initialize the Strings to point into KHttpHeader node */
+                                StringInit(&node->name,
+                                    (const char*)node->value_storage.base,
+                                    name->size, name->len);
+                                StringInit(&node->value,
+                                    node->name.addr + name->size,
+                                    value->size, value->len);
+                            }
+                        }
                     }
                 }
             }
-          }
-         }
         }
 
-        StringWhack ( nname );
+        StringWhack(nname);
     }
 
     return rc;
