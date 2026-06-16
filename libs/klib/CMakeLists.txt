@@ -121,7 +121,7 @@ set( SRC
     vector
     vector_namelist
     vlen-encode
-    writer
+    writer.cpp
     ${BUILD_SPECIFIC_SRC}
     ${OS_SPECIFIC_SRC}
 )

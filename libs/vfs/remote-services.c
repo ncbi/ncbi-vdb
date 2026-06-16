@@ -3479,8 +3479,10 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
         DBG_FLAG ( DBG_VFS_SERVICE ), ( "CGI = '%s'\n", self -> cgi ) );
     if ( rc == 0 ) {
         if (request->sdl)
+            ; /*
             DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE), (
                 "  not sending version in SDL protocol\n"));
+              */
         else {
             const char name[] = "version";
             char * version = NULL;
