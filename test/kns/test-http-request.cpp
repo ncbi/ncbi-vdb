@@ -177,7 +177,9 @@ FIXTURE_TEST_CASE(HttpRequest_PUT_non_sra, HttpRequestFixture)
 
     REQUIRE_RC ( KClientHttpResultRelease ( rslt ) );
 }
+#endif
 
+#ifdef ALL
 FIXTURE_TEST_CASE(HttpRequest_head_as_get, HttpRequestFixture)
 {
     MakeRequest( GetName() );
