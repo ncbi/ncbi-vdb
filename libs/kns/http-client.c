@@ -1232,9 +1232,12 @@ rc_t KClientHttpAddHeaderString
     else
     {
         /* test for previous existence of node by name */
-        KHttpHeader * node = ( KHttpHeader * ) BSTreeFind ( hdrs, name, KHttpHeaderCmp );
-        if ( node == NULL )
-        {
+        const String * nname = NULL;
+        rc = StringCopyToLower ( & nname, name );
+        if ( rc == 0 ) {
+         KHttpHeader * node
+              = ( KHttpHeader * ) BSTreeFind ( hdrs, nname, KHttpHeaderCmp );
+         if ( node == NULL ) {
             /* node doesnt exist - allocate memory for a new one */
             node = ( KHttpHeader * ) calloc ( 1, sizeof * node );
             if ( node == NULL )
@@ -1244,11 +1247,7 @@ rc_t KClientHttpAddHeaderString
                 rc = KDataBufferMakeBytes ( & node -> value_storage, 0 );
                 if ( rc == 0 )
                 {
-                    const String* nname = NULL;
-                    rc = StringCopyToLower(&nname, name);
-
                     /* Remove any leading or trailing whitespace */
-                    if (rc == 0) {
                         String* nvalue = (String*)value;
                         char* addr = (char*)value->addr;
                         size_t size = value->size;
@@ -1270,7 +1269,6 @@ rc_t KClientHttpAddHeaderString
                             nvalue->size = value->size - diff;
                             nvalue->len = value->len - diff;
                         }
-                    }
 
                     /* copy the string data into storage */
                     if ( rc == 0 )
@@ -1297,12 +1295,10 @@ rc_t KClientHttpAddHeaderString
 
                 free ( node );
             }
-        }
+         }
 
-        /* node exists
-           check that value param has data */
-        else if ( value -> size != 0 )
-        {
+         /* node exists; check that value param has data */
+         else if ( value -> size != 0 ) {
           if ( add ) { /* add value to node -> value
                           do not add value if node -> value == value */
             if ( ! StringEqual ( & node -> value, value ) )
@@ -1313,7 +1309,11 @@ rc_t KClientHttpAddHeaderString
                     /* update size and len of value in the node */
                     node -> value . size += value -> size + 1;
                     node -> value . len += value -> len + 1;
+
+                    StringWhack ( nname );
+
                     return 0;
+
                 }
             }
           } else { /* replace value with node -> value */
@@ -1323,7 +1323,7 @@ rc_t KClientHttpAddHeaderString
                 rc = KDataBufferWhack ( & node -> value_storage );
                 if ( rc == 0 )
                 {
-                    rc = KDataBufferPrintf( & node -> value_storage, "%S%S", name, value );
+                    rc = KDataBufferPrintf( & node -> value_storage, "%S%S", nname, value );
                     if ( rc == 0 )
                     {
                         /* initialize the Strings to point into KHttpHeader node */
@@ -1337,7 +1337,10 @@ rc_t KClientHttpAddHeaderString
                 }
             }
           }
+         }
         }
+
+        StringWhack ( nname );
     }
 
     return rc;
