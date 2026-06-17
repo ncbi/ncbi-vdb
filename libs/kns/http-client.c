@@ -1232,7 +1232,7 @@ rc_t KClientHttpAddHeaderString
     else
     {
         /* test for previous existence of node by name */
-        const String* nname = NULL;
+        const String* nname = NULL; /* header name in lowercase */
         rc = StringCopyToLower(&nname, name);
         if (rc == 0) {
             KHttpHeader* node
