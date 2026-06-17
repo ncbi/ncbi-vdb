@@ -475,7 +475,9 @@ FIXTURE_TEST_CASE(HttpReliableRequest_POST_5xx_retry, HttpFixture)
 
     REQUIRE_RC ( KClientHttpResultRelease ( rslt ) );
 }
+#endif
 
+#ifdef ALL
 FIXTURE_TEST_CASE(HttpReliableRequest_BadCgi, HttpFixture)
 {
     /* calling non-existing cgi returns 404 */
@@ -876,7 +878,6 @@ TEST_CASE(TestAbsolutePathComponentOfTheURIExtraction) {
 }
 #endif
 
-#ifdef ALL
 static void AddHeader(BSTNode* n, void* data) {
     KHttpHeader* self = (KHttpHeader*)n;
     char* b = (char*)data;
@@ -898,6 +899,28 @@ static void AddHeader(BSTNode* n, void* data) {
     rc = StringCopy(&s, &self->name);*/
 }
 
+#ifdef ALL
+FIXTURE_TEST_CASE(test_ClientHttpResultHeaders, HttpFixture) {
+    REQUIRE_RC(KNSManagerMakeClientRequest(m_mgr, &m_req, 0x01010000, &m_stream,
+        MakeURL(GetName()).c_str()));
+    TestStream::AddResponse("HTTP/1.1 200 OK\r\n"
+        "Duplicated-Header: Value2\r\n"
+        "Unique-Header: ValueU\r\n"
+        "duplicateD-headeR: Value1\r\n");
+    KClientHttpResult* rslt(nullptr);
+    REQUIRE_RC(KClientHttpRequestGET(m_req, &rslt));
+    REQUIRE_NULL(KClientHttpResultGetHeaders(nullptr));
+    const BSTree* hdrs(KClientHttpResultGetHeaders(rslt));
+    char b[512] = "";
+    BSTreeForEach(hdrs, false, AddHeader, b);
+    REQUIRE_RC(KClientHttpResultRelease(rslt));
+    REQUIRE_EQ(string(b), string(
+        "duplicated-header=Value2,Value1\n"
+        "unique-header=ValueU\n"));
+}
+#endif
+
+#ifdef ALL
 /*struct CanonicalHeadersBuilder {    const BSTree* canonicalHdrs;};
 static rc_t PrepareCanonicalHeaders(const BSTree* hdrs) {
     //KDataBuffer canonicalHeaders;
@@ -911,6 +934,11 @@ static rc_t PrepareCanonicalHeaders(const BSTree* hdrs) {
 
 FIXTURE_TEST_CASE(TestHeadersCanonization, HttpRequestFixture) {
     MakeRequest(GetName());
+
+    REQUIRE_RC_FAIL(KClientHttpRequestAddHeader(m_req, "", "no-name"));
+
+    REQUIRE_RC(KClientHttpRequestAddHeader(m_req, "X-VDB-Release", "1.2.3"));
+    REQUIRE_RC(KClientHttpRequestAddHeader(m_req, "X-SRA-Release", "45.678.90XY"));
 
     REQUIRE_RC(KClientHttpRequestAddHeader(m_req, "X-aMz-DaTe",
         //                                         1234567810
@@ -933,15 +961,77 @@ FIXTURE_TEST_CASE(TestHeadersCanonization, HttpRequestFixture) {
         "simple-header=simple-value\n"
         "x-amz-content-sha256" "="
                             "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b9" "\n"
+        "x-amz-date" "=" "20130708T220855Z" "\n"
+        "x-sra-release" "=" "45.678.90XY" "\n"
+        "x-vdb-release" "=" "1.2.3" "\n"
+    ));
+}
+#endif
+
+#ifdef ALL
+FIXTURE_TEST_CASE(TestPrepareCanonicalHeaders, HttpRequestFixture) {
+    MakeRequest(GetName());
+
+    REQUIRE_RC(KClientHttpRequestAddHeader(m_req, "X-aMz-DaTe",
+        //                                         1234567810
+        " \t\v\n\r\f20130708T220855Z \t\v\n\r\f"));
+    //              1234567810123456
+
+    REQUIRE_RC(KClientHttpRequestAddHeader(m_req, "x-AmZ-cOnTeNt-ShA256",
+        //                                         12345678101234567820
+        " \t\v\n\r\fe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b9 \t\v\n\r\f"));
+    //              123456781012345678201234567830123456784012345
+
+    REQUIRE_RC(KClientHttpRequestAddHeader(m_req,
+        "simple-header", "simple-value"));
+
+    const BSTree* hdrs(KClientHttpRequestGetHeaders(m_req));
+    char b[512] = "";
+    BSTreeForEach(hdrs, false, AddHeader, b);
+
+    REQUIRE_EQ(string(b), string(
+        "simple-header=simple-value\n"
+        "x-amz-content-sha256" "="
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b9" "\n"
         "x-amz-date" "=" "20130708T220855Z" "\n"));
     //REQUIRE_RC(PrepareCanonicalHeaders(KClientHttpRequestGetHeaders(m_req)));
 }
 #endif
 
 #ifdef ALL
-FIXTURE_TEST_CASE(TestPrepareCanonicalHeaders, HttpRequestFixture) {
+FIXTURE_TEST_CASE(TestKClientHttpRequestAddReplaceHeader, HttpRequestFixture) {
+    MakeRequest(GetName());
+
+    REQUIRE_RC(KClientHttpRequestAddHeader(m_req,
+        "simple-header", "simplE-valuE"));
+
+    const BSTree* chdrs(KClientHttpRequestGetHeaders(m_req));
+    char b[512] = "";
+
+    BSTreeForEach(chdrs, false, AddHeader, b);
+    REQUIRE_EQ(string(b), string("simple-header=simplE-valuE\n"));
+
+    REQUIRE_RC(KClientHttpRequestAddHeader(m_req,
+        "simple-header", "simple-value"));
+    b[0] = '\0';
+    BSTreeForEach(chdrs, false, AddHeader, b);
+    REQUIRE_EQ(string(b), string("simple-header=simple-value\n"));
+
+    REQUIRE_RC(KClientHttpRequestAddHeader(m_req,
+        "Simple-Header", "Simple-Value"));
+    b[0] = '\0';
+    BSTreeForEach(chdrs, false, AddHeader, b);
+    REQUIRE_EQ(string(b), string("simple-header=Simple-Value\n"));
+
+    BSTree* hdrs(const_cast<BSTree*>(chdrs));
+    REQUIRE_RC(KClientHttpReplaceHeader(hdrs,
+        "SIMPLE-HEADER", "not-simple-value"));
+    b[0] = '\0';
+    BSTreeForEach(chdrs, false, AddHeader, b);
+    REQUIRE_EQ(string(b), string("simple-header=not-simple-value\n"));
 }
 #endif
+
 //////////////////////////////////////////// Main
 
 static rc_t argsHandler ( int argc, char * argv [] ) {
