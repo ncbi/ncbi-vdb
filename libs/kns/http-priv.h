@@ -265,7 +265,8 @@ rc_t KClientHttpRequestAttachEnvironmentToken(
 
 const char * KClientHttpRequestGetBody( struct KClientHttpRequest * self );
 
-const BSTree * KClientHttpRequestGetHeaders( const KClientHttpRequest* self );
+const BSTree * KClientHttpRequestGetHeaders( const KClientHttpRequest * self );
+const BSTree * KClientHttpResultGetHeaders(const KClientHttpResult * self);
 
 /* exported private functions
 */

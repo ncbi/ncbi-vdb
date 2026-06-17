@@ -194,7 +194,7 @@ rc_t KClientHttpMakeRequestInt ( const KClientHttp *self,
                     * _req = req;
     /*              DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ),
                         ( " KClientHttpMakeRequestInt (path=%S) = (path:%S)\n",
-                        & block -> path, & ( * _req ) -> url_block . path ) ); */
+                        & block -> path, & ( * _req ) -> url_block . path ) );*/
                     return 0;
                 }
             }
@@ -2184,3 +2184,9 @@ LIB_EXPORT rc_t CC KClientHttpRequestPOST ( KClientHttpRequest *self, KClientHtt
     return rc;
 }
 
+const BSTree* KClientHttpResultGetHeaders(const KClientHttpResult* self) {
+    if (self == NULL)
+        return NULL;
+    else
+        return &self->hdrs;
+}
