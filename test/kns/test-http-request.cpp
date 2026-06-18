@@ -880,23 +880,11 @@ TEST_CASE(TestAbsolutePathComponentOfTheURIExtraction) {
 
 static void AddHeader(BSTNode* n, void* data) {
     KHttpHeader* self = (KHttpHeader*)n;
-    char* b = (char*)data;
+    KDataBuffer* buf = (KDataBuffer*)data;
 
-    strncat(b, self->name.addr, self->name.size);
-    strcat(b, "=");
-    strncat(b, self->value.addr, self->value.size);
-    strcat(b, "\n");
-
-    /*rc_t rc = 0;
-    const String* s = NULL;
-    size_t nameSz = 0;
-    size_t valueSz = 0;
-    char* buf = NULL; malloc(nameSz + valueSz + 1);
-    if (buf == NULL)
-        return;
-    KHttpHeader* canonicalHeader = NULL;
-    assert(canonicalHdrs && self);
-    rc = StringCopy(&s, &self->name);*/
+    KDataBufferPrintf(buf, "%.*s=%.*s\n",
+        (uint32_t)self->name.size, self->name.addr,
+        (uint32_t)self->value.size, self->value.addr);
 }
 
 #ifdef ALL
@@ -907,30 +895,37 @@ FIXTURE_TEST_CASE(test_ClientHttpResultHeaders, HttpFixture) {
         "Duplicated-Header: Value2\r\n"
         "Unique-Header: ValueU\r\n"
         "duplicateD-headeR: Value1\r\n");
+
     KClientHttpResult* rslt(nullptr);
     REQUIRE_RC(KClientHttpRequestGET(m_req, &rslt));
+
     REQUIRE_NULL(KClientHttpResultGetHeaders(nullptr));
+
     const BSTree* hdrs(KClientHttpResultGetHeaders(rslt));
-    char b[512] = "";
-    BSTreeForEach(hdrs, false, AddHeader, b);
+    KDataBuffer b;
+    REQUIRE_RC(KDataBufferMake(&b, 8, 0));
+    BSTreeForEach(hdrs, false, AddHeader, &b);
+
     REQUIRE_RC(KClientHttpResultRelease(rslt));
-    REQUIRE_EQ(string(b), string(
+
+    REQUIRE_EQ(string((char*)b.base, b.elem_count - 1), string(
         "duplicated-header=Value2,Value1\n"
         "unique-header=ValueU\n"));
+
+    REQUIRE_RC(KDataBufferWhack(&b));
 }
 #endif
 
 #ifdef ALL
-/*struct CanonicalHeadersBuilder {    const BSTree* canonicalHdrs;};
-static rc_t PrepareCanonicalHeaders(const BSTree* hdrs) {
-    //KDataBuffer canonicalHeaders;
-    rc_t rc = 0;// KDataBufferMake(&canonicalHeaders, 8, 0);
-    BSTree canonicalHdrs;
-    BSTreeInit(&canonicalHdrs);
-    //if (rc != 0)        return rc;
-    BSTreeForEach(hdrs, false, AddHeader, &canonicalHdrs);
+static rc_t KClientHttpRequestPrepareCanonicalHeaders(
+    const KClientHttpRequest* self, KDataBuffer* out)
+{
+    rc_t rc = KDataBufferWhack(out);
+    const BSTree* hdrs = KClientHttpRequestGetHeaders(self);
+    if (rc == 0 && hdrs != NULL)
+        BSTreeForEach(hdrs, false, AddHeader, out);
     return rc;
-}*/
+}
 
 FIXTURE_TEST_CASE(TestHeadersCanonization, HttpRequestFixture) {
     MakeRequest(GetName());
@@ -938,7 +933,8 @@ FIXTURE_TEST_CASE(TestHeadersCanonization, HttpRequestFixture) {
     REQUIRE_RC_FAIL(KClientHttpRequestAddHeader(m_req, "", "no-name"));
 
     REQUIRE_RC(KClientHttpRequestAddHeader(m_req, "X-VDB-Release", "1.2.3"));
-    REQUIRE_RC(KClientHttpRequestAddHeader(m_req, "X-SRA-Release", "45.678.90XY"));
+    REQUIRE_RC(KClientHttpRequestAddHeader(m_req,
+        "X-SRA-Release", "45.678.90XY"));
 
     REQUIRE_RC(KClientHttpRequestAddHeader(m_req, "X-aMz-DaTe",
         //                                         1234567810
@@ -953,11 +949,11 @@ FIXTURE_TEST_CASE(TestHeadersCanonization, HttpRequestFixture) {
     REQUIRE_RC(KClientHttpRequestAddHeader(m_req,
         "simple-header", "simple-value"));
 
-    const BSTree* hdrs(KClientHttpRequestGetHeaders(m_req));
-    char b[512] = "";
-    BSTreeForEach(hdrs, false, AddHeader, b);
+    KDataBuffer b;
+    REQUIRE_RC(KDataBufferMake(&b, 8, 0));
+    REQUIRE_RC(KClientHttpRequestPrepareCanonicalHeaders(m_req, &b));
 
-    REQUIRE_EQ(string(b), string(
+    REQUIRE_EQ(string((char*)b.base, b.elem_count - 1), string(
         "simple-header=simple-value\n"
         "x-amz-content-sha256" "="
                             "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b9" "\n"
@@ -965,6 +961,8 @@ FIXTURE_TEST_CASE(TestHeadersCanonization, HttpRequestFixture) {
         "x-sra-release" "=" "45.678.90XY" "\n"
         "x-vdb-release" "=" "1.2.3" "\n"
     ));
+
+    REQUIRE_RC(KDataBufferWhack(&b));
 }
 #endif
 
@@ -985,50 +983,56 @@ FIXTURE_TEST_CASE(TestPrepareCanonicalHeaders, HttpRequestFixture) {
     REQUIRE_RC(KClientHttpRequestAddHeader(m_req,
         "simple-header", "simple-value"));
 
-    const BSTree* hdrs(KClientHttpRequestGetHeaders(m_req));
-    char b[512] = "";
-    BSTreeForEach(hdrs, false, AddHeader, b);
+    KDataBuffer b;
+    REQUIRE_RC(KDataBufferMake(&b, 8, 0));
+    REQUIRE_RC(KClientHttpRequestPrepareCanonicalHeaders(m_req, &b));
 
-    REQUIRE_EQ(string(b), string(
+    REQUIRE_EQ(string((char*)b.base, b.elem_count - 1), string(
         "simple-header=simple-value\n"
         "x-amz-content-sha256" "="
         "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b9" "\n"
         "x-amz-date" "=" "20130708T220855Z" "\n"));
-    //REQUIRE_RC(PrepareCanonicalHeaders(KClientHttpRequestGetHeaders(m_req)));
+
+    REQUIRE_RC(KDataBufferWhack(&b));
 }
 #endif
 
 #ifdef ALL
-FIXTURE_TEST_CASE(TestKClientHttpRequestAddReplaceHeader, HttpRequestFixture) {
+FIXTURE_TEST_CASE(TestKClientHttpRequestAddReplaceHeader,
+    HttpRequestFixture)
+{
     MakeRequest(GetName());
 
     REQUIRE_RC(KClientHttpRequestAddHeader(m_req,
         "simple-header", "simplE-valuE"));
 
-    const BSTree* chdrs(KClientHttpRequestGetHeaders(m_req));
-    char b[512] = "";
+    KDataBuffer b;
+    REQUIRE_RC(KDataBufferMake(&b, 8, 0));
 
-    BSTreeForEach(chdrs, false, AddHeader, b);
-    REQUIRE_EQ(string(b), string("simple-header=simplE-valuE\n"));
+    REQUIRE_RC(KClientHttpRequestPrepareCanonicalHeaders(m_req, &b));
+    REQUIRE_EQ(string((char*)b.base, b.elem_count - 1),
+        string("simple-header=simplE-valuE\n"));
 
     REQUIRE_RC(KClientHttpRequestAddHeader(m_req,
         "simple-header", "simple-value"));
-    b[0] = '\0';
-    BSTreeForEach(chdrs, false, AddHeader, b);
-    REQUIRE_EQ(string(b), string("simple-header=simple-value\n"));
+    REQUIRE_RC(KClientHttpRequestPrepareCanonicalHeaders(m_req, &b));
+    REQUIRE_EQ(string((char*)b.base, b.elem_count - 1),
+        string("simple-header=simple-value\n"));
 
     REQUIRE_RC(KClientHttpRequestAddHeader(m_req,
         "Simple-Header", "Simple-Value"));
-    b[0] = '\0';
-    BSTreeForEach(chdrs, false, AddHeader, b);
-    REQUIRE_EQ(string(b), string("simple-header=Simple-Value\n"));
+    REQUIRE_RC(KClientHttpRequestPrepareCanonicalHeaders(m_req, &b));
+    REQUIRE_EQ(string((char*)b.base, b.elem_count - 1),
+        string("simple-header=Simple-Value\n"));
 
-    BSTree* hdrs(const_cast<BSTree*>(chdrs));
+    BSTree* hdrs(const_cast<BSTree*>(KClientHttpRequestGetHeaders(m_req)));
     REQUIRE_RC(KClientHttpReplaceHeader(hdrs,
         "SIMPLE-HEADER", "not-simple-value"));
-    b[0] = '\0';
-    BSTreeForEach(chdrs, false, AddHeader, b);
-    REQUIRE_EQ(string(b), string("simple-header=not-simple-value\n"));
+    REQUIRE_RC(KClientHttpRequestPrepareCanonicalHeaders(m_req, &b));
+    REQUIRE_EQ(string((char*)b.base, b.elem_count - 1),
+        string("simple-header=not-simple-value\n"));
+
+    REQUIRE_RC(KDataBufferWhack(&b));
 }
 #endif
 
