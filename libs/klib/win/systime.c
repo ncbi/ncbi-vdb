@@ -26,7 +26,7 @@
 
 #include <klib/extern.h>
 
-#include<klib/printf.h> /* string_printf */
+#include <klib/printf.h> /* string_printf */
 #include <klib/rc.h> /* SILENT_RC */
 #include <klib/time.h>
 
@@ -351,25 +351,34 @@ LIB_EXPORT KTime_t CC KTimeMakeTime ( const KTime *self )
 }
 
 
-/* YYYY-MM-DDThh:mm:ssTZD */
-LIB_EXPORT size_t CC KTimeIso8601 ( KTime_t ts, char * s, size_t size )
-{
+/* Iso8601
+ *  populate "s" from "ks" according to ISO-8601:
+ * basic = true : basic    format: YYYYMMDDThhmmssTZD
+ * basic = false: extended format: YYYY-MM-DDThh:mm:ssTZD
+ */
+static size_t
+KTimeFormatIso8601 ( KTime_t ts, char * s, size_t size, bool basic ) {
     rc_t rc = 0;
     size_t num_writ = 0;
 
     const KTime * r = NULL;
-    KTime ktime;
+    KTime now;
 
     if ( ts == 0 || s == NULL || size < 19 )
         return 0;
 
-    r = KTimeGlobal ( & ktime, ts );
+    r = KTimeGlobal ( & now, ts );
     if ( r == NULL )
         return 0;
-
-    rc = string_printf ( s, size, & num_writ, "%04d-%02d-%02dT%02d:%02d:%02dZ",
-        ktime . year, ktime . month + 1, ktime . day + 1,
-        ktime . hour, ktime . minute, ktime . second );
+    if (basic)
+        rc = string_printf ( s, size, & num_writ, "%04d%02d%02dT%02:%02d%02dZ",
+            now . year, now . month + 1, now . day + 1,
+            now . hour, now . minute, now . second );
+    else
+        rc = string_printf ( s, size, & num_writ,
+            "%04d-%02d-%02dT%02d:%02d:%02dZ",
+            now . year, now . month + 1, now . day + 1,
+            now . hour, now . minute, now . second );
     if ( rc == 0 )
         return num_writ;
     else if ( rc ==
@@ -379,6 +388,25 @@ LIB_EXPORT size_t CC KTimeIso8601 ( KTime_t ts, char * s, size_t size )
         return num_writ;
     }
     return 0;
+}
+
+/* Iso8601
+ *  populate "s" from "ks" according to ISO-8601:
+ *         YYYY-MM-DDThh:mm:ssTZD
+ */
+KLIB_EXTERN size_t CC KTimeIso8601 (KTime_t ts, char * s, size_t size)
+{
+    return KTimeFormatIso8601(ts, s, size, false);
+}
+
+/* Iso8601
+ *  populate "s" from "ts" according to ISO-8601 basic format:
+ *         YYYYMMDDThhmmssTZD
+ */
+KLIB_EXTERN
+size_t CC KTimeIso8601Basic ( KTime_t ts, char * s, size_t size )
+{
+    return KTimeFormatIso8601(ts, s, size, true);
 }
 
 static const char * month(uint16_t month) {
