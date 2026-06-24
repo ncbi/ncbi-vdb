@@ -50,13 +50,17 @@ using std::string;
 using namespace::std;
 
 #define TO_SHOW_RESULTS 0
+#define ALL
 
 TEST_SUITE(AwsTestSuite)
+
+static KConfig* KFG = nullptr;
 
 //
 // Unit tests for functions in cloud/aws-auth.c
 //
 
+#ifdef ALL
 TEST_CASE(TestBase64InIdentityDocument) {
     const char src[] =
         "{\n"
@@ -199,8 +203,6 @@ TEST_CASE(TestBase64MakeLocation) {
 //
 // Unit tests for functions in cloud/aws.c
 //
-
-static KConfig * KFG = nullptr;
 
 TEST_CASE(Get_IMDS_version)
 {
@@ -365,6 +367,53 @@ TEST_CASE(GetLocation) {
 
     REQUIRE_RC( CloudMgrRelease(mgr) );
 }
+#endif
+
+#ifdef ALL
+#include "klib/printf.h" /*string_printf*/
+#include "mbedtls/sha256.h" /*mbedtls_sha256*/
+
+static rc_t CalculateSHA256Hash(
+    const unsigned char* input, size_t input_len, char hash[65])
+{
+    int i = 0;
+
+    unsigned char output[32] = "";
+    rc_t rc = mbedtls_sha256(input, input_len, output, 0);
+
+    for (i = 0; rc == 0 && i < 32; ++i)
+        rc = string_printf(hash + i * 2, 3, nullptr, "%02x", output[i]);
+
+    return rc;
+}
+
+TEST_CASE(TestSHA256OfTheEmptyString) {
+    const unsigned char input[]("");
+    char hex[65]("");
+    REQUIRE_RC(CalculateSHA256Hash(input, sizeof input - 1, hex));
+    REQUIRE_EQ(string(hex), string(
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"));
+}
+
+TEST_CASE(TestSHA256) {
+    const unsigned char input[](
+        "GET\n"
+        "/test.txt\n"
+        "\n"
+        "host:examplebucket.s3.amazonaws.com\n"
+        "range:bytes=0-9\n"
+        "x-amz-content-sha256:"
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        "x-amz-date:20130524T000000Z\n"
+        "\n"
+        "host;range;x-amz-content-sha256;x-amz-date\n"
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
+    char hex[65]("");
+    REQUIRE_RC(CalculateSHA256Hash(input, sizeof input - 1, hex));
+    REQUIRE_EQ(string(hex), string(
+        "7344ae5b7ee6c3e7e6b0fe0640412a37625d1fbfff95c48bbb2dc43964946972"));
+}
+#endif
 
 //////////////////////////////////////////// Main
 
