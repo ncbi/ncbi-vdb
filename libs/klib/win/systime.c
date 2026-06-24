@@ -371,7 +371,7 @@ KTimeFormatIso8601 ( KTime_t ts, char * s, size_t size, bool basic ) {
     if ( r == NULL )
         return 0;
     if (basic)
-        rc = string_printf ( s, size, & num_writ, "%04d%02d%02dT%02:%02d%02dZ",
+        rc = string_printf ( s, size, & num_writ, "%04d%02d%02dT%02d%02d%02dZ",
             now . year, now . month + 1, now . day + 1,
             now . hour, now . minute, now . second );
     else
@@ -387,7 +387,8 @@ KTimeFormatIso8601 ( KTime_t ts, char * s, size_t size, bool basic ) {
     {
         return num_writ;
     }
-    return 0;
+    else
+        return 0;
 }
 
 /* Iso8601
