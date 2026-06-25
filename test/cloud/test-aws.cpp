@@ -415,6 +415,51 @@ TEST_CASE(TestSHA256) {
 }
 #endif
 
+#ifdef ALL
+#include <klib/data-buffer.h> /* KDataBufferWhack */
+#include <klib/printf.h> /* KDataBufferPrintf */
+
+static rc_t buildStringToSign(KTime_t requestDateTime, const char* region,
+    const char* hashedCanonicalRequest, KDataBuffer* stringToSign)
+{
+    char t[17] = "";
+    size_t s = KTimeIso8601Basic(requestDateTime, t, sizeof t);
+    if (s == 0)
+        return RC(rcCloud, rcUri, rcEncoding, rcString, rcInsufficient);
+
+    return KDataBufferPrintf(stringToSign,
+        "AWS4-HMAC-SHA256\n"        /* Algorithm */
+        "%s\n"                      /* RequestDateTime */
+        "%.*s/%s/s3/aws4_request\n" /* CredentialScope:
+                                       date/region/service/aws4_request */
+        "%s"                        /* HashedCanonicalRequest */
+        , t, 8, t, region, hashedCanonicalRequest);
+}
+
+TEST_CASE(TestBuildStringToSign) {
+    KTime_t requestDateTime(1369353600);
+    const char region[]("us-east-1");
+    const char hashedCanonicalRequest[](
+        "7344ae5b7ee6c3e7e6b0fe0640412a37625d1fbfff95c48bbb2dc43964946972");
+
+    KDataBuffer stringToSign;
+    REQUIRE_RC(KDataBufferMake(&stringToSign, 8, 0));
+
+    REQUIRE_RC(buildStringToSign(
+        requestDateTime, region, hashedCanonicalRequest, &stringToSign));
+
+    REQUIRE_EQ(string((char*)stringToSign.base, stringToSign.elem_count - 1),
+        string(
+            "AWS4-HMAC-SHA256\n"
+            "20130524T000000Z\n"
+            "20130524/us-east-1/s3/aws4_request\n"
+            "7344ae5b7ee6c3e7e6b0fe0640412a37625d1fbfff95c48bbb2dc43964946972")
+    );
+
+    REQUIRE_RC(KDataBufferWhack(&stringToSign));
+}
+#endif
+
 //////////////////////////////////////////// Main
 
 int main ( int argc, char *argv [] )
