@@ -364,9 +364,11 @@ KTimeFormatIso8601 ( KTime_t ts, char * s, size_t size, bool basic ) {
     const KTime * r = NULL;
     KTime now;
 
-    if ( ts == 0 || s == NULL || size < 19 )
+    if ( ts == 0 || s == NULL )
         return 0;
-
+    if ( ( basic && size < 17 ) || ( !basic && size < 19 ) )
+        return 0;
+    
     r = KTimeGlobal ( & now, ts );
     if ( r == NULL )
         return 0;
