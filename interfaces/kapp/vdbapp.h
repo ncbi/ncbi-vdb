@@ -174,6 +174,8 @@ rc_t CC NextLogLevelCommon ( const char * level_parameter );
         class Application
         {
         public:
+            // filters and/or converts argv, handles standard options;
+            // use getArgC() and getArgV() to access the updated argument list
             Application( int argc, char* argv[], const char * exe_name = VDB_EXE_NAME );
 #if WINDOWS && UNICODE
             Application( int argc, wchar_t* argv[], const char * exe_name = VDB_EXE_NAME );
@@ -192,6 +194,8 @@ rc_t CC NextLogLevelCommon ( const char * level_parameter );
             const char** getArgV() const { return (const char**)m_argv; }
 
         private:
+            rc_t HandleAndRemoveStandardOptions();
+
             int m_argc;
             char** m_argv;
             bool m_argvOwned; // true if args have been rewritten

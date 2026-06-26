@@ -33,6 +33,10 @@ Application::Application(int argc, char* argv[], const char * exe_name)
 {
     SetUsageDefaultName( exe_name );
     m_rc = VdbInitialize(argc, argv, 0);
+    if ( m_rc == 0 )
+    {
+        m_rc = HandleAndRemoveStandardOptions( argc, argv );
+    }
 }
 
 #if WINDOWS && UNICODE
@@ -40,7 +44,8 @@ Application::Application(int argc, char* argv[], const char * exe_name)
 Application::Application(int argc, wchar_t* argv[], const char * exe_name)
     : m_argc( argc ), m_argvOwned ( false )
 {
-    int status = ConvertWArgsToUtf8(argc, argv, &m_argv, true);
+    char * new_argv[];
+    int status = ConvertWArgsToUtf8(argc, argv, &new_argv, true);
     if (status != 0)
     {
         m_rc = RC(rcApp, rcArgv, rcParsing, rcParam, rcFailed);
@@ -49,7 +54,12 @@ Application::Application(int argc, wchar_t* argv[], const char * exe_name)
     {
         m_argvOwned = true;
         SetUsageDefaultName( exe_name );
-        m_rc = VdbInitialize(argc, m_argv, 0);
+        m_rc = VdbInitialize(argc, new_argv, 0);
+    }
+    if ( m_rc == 0 )
+    {
+        m_rc = HandleAndRemoveStandardOptions( argc, new_argv );
+        free( new_argv );
     }
 }
 #endif
@@ -66,4 +76,10 @@ Application::~Application()
         }
         free ( m_argv );
     }
+}
+
+rc_t
+Application::HandleAndRemoveStandardOptions( int argc, char* argv[] )
+{   // after this, m_argv wil always be owned
+    return 0;
 }

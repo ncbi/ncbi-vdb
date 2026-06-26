@@ -120,6 +120,16 @@ TEST_CASE(WCharConversion_BadArgs)
 
 #endif
 
+TEST_CASE(App_FilterArgs)
+{   // handles and filters out standard options
+    int argc = 4;
+    const char* argv[] = { "exe", "-+VDB", "param", "-h" };
+    VDB::Application app( argc, (char**)argv);
+    REQUIRE_EQ( 2, app.getArgC() );
+    REQUIRE_EQ( string("exe"), string( app.getArgV()[0] ) );
+    REQUIRE_EQ( string("param"), string( app.getArgV()[1] ) );
+}
+
 int main(int argc, char* argv[])
 {
     return VDBAppTestSuite(argc, argv);
