@@ -588,7 +588,7 @@ LIB_EXPORT rc_t CC KClientHttpRequestAddHeader ( KClientHttpRequest *self,
             switch ( name_size )
             {
             case CSTRLEN ( "host" ):
-                if ( NAMEIS ( "host" ) )
+                if ( NAMEIS ( "host" ) && ! self -> testing )
                     rc = RC ( rcNS, rcNoTarg, rcComparing, rcParam, rcUnsupported );
                 break;
             case CSTRLEN ( "content-length" ):
@@ -2189,4 +2189,343 @@ const BSTree* KClientHttpResultGetHeaders(const KClientHttpResult* self) {
         return NULL;
     else
         return &self->hdrs;
+}
+
+
+/********************** Prepare a signed AWS API request **********************/
+static bool IsUnreserved(char c) {
+    static const char unreserved[] =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        "abcdefghijklmnopqrstuvwxyz"
+        "0123456789"
+        "-._~"
+        "/"; /* Encode the forward slash character, '/', everywhere except in
+                the object key name.
+                For example, if the object key name is photos/Jan/sample.jpg,
+                the forward slash in the key name is not encoded. */
+    return string_chr(unreserved, sizeof unreserved - 1, c) != NULL;
+}
+
+rc_t UriEncodeForAWS(const String** encoding) {
+    size_t i = 0;
+    int n = 0;
+    if (encoding == NULL || *encoding == NULL || (*encoding)->addr == NULL)
+        return 0;
+    for (i = 0; i < (*encoding)->size; ++i)
+        if (!IsUnreserved(((*encoding)->addr)[i]))
+            ++n;
+    if (n > 0) {
+        size_t iFrom = 0, iTo = 0;
+        const char* from = (*encoding)->addr;
+        char* to = NULL;
+        assert(FITS_INTO_INT32((*encoding)->size + n + n));
+        uint32_t len = (uint32_t)((*encoding)->size + n + n);
+
+        String* encoded = (String*)calloc(1, sizeof * encoded + len + 1);
+        if (encoded == NULL)
+            return RC(rcNS, rcString, rcAllocating, rcMemory, rcExhausted);
+
+        to = (char*)(encoded + 1);
+        StringInit(encoded, to, len, len);
+
+        for (iFrom = 0; iFrom < (*encoding)->size; ++iFrom) {
+            char c = from[iFrom];
+            if (IsUnreserved(c))
+                to[iTo++] = c;
+            else {
+                size_t num_writ = 0;
+                rc_t rc = string_printf(to + iTo, len, &num_writ, "%%%02X", c);
+                if (rc != 0)
+                    return rc;
+                iTo += num_writ;
+            }
+        }
+        to[iTo] = '\0';
+        assert(iTo == len);
+        StringWhack(*encoding);
+        *encoding = encoded;
+    }
+    return 0;
+}
+
+typedef struct PParameter {
+    BSTNode dad;
+
+    const String* name;
+    const String* value;
+} PParameter;
+
+typedef struct SParameter {
+    String parameter;
+
+    String name;
+    String value;
+
+    PParameter* encoded;
+} SParameter;
+
+static rc_t
+ParameterInit(SParameter* parameter, const char* buf, size_t size)
+{
+    rc_t rc = 0;
+
+    const char* end = buf + size;
+    char* sep = string_chr(buf, end - buf, '=');
+
+    assert(parameter);
+    memset(parameter, 0, sizeof * parameter);
+
+    StringInit(&parameter->parameter, buf, size, (uint32_t)size);
+
+    if (sep != NULL) {
+        StringInit(&parameter->name, buf, sep - buf, (uint32_t)(sep - buf));
+        StringInit(&parameter->value, sep + 1,
+            end - sep - 1, (uint32_t)(end - sep - 1));
+    }
+    else {
+        StringInit(&parameter->name, buf, end - buf, (uint32_t)(end - buf));
+        StringInit(&parameter->value, "", 0, 0);
+    }
+
+    parameter->encoded = (PParameter*)calloc(1, sizeof * parameter->encoded);
+    if (parameter->encoded == NULL)
+        return RC(rcNS, rcString, rcAllocating, rcMemory, rcExhausted);
+
+    rc = StringCopy(&parameter->encoded->name, &parameter->name);
+    if (rc == 0)
+        rc = UriEncodeForAWS(&parameter->encoded->name);
+
+    if (rc == 0)
+        rc = StringCopy(&parameter->encoded->value, &parameter->value);
+    if (rc == 0)
+        rc = UriEncodeForAWS(&parameter->encoded->value);
+
+    return rc;
+}
+
+static int64_t CC PParameterSort(const BSTNode* na, const BSTNode* nb) {
+    const PParameter* a = (const PParameter*)na;
+    const PParameter* b = (const PParameter*)nb;
+
+    return StringCaseCompare(a->name, b->name);
+}
+
+static void AddParameter(BSTNode* n, void* data) {
+    PParameter* self = (PParameter*)n;
+    KDataBuffer* buf = (KDataBuffer*)data;
+
+    assert(buf && self && self->name);
+
+    if (self->name->size > 0)
+        KDataBufferPrintf(buf, "%s%S=%S",
+            buf->elem_count != 0 ? "&" : "", self->name, self->value);
+}
+
+static void CC PParameterWhack(BSTNode* n, void* ignore) {
+    PParameter* self = (PParameter*)n;
+
+    assert(self);
+
+    StringWhack(self->name);
+    StringWhack(self->value);
+
+    free(self);
+}
+
+rc_t PrepareCanonicalQueryStringForAWSRequest(const String* query,
+    KDataBuffer* canonicalQueryString)
+{
+    rc_t rc = 0;
+
+    const char* buf = NULL;
+    const char* end = NULL;
+    char* sep = NULL;
+
+    SParameter parameter;
+
+    BSTree parameters;
+    BSTreeInit(&parameters);
+
+    assert(query && canonicalQueryString);
+
+    buf = query->addr;
+    end = buf + query->size;
+
+    sep = string_chr(buf, end - buf, '&');
+    if (sep == NULL) {
+        rc = ParameterInit(&parameter, buf, query->size);
+        if (rc != 0)
+            return rc;
+        rc = BSTreeInsert(&parameters, &parameter.encoded->dad, PParameterSort);
+        if (rc != 0)
+            return rc;
+    }
+
+    while (sep != NULL) {
+        rc = ParameterInit(&parameter, buf, sep - buf);
+        if (rc != 0)
+            return rc;
+        rc = BSTreeInsert(&parameters, &parameter.encoded->dad, PParameterSort);
+        if (rc != 0)
+            return rc;
+
+        buf = sep + 1;
+        sep = string_chr(buf, end - buf, '&');
+        if (sep == NULL) {
+            rc = ParameterInit(&parameter, buf, end - buf);
+            if (rc != 0)
+                return rc;
+            rc = BSTreeInsert(&parameters, &parameter.encoded->dad,
+                PParameterSort);
+            if (rc != 0)
+                return rc;
+        }
+    }
+
+    BSTreeForEach(&parameters, false, AddParameter, canonicalQueryString);
+    BSTreeWhack(&parameters, PParameterWhack, NULL);
+
+    if (canonicalQueryString->elem_count == 0)
+        rc = KDataBufferPrintf(canonicalQueryString, "%s", "");
+
+    return rc;
+}
+
+rc_t SAddHeaderDataInit(SAddHeaderData* self, bool buildSignedHeaders)
+{
+    rc_t rc = 0;
+
+    assert(self);
+    memset(self, 0, sizeof * self);
+
+    rc = KDataBufferMake(&self->canonicalHeaders, 8, 0);
+
+    if (rc == 0 && buildSignedHeaders) {
+        rc = KDataBufferMake(&self->signedHeaders, 8, 0);
+        self->buildSignedHeaders = true;
+    }
+
+    return rc;
+}
+
+rc_t SAddHeaderDataFini(SAddHeaderData* self) {
+    rc_t rc = 0;
+
+    assert(self);
+
+    rc = KDataBufferWhack(&self->canonicalHeaders);
+
+    if (self->buildSignedHeaders) {
+        rc_t r2 = KDataBufferWhack(&self->signedHeaders);
+        if (r2 != 0 && rc == 0)
+            rc = r2;
+    }
+
+    return rc;
+}
+
+void AddHeaderForAWSRequest(BSTNode* n, void* data) {
+    KHttpHeader* self = (KHttpHeader*)n;
+    SAddHeaderData* d = (SAddHeaderData*)data;
+
+    assert(self && d);
+
+    KDataBufferPrintf(&d->canonicalHeaders, "%.*s:%.*s\n",
+        (uint32_t)self->name.size, self->name.addr,
+        (uint32_t)self->value.size, self->value.addr);
+
+    if (d->buildSignedHeaders)
+        KDataBufferPrintf(&d->signedHeaders, "%.*s;",
+            (uint32_t)self->name.size, self->name.addr);
+}
+
+rc_t KClientHttpRequestPrepareCanonicalHeaders(
+    const KClientHttpRequest* self, SAddHeaderData* d)
+{
+    rc_t rc = SAddHeaderDataInit(d, true);
+
+    const BSTree* hdrs = KClientHttpRequestGetHeaders(self);
+
+    if (rc == 0 && hdrs != NULL)
+        BSTreeForEach(hdrs, false, AddHeaderForAWSRequest, d);
+
+    assert(d);
+    if (rc == 0 && d->canonicalHeaders.elem_count == 0)
+        rc = KDataBufferPrintf(&d->canonicalHeaders, "%s", "");
+    if (rc == 0 && d->buildSignedHeaders && d->signedHeaders.elem_count == 0)
+        rc = KDataBufferPrintf(&d->signedHeaders, "%s", "");
+
+    return rc;
+}
+
+/*
+https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_sigv-create-signed-request.html
+https://docs.aws.amazon.com/AmazonS3/latest/developerguide/sig-v4-header-based-auth.html
+*/
+rc_t KClientHttpRequestCreateCanonicalRequestString(
+    const KClientHttpRequest* self, KDataBuffer* request)
+{
+    rc_t rc = 0;
+    const URLBlock* block = NULL;
+    const String* uri = NULL;
+    KDataBuffer canonicalQueryString;
+    SAddHeaderData d;
+
+    assert(self);
+
+    block = &self->url_block;
+
+    rc = StringCopy(&uri, &block->path);
+    if (rc == 0)
+        rc = UriEncodeForAWS(&uri);
+
+    if (rc == 0)
+        rc = KDataBufferMake(&canonicalQueryString, 8, 0);
+
+    if (rc == 0)
+        rc = PrepareCanonicalQueryStringForAWSRequest(
+            &block->query, &canonicalQueryString);
+
+    if (rc == 0)
+        rc = KClientHttpRequestPrepareCanonicalHeaders(self, &d);
+
+    if (rc == 0)
+        rc = KDataBufferPrintf(request, "GET\n");     /* <HTTPMethod>\n */
+    if (rc == 0)
+        rc = KDataBufferPrintf(request, "%S\n", uri); /* <CanonicalURI>\n */
+    if (rc == 0)
+        rc = KDataBufferPrintf(request, "%.*s\n", /* <CanonicalQueryString>\n */
+            (uint32_t)canonicalQueryString.elem_count - 1,
+            canonicalQueryString.base);
+    if (rc == 0) {
+        const KDataBuffer* canoniclHdrs = &d.canonicalHeaders;
+        rc = KDataBufferPrintf(request, "%.*s\n", /* <CanonicalHeaders>\n */
+            (uint32_t)canoniclHdrs->elem_count - 1, canoniclHdrs->base);
+    }
+    if (rc == 0) {
+        const KDataBuffer* signedHdrs = &d.signedHeaders;
+        uint32_t l = signedHdrs->elem_count - 1;
+        if (l > 0)
+            --l; /* remote trailing ';' */
+        rc = KDataBufferPrintf(request, "%.*s\n", /* <SignedHeaders>\n */
+            l, signedHdrs->base);
+    }
+    if (rc == 0)
+        rc = KDataBufferPrintf(request,
+            /* <HashedPayload> (of no payload in the request: "" ) */
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
+
+    StringWhack(uri);
+
+    {
+        rc_t r2 = KDataBufferWhack(&canonicalQueryString);
+        if (r2 != 0 && rc == 0)
+            rc = r2;
+
+        r2 = SAddHeaderDataFini(&d);
+        if (r2 != 0 && rc == 0)
+            rc = r2;
+    }
+
+    return rc;
 }

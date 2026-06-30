@@ -242,6 +242,7 @@ struct KClientHttpRequest
     bool ceAdded;
 
     bool head; /* is HEAD request */
+    bool testing; /* ease some restrictions */
 };
 
 void KClientHttpGetRemoteEndpoint ( const struct KClientHttp * self,
@@ -319,6 +320,23 @@ bool KUnstableFileIsKHttpFile(const struct KFile * self);
 
 rc_t VdbVersionPrint( ver_t self, char *buffer, size_t size,
     const char *prefix, const char *suffix );
+
+/* Prepare a signed AWS API request */
+rc_t UriEncodeForAWS(const String** encoding);
+rc_t PrepareCanonicalQueryStringForAWSRequest(const String* query,
+    KDataBuffer* canonicalQueryString);
+void AddHeaderForAWSRequest(BSTNode* n, void* data);
+typedef struct SAddHeaderData {
+    KDataBuffer canonicalHeaders;
+    KDataBuffer signedHeaders;
+    bool buildSignedHeaders;
+} SAddHeaderData;
+rc_t SAddHeaderDataInit(struct SAddHeaderData* self, bool buildSignedHeaders);
+rc_t SAddHeaderDataFini(struct SAddHeaderData* self);
+rc_t KClientHttpRequestPrepareCanonicalHeaders(
+    const KClientHttpRequest* self, struct SAddHeaderData* d);
+rc_t KClientHttpRequestCreateCanonicalRequestString(
+    const KClientHttpRequest* self, KDataBuffer* request);
 
 #ifdef __cplusplus
 }

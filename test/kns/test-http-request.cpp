@@ -64,9 +64,15 @@ using namespace ncbi::NK;
 class HttpRequestFixture : public HttpFixture
 {
 public:
-    void MakeRequest(const char * p_urlBase)
+    void MakeRequest(const char * p_urlBase, const char * query = nullptr,
+        const char * url = nullptr)
     {
-        m_url = MakeURL( p_urlBase );
+        string q, u;
+        if (query != nullptr)
+            q = query;
+        if (url != nullptr)
+            u = url;
+        m_url = MakeURL( p_urlBase, q, u );
         if ( KNSManagerMakeClientRequest ( m_mgr, &m_req, 0x01010000, & m_stream, m_url.c_str() ) != 0 )
         {
             throw logic_error( "HttpRequestFixture::MakeRequest(): KNSManagerMakeClientRequest() failed" );
@@ -358,7 +364,6 @@ FIXTURE_TEST_CASE(RequestAddPostParam, HttpRequestFixture)
 }
 
 // KClientHttpRequestAddPostFileParam
-
 FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_SelfNull, HttpRequestFixture)
 {
     REQUIRE_RC_FAIL ( KClientHttpRequestAddPostFileParam ( nullptr, "name", "data/fileToPost" ) );
@@ -564,222 +569,26 @@ TEST_CASE(TestVersionHeaders) {
 #endif
 
 #ifdef ALL
-#include "../../libs/klib/int_checks-priv.h" /* #define FITS_INTO_INT32 */
-#include <klib/rc.h> /* RC */
-static bool IsUnreserved(char c) {
-    static const char unreserved[] =
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        "abcdefghijklmnopqrstuvwxyz"
-        "0123456789"
-        "-._~"
-        "/"; /* Encode the forward slash character, '/', everywhere except in
-                the object key name.
-                For example, if the object key name is photos/Jan/sample.jpg,
-                the forward slash in the key name is not encoded. */
-    return string_chr(unreserved, sizeof unreserved - 1, c) != NULL;
-}
-static rc_t UriEncodeForS3(const String** encoding) {
-    size_t i = 0;
-    int n = 0;
-    if (encoding == NULL || *encoding == NULL || (*encoding)->addr == NULL)
-        return 0;
-    for (i = 0; i < (*encoding)->size; ++i)
-        if (!IsUnreserved(((*encoding)->addr)[i]))
-            ++n;
-    if (n > 0) {
-        size_t iFrom = 0, iTo = 0;
-        const char* from = (*encoding)->addr;
-        char* to = NULL;
-        assert(FITS_INTO_INT32((*encoding)->size + n + n));
-        uint32_t len = (uint32_t)((*encoding)->size + n + n);
-
-        String* encoded = (String*)calloc(1, sizeof * encoded + len + 1);
-        if (encoded == NULL)
-            return RC(rcNS, rcString, rcAllocating, rcMemory, rcExhausted);
-
-        to = (char*)(encoded + 1);
-        StringInit(encoded, to, len, len);
-
-        for (iFrom = 0; iFrom < (*encoding)->size; ++iFrom) {
-            char c = from[iFrom];
-            if (IsUnreserved(c))
-                to[iTo++] = c;
-            else {
-                size_t num_writ = 0;
-                rc_t rc = string_printf(to + iTo, len, &num_writ, "%%%02X", c);
-                if (rc != 0)
-                    return rc;
-                iTo += num_writ;
-            }
-        }
-        to[iTo] = '\0';
-        assert(iTo == len);
-        StringWhack(*encoding);
-        *encoding = encoded;
-    }
-    return 0;
-}
 TEST_CASE(TestUriEncodeForS3) {
-    const String* encoding = NULL;
+    const String* encoding(nullptr);
     String s, d;
     CONST_STRING(&s, "/test+A/b!1#-$.&_'~(Z)z*0,9:a.txt");
     CONST_STRING(&d, "/test%2BA/b%211%23-%24.%26_%27~%28Z%29z%2A0%2C9%3Aa.txt");
     REQUIRE_RC(StringCopy(&encoding, &s));
-    REQUIRE_RC(UriEncodeForS3(&encoding));
+    REQUIRE_RC(UriEncodeForAWS(&encoding));
     REQUIRE_EQ(StringCompare(encoding, &d), 0);
     StringWhack(encoding);
 
     CONST_STRING(&s, ";b=c?d@e[f]g H\"i%J\\k<L>m^N\0");
     CONST_STRING(&d, "%3Bb%3Dc%3Fd%40e%5Bf%5Dg%20H%22i%25J%5Ck%3CL%3Em%5EN%00");
     REQUIRE_RC(StringCopy(&encoding, &s));
-    REQUIRE_RC(UriEncodeForS3(&encoding));
+    REQUIRE_RC(UriEncodeForAWS(&encoding));
     REQUIRE_EQ(StringCompare(encoding, &d), 0);
     StringWhack(encoding);
 }
+#endif
 
-struct PParameter {
-    BSTNode dad;
-
-    const String* name;
-    const String* value;
-};
-
-struct SParameter {
-    String parameter;
-
-    String name;
-    String value;
-
-    PParameter* encoded;
-};
-
-static rc_t
-ParameterInit(SParameter* parameter, const char* buf, size_t size)
-{
-    rc_t rc = 0;
-
-    const char* end = buf + size;
-    char* sep = string_chr(buf, end - buf, '=');
-
-    assert(parameter);
-    memset(parameter, 0, sizeof * parameter);
-
-    StringInit(&parameter->parameter, buf, size, (uint32_t)size);
-
-    if (sep != NULL) {
-        StringInit(&parameter->name, buf, sep - buf, (uint32_t)(sep - buf));
-        StringInit(&parameter->value, sep + 1,
-            end - sep - 1, (uint32_t)(end - sep - 1));
-    }
-    else {
-        StringInit(&parameter->name, buf, end - buf, (uint32_t)(end - buf));
-        StringInit(&parameter->value, "", 0, 0);
-    }
-
-    parameter->encoded = (PParameter*)calloc(1, sizeof * parameter->encoded);
-    if (parameter->encoded == NULL)
-        return RC(rcNS, rcString, rcAllocating, rcMemory, rcExhausted);
-
-    rc = StringCopy(&parameter->encoded->name, &parameter->name);
-    if (rc == 0)
-        rc = UriEncodeForS3(&parameter->encoded->name);
-
-    if (rc == 0)
-        rc = StringCopy(&parameter->encoded->value, &parameter->value);
-    if (rc == 0)
-        rc = UriEncodeForS3(&parameter->encoded->value);
-
-    return rc;
-}
-
-static int64_t CC PParameterSort(const BSTNode* na, const BSTNode* nb) {
-    const PParameter* a = (const PParameter*)na;
-    const PParameter* b = (const PParameter*)nb;
-
-    return StringCaseCompare(a->name, b->name);
-}
-
-static void AddParameter(BSTNode* n, void* data) {
-    PParameter* self = (PParameter*)n;
-    KDataBuffer* buf = (KDataBuffer*)data;
-
-    assert(buf && self && self->name);
-
-    if (self->name->size > 0)
-        KDataBufferPrintf(buf, "%s%S=%S",
-            buf->elem_count != 0 ? "&" : "", self->name, self->value);
-}
-
-static void CC PParameterWhack(BSTNode* n, void* ignore) {
-    PParameter* self = (PParameter*)n;
-
-    assert(self);
-
-    StringWhack(self->name);
-    StringWhack(self->value);
-
-    free(self);
-}
-
-static rc_t PrepareCanonicalQueryString(const String* query,
-    KDataBuffer* canonicalQueryString)
-{
-    rc_t rc = 0;
-
-    const char* buf = NULL;
-    const char* end = NULL;
-    char* sep = NULL;
-
-    SParameter parameter;
-
-    BSTree parameters;
-    BSTreeInit(&parameters);
-
-    assert(query && canonicalQueryString);
-
-    buf = query->addr;
-    end = buf + query->size;
-
-    sep = string_chr(buf, end - buf, '&');
-    if (sep == NULL) {
-        rc = ParameterInit(&parameter, buf, query->size);
-        if (rc != 0)
-            return rc;
-        rc = BSTreeInsert(&parameters, &parameter.encoded->dad, PParameterSort);
-        if (rc != 0)
-            return rc;
-    }
-
-    while (sep != NULL) {
-        rc = ParameterInit(&parameter, buf, sep - buf);
-        if (rc != 0)
-            return rc;
-        rc = BSTreeInsert(&parameters, &parameter.encoded->dad, PParameterSort);
-        if (rc != 0)
-            return rc;
-
-        buf = sep + 1;
-        sep = string_chr(buf, end - buf, '&');
-        if (sep == NULL) {
-            rc = ParameterInit(&parameter, buf, end - buf);
-            if (rc != 0)
-                return rc;
-            rc = BSTreeInsert(&parameters, &parameter.encoded->dad,
-                PParameterSort);
-            if (rc != 0)
-                return rc;
-        }
-    }
-
-    BSTreeForEach(&parameters, false, AddParameter, canonicalQueryString);
-    BSTreeWhack(&parameters, PParameterWhack, NULL);
-
-    if (canonicalQueryString->elem_count == 0)
-        rc = KDataBufferPrintf(canonicalQueryString, "%s", "");
-
-    return rc;
-}
-
+#ifdef ALL
 TEST_CASE(TestAbsolutePathComponentOfTheURIExtraction) {
     String s, q;
     const String* uri = NULL;
@@ -793,7 +602,7 @@ TEST_CASE(TestAbsolutePathComponentOfTheURIExtraction) {
 
     /* Encode URI for S3 */
     REQUIRE_RC(StringCopy(&uri, &block.path));
-    REQUIRE_RC(UriEncodeForS3(&uri));
+    REQUIRE_RC(UriEncodeForAWS(&uri));
     REQUIRE_EQ(StringCompare(uri, &s), 0);
     StringWhack(uri);
 
@@ -804,7 +613,7 @@ TEST_CASE(TestAbsolutePathComponentOfTheURIExtraction) {
     REQUIRE_EQ(StringCompare(&block.path, &s), 0);
 
     REQUIRE_RC(StringCopy(&uri, &block.path));
-    REQUIRE_RC(UriEncodeForS3(&uri));
+    REQUIRE_RC(UriEncodeForAWS(&uri));
     REQUIRE_EQ(StringCompare(uri, &s), 0);
     StringWhack(uri);
 
@@ -819,19 +628,20 @@ TEST_CASE(TestAbsolutePathComponentOfTheURIExtraction) {
     REQUIRE_EQ(StringCompare(&block.query, &q), 0);
 
     REQUIRE_RC(StringCopy(&uri, &block.path));
-    REQUIRE_RC(UriEncodeForS3(&uri));
+    REQUIRE_RC(UriEncodeForAWS(&uri));
     REQUIRE_EQ(StringCompare(uri, &s), 0);
     StringWhack(uri);
 
     KDataBuffer canonicalQueryString;
 
     REQUIRE_RC(KDataBufferMake(&canonicalQueryString, 8, 0));
-    REQUIRE_RC(PrepareCanonicalQueryString(&block.query, &canonicalQueryString));
+    REQUIRE_RC(PrepareCanonicalQueryStringForAWSRequest(
+        &block.query, &canonicalQueryString));
     string a((char*)canonicalQueryString.base, 0,
         canonicalQueryString.elem_count - 1);
     string e("marker=someMarker&max-keys=20&prefix=somePrefix");
     REQUIRE_EQ(a, e);
-    KDataBufferWhack(&canonicalQueryString);
+    REQUIRE_RC(KDataBufferWhack(&canonicalQueryString));
 
     // When a request targets a subresource,
     // the corresponding query parameter value will be an empty string ("")
@@ -843,12 +653,13 @@ TEST_CASE(TestAbsolutePathComponentOfTheURIExtraction) {
     REQUIRE_EQ(StringCompare(&block.query, &q), 0);
 
     REQUIRE_RC(StringCopy(&uri, &block.path));
-    REQUIRE_RC(UriEncodeForS3(&uri));
+    REQUIRE_RC(UriEncodeForAWS(&uri));
     REQUIRE_EQ(StringCompare(uri, &s), 0);
     StringWhack(uri);
 
     REQUIRE_RC(KDataBufferMake(&canonicalQueryString, 8, 0));
-    REQUIRE_RC(PrepareCanonicalQueryString(&block.query, &canonicalQueryString));
+    REQUIRE_RC(PrepareCanonicalQueryStringForAWSRequest(
+        &block.query, &canonicalQueryString));
     a = string((char*)canonicalQueryString.base, 0,
         canonicalQueryString.elem_count - 1);
     e = string("acl=");
@@ -864,12 +675,13 @@ TEST_CASE(TestAbsolutePathComponentOfTheURIExtraction) {
     REQUIRE_EQ(StringCompare(&block.query, &q), 0);
 
     REQUIRE_RC(StringCopy(&uri, &block.path));
-    REQUIRE_RC(UriEncodeForS3(&uri));
+    REQUIRE_RC(UriEncodeForAWS(&uri));
     REQUIRE_EQ(StringCompare(uri, &s), 0);
     StringWhack(uri);
 
     REQUIRE_RC(KDataBufferMake(&canonicalQueryString, 8, 0));
-    REQUIRE_RC(PrepareCanonicalQueryString(&block.query, &canonicalQueryString));
+    REQUIRE_RC(PrepareCanonicalQueryStringForAWSRequest(
+        &block.query, &canonicalQueryString));
     a = string((char*)canonicalQueryString.base, 0,
         canonicalQueryString.elem_count - 1);
     e = string("");
@@ -877,59 +689,6 @@ TEST_CASE(TestAbsolutePathComponentOfTheURIExtraction) {
     KDataBufferWhack(&canonicalQueryString);
 }
 #endif
-
-struct SAddHeaderData {
-    KDataBuffer canonicalHeaders;
-    KDataBuffer signedHeaders;
-    bool buildSignedHeaders;
-};
-
-rc_t SAddHeaderDataInit(SAddHeaderData* self, bool buildSignedHeaders) {
-    rc_t rc = 0;
-
-    assert(self);
-    memset(self, 0, sizeof * self);
-
-    rc = KDataBufferMake(&self->canonicalHeaders, 8, 0);
-
-    if (rc == 0 && buildSignedHeaders) {
-        rc = KDataBufferMake(&self->signedHeaders, 8, 0);
-        self->buildSignedHeaders = true;
-    }
-
-    return rc;
-}
-
-rc_t SAddHeaderDataFini(SAddHeaderData* self) {
-    rc_t rc = 0;
-
-    assert(self);
-
-    rc = KDataBufferWhack(&self->canonicalHeaders);
-
-    if (self->buildSignedHeaders) {
-        rc_t r2 = KDataBufferWhack(&self->canonicalHeaders);
-        if (r2 != 0 && rc == 0)
-            rc = r2;
-    }
-
-    return rc;
-}
-
-static void AddHeader(BSTNode* n, void* data) {
-    KHttpHeader* self = (KHttpHeader*)n;
-    SAddHeaderData* d = (SAddHeaderData*)data;
-
-    assert(self && d);
-
-    KDataBufferPrintf(&d->canonicalHeaders, "%.*s=%.*s\n",
-        (uint32_t)self->name.size, self->name.addr,
-        (uint32_t)self->value.size, self->value.addr);
-
-    if (d->buildSignedHeaders)
-        KDataBufferPrintf(&d->signedHeaders, "%.*s;",
-            (uint32_t)self->name.size, self->name.addr);
-}
 
 #ifdef ALL
 FIXTURE_TEST_CASE(test_ClientHttpResultHeaders, HttpFixture) {
@@ -948,7 +707,7 @@ FIXTURE_TEST_CASE(test_ClientHttpResultHeaders, HttpFixture) {
     const BSTree* hdrs(KClientHttpResultGetHeaders(rslt));
     SAddHeaderData d;
     REQUIRE_RC(SAddHeaderDataInit(&d, false));
-    BSTreeForEach(hdrs, false, AddHeader, &d);
+    BSTreeForEach(hdrs, false, AddHeaderForAWSRequest, &d);
 
     REQUIRE_RC(KClientHttpResultRelease(rslt));
 
@@ -956,27 +715,14 @@ FIXTURE_TEST_CASE(test_ClientHttpResultHeaders, HttpFixture) {
     assert(canoniclHdrs);
     REQUIRE_EQ(string((char*)canoniclHdrs->base, canoniclHdrs->elem_count - 1),
         string(
-            "duplicated-header=Value2,Value1\n"
-            "unique-header=ValueU\n"));
+            "duplicated-header:Value2,Value1\n"
+            "unique-header:ValueU\n"));
 
     REQUIRE_RC(SAddHeaderDataFini(&d));
 }
 #endif
 
 #ifdef ALL
-static rc_t KClientHttpRequestPrepareCanonicalHeaders(
-    const KClientHttpRequest* self, SAddHeaderData* d)
-{
-    rc_t rc = SAddHeaderDataInit(d, true);
-
-    const BSTree* hdrs = KClientHttpRequestGetHeaders(self);
-
-    if (rc == 0 && hdrs != NULL)
-        BSTreeForEach(hdrs, false, AddHeader, d);
-
-    return rc;
-}
-
 FIXTURE_TEST_CASE(TestHeadersCanonization, HttpRequestFixture) {
     MakeRequest(GetName());
 
@@ -1006,12 +752,12 @@ FIXTURE_TEST_CASE(TestHeadersCanonization, HttpRequestFixture) {
     assert(canoniclHdrs);
     REQUIRE_EQ(string((char*)canoniclHdrs->base, canoniclHdrs->elem_count - 1),
         string(
-            "simple-header=simple-value\n"
-            "x-amz-content-sha256" "="
+            "simple-header:simple-value\n"
+            "x-amz-content-sha256" ":"
             "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b9" "\n"
-            "x-amz-date" "=" "20130708T220855Z" "\n"
-            "x-sra-release" "=" "45.678.90XY" "\n"
-            "x-vdb-release" "=" "1.2.3" "\n"
+            "x-amz-date" ":" "20130708T220855Z" "\n"
+            "x-sra-release" ":" "45.678.90XY" "\n"
+            "x-vdb-release" ":" "1.2.3" "\n"
         ));
 
     const KDataBuffer* signedHdrs(&d.signedHeaders);
@@ -1026,6 +772,93 @@ FIXTURE_TEST_CASE(TestHeadersCanonization, HttpRequestFixture) {
         ));
 
     REQUIRE_RC(SAddHeaderDataFini(&d));
+}
+#endif
+
+#ifdef ALL
+FIXTURE_TEST_CASE(TestCanonicalRequestCreation, HttpRequestFixture) {
+    MakeRequest(GetName());
+    KDataBuffer request;
+    REQUIRE_RC(KDataBufferMake(&request, 8, 0));
+    REQUIRE_RC(KClientHttpRequestCreateCanonicalRequestString(
+        m_req, &request));
+    REQUIRE_EQ(string((char*)request.base, request.elem_count - 1), string(
+        "GET\n"
+        "/blah\n"
+        "\n"
+        "\n"
+        "\n"
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"));
+    REQUIRE_RC(KDataBufferWhack(&request));
+
+}
+
+FIXTURE_TEST_CASE(TestCanonicalRequestWithQueryCreation,
+    HttpRequestFixture)
+{
+    MakeRequest(GetName(), "max-keys=2&prefix=J");
+    KDataBuffer request;
+    REQUIRE_RC(KDataBufferMake(&request, 8, 0));
+    REQUIRE_RC(KClientHttpRequestCreateCanonicalRequestString(
+        m_req, &request));
+    REQUIRE_EQ(string((char*)request.base, request.elem_count - 1), string(
+        "GET\n"
+        "/blah\n"
+        "max-keys=2&prefix=J\n"
+        "\n"
+        "\n"
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"));
+    REQUIRE_RC(KDataBufferWhack(&request));
+
+}
+
+FIXTURE_TEST_CASE(TestCanonicalRequestWithQueryNoValueCreation,
+    HttpRequestFixture)
+{
+    MakeRequest(GetName(), "acl");
+    KDataBuffer request;
+    REQUIRE_RC(KDataBufferMake(&request, 8, 0));
+    REQUIRE_RC(KClientHttpRequestCreateCanonicalRequestString(
+        m_req, &request));
+    REQUIRE_EQ(string((char*)request.base, request.elem_count - 1), string(
+        "GET\n"
+        "/blah\n"
+        "acl=\n"
+        "\n"
+        "\n"
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"));
+    REQUIRE_RC(KDataBufferWhack(&request));
+}
+
+FIXTURE_TEST_CASE(TestCanonicalRequestAwsExampleCreation,
+    HttpRequestFixture)
+{
+    MakeRequest("", "max-keys=2&prefix=J",
+        "https://examplebucket.s3.amazonaws.com/");
+    assert(m_req);
+    REQUIRE_RC(KClientHttpRequestAddHeader(m_req, "x-amz-content-sha256",
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"));
+    REQUIRE_RC(KClientHttpRequestAddHeader(m_req, "x-amz-date",
+        "20130524T000000Z"));
+    m_req->testing = true; // allow setting Host header
+    REQUIRE_RC(KClientHttpRequestAddHeader(m_req, "Host",
+        "examplebucket.s3.amazonaws.com"));
+    KDataBuffer request;
+    REQUIRE_RC(KDataBufferMake(&request, 8, 0));
+    REQUIRE_RC(KClientHttpRequestCreateCanonicalRequestString(
+        m_req, &request));
+    REQUIRE_EQ(string((char*)request.base, request.elem_count - 1), string(
+        "GET\n"
+        "/\n"
+        "max-keys=2&prefix=J\n"
+        "host:examplebucket.s3.amazonaws.com\n"
+        "x-amz-content-sha256:"
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        "x-amz-date:20130524T000000Z\n"
+        "\n"
+        "host;x-amz-content-sha256;x-amz-date\n"
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"));
+    REQUIRE_RC(KDataBufferWhack(&request));
 }
 #endif
 
@@ -1053,10 +886,10 @@ FIXTURE_TEST_CASE(TestPrepareCanonicalHeaders, HttpRequestFixture) {
     assert(canoniclHdrs);
     REQUIRE_EQ(string((char*)canoniclHdrs->base, canoniclHdrs->elem_count - 1),
         string(
-            "simple-header=simple-value\n"
-            "x-amz-content-sha256" "="
-            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b9" "\n"
-            "x-amz-date" "=" "20130708T220855Z" "\n"));
+            "simple-header:simple-value\n"
+            "x-amz-content-sha256" ":"
+                            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b9" "\n"
+            "x-amz-date" ":" "20130708T220855Z" "\n"));
 
     const KDataBuffer* signedHdrs(&d.signedHeaders);
     assert(signedHdrs);
@@ -1087,7 +920,7 @@ FIXTURE_TEST_CASE(TestKClientHttpRequestAddReplaceHeader,
     const KDataBuffer* canoniclHdrs(&d.canonicalHeaders);
     assert(canoniclHdrs);
     REQUIRE_EQ(string((char*)canoniclHdrs->base, canoniclHdrs->elem_count - 1),
-        string("simple-header=simplE-valuE\n"));
+        string("simple-header:simplE-valuE\n"));
 
     const KDataBuffer* signedHdrs(&d.signedHeaders);
     assert(signedHdrs);
@@ -1100,7 +933,7 @@ FIXTURE_TEST_CASE(TestKClientHttpRequestAddReplaceHeader,
         "simple-header", "simple-value"));
     REQUIRE_RC(KClientHttpRequestPrepareCanonicalHeaders(m_req, &d));
     REQUIRE_EQ(string((char*)canoniclHdrs->base, canoniclHdrs->elem_count - 1),
-        string("simple-header=simple-value\n"));
+        string("simple-header:simple-value\n"));
     REQUIRE_EQ(string((char*)signedHdrs->base, signedHdrs->elem_count - 1),
         string("simple-header;"));
     REQUIRE_RC(SAddHeaderDataFini(&d));
@@ -1109,7 +942,7 @@ FIXTURE_TEST_CASE(TestKClientHttpRequestAddReplaceHeader,
         "Simple-Header", "Simple-Value"));
     REQUIRE_RC(KClientHttpRequestPrepareCanonicalHeaders(m_req, &d));
     REQUIRE_EQ(string((char*)canoniclHdrs->base, canoniclHdrs->elem_count - 1),
-        string("simple-header=Simple-Value\n"));
+        string("simple-header:Simple-Value\n"));
     REQUIRE_EQ(string((char*)signedHdrs->base, signedHdrs->elem_count - 1),
         string("simple-header;"));
     REQUIRE_RC(SAddHeaderDataFini(&d));
@@ -1119,7 +952,7 @@ FIXTURE_TEST_CASE(TestKClientHttpRequestAddReplaceHeader,
         "SIMPLE-HEADER", "not-simple-value"));
     REQUIRE_RC(KClientHttpRequestPrepareCanonicalHeaders(m_req, &d));
     REQUIRE_EQ(string((char*)canoniclHdrs->base, canoniclHdrs->elem_count - 1),
-        string("simple-header=not-simple-value\n"));
+        string("simple-header:not-simple-value\n"));
     REQUIRE_EQ(string((char*)signedHdrs->base, signedHdrs->elem_count - 1),
         string("simple-header;"));
     REQUIRE_RC(SAddHeaderDataFini(&d));
