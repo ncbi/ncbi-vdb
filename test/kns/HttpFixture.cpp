@@ -208,9 +208,17 @@ HttpFixture :: Reconnect () noexcept
 }
 
 string
-HttpFixture :: MakeURL(const string & base)
+HttpFixture :: MakeURL(const string & base, const string & query,
+    const string & aUrl)
 {
-    return string("http://") + base + ".com/blah";
+    string url("http://" + base + ".com/blah");
+    if (aUrl.size() > 0)
+        url = aUrl;
+
+    if (query.size() > 0)
+        url += "?" + query;
+
+    return url;
 }
 
 KStream HttpFixture :: m_stream;
