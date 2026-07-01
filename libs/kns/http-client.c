@@ -397,7 +397,7 @@ rc_t KClientHttpProxyConnect ( KClientHttp * self, const String * hostname, uint
                 size_t size = buffer.elem_count - 1;
 
                 STATUS(_STAT_QA, "%s - created proxy request '%.*s'\n", __func__,
-                                    (uint32_t)size, (char*)buffer.base);
+                                    (int)size, (char*)buffer.base);
 
                 /* send request and receive a response */
                 STATUS(_STAT_PRG, "%s - sending proxy request\n", __func__);
@@ -1571,7 +1571,7 @@ rc_t KClientHttpGetStatusLine ( KClientHttp *self, timeout_t *tm, String *msg, u
             if ( strcase_cmp ( "http", 4, buffer, sep - buffer, 4 ) != 0 )
             {
                 rc = RC ( rcNS, rcNoTarg, rcParsing, rcNoObj, rcUnsupported );
-                DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_HTTP), ("%s: protocol given as '%.*s'\n", __func__, ( uint32_t ) ( sep - buffer ), buffer ));
+                DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_HTTP), ("%s: protocol given as '%.*s'\n", __func__, ( int ) ( sep - buffer ), buffer ));
             }
             else
             {
@@ -2011,10 +2011,10 @@ rc_t KClientHttpSendReceiveMsg ( KClientHttp *self, KClientHttpResult **rslt,
     /* TBD - may want to assert that there is an empty line in "buffer" */
 #if _DEBUGGING
     if ( KNSManagerIsVerbose ( self -> mgr ) )
-        KOutMsg ( "KClientHttpSendReceiveMsg: '%.*s'\n", len, buffer );
+        KOutMsg ( "KClientHttpSendReceiveMsg: '%.*s'\n", (int)len, buffer );
 #endif
     DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_HTTP),
-        ("HTTP send '%S' '%.*s'\n\n", &self->hostname, len, buffer));
+        ("HTTP send '%S' '%.*s'\n\n", &self->hostname, (int)len, buffer));
 
 #ifndef DEBUG_GCP_KSOCKET_TIMED_WRITE_MBEDTLS_SSL_WRITE_UNKNOWN_ERROR_MESSAGE
     KClientHttpKSocketTimedWriteErrGcpHack(self);
