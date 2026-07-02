@@ -139,7 +139,7 @@ extern "C" {
     _condition(BLAST,BLAST)
 
 #define CLOUD_CONDITIONS() \
-    _condition(CLOUD,LOAD)
+    _condition(CLOUD,LOAD) _condition(CLOUD,SIGN)
 
 #define KDB_CONDITIONS() \
     _condition(KDB,KDB) _condition(KDB,POS)
