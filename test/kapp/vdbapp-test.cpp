@@ -25,11 +25,15 @@
  */
 
 #include <kapp/vdbapp.h>
+#include <../libs/kapp/vdbapp-priv.h>
 
 #include <ktst/unit_test.hpp>
 
 #include <kproc/procmgr.h>
 #include <klib/klib-priv.h>
+#include <klib/log.h>
+#include <klib/debug.h>
+#include <klib/status.h>
 #include <kns/manager.h>
 
 using namespace std;
@@ -120,14 +124,78 @@ TEST_CASE(WCharConversion_BadArgs)
 
 #endif
 
-TEST_CASE(App_FilterArgs)
-{   // handles and filters out standard options
-    int argc = 4;
-    const char* argv[] = { "exe", "-+VDB", "param", "-h" };
+// handling of standard options
+
+bool usage_called = false;
+rc_t CC usage ( const Args * args )
+{
+    usage_called=true;
+    return 0;
+}
+
+TEST_CASE(App_HandleStandardOptions_None)
+{
+    SetUsage( usage );
+    usage_called = false;
+    int argc = 1;
+    const char* argv[] = { GetName() };
     VDB::Application app( argc, (char**)argv);
-    REQUIRE_EQ( 2, app.getArgC() );
-    REQUIRE_EQ( string("exe"), string( app.getArgV()[0] ) );
-    REQUIRE_EQ( string("param"), string( app.getArgV()[1] ) );
+    REQUIRE_RC( app.HandleStandardOptions() );
+    REQUIRE( ! usage_called );
+    REQUIRE_EQ( 1, app.getArgC() );
+}
+
+TEST_CASE(App_HandleStandardOptions_Help)
+{
+    SetUsage( usage );
+    usage_called = false;
+    int argc = 2;
+    const char* argv[] = { GetName(), "-h" };
+    VDB::Application app( argc, (char**)argv);
+    exit_after_help_or_version = false;
+    REQUIRE_RC( app.HandleStandardOptions() );
+    REQUIRE( usage_called );
+    REQUIRE_EQ( 1, app.getArgC() ); // -h filtered out
+}
+
+TEST_CASE(App_HandleStandardOptions_Version)
+{
+    int argc = 2;
+    const char* argv[] = { GetName(), "-V" };
+    VDB::Application app( argc, (char**)argv );
+    exit_after_help_or_version = false;
+    REQUIRE_RC( app.HandleStandardOptions() );
+    REQUIRE_EQ( 1, app.getArgC() ); // -V filtered out
+}
+
+TEST_CASE(App_HandleStandardOptions_Log)
+{
+    int argc = 3;
+    const char* argv[] = { GetName(), "-L", "int" };
+    VDB::Application app( argc, (char**)argv );
+    REQUIRE_RC( app.HandleStandardOptions() );
+    REQUIRE_EQ( (int)klogInt, (int)KLogLevelGet() );
+    REQUIRE_EQ( 1, app.getArgC() ); // "-L int" filtered out
+}
+
+TEST_CASE(App_HandleStandardOptions_Verbose)
+{
+    int argc = 2;
+    const char* argv[] = { GetName(), "-vvv" };
+    VDB::Application app( argc, (char**)argv );
+    REQUIRE_RC( app.HandleStandardOptions() );
+    REQUIRE_EQ( 3, (int)KStsLevelGet() );
+    REQUIRE_EQ( 1, app.getArgC() ); // "-vvv" filtered out
+}
+
+TEST_CASE(App_HandleStandardOptions_Debug)
+{
+    int argc = 2;
+    const char* argv[] = { GetName(), "-+KDB" };
+    VDB::Application app( argc, (char**)argv );
+    REQUIRE_RC( app.HandleStandardOptions() );
+    REQUIRE( KDbgTestModConds( DBG_KDB, DBG_FLAG(DBG_KDB_KDB) ) );
+    REQUIRE_EQ( 1, app.getArgC() ); // "-+KDB" filtered out
 }
 
 int main(int argc, char* argv[])

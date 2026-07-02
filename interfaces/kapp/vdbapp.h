@@ -182,6 +182,8 @@ rc_t CC NextLogLevelCommon ( const char * level_parameter );
 #endif
             ~Application();
 
+            rc_t HandleStandardOptions(); // handles and removes standard options
+
             operator bool() const { return m_rc == 0; }
             rc_t getRc() const { return m_rc; }
             void setRc( rc_t p_rc ) { m_rc = p_rc; }
@@ -193,8 +195,10 @@ rc_t CC NextLogLevelCommon ( const char * level_parameter );
             char** getArgV() { return m_argv; }
             const char** getArgV() const { return (const char**)m_argv; }
 
+            void HandleHelp( Usage_t helpFn = nullptr ) const; // calls global Usage if null
+
         private:
-            rc_t HandleAndRemoveStandardOptions();
+            bool IsStandardOption( unsigned int index, bool & skipNext ) const;
 
             int m_argc;
             char** m_argv;

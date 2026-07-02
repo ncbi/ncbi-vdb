@@ -24,8 +24,14 @@
 *
 */
 
-#include <kapp/vdbapp.h>
+#include "vdbapp-priv.h"
 
+#include <klib/text.h>
+
+#include <string>
+#include <stdexcept>
+
+using namespace std;
 using namespace VDB;
 
 Application::Application(int argc, char* argv[], const char * exe_name)
@@ -33,10 +39,6 @@ Application::Application(int argc, char* argv[], const char * exe_name)
 {
     SetUsageDefaultName( exe_name );
     m_rc = VdbInitialize(argc, argv, 0);
-    if ( m_rc == 0 )
-    {
-        m_rc = HandleAndRemoveStandardOptions( argc, argv );
-    }
 }
 
 #if WINDOWS && UNICODE
@@ -56,11 +58,6 @@ Application::Application(int argc, wchar_t* argv[], const char * exe_name)
         SetUsageDefaultName( exe_name );
         m_rc = VdbInitialize(argc, new_argv, 0);
     }
-    if ( m_rc == 0 )
-    {
-        m_rc = HandleAndRemoveStandardOptions( argc, new_argv );
-        free( new_argv );
-    }
 }
 #endif
 
@@ -78,8 +75,82 @@ Application::~Application()
     }
 }
 
+bool
+Application::IsStandardOption( unsigned int index, bool & skipNext ) const
+{
+    string opt = m_argv[ index ];
+    skipNext = false;
+    if ( opt == "-h" || opt == "--help" )
+    {
+        return true;
+    }
+    if ( opt == "-V" || opt == "--version" )
+    {
+        return true;
+    }
+    if ( opt == "-L" || opt == "--log-level" )
+    {
+        skipNext = true;
+        return true;
+    }
+    if ( opt.substr(0, 2) == "-v" || opt == "--verbose" )
+    {
+        return true;
+    }
+    if ( opt.substr(0, 2) == "-+" )
+    {
+        return true;
+    }
+    return false;
+}
+
 rc_t
-Application::HandleAndRemoveStandardOptions( int argc, char* argv[] )
-{   // after this, m_argv wil always be owned
-    return 0;
+Application::HandleStandardOptions()
+{
+    Args * args = nullptr;
+    // take care of the standard options
+    rc_t rc = ArgsMakeStandardOptions( &args );
+    if ( rc == 0 )
+    {
+        rc = ArgsParse( args, m_argc, (const char **)m_argv );
+        ArgsRelease( args );
+    }
+
+    // filter out standard options
+    char ** new_argv = (char**) malloc( m_argc * sizeof( *new_argv ) );
+    if ( m_argv == 0 )
+    {
+        throw std::bad_alloc();
+    }
+
+    int new_argc = 0;
+    int i = 0;
+    while ( i < m_argc )
+    {
+        bool skip = false;
+        if( i > 0 && IsStandardOption( i, skip ) )
+        {
+            if ( skip )
+            {
+                ++i;
+            }
+        }
+        else
+        {
+            new_argv[ new_argc ] = string_dup( m_argv[i], string_size( m_argv [ i ] ) );
+            ++new_argc;
+        }
+        ++i;
+    }
+
+    m_argc = new_argc;
+    // we do not own the original m_argv, replace it with a filtered copy
+    m_argv = new_argv;
+    m_argvOwned = true;
+
+    if ( rc != 0 )
+    {
+        setRc( rc );
+    }
+    return rc;
 }

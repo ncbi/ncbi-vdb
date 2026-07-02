@@ -80,6 +80,8 @@ static Usage_t Usage = DefaultUsage;
 static UsageSummary_t UsageSummary = DefaultUsageSummary;
 static ver_t KAppVersion = 0;
 
+bool exit_after_help_or_version = true;
+
 rc_t DefaultUsage( const Args * args )
 {
     UNUSED( args );
@@ -1496,6 +1498,10 @@ rc_t ArgsParseInt (Args * self, int argc, const char *argv[])
 #if _DEBUGGING
     (void)ArgsHandleDebug (self);
 #endif
+
+    (void)ArgsHandleLogLevel ( self );
+    (void)ArgsHandleStatusLevel ( self );
+
 #if USE_EARLY_HELP
     if (rc == 0)
     {
@@ -1527,10 +1533,10 @@ rc_t ArgsParseInt (Args * self, int argc, const char *argv[])
 
 rc_t CC ArgsParse_int (Args * self, int argc, const char *argv[])
 {
-    KLogLevel lvl = KLogLevelGet ();
-    rc_t rc = KLogLevelSet ( klogWarn );
-    rc = ArgsParseInt ( self, argc, argv );
-    KLogLevelSet ( lvl );
+    //KLogLevel lvl = KLogLevelGet ();
+    //rc_t rc = KLogLevelSet ( klogWarn );
+    rc_t rc = ArgsParseInt ( self, argc, argv );
+    //KLogLevelSet ( lvl );
     return rc;
 }
 
@@ -1887,8 +1893,11 @@ rc_t CC ArgsHandleHelp (Args * self)
             {
                 Usage(self);
             }
-            ArgsWhack (self);
-            exit (0);
+            if ( exit_after_help_or_version )
+            {
+                ArgsWhack (self);
+                exit (0);
+            }
         }
     }
     return rc;
@@ -1924,8 +1933,11 @@ rc_t CC ArgsHandleVersion (Args * self)
 
             HelpVersion (fullpath, KAppVersion);
 
-            ArgsWhack (self);
-            exit (0);
+            if ( exit_after_help_or_version )
+            {
+                ArgsWhack (self);
+                exit (0);
+            }
         }
     }
     return rc;

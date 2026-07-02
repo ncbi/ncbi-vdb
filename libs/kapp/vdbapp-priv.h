@@ -53,6 +53,11 @@ void VdbTerminateSystem();
  */
 void SetQuitting();
 
+/*
+*   controls whether ArgsHandleHelp() and ArgsHandleVersion() call exit()
+*/
+extern bool exit_after_help_or_version;
+
 #ifdef __cplusplus
 }
 #endif
