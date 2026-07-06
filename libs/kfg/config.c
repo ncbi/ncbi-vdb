@@ -65,6 +65,7 @@ struct KfgConfigNamelist;
 #include <stdlib.h>
 #include <assert.h>
 #include <va_copy.h>
+#include <stdio.h>
 
 #if !WINDOWS
     #include <sys/utsname.h>
@@ -170,6 +171,9 @@ struct KConfigNode
     TInternal internal; /* EInternal */
     bool read_only;
     bool dirty;
+
+    /* used to synchronize access to this node */
+    KLock * lock;
 };
 
 /* replace this once we introduce attributes */
@@ -186,11 +190,13 @@ void CC KConfigNodeWhack ( BSTNode *n, void * data )
 
     if ( mgr == NULL )
     {
+        KLockAcquire( self -> lock );
         /* just releasing reference */
         mgr = self -> mgr;
         self -> mgr = NULL; /* update self before releasing self -> mgr */
         self -> read_only = false;
         KConfigSever ( mgr );
+        KLockUnlock( self -> lock );
     }
     else
     {
@@ -198,6 +204,7 @@ void CC KConfigNodeWhack ( BSTNode *n, void * data )
         BSTreeWhack ( & self -> children, KConfigNodeWhack, mgr );
         BSTreeWhack ( & self -> attr, KConfigAttrWhack, mgr );
         free ( self -> val_buffer );
+        KLockRelease( self -> lock );
         free ( self );
     }
 }
@@ -215,6 +222,8 @@ void KConfigNodeInit ( KConfigNode *self, const String *name )
     StringInit ( & self -> name, ( char* ) ( self + 1 ), name -> size, name -> len );
     StringInit ( & self -> value, "", 0, 0 );
     KRefcountInit ( & self -> refcount, 0, "KConfigNode", "init", self -> name . addr );
+
+    KLockMake( & self -> lock );
 }
 
 /* Make
@@ -720,22 +729,35 @@ rc_t KConfigNodeVOpenNodeReadInt ( const KConfigNode *self, const KConfig *mgr,
 
             if ( rc == 0 )
             {
-                /* open node for read */
-                if ( self -> read_only )
+                rc = KLockAcquire( self -> lock );
+                if (rc == 0 )
                 {
-                    assert ( self -> mgr == mgr );
-                    return KConfigNodeAddRef ( self );
-                }
+                    /* open node for read */
+                    if ( self -> read_only )
+                    {
+                        assert ( self -> mgr == mgr );
+                        rc = KLockUnlock( self -> lock );
+                        if ( rc != 0 )
+                        {
+                            return rc;
+                        }
+                        return KConfigNodeAddRef ( self );
+                    }
+                    rc = KLockUnlock( self -> lock );
 
-                /* check to see if already open */
-                if ( atomic32_read ( & self -> refcount ) == 0 )
-                {
-                    ( ( KConfigNode* ) self ) -> mgr = KConfigAttach ( mgr );
-                    ( ( KConfigNode* ) self ) -> read_only = true;
-                    return KConfigNodeAddRef ( self );
-                }
+                    if ( rc == 0 )
+                    {
+                        /* check to see if already open */
+                        if ( atomic32_read ( & self -> refcount ) == 0 )
+                        {
+                            ( ( KConfigNode* ) self ) -> mgr = KConfigAttach ( mgr );
+                            ( ( KConfigNode* ) self ) -> read_only = true;
+                            return KConfigNodeAddRef ( self );
+                        }
 
-                rc = RC ( rcKFG, rcNode, rcOpening, rcNode, rcBusy );
+                        rc = RC ( rcKFG, rcNode, rcOpening, rcNode, rcBusy );
+                    }
+                }
             }
         }
 
@@ -3577,10 +3599,10 @@ rc_t KConfigMakeImpl ( KConfig ** cfg, const KDirectory * cfgdir, bool local,
                     if ( prev != NULL )
                     {
                         /* the global singleton was already instantiated: hand out that one */
-                        rc = KConfigAddRef ( G_kfg.ptr );
+                        rc = KConfigAddRef ( prev );
                         if ( rc == 0 )
                         {
-                            * cfg = G_kfg . ptr;
+                            * cfg = prev;
                         }
                         /* and we have to deallocate the object we just made! */
                         KConfigEmpty ( mgr );

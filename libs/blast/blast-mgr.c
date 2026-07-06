@@ -50,7 +50,7 @@
 #include <stdio.h> /* fprintf */
 #include <string.h> /* memset */
 
-#define TOOLKIT "sratoolkit3_4_0"
+#define TOOLKIT "sratoolkit3_4_2"
 
 /******************************************************************************/
 

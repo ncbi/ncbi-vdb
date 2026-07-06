@@ -1144,20 +1144,7 @@ FIXTURE_TEST_CASE(Pileup, PathFixture)
 #endif
 
 //////////////////////////////////////////// Main
-static void clear_recorded_errors( void )
-{
-    rc_t rc;
-    const char * filename;
-    const char * funcname;
-    uint32_t line_nr;
-    while ( GetUnreadRCInfo ( &rc, &filename, &funcname, &line_nr ) )
-    {
-    }
-}
-
 int main( int argc, char *argv [] )
 {
-    int rc=VPathTestSuite(argc, argv);
-    clear_recorded_errors();
-    return rc;
+    return VPathTestSuite(argc, argv);
 }

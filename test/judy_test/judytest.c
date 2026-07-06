@@ -1813,6 +1813,7 @@ rc_t perform_test( const uint32_t count )
 
 int main ( int argc, char *argv [] )
 {
+    SetUsageDefaultName( UsageDefaultName );
     rc_t rc = VdbInitialize(argc, argv, 0); // this may be not the first call to VdbInitialize, but should not be a problem.
     if ( rc == 0 )
     {

@@ -363,10 +363,16 @@ UsageSummary_t SetUsageSummary ( UsageSummary_t func );
 
 /*
  * A program should define this which will be used only of the actual
- * program name as called is somehow irretrievable
+ * program name as called is somehow irretrievable.
+ * Does nothing if progname is NULL.
  */
-//extern const char UsageDefaultName[];
-void SetUsageDefaultName( const char* );
+void SetUsageDefaultName( const char* progname );
+
+/*
+ * Access to the program-defined name, Cannot be NULL.
+ * if SetUsageDefaultName() has not been called, returns "".
+ */
+const char * GetUsageDefaultName();
 
 /*
  * Version
@@ -425,6 +431,9 @@ rc_t CC ArgsHandleAppendMode ( const Args * self );
  */
 bool CC ArgsIsAppendModeSet ( void );
 void CC ArgsAppendModeSet ( bool AppendMode );
+
+/* hash of sra-tools repository used to generate unique version string */
+void SetSraToolsHash ( const char* str );
 
 #ifdef __cplusplus
 }

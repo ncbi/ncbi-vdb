@@ -4471,7 +4471,8 @@ rc_t VResolverQueryAcc ( const VResolver * self, VRemoteProtocols protocols,
  *  but there is a thought that we can also transform paths
  */
 static
-rc_t VResolverQueryPath ( const VResolver * self, const VPath * query, const VPath ** local )
+rc_t VResolverQueryPath ( const VResolver * self, const VPath * query,
+    const VPath ** local, const char * dir )
 {
     rc_t rc;
 
@@ -4480,7 +4481,10 @@ rc_t VResolverQueryPath ( const VResolver * self, const VPath * query, const VPa
     if ( local == NULL )
         return RC ( rcVFS, rcResolver, rcResolving, rcPath, rcNotFound );
 
-    switch ( KDirectoryPathType ( self -> wd, "%.*s", ( int ) query -> path . size, query -> path . addr ) )
+    switch ( KDirectoryPathType ( self -> wd, "%s%s%.*s",
+        dir == NULL ? "" : dir,
+        dir == NULL ? "" : "/",
+        ( int ) query -> path . size, query -> path . addr ) )
     {
     case kptDir:
     case kptDir | kptAlias:
@@ -4519,9 +4523,10 @@ rc_t VResolverQueryPath ( const VResolver * self, const VPath * query, const VPa
  */
 static
 rc_t VResolverQueryName ( const VResolver * self, VRemoteProtocols protocols,
-    const VPath * query, const VPath ** local, const VPath ** remote, const VPath ** cache )
+    const VPath * query, const VPath ** local, const VPath ** remote,
+    const VPath ** cache, const char * dir )
 {
-    return VResolverQueryPath ( self, query, local );
+    return VResolverQueryPath ( self, query, local, dir );
 }
 
 
@@ -4836,13 +4841,13 @@ rc_t VResolverQueryInt ( const VResolver * self, VRemoteProtocols protocols,
                        ( "Resolver-%s: checking '%S' as file name\n",
                          self -> version, &sQuery) );
                 rc = VResolverQueryName(self, protocols, query,
-                                        local, remote, cache);
+                                        local, remote, cache, dir);
                 break;
 
             case vpRelPath:
             case vpFullPath:
             case vpUNCPath:
-                rc = VResolverQueryPath ( self, query, local );
+                rc = VResolverQueryPath ( self, query, local, dir );
                 if (rc == 0)
                     DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS), (
                         "VResolverQueryInt: "

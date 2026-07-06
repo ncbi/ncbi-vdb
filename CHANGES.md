@@ -23,6 +23,12 @@ Please cite the author in any work or product based on this material.
 # NCBI External Developer Release:
 
 
+## NCBI VDB 3.4.1
+**March 25, 2026**
+
+This release updates release notes. It adds some release notes that were missed in 3.3.0 and 3.4.0. It contains no changes to functionality.
+
+
 ## NCBI VDB 3.4.0
 **March 17, 2026**
 
@@ -31,16 +37,33 @@ Please cite the author in any work or product based on this material.
   **ncbi-vdb**: fixed installation for superuser when LD_LIBRARY_PATH is not defined  
   **ncbi-vdb, sra-tools**: bzip2 was upgraded to version 1.0.8  
   **ncbi-vdb, sra-tools**: zstd was upgraded to version 1.5.7  
+  **sra**: added platform AMCARE  
+  **sra**: added platform CAPITAL_BIOTECH  
+  **sra**: added platform DAAN_GENE  
+  **sra**: added platform GENEPLUS  
+  **sra**: added platform HYK_GENE  
+  **sra**: added platform QITAN_TECH  
   **test**: fixed  
+  **test**: improved python test  
+  **vdb**: removed use of sprintf  
 
 
 ## NCBI VDB 3.3.0
 **December 2, 2025**
 
+  **align, bam-load**: fixed a deadlock condition  
+  **copycat, vdb**: moved teefile to sra-tools  
+  **kdb**: fixed KMDataNodeDropChild to work with nested nodes  
   **kdbmeta, ngs, pileup-stats, prefetch, srapath, vfs**: improved directory path handling  
   **kfg, prefetch**: improved file type handling  
+  **kfs, sra-tools, vfs**: use verbosity option to report HTTP file cache location  
+  **kfs, vfs**: added possibility to calculate md5 checksum while reading a file  
   **kns**: fixed to build on FreeBSD Release 14.3  
+  **ncbi-vdb**: new library, vdbapp, supports tool development without using kapp/KMain  
+  **ncbi-vdb**: removed strchrnul from our macOS support header  
   **ncbi-vdb, sra, sra-info**: added Salus and Geneus platforms  
+  **ncbi-vdb**: updated zlib to 1.3.1  
+  **prefetch, vdb**: fixed failure when prefetching multiple runs  
   **test**: fixed deprecation  
   **test**: ported cipher test to run on multiple UNIX platforms  
 

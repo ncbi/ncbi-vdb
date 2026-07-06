@@ -320,7 +320,8 @@ static rc_t CtxInit(Ctx* self, const VDatabase *db) {
             rc = KConfigOpenNodeRead(cfg, &node, "repository");
             if (rc == 0) {
                 OLD = false;
-                LOGMSG(klogInfo, "KConfig(repository) found: using VResolver");
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
+                    ("KConfig(repository) found: using VResolver"));
             }
             else {
                 OLD = true;
@@ -681,8 +682,17 @@ static void CC bstProcess(BSTNode* n, void* data) {
         static bool reuseWgsResponseInited = false;
         static bool reuseWgsResponse = false;
         if (!reuseWgsResponseInited) {
+#ifdef WINDOWS
+            char buf_env[4096];
+            size_t buf_env_count = 0;
+            errno_t err = getenv_s ( & buf_env_count, buf_env, sizeof ( buf_env ), "NCBI_VDB_NO_CACHE_SDL_RESPONSE" );
+            assert ( err != ERANGE );
+            assert ( buf_env_count <= sizeof ( buf_env ) );
+            reuseWgsResponse = buf_env_count == 0;
+#else
             reuseWgsResponse
                 = getenv("NCBI_VDB_NO_CACHE_SDL_RESPONSE") == NULL;
+#endif
             reuseWgsResponseInited = true;
         }
         RefNode* sn = elm;
@@ -812,7 +822,7 @@ rc_t CC VDatabaseDependencies(const VDatabase *self, BSTree* tr, BSTree* trWgs,
         cacheState = VResolverCacheEnable(ctx->resolver, vrAlwaysDisable);
     }
 
-    ctx->cacheState = cacheState;
+    ctx->cacheState = (bool)cacheState;
 
     if (rc == 0) {
         rc = VDatabaseOpenTableRead(self, &tbl, "REFERENCE");

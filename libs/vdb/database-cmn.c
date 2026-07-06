@@ -344,8 +344,18 @@ static rc_t VFSManagerMagicResolve(const VFSManager *self,
     bool * envVarWasSet)
 {
     rc_t rc = 0;
-
+#ifdef WINDOWS
+    char buf_magic[4096];
+    const char * magic = NULL;
+    size_t buf_count = 0;
+    errno_t err = getenv_s ( & buf_count, buf_magic, sizeof ( buf_magic ), name );
+    assert ( err != ERANGE );
+    assert ( buf_count <= sizeof ( buf_magic ) );
+    if (!err)
+        magic = buf_magic;
+#else
     const char * magic = getenv(name);
+#endif
 
     assert(path);
     *path = NULL;
@@ -388,7 +398,18 @@ static rc_t VFSManagerMagicResolve(const VFSManager *self,
         }
 
         if (rc == 0) {
+#ifdef WINDOWS
+            char buf_e[4096];
+            const char * e = NULL;
+            buf_count = 0;
+            err = getenv_s ( & buf_count, buf_e, sizeof ( buf_e ), "NCBI_VDB_RELIABLE" );
+            assert ( err != ERANGE );
+            assert ( buf_count <= sizeof ( buf_e ) );
+            if (!err)
+                e = buf_e;
+#else
             const char * e = getenv("NCBI_VDB_RELIABLE");
+#endif
             if (e != NULL && e[0] == '\0')
                 high_reliability = false;
             if (high_reliability)
@@ -1257,7 +1278,7 @@ static bool validRunFileNameExt(const String * acc, const String * file,
                 acc->addr, acc->size, acc->len) == 0)
             {
                 if (string_cmp(file->addr + acc->size, file->size - acc->size,
-                    xNoqual->addr, xNoqual->size, xNoqual->size) == 0)
+                    xNoqual->addr, xNoqual->size, (uint32_t) xNoqual->size) == 0)
                 {
                     return true;
                 }
@@ -1295,7 +1316,7 @@ static bool validRunFileNameExt(const String * acc, const String * file,
                         }
                         if (quality[j] == 'Z' &&
                             string_cmp(file->addr + i, file->size - acc->size,
-                                    xNoqual->addr, xNoqual->size, xNoqual->size
+                                    xNoqual->addr, xNoqual->size, (uint32_t) xNoqual->size
                                       ) == 0)
                         {
                             return true;
@@ -1352,7 +1373,7 @@ LIB_EXPORT rc_t CC VDatabaseGetAccession(const VDatabase * self,
         /* find the last '/' */
         const char * last = string_rchr(path, pathLen, '/');
         if (last != NULL) {
-            uint32_t fileLen = pathLen - (last - path) - 1;
+            uint32_t fileLen = pathLen - (uint32_t)(last - path) - 1;
             uint32_t l = pathLen - fileLen - 1;
             const char * start = NULL;
             uint32_t accLen = 0;
@@ -1367,7 +1388,7 @@ LIB_EXPORT rc_t CC VDatabaseGetAccession(const VDatabase * self,
             else
                 ++start;
 
-            accLen = last - start;
+            accLen = (uint32_t)(last - start);
             StringInit(&acc, start, accLen, accLen);
             StringInit(&file, last + 1, fileLen, fileLen);
 

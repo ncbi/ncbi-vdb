@@ -54,7 +54,7 @@ rc_t CC fake_stub_func ( void *self, const VXformInfo *info, int64_t row_id,
 {
     assert(!"THIS FUNCTION IS NEVER TO BE CALLED");
     abort();
-    return 0;
+    /*return 0;*/
 }
 
 /* select is REALLY internal */
@@ -198,6 +198,7 @@ VTRANSFACT_BUILTIN_IMPL ( vdb_hello, 1, 0, 0 ) ( const void *self,
 {
     const char *fact_hello = "vdb:hello factory";
     const char *func_hello = "vdb:hello function";
+    size_t func_hello_len = strlen ( func_hello );
 
     if ( cp -> argc > 0 )
     {
@@ -206,10 +207,14 @@ VTRANSFACT_BUILTIN_IMPL ( vdb_hello, 1, 0, 0 ) ( const void *self,
             func_hello = cp -> argv [ 1 ] . data . ascii;
     }
 
-    rslt -> self = malloc ( strlen ( func_hello ) + 1 );
+    rslt -> self = malloc ( func_hello_len + 1 );
     if ( rslt -> self == NULL )
         return RC ( rcVDB, rcFunction, rcConstructing, rcMemory, rcExhausted );
+#ifdef WINDOWS
+    strcpy_s ( rslt -> self, func_hello_len, func_hello );
+#else
     strcpy ( rslt -> self, func_hello );
+#endif
     rslt -> whack = free;
     rslt -> u . rf = hello_func;
     rslt -> variant = vftRow;
@@ -242,7 +247,7 @@ rc_t CC VLinkerEnterFactory ( KSymTable *tbl, const SchemaEnv *env,
 }
 
 rc_t VLinkerAddFactories ( VLinker *self,
-    const VLinkerIntFactory *fact, uint32_t count,
+    const VLinkerIntFactory *fact_, uint32_t count,
     KSymTable *tbl, const SchemaEnv *env )
 {
     rc_t ret = 0;
@@ -253,7 +258,7 @@ rc_t VLinkerAddFactories ( VLinker *self,
             return RC ( rcVDB, rcFunction, rcRegistering, rcMemory, rcExhausted );
 
         /* invoke factory to get description */
-        rc_t rc = ( * fact [ i ] . f ) ( & lfact -> desc );
+        rc_t rc = ( * fact_ [ i ] . f ) ( & lfact -> desc );
         if ( rc != 0 )
         {
             free ( lfact );
@@ -274,7 +279,7 @@ rc_t VLinkerAddFactories ( VLinker *self,
         }
 
         /* create name */
-        rc = VLinkerEnterFactory ( tbl, env, lfact, fact [ i ] . name );
+        rc = VLinkerEnterFactory ( tbl, env, lfact, fact_ [ i ] . name );
         if ( rc != 0 )
         {
             void *ignore;
@@ -319,7 +324,7 @@ rc_t CC VLinkerEnterSpecial ( KSymTable *tbl, const SchemaEnv *env,
 
 static
 rc_t VLinkerAddUntyped ( VLinker *self,
-    const VLinkerIntSpecial *special, uint32_t count,
+    const VLinkerIntSpecial *special_, uint32_t count,
     KSymTable *tbl, const SchemaEnv *env )
 {
     uint32_t i;
@@ -333,7 +338,7 @@ rc_t VLinkerAddUntyped ( VLinker *self,
         /* I am intrinsic and have no dl symbol */
         lspec -> addr = NULL;
         lspec -> name = NULL;
-        lspec -> func = special [ i ] . f;
+        lspec -> func = special_ [ i ] . f;
 
         /* add to linker */
         rc = VectorAppend ( & self -> special, & lspec -> id, lspec );
@@ -344,7 +349,7 @@ rc_t VLinkerAddUntyped ( VLinker *self,
         }
 
         /* create name */
-        rc = VLinkerEnterSpecial ( tbl, env, lspec, special [ i ] . name );
+        rc = VLinkerEnterSpecial ( tbl, env, lspec, special_ [ i ] . name );
         if ( rc != 0 )
         {
             void *ignore;

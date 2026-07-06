@@ -151,7 +151,12 @@ rc_t VProductionMake ( VProduction **prodp, Vector *owned, size_t size,
         {
 #if PROD_NAME
             prod -> name = ( ( const char* ) prod ) + psize;
+
+#ifdef WINDOWS
+            strcpy_s ( ( char* ) prod -> name, size - psize, name ? name : "" );
+#else
             strcpy ( ( char* ) prod -> name, name ? name : "" );
+#endif
 #endif
 
             if ( fd != NULL )
@@ -176,7 +181,7 @@ static
 void VProductionFlushCacheDeep ( VProduction *self, const char *context )
 {
     int i;
-    for ( i = 0; i < self -> cache_cnt; ++ i )
+    for ( i = 0; i < ( int ) self -> cache_cnt; ++ i )
     {
 #if TRACKING_BLOBS
         if ( self -> cache [ i ] != NULL )
@@ -584,7 +589,7 @@ static bool computeWindow(uint32_t *const pwindow, int64_t const start_id, int64
         window_resized = true;
     }
     assert(window <= UINT32_MAX);
-    *pwindow = window;
+    *pwindow = (uint32_t) window;
     return window_resized;
 }
 
@@ -609,12 +614,12 @@ static
 rc_t VFunctionProdCallRowFunc1( VFunctionProd *self, VBlob **prslt, int64_t row_id,
     uint32_t row_count, const VXformInfo *info, Vector *args,int64_t param_start_id,int64_t param_stop_id)
 {
-    rc_t rc;
+    rc_t rc = 0;
     uint32_t i, argc = VectorLength ( args );
     VRowResult rslt;
     VRowData args_os[16], *args_oh, *argv;
     KDataBuffer scratch;
-    VBlob *blob;
+    VBlob *blob = NULL;
     const VBlob *in;
     PageMapIterator iter_os[16], *iter_oh, *iter;
     uint64_t last = 0;
@@ -711,7 +716,7 @@ rc_t VFunctionProdCallRowFunc1( VFunctionProd *self, VBlob **prslt, int64_t row_
         in = VectorGet(args, i);
 
 		if(in->start_id == -INT64_MAX - 1 ) {
-			rc = PageMapNewIterator(in->pm, &iter[i],0,-1);
+			rc = PageMapNewIterator(in->pm, &iter[i],0,(uint64_t)-1);
 		} else if(param_stop_id>self->stop_id && param_stop_id < INT64_MAX){
 			rc = PageMapNewIterator(in->pm, &iter[i], self->start_id-in->start_id, param_stop_id - self->start_id + 1);
 			if(rc == 0){
@@ -768,17 +773,17 @@ rc_t VFunctionProdCallRowFunc1( VFunctionProd *self, VBlob **prslt, int64_t row_
 
 
     for (row_id = self->start_id; row_id <= self->stop_id && rc == 0; ) {
-        uint32_t row_count = 1;
+        uint32_t row_count_l = 1;
         if(self->dad.sub == vftRow || self->dad.sub ==vftRowFast ){
-            row_count = PageMapIteratorRepeatCount(&iter[0]);
+            row_count_l = PageMapIteratorRepeatCount(&iter[0]);
 
             for (i = 1; i != argc; ++i) {
                 uint32_t j = PageMapIteratorRepeatCount(&iter[i]);
-                if (row_count > j)
-                row_count = j;
+                if (row_count_l > j)
+                row_count_l = j;
             }
-            if (row_id + row_count > self->stop_id + 1)
-            row_count = (uint32_t)( self->stop_id + 1 - row_id );
+            if (row_id + row_count_l > self->stop_id + 1)
+            row_count_l = (uint32_t)( self->stop_id + 1 - row_id );
         }
 
         for (i = 0; i != argc; ++i) {
@@ -797,13 +802,13 @@ rc_t VFunctionProdCallRowFunc1( VFunctionProd *self, VBlob **prslt, int64_t row_
 
         if (row_id == self->start_id) {
 #if PAGEMAP_PRE_EXPANDING_SINGLE_ROW_FIX
-            if (blob->start_id + row_count > blob->stop_id) {
+            if (blob->start_id + row_count_l > blob->stop_id) {
                 last = blob->data.elem_count;
                 rc = KDataBufferResize(&blob->data, blob->data.elem_count + rslt.elem_count);
                 if (rc == 0) {
                     bitcpy(blob->data.base, last * rslt.elem_bits,
                            rslt.data->base, 0, rslt.elem_count * rslt.elem_bits);
-                    rc = PageMapNewSingle(&blob->pm, row_count, rslt.elem_count);
+                    rc = PageMapNewSingle(&blob->pm, row_count_l, rslt.elem_count);
                 }
             }
             else
@@ -822,11 +827,11 @@ rc_t VFunctionProdCallRowFunc1( VFunctionProd *self, VBlob **prslt, int64_t row_
             if (rc == 0) {
                 bitcpy(blob->data.base, last * rslt.elem_bits,
                        rslt.data->base, 0, rslt.elem_count * rslt.elem_bits);
-                rc = PageMapAppendRows(blob->pm, rslt.elem_count, row_count, false);
+                rc = PageMapAppendRows(blob->pm, rslt.elem_count, row_count_l, false);
             }
         }
         else
-            rc = PageMapAppendRows(blob->pm, rslt.elem_count, row_count, true);
+            rc = PageMapAppendRows(blob->pm, rslt.elem_count, row_count_l, true);
 
         /* drop any new buffer that was returned to us */
         if (rslt.data != &scratch) {
@@ -838,8 +843,8 @@ rc_t VFunctionProdCallRowFunc1( VFunctionProd *self, VBlob **prslt, int64_t row_
         last_len = (uint32_t)rslt.elem_count;
 
         for (i = 0; i != argc; ++i)
-            PageMapIteratorAdvance(&iter[i], row_count);
-        row_id += row_count;
+            PageMapIteratorAdvance(&iter[i], row_count_l);
+        row_id += row_count_l;
     }
     KDataBufferWhack(&scratch);
     if (args_oh) free(args_oh);
@@ -918,7 +923,7 @@ rc_t VFunctionProdCallArrayFunc( VFunctionProd *self, VBlob **prslt,
 }
 
 static
-rc_t VFunctionProdCallPageFunc( VFunctionProd *self, VBlob **rslt, int64_t id,
+rc_t VFunctionProdCallPageFunc( VFunctionProd *self, VBlob **rslt_ret, int64_t id,
     const VXformInfo *info, Vector *args )
 {
     struct input_t {
@@ -983,11 +988,11 @@ rc_t VFunctionProdCallPageFunc( VFunctionProd *self, VBlob **rslt, int64_t id,
         }
     }
     if ( allInputsAreSingleRow ) {
-	row_count = stop_id - start_id + 1;
+	row_count = (uint32_t) (stop_id - start_id + 1);
 	if(row_count == 0 ) /*** case of static column **/
 		row_count=1;
     } else {
-	row_count = stop_id - start_id + 1;
+	row_count = (uint32_t) (stop_id - start_id + 1);
     }
     if (first_non_control_input < 0) /* no non-control inputs */
         rc = RC(rcVDB, rcFunction, rcExecuting, rcParam, rcInvalid);
@@ -1109,7 +1114,7 @@ rc_t VFunctionProdCallPageFunc( VFunctionProd *self, VBlob **rslt, int64_t id,
                 }
                 else {
                     last = first_write;
-                    first_write += rslt.elem_count;
+                    first_write += (uint32_t) rslt.elem_count;
                     rc = PageMapAppendRow(blob->pm, (uint32_t)rslt.elem_count, false);
                 }
                 if (rc)
@@ -1120,7 +1125,7 @@ rc_t VFunctionProdCallPageFunc( VFunctionProd *self, VBlob **rslt, int64_t id,
                 break;
             KDataBufferSub(&blob->data, &blob->data, 0, first_write);
         }
-        *rslt = blob;
+        *rslt_ret = blob;
         break;
     }
     if (rc != 0 && blob != NULL) vblob_release(blob, NULL);
@@ -1134,7 +1139,7 @@ rc_t VFunctionProdCallBlobFuncEncoding( VFunctionProd *self, VBlob *rslt, int64_
     const VXformInfo *info, const VBlob *sblob ) {
     VBlobData src;
     VBlobResult dst;
-    VBlobHeader *hdr;
+    VBlobHeader *hdr = NULL;
     rc_t rc;
     uint32_t elem_size = VTypedescSizeof(&self->dad.desc);
 
@@ -1339,7 +1344,14 @@ rc_t VFunctionProdCallBlobNFunc( VFunctionProd *self, VBlob **rslt,
     int argc = VectorLength(args);
     rc_t rc;
 
+#ifdef WINDOWS
+#pragma warning(push)
+#pragma warning(disable:4090)
+#endif
     VECTOR_TO_ARRAY(argc, argv, on_stack, on_heap, args);
+#ifdef WINDOWS
+#pragma warning(pop)
+#endif
     {
 	int i;
 	for(i=0;i<argc;i++){
@@ -1506,7 +1518,7 @@ rc_t VFunctionProdCallCompare1(VFunctionProd *self, VBlob **vblob, int64_t id, u
         orig_data.u.data.base = orig->data.base;
         orig_data.u.data.elem_bits = orig->data.elem_bits;
 
-        PageMapNewIterator(orig->pm, &oi, 0, -1);
+        PageMapNewIterator(orig->pm, &oi, 0, (uint64_t)-1);
 
         for (i = orig->start_id; i <= orig->stop_id; ++i) {
             VBlob *test;
@@ -1526,19 +1538,19 @@ rc_t VFunctionProdCallCompare1(VFunctionProd *self, VBlob **vblob, int64_t id, u
                     test_data.u.data.base = test->data.base;
                     test_data.u.data.elem_bits = test->data.elem_bits;
 
-                    PageMapNewIterator(test->pm, &ti, 0, -1);
+                    PageMapNewIterator(test->pm, &ti, 0, (uint64_t)-1);
 
                     if (!PageMapIteratorAdvance(&ti, (uint32_t)(i - test->start_id))) {
                         rc = RC(rcVDB, rcBlob, rcValidating, rcBlob, rcCorrupt);
                     }
                     else {
-                        uint32_t k = PageMapIteratorDataLength(&ti);
+                        uint32_t pm_len = PageMapIteratorDataLength(&ti);
                         orig_data.u.data.elem_count = test_data.u.data.elem_count = j;
 
                         orig_data.u.data.first_elem = (orig->data.bit_offset / orig->data.elem_bits) + PageMapIteratorDataOffset(&oi);
                         test_data.u.data.first_elem = (test->data.bit_offset / test->data.elem_bits) + PageMapIteratorDataOffset(&ti);
 
-                        if (j != k) {
+                        if (j != pm_len) {
                             rc = RC(rcVDB, rcBlob, rcValidating, rcBlob, rcCorrupt);
                         } else {
                             rc = self->u.cf(self->fself, &orig_data, &test_data);
@@ -1558,13 +1570,13 @@ rc_t VFunctionProdCallCompare1(VFunctionProd *self, VBlob **vblob, int64_t id, u
                             a += (orig_data.u.data.first_elem * orig_data.u.data.elem_bits) >> 3;
                             b += (test_data.u.data.first_elem * test_data.u.data.elem_bits) >> 3;
                             /* show up to a row of data before */
-                            count = a - (const uint8_t*)orig_data.u.data.base;
-                            count = count < b - (const uint8_t*)orig_data.u.data.base ? count : b - (const uint8_t*)orig_data.u.data.base;
+                            count = (unsigned) (a - (const uint8_t*)orig_data.u.data.base);
+                            count = (unsigned) (count < b - (const uint8_t*)orig_data.u.data.base ? count : b - (const uint8_t*)orig_data.u.data.base);
                             count = count > 16 ? 16 : count;
                             a -= count;
                             b -= count;
 
-                            count += (j * orig->data.elem_bits + 7) >> 3;
+                            count += (unsigned) ((j * orig->data.elem_bits + 7) >> 3);
 
                             for (k = 0, m = 0; k != count; ++k) {
                                 if (m == 0) {
@@ -1634,8 +1646,8 @@ rc_t VFunctionProdCallCompare( VFunctionProd *self, VBlob **vblob, int64_t id, u
                 test_data.u.data.base = test->data.base;
                 test_data.u.data.elem_bits = test->data.elem_bits;
 
-                PageMapNewIterator(orig->pm, &oi, 0, -1);
-                PageMapNewIterator(test->pm, &ti, 0, -1);
+                PageMapNewIterator(orig->pm, &oi, 0, (uint64_t)-1);
+                PageMapNewIterator(test->pm, &ti, 0, (uint64_t)-1);
                 if (test->start_id < orig->start_id) {
                     if ( !PageMapIteratorAdvance( &ti, (uint32_t)( orig->start_id - test->start_id ) ) ) {
                         rc = RC(rcVDB, rcBlob, rcValidating, rcBlob, rcCorrupt);
@@ -1705,12 +1717,12 @@ rc_t VFunctionProdCallCompare( VFunctionProd *self, VBlob **vblob, int64_t id, u
                     if (!PageMapIteratorAdvance(&ti, 0)) {
                         VBlob *temp;
                         int64_t row = i;
-                        rc = VProductionReadBlob(test_prod, &temp, &row, orig->stop_id - row, NULL);
+                        rc = VProductionReadBlob(test_prod, &temp, &row, (uint32_t)(orig->stop_id - row), NULL);
                         if (rc == 0) {
                             vblob_release(test, NULL);
                             test = temp;
                             test_data.u.data.base = test->data.base;
-                            PageMapNewIterator(test->pm, &ti, 0, -1);
+                            PageMapNewIterator(test->pm, &ti, 0, (uint64_t)-1);
                             if ( test->start_id < row ) {
                                 if ( !PageMapIteratorAdvance( &ti, (uint32_t)( row - test->start_id ) ) ) {
                                     rc = RC(rcVDB, rcBlob, rcValidating, rcBlob, rcCorrupt);
@@ -1867,7 +1879,7 @@ static rc_t VFunctionProdReadNormal ( VFunctionProd *self, VBlob **vblob, int64_
         case vftRow:
 	    case vftRowFast:
         case vftIdDepRow:
-            rc = VFunctionProdCallRowFunc ( self, &vb, id_run, cnt_run, & info, & inputs, pb.range_start_id,pb.range_stop_id );
+            rc = VFunctionProdCallRowFunc ( self, &vb, id_run, (uint32_t)cnt_run, & info, & inputs, pb.range_start_id,pb.range_stop_id );
             break;
         case vftArray:
             rc = VFunctionProdCallArrayFunc ( self, &vb, id_run, & info, & inputs );
@@ -2112,7 +2124,7 @@ rc_t VPivotProdMake ( VPivotProd ** p_prodp,
     VPivotProd * prod;
     VFormatdecl fd = { { 0, 0 }, 0 };
     rc_t rc = VProductionMake ( ( VProduction** ) p_prodp, p_owned, sizeof * prod,
-        prodPivot, 0, p_name, & fd, & p_member -> desc, NULL, p_chain );
+        prodPivot, 0, p_name, & fd, & p_member -> desc, NULL, (uint8_t)p_chain );
     if ( rc == 0 )
     {
         prod = * p_prodp;
@@ -2436,7 +2448,7 @@ rc_t VProductionReadBlob ( const VProduction *cself, VBlob **vblob, int64_t * p_
 
 #if PROD_CACHE
     /* check cache */
-    for ( i = 0; i < self -> cache_cnt; ++ i )
+    for ( i = 0; i < (int) self -> cache_cnt; ++ i )
     {
         blob = self -> cache [ i ];
         if ( self -> cache [ i ] != NULL )

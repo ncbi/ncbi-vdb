@@ -42,8 +42,9 @@ endfunction()
 #
 # sanitizer settings
 #   address sanitizer: stop and fail the test if undefined behavior is detected
-set( asan_defs "-fsanitize=address" "-fsanitize=undefined" "-fno-sanitize-recover=undefined" )
-set( tsan_defs "-fsanitize=thread" )
+#   -lresolv helps to avoid compatibility issues
+set( asan_defs "-fsanitize=address" "-fsanitize=undefined" "-fno-sanitize-recover=undefined" "-lresolv" "-fno-omit-frame-pointer")
+set( tsan_defs "-fsanitize=thread"  "-lresolv" "-fno-omit-frame-pointer")
 #
 
 function( GenerateStaticLibsWithDefs target_name sources compile_defs )
@@ -203,6 +204,7 @@ endfunction()
 
 function( BuildExecutableForTest exe_name sources libraries )
 	add_executable( ${exe_name} ${sources} )
+    target_compile_definitions(${exe_name} PRIVATE VDB_EXE_NAME="${exe_name}")
     add_dependencies( ${exe_name} ncbi-vdb ncbi-wvdb )
     if( WIN32 )
         target_link_options( ${exe_name} PRIVATE "/ENTRY:mainCRTStartup" )
@@ -228,13 +230,16 @@ function( AddExecutableTest test_name sources libraries )
 	if( RUN_SANITIZER_TESTS )
 	    if (NOT "--no-asan" IN_LIST ARGV)
     		BuildExecutableForTest( "${test_name}_asan" "${sources}" "${libraries}" )
+            add_dependencies( "${test_name}_asan" ncbi-vdb-asan )
 	    	target_compile_options( "${test_name}_asan" PRIVATE ${asan_defs} )
 		    target_link_options( "${test_name}_asan" PRIVATE ${asan_defs} )
 		    add_test( NAME "${test_name}_asan" COMMAND "${test_name}_asan" WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
         endif()
 
         if (NOT "--no-tsan" IN_LIST ARGV)
-            BuildExecutableForTest( "${test_name}_tsan" "${sources}" "${libraries}" )
+            string(REPLACE "libncbi-vdb" "libncbi-vdb-tsan" TLIBS "${libraries}" )
+            BuildExecutableForTest( "${test_name}_tsan" "${sources}" "${TLIBS}" )
+            add_dependencies( "${test_name}_tsan" ncbi-vdb-tsan )
             target_compile_options( "${test_name}_tsan" PRIVATE ${tsan_defs} )
             target_link_options( "${test_name}_tsan" PRIVATE ${tsan_defs} )
             add_test( NAME "${test_name}_tsan" COMMAND "${test_name}_tsan" WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )

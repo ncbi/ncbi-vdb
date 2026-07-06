@@ -36,6 +36,7 @@
 #include <klib/out.h> /* KOutMsg */
 #include <klib/printf.h> /* string_printf */
 #include <klib/rc.h> /* RC */
+#include <klib/status.h> /* define STATUS */
 #include <klib/strings.h> /* KFG_USER_ACCEPT_GCP_CHARGES etc */
 #include <klib/text.h> /* String */
 #include <klib/time.h> /* KTime */
@@ -63,6 +64,7 @@
 #include <vfs/services.h> /* KServiceMake */
 
 #include "../kns/mgr-priv.h" /* KNSManagerGetCloudLocation */
+#include "../vdb/dbmgr-priv.h" /* InputValidForCgiCall */
 #include "json-response.h" /* Response4 */
 #include "jwt.h" /* JwtKartValidateFile */
 #include "manager-priv.h" /* VFSManagerExtNoqual */
@@ -288,6 +290,8 @@ typedef struct {
 typedef struct {
     KHttpRequest * httpReq;
     rc_t rc;
+    bool log;            /* log SDL request */
+    KDataBuffer request; /* buffer with masked SDL request to be reported */
 } SHttpRequestHelper;
 
 
@@ -2225,7 +2229,7 @@ rc_t SKVMakeObj ( const SKV ** self, const SObject * obj,
 static rc_t SHttpRequestHelperInit ( SHttpRequestHelper * self,
     const KNSManager * kMgr, const char * cgi )
 {
-    rc_t rc = 0;
+    rc_t rc = 0, r2 = 0;
 
     assert ( self );
 
@@ -2234,20 +2238,206 @@ static rc_t SHttpRequestHelperInit ( SHttpRequestHelper * self,
     rc = KNSManagerMakeReliableClientRequest ( kMgr, & self -> httpReq,
         0x01010000, NULL, cgi );
 
+    r2 = KDataBufferMakeBytes(&self->request, 0);
+    if (rc == 0 && r2 != 2)
+        rc = r2;
+
+    /* SDL request is logged when requested by env.var. */
+    if (rc == 0 && getenv("NCBI_VDB_REQUEST") != NULL) {
+        self->log = true;
+        KDataBufferPrintf(&self->request, "%s?", cgi);
+    }
+
     return rc;
 }
 
 
 static rc_t SHttpRequestHelperFini ( SHttpRequestHelper * self ) {
-    rc_t rc = 0;
+    rc_t rc = 0, r2 = 0;
 
     assert ( self );
 
     RELEASE ( KHttpRequest, self -> httpReq );
 
+    if (self->log) {
+        char* p = self->request.base;
+        uint32_t l = self->request.elem_count;
+        while (l > 0 && (p[l - 1] == '\0' || p[l - 1] == '&'))
+            --l;
+        if (l > 0)
+            STATUS(STAT_ALWAYS, "REQUEST: '%.*s'\n", l, p);
+    }
+
+    r2 = KDataBufferWhack(&self->request);
+    if (rc == 0 && r2 != 0)
+        rc = r2;
+
     return rc;
 }
 
+static rc_t LogSdlResponse(const char* s) {
+    rc_t rc = 0;
+    KDataBuffer b;
+
+    /* SDL response is logged when requested by env.var. */
+    if (getenv("NCBI_VDB_REQUEST") == NULL)
+        return 0;
+
+    rc = KDataBufferMakeBytes(&b, 0);
+    if (rc != 0)
+        return rc;
+
+    rc = MaskSdlResponse(s, &b);
+    if (rc == 0)
+        STATUS(STAT_ALWAYS,
+            "RESPONSE: '%.*s'\n", (uint32_t)b.elem_count, b.base);
+
+    KDataBufferWhack(&b);
+
+    return 0;
+}
+
+/* We mask the content of file argument */
+rc_t MaskSdlRequestFileArg(const char* arg, KDataBuffer* out) {
+    if (arg == NULL)
+        return RC(rcVFS, rcDoc, rcCreating, rcParam, rcNull);
+
+    return KDataBufferPrintf(out, "%s=***...&", arg);
+}
+
+/* We mask long request arguments */
+rc_t MaskSdlRequestArg(const String* arg, KDataBuffer* out) {
+    if (arg == NULL)
+        return RC(rcVFS, rcDoc, rcCreating, rcParam, rcNull);
+
+    else {
+        rc_t rc = 0;
+
+        uint32_t s = string_measure(arg->addr, NULL);
+        if (s <= 99)
+            rc = KDataBufferPrintf(out, "%s", arg->addr);
+        else {
+            size_t l = 96;
+            rc = KDataBufferPrintf(out, "%.*s", 99, arg->addr);
+            if (rc != 0)
+                return rc;
+
+            s -= 99;
+            if (s < 99)
+                l = s;
+            rc = KDataBufferPrintf(out, "%.*s", l,
+                "**********" "**********" "**********" "**********" "**********"
+                "**********" "**********" "**********" "**********" "**********"
+            );
+
+            if (rc != 0)
+                return rc;
+
+            if (l != s) {
+                rc = KDataBufferPrintf(out, "...");
+                if (rc != 0)
+                    return rc;
+            }
+        }
+
+        return KDataBufferPrintf(out, "&");
+    }
+}
+
+/* mask long URL-s in SDL response to log */
+rc_t MaskSdlResponse(const char* in, KDataBuffer* out) {
+    rc_t rc = 0;
+    const char* b = in; /* begin */
+    const char* e = NULL; /* end */
+    const char* end = NULL; /* end of input */
+    size_t len = 0; /* length of SDL response */
+    char link[] = "\"link\"";
+
+    if (in == NULL)
+        return RC(rcVFS, rcDoc, rcCreating, rcParam, rcNull);
+
+    len = string_measure(in, NULL);
+    end = in + len; /* end of SDL response */
+
+    do {
+        e = strstr(b, link); /* find "link" */
+
+        if (e == NULL) {
+            /* "link" not found, log full response */
+            rc = KDataBufferPrintf(out, "%s", b);
+            break;
+        }
+
+        else {
+            /* found "link" */
+            e += sizeof link - 1;
+            KDataBufferPrintf(out, "%.*s", e - b, b); /* print "link" */
+            /* const char* p = (char*)out->base; */
+            
+            while (*e != '\0')
+                /* skip spaces */
+                if (isspace(*e))
+                    KDataBufferPrintf(out, "%c", *(e++));
+                /* expecting : */
+                else if (*e == ':') {
+                    KDataBufferPrintf(out, "%c", *(e++));
+                    break;
+                }
+                else /* invalid JSON */
+                    goto finish;
+            
+            while (*e != '\0')
+                /* skip spaces after "link"[\s*]:*/
+                if (isspace(*e))
+                    KDataBufferPrintf(out, "%c", *(e++));
+            /* expecting opening " */
+                else if (*e == '"') {
+                    size_t s = 0;
+                    const char* i = NULL;
+                    KDataBufferPrintf(out, "%c", *(e++));
+                    b = e;
+                    /* find ending " */
+                    e = string_chr(b, end - b, '"');
+                    if (e == NULL) /* invalid JSON */
+                        goto finish;
+                    s = e - b;
+                    if (s > 99) {
+                        /* mask a long link */
+                        KDataBufferPrintf(out, "%.*s...", 96, b);
+                        break;
+                    }
+                    else {
+                        /* look for URL with query */
+                        i = string_chr(b, e - b, '?');
+                        if (i == NULL)
+                            KDataBufferPrintf(out, "%.*s", e - b, b);
+                        else {
+                            /* URL has query */
+                            s = e - i;
+                            if (s < 32)
+                                KDataBufferPrintf(out, "%.*s", e - b, b);
+                            else {
+                                /* mask long query */
+                                KDataBufferPrintf(out, "%.*s", i - b + 9, b);
+                                KDataBufferPrintf(out, "******************...");
+                            }
+                        }
+                        break;
+                    }
+                }
+                else /* invalid JSON */
+                    goto finish;
+
+            b = e; /* "link" is processed, look for a next one... */
+        }
+    } while (e != NULL);
+
+finish:
+    if (e != NULL)
+        KDataBufferPrintf(out, "%s", e);
+
+    return rc;
+}
 
 static
 void SHttpRequestHelperAddPostParam ( void * item, void * data )
@@ -2260,8 +2450,12 @@ void SHttpRequestHelperAddPostParam ( void * item, void * data )
     assert ( kv && p );
 
     rc = KHttpRequestAddPostParam ( p -> httpReq, "%s", kv -> k . addr );
-    if ( p -> rc == 0 )
-        p -> rc = rc;
+    if (rc != 0) {
+        if (p->rc == 0)
+            p->rc = rc;
+    }
+    else if (p->log)
+        MaskSdlRequestArg(&kv->k, &p->request);
 }
 
 static
@@ -2275,8 +2469,12 @@ void SHttpRequestHelperAddQueryParam(void * item, void * data)
     assert(kv && p);
 
     rc = KClientHttpRequestAddQueryParam(p->httpReq, kv->n, "%S", &kv->v);
-    if (p->rc == 0)
-        p->rc = rc;
+    if (rc != 0) {
+        if (p->rc == 0)
+            p->rc = rc;
+    }
+    else if (p->log)
+        MaskSdlRequestArg(&kv->k, &p->request);
 }
 
 
@@ -2391,6 +2589,7 @@ static rc_t SCgiRequestPerform ( const SCgiRequest * self,
 
             if (rc == 0) {
                 if (self->fileKey != NULL && self->fileVal != NULL) {
+                    MaskSdlRequestFileArg(self->fileKey, &h.request);
                     rc = KClientHttpRequestAddPostFileParam(h.httpReq,
                         self->fileKey, self->fileVal);
                     if (rc == 0) {
@@ -3011,8 +3210,11 @@ bool SCgiRequestAddKfgLocation(SCgiRequest * self, SHelper * helper)
         rc = KConfigRead(helper->kfg, "/libs/cloud/location", 0,
             buffer, sizeof buffer, &num_read, NULL);
         if (rc == 0) {
-            if (num_read == 0)
+            if (num_read == 0 ||
+                !InputValidForCgiCall(buffer, string_size(buffer), 64))
+            {
                 return false;
+            }
             else {
                 const SKV * kv = NULL;
                 const char n[] = "location";
@@ -3277,8 +3479,10 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
         DBG_FLAG ( DBG_VFS_SERVICE ), ( "CGI = '%s'\n", self -> cgi ) );
     if ( rc == 0 ) {
         if (request->sdl)
+            ; /*
             DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE), (
                 "  not sending version in SDL protocol\n"));
+              */
         else {
             const char name[] = "version";
             char * version = NULL;
@@ -4091,6 +4295,7 @@ rc_t KServiceProcessStreamAll ( KService * self, KStream * stream )
             && buffer [ 0 ] != '#' )
         {
             start = false;
+            LogSdlResponse(buffer);
             rc = KServiceProcessJson ( self );
         }
         else {

@@ -378,42 +378,45 @@ rc_t CC sprintf_func ( void *obj,
         ++ arg_idx;
     }
 
-    /* round cell-size up to nearest 4K */
-    cell_size = ( cell_size + 4095 ) & ~ ( size_t ) 4095;
-
-    /* set output buffer size */
-    rc = KDataBufferResize( rslt -> data, cell_size );
-    if ( rc == 0 )
+    if ( cell_size > 0 )
     {
-#if _DEBUGGING
-        rc = validate_obj ( self, false );
-        if ( rc != 0 )
-            KDbgMsg ( "%s - self is bad before invoking structured_sprintf: %R\n", __func__, rc );
-#endif
-        /* invoke sprintf engine */
-        rc = structured_sprintf ( rslt -> data -> base,
-            rslt -> data -> elem_count, & cell_size, fmt, args );
+        /* round cell-size up to nearest 4K */
+        cell_size = ( cell_size + 4095 ) & ~ ( size_t ) 4095;
 
-        /* recover from buffer insufficient */
-        if ( GetRCState ( rc ) == rcInsufficient && GetRCObject ( rc ) == (enum RCObject)rcBuffer )
-        {
-            rc = KDataBufferResize ( rslt -> data, cell_size + 1 );
-            if ( rc == 0 )
-            {
-                rc = structured_sprintf ( rslt -> data -> base,
-                    rslt -> data -> elem_count, & cell_size, fmt, args );
-            }
-        }
-
+        /* set output buffer size */
+        rc = KDataBufferResize( rslt -> data, cell_size );
         if ( rc == 0 )
         {
-            /* set the return parameters */
-            rc = KDataBufferResize ( rslt -> data, cell_size );
-            if ( rc == 0 )
+        #if _DEBUGGING
+            rc = validate_obj ( self, false );
+            if ( rc != 0 )
+                KDbgMsg ( "%s - self is bad before invoking structured_sprintf: %R\n", __func__, rc );
+        #endif
+            /* invoke sprintf engine */
+            rc = structured_sprintf ( rslt -> data -> base,
+                rslt -> data -> elem_count, & cell_size, fmt, args );
+
+            /* recover from buffer insufficient */
+            if ( GetRCState ( rc ) == rcInsufficient && GetRCObject ( rc ) == (enum RCObject)rcBuffer )
             {
-                rslt -> elem_count = cell_size;
-                rslt -> elem_bits = 8;
+                rc = KDataBufferResize ( rslt -> data, cell_size + 1 );
+                if ( rc == 0 )
+                {
+                    rc = structured_sprintf ( rslt -> data -> base,
+                        rslt -> data -> elem_count, & cell_size, fmt, args );
+                }
             }
+        }
+    }
+
+    if ( rc == 0 )
+    {
+        /* set the return parameters */
+        rc = KDataBufferResize ( rslt -> data, cell_size );
+        if ( rc == 0 )
+        {
+            rslt -> elem_count = cell_size;
+            rslt -> elem_bits = 8;
         }
     }
 
