@@ -35,7 +35,7 @@ using namespace std;
 using namespace VDB;
 
 Application::Application(int argc, char* argv[], const char * exe_name)
-    : m_argc( argc ), m_argv( argv ), m_argvOwned ( false )
+    : m_argc( (unsigned int)argc ), m_argv( argv ), m_argvOwned ( false )
 {
     SetUsageDefaultName( exe_name );
     m_rc = VdbInitialize(argc, argv, 0);
@@ -44,9 +44,9 @@ Application::Application(int argc, char* argv[], const char * exe_name)
 #if WINDOWS && UNICODE
 #include <kapp/win/main-priv-win.h>
 Application::Application(int argc, wchar_t* argv[], const char * exe_name)
-    : m_argc( argc ), m_argvOwned ( false )
+    : m_argc( (unsigned int)argc ), m_argvOwned ( false )
 {
-    char * new_argv[];
+    char ** new_argv;
     int status = ConvertWArgsToUtf8(argc, argv, &new_argv, true);
     if (status != 0)
     {
@@ -66,10 +66,9 @@ Application::~Application()
     VdbTerminate(m_rc);
     if (m_argvOwned)
     {
-        int i = m_argc;
-        while ( -- i >= 0 )
+        for ( unsigned int i = 0; i < m_argc; ++i )
         {
-            free ( m_argv [ i ] );
+            free(m_argv[i]);
         }
         free ( m_argv );
     }
@@ -113,7 +112,7 @@ Application::HandleStandardOptions()
     rc_t rc = ArgsMakeStandardOptions( &args );
     if ( rc == 0 )
     {
-        rc = ArgsParse( args, m_argc, (const char **)m_argv );
+        rc = ArgsParse( args, (int)m_argc, (const char **)m_argv );
         ArgsRelease( args );
     }
     ignore_unknown_arguments = false;
@@ -125,8 +124,8 @@ Application::HandleStandardOptions()
         throw std::bad_alloc();
     }
 
-    int new_argc = 0;
-    int i = 0;
+    unsigned int new_argc = 0;
+    unsigned int i = 0;
     while ( i < m_argc )
     {
         bool skip = false;
