@@ -198,6 +198,15 @@ TEST_CASE(App_HandleStandardOptions_Debug)
     REQUIRE_EQ( 1, app.getArgC() ); // "-+KDB" filtered out
 }
 
+TEST_CASE(App_HandleStandardOptions_Unknown)
+{   // ignore unknown arguments
+    int argc = 2;
+    const char* argv[] = { GetName(), "--whoami" };
+    VDB::Application app( argc, (char**)argv );
+    REQUIRE_RC( app.HandleStandardOptions() );
+    REQUIRE_EQ( 2, app.getArgC() ); // unchanged
+}
+
 int main(int argc, char* argv[])
 {
     return VDBAppTestSuite(argc, argv);

@@ -81,6 +81,7 @@ static UsageSummary_t UsageSummary = DefaultUsageSummary;
 static ver_t KAppVersion = 0;
 
 bool exit_after_help_or_version = true;
+bool ignore_unknown_arguments = false;
 
 rc_t DefaultUsage( const Args * args )
 {
@@ -1285,13 +1286,16 @@ rc_t ArgsParseInt (Args * self, int argc, const char *argv[])
                 node = ( Option* )BSTreeFind( &self->names, name, OptionCmp );
                 if ( node == NULL )
                 {
-                    qrc = RC( rcApp, rcArgv, rcParsing, rcParam, rcUnknown );
-                    PLOGERR (klogErr,
-                             (klogErr, qrc,
-                              "Unknown argument '$(O)'", "O=--%s", name ));
-/*                     break; */
-                    if (orc == 0) /* non-fatal */
-                        orc = qrc;
+                    if ( ! ignore_unknown_arguments )
+                    {
+                        qrc = RC( rcApp, rcArgv, rcParsing, rcParam, rcUnknown );
+                        PLOGERR (klogErr,
+                                (klogErr, qrc,
+                                "Unknown argument '$(O)'", "O=--%s", name ));
+    /*                     break; */
+                        if (orc == 0) /* non-fatal */
+                            orc = qrc;
+                    }
                 }
                 else
                 {
@@ -1367,13 +1371,16 @@ rc_t ArgsParseInt (Args * self, int argc, const char *argv[])
                     alias = ( OptAlias* )BSTreeFind( &self->aliases, name, OptAliasCmp );
                     if ( alias == NULL )
                     {
-                        qrc = RC( rcApp, rcArgv, rcParsing, rcParam, rcUnknown );
-                        PLOGERR (klogErr,
-                                 (klogErr, qrc,
-                                  "Unknown argument '$(O)'", "O=-%s", name ));
+                        if ( ! ignore_unknown_arguments )
+                        {
+                            qrc = RC( rcApp, rcArgv, rcParsing, rcParam, rcUnknown );
+                            PLOGERR (klogErr,
+                                    (klogErr, qrc,
+                                    "Unknown argument '$(O)'", "O=-%s", name ));
 
-                        if (orc == 0)
-                            orc = qrc;
+                            if (orc == 0)
+                                orc = qrc;
+                        }
                     }
                     else
                     {

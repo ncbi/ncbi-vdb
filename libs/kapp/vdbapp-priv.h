@@ -55,8 +55,15 @@ void SetQuitting();
 
 /*
 *   controls whether ArgsHandleHelp() and ArgsHandleVersion() call exit()
+*   true by default
 */
 extern bool exit_after_help_or_version;
+
+/*
+*   controls whether ArgsParse() reports unrecognized arguments
+*   false by default
+*/
+extern bool ignore_unknown_arguments;
 
 #ifdef __cplusplus
 }

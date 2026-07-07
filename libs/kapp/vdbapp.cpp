@@ -109,12 +109,14 @@ Application::HandleStandardOptions()
 {
     Args * args = nullptr;
     // take care of the standard options
+    ignore_unknown_arguments = true;
     rc_t rc = ArgsMakeStandardOptions( &args );
     if ( rc == 0 )
     {
         rc = ArgsParse( args, m_argc, (const char **)m_argv );
         ArgsRelease( args );
     }
+    ignore_unknown_arguments = false;
 
     // filter out standard options
     char ** new_argv = (char**) malloc( m_argc * sizeof( *new_argv ) );
