@@ -46,8 +46,7 @@ Application::Application(int argc, char* argv[], const char * exe_name)
 Application::Application(int argc, wchar_t* argv[], const char * exe_name)
     : m_argc( (unsigned int)argc ), m_argvOwned ( false )
 {
-    char ** new_argv;
-    int status = ConvertWArgsToUtf8(argc, argv, &new_argv, true);
+    int status = ConvertWArgsToUtf8(argc, argv, &m_argv, true);
     if (status != 0)
     {
         m_rc = RC(rcApp, rcArgv, rcParsing, rcParam, rcFailed);
@@ -56,7 +55,7 @@ Application::Application(int argc, wchar_t* argv[], const char * exe_name)
     {
         m_argvOwned = true;
         SetUsageDefaultName( exe_name );
-        m_rc = VdbInitialize(argc, new_argv, 0);
+        m_rc = VdbInitialize(argc, m_argv, 0);
     }
 }
 #endif
