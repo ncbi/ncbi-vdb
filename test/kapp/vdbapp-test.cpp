@@ -188,7 +188,7 @@ TEST_CASE(App_HandleStandardOptions_Verbose)
     REQUIRE_EQ( 1, app.getArgC() ); // "-vvv" filtered out
 }
 
-TEST_CASE(App_HandleStandardOptions_Debug)
+TEST_CASE(App_HandleStandardOptions_Debug_Short)
 {
     int argc = 2;
     const char* argv[] = { GetName(), "-+KDB" };
@@ -196,6 +196,16 @@ TEST_CASE(App_HandleStandardOptions_Debug)
     REQUIRE_RC( app.HandleStandardOptions() );
     REQUIRE( KDbgTestModConds( DBG_KDB, DBG_FLAG(DBG_KDB_KDB) ) );
     REQUIRE_EQ( 1, app.getArgC() ); // "-+KDB" filtered out
+}
+
+TEST_CASE(App_HandleStandardOptions_Debug_Long)
+{
+    int argc = 3;
+    const char* argv[] = { GetName(), "--debug", "KDB" };
+    VDB::Application app( argc, (char**)argv );
+    REQUIRE_RC( app.HandleStandardOptions() );
+    REQUIRE( KDbgTestModConds( DBG_KDB, DBG_FLAG(DBG_KDB_KDB) ) );
+    REQUIRE_EQ( 1, app.getArgC() ); // "--debug KDB" filtered out
 }
 
 TEST_CASE(App_HandleStandardOptions_Unknown)

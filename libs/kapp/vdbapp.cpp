@@ -99,6 +99,11 @@ Application::IsStandardOption( unsigned int index, bool & skipNext ) const
     {
         return true;
     }
+    if ( opt == "--debug" )
+    {
+        skipNext = true;
+        return true;
+    }
     return false;
 }
 
