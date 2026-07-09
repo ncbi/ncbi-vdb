@@ -2589,8 +2589,10 @@ LIB_EXPORT rc_t CC KClientHttpRequestCreateCanonicalRequestString(
     KDataBuffer* request, char** signedHeaders)
 {
     rc_t rc = 0;
+
     const URLBlock* block = NULL;
     const String* uri = NULL;
+
     KDataBuffer canonicalQueryString;
     SAddHeaderData d;
 
