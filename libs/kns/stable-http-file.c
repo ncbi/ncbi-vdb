@@ -38,6 +38,8 @@
 #include <klib/strings.h> /* ENV_VAR_LOG_HTTP_RETRY */
 #include <klib/time.h> /* KSleep */
 
+#include <vfs/path.h> /* VPathRelease */
+
 #include <strtol.h> /* strtou64 */
 
 #include "http-priv.h" /* SUPPORT_CHUNKED_READ */
@@ -132,7 +134,8 @@ rc_t RetrierReopenRemote(KStableHttpFile * self, bool neverBefore)
     {
         rc = KNSManagerVMakeHttpFileIntUnstableFromBuffer(self->mgr,
             &self->file, self->conn, self->vers, self->reliable,
-            self->need_env_token, self->payRequired, self->url, &self->buf);
+            self->need_env_token, self->payRequired, self->url, self->path,
+            &self->buf);
         if (rc == 0) {
             if (neverBefore && !first && logLevel > 0)
                 PLOGERR(klogErr, (klogErr, rc,
@@ -371,8 +374,13 @@ rc_t CC KStblHttpFileDestroy(KStableHttpFile *self)
     rc = KNSManagerRelease(self->mgr);
 
     r2 = KStreamRelease(self->conn);
-    if (rc == 0 && r2 != 0)
+    if (r2 != 0 && rc == 0)
         rc = r2;
+
+    r2 = VPathRelease(self->path);
+    if (r2 != 0 && rc == 0)
+        rc = r2;
+    self->path = NULL;
 
     r2 = KDataBufferWhack(&self->buf);
     if (rc == 0 && r2 != 0)
@@ -382,6 +390,7 @@ rc_t CC KStblHttpFileDestroy(KStableHttpFile *self)
     if (rc == 0 && r2 != 0)
         rc = r2;
 
+    free(self->region);
     free(self->url);
 
     memset(self, 0, sizeof *self);
@@ -614,9 +623,10 @@ enum {
 static
 rc_t KNSManagerVMakeHttpFileInt(const KNSManager *self,
     const KFile **file, struct KStream *conn, ver_t vers, bool reliable,
-    bool need_env_token, bool payRequired, const char *url,
+    bool need_env_token, bool payRequired, const VPath* path, const char *url,
     va_list args)
 {
+    const char* region = NULL;
     rc_t rc = 0;
 
     if (self != NULL && !self->retryFile)
@@ -639,12 +649,15 @@ rc_t KNSManagerVMakeHttpFileInt(const KNSManager *self,
             rc = KHttpFileMake(&f, url, args);
 
             if (rc == 0) {
+                VPath* newPath = NULL;
                 rc = KNSManagerAddRef(self);
                 if (rc == 0)
                     f->mgr = self;
 
                 if (rc == 0)
                     rc = KStreamAddRef(conn);
+                if (rc == 0)
+                    rc = VPathCopyForCloudAccess(path, &newPath);
                 if (rc == 0) {
                     static int sReliable = eUninitialized;
                     if (sReliable == eUninitialized) {
@@ -679,12 +692,15 @@ rc_t KNSManagerVMakeHttpFileInt(const KNSManager *self,
                         reliable = true;
 
                     f->conn = conn;
+                    f->path = newPath;
 
                     f->vers = vers;
                     f->reliable = reliable;
                     f->need_env_token = need_env_token;
                     f->payRequired = payRequired;
                     f->url = string_dup_measure(url, NULL);
+                    if (region != NULL)
+                        f->region = string_dup_measure(region, NULL);
 
                     f->quitting = KNSManagerGetQuitting(self);
 
@@ -724,7 +740,7 @@ LIB_EXPORT rc_t CC KNSManagerMakeHttpFile(const KNSManager *self,
     va_list args;
     va_start(args, url);
     rc = KNSManagerVMakeHttpFileInt(self, file, conn,
-        vers, false, false, false, url, args);
+        vers, false, false, false, NULL, url, args);
     va_end(args);
     return rc;
 }
@@ -737,7 +753,21 @@ LIB_EXPORT rc_t CC KNSManagerMakeReliableHttpFile(const KNSManager *self,
     va_list args;
     va_start(args, url);
     rc = KNSManagerVMakeHttpFileInt(self, file, conn,
-        vers, reliable, need_env_token, payRequired, url, args);
+        vers, reliable, need_env_token, payRequired, NULL, url, args);
+    va_end(args);
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KNSManagerMakeReliableHttpFileVPath(const KNSManager *self,
+    const KFile **file, struct KStream *conn, ver_t vers, bool reliable,
+    bool need_env_token, bool payRequired, const VPath *path,
+    const char *url, ...)
+{
+    rc_t rc = 0;
+    va_list args;
+    va_start(args, url);
+    rc = KNSManagerVMakeHttpFileInt(self, file, conn,
+        vers, reliable, need_env_token, payRequired, path, url, args);
     va_end(args);
     return rc;
 }

@@ -133,18 +133,20 @@ FIXTURE_TEST_CASE(HttpRequest_PUT_sra, HttpRequestFixture)
         version, sizeof version, NULL, "%.3V", VDB_RELEASE_VERSION));
     assert(m_req && m_req->http);
     string expected("PUT ");
+    const char* ua(nullptr);
+    KNSManagerGetUserAgent(&ua);
     if (m_req->http->uf == eUFAbsolute)
         expected += "http://HttpRequest_PUT_sra.com";
     expected +=
         "/blah HTTP/1.1\r\n"
         "host: HttpRequest_PUT_sra.com\r\n"
         "accept: */*\r\n"
-        "X-SRA-Release: " + string(version) + "\r\n"
-        "X-VDB-Release: " + string(version) + "\r\n"
-        "User-Agent: ";
+        "user-agent: " + string(ua) + "\r\n"
+        "x-sra-release: " + string(version) + "\r\n"
+        "x-vdb-release: " + string(version) + "\r\n";
     assert(!expected.empty());
 
-    // match expected against the start of the actual (stop before OS)
+    // match expected against the start of the actual
     auto m = mismatch(expected.begin(), expected.end(), TestStream::m_requests.front().begin() );
     if ( m.first != expected.end() )
     {
@@ -706,7 +708,7 @@ FIXTURE_TEST_CASE(test_ClientHttpResultHeaders, HttpFixture) {
 
     const BSTree* hdrs(KClientHttpResultGetHeaders(rslt));
     SAddHeaderData d;
-    REQUIRE_RC(SAddHeaderDataInit(&d, false));
+    REQUIRE_RC(SAddHeaderDataInit(&d, false, nullptr));
     BSTreeForEach(hdrs, false, AddHeaderForAWSRequest, &d);
 
     REQUIRE_RC(KClientHttpResultRelease(rslt));
@@ -751,7 +753,7 @@ FIXTURE_TEST_CASE(TestHeadersCanonization, HttpRequestFixture) {
     const KDataBuffer* canoniclHdrs(&d.canonicalHeaders);
     assert(canoniclHdrs);
     REQUIRE_EQ(string((char*)canoniclHdrs->base, canoniclHdrs->elem_count - 1),
-        string(
+        string("host:TestHeadersCanonization.com\n"
             "simple-header:simple-value\n"
             "x-amz-content-sha256" ":"
             "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b9" "\n"
@@ -763,7 +765,7 @@ FIXTURE_TEST_CASE(TestHeadersCanonization, HttpRequestFixture) {
     const KDataBuffer* signedHdrs(&d.signedHeaders);
     assert(signedHdrs);
     REQUIRE_EQ(string((char*)signedHdrs->base, signedHdrs->elem_count - 1),
-        string(
+        string("host;"
             "simple-header;"
             "x-amz-content-sha256;"
             "x-amz-date;"
@@ -780,8 +782,11 @@ FIXTURE_TEST_CASE(TestCanonicalRequestCreation, HttpRequestFixture) {
     MakeRequest(GetName());
     KDataBuffer request;
     REQUIRE_RC(KDataBufferMake(&request, 8, 0));
+    char* signedHeaders(nullptr);
     REQUIRE_RC(KClientHttpRequestCreateCanonicalRequestString(
-        m_req, &request));
+        m_req, "GET", &request, &signedHeaders));
+    REQUIRE_EQ(string(signedHeaders), string());
+    free((void*)signedHeaders); signedHeaders = nullptr;
     REQUIRE_EQ(string((char*)request.base, request.elem_count - 1), string(
         "GET\n"
         "/blah\n"
@@ -799,8 +804,11 @@ FIXTURE_TEST_CASE(TestCanonicalRequestWithQueryCreation,
     MakeRequest(GetName(), "max-keys=2&prefix=J");
     KDataBuffer request;
     REQUIRE_RC(KDataBufferMake(&request, 8, 0));
+    char* signedHeaders(nullptr);
     REQUIRE_RC(KClientHttpRequestCreateCanonicalRequestString(
-        m_req, &request));
+        m_req, "GET", &request, &signedHeaders));
+    REQUIRE_EQ(string(signedHeaders), string());
+    free((void*)signedHeaders); signedHeaders = nullptr;
     REQUIRE_EQ(string((char*)request.base, request.elem_count - 1), string(
         "GET\n"
         "/blah\n"
@@ -818,8 +826,11 @@ FIXTURE_TEST_CASE(TestCanonicalRequestWithQueryNoValueCreation,
     MakeRequest(GetName(), "acl");
     KDataBuffer request;
     REQUIRE_RC(KDataBufferMake(&request, 8, 0));
+    char* signedHeaders(nullptr);
     REQUIRE_RC(KClientHttpRequestCreateCanonicalRequestString(
-        m_req, &request));
+        m_req, "GET", &request, &signedHeaders));
+    REQUIRE_EQ(string(signedHeaders), string());
+    free((void*)signedHeaders); signedHeaders = nullptr;
     REQUIRE_EQ(string((char*)request.base, request.elem_count - 1), string(
         "GET\n"
         "/blah\n"
@@ -845,8 +856,12 @@ FIXTURE_TEST_CASE(TestCanonicalRequestAwsExampleCreation,
         "examplebucket.s3.amazonaws.com"));
     KDataBuffer request;
     REQUIRE_RC(KDataBufferMake(&request, 8, 0));
+    char* signedHeaders(nullptr);
     REQUIRE_RC(KClientHttpRequestCreateCanonicalRequestString(
-        m_req, &request));
+        m_req, "GET", &request, &signedHeaders));
+    REQUIRE_EQ(string(signedHeaders),
+        string("host;x-amz-content-sha256;x-amz-date"));
+    free((void*)signedHeaders); signedHeaders = nullptr;
     REQUIRE_EQ(string((char*)request.base, request.elem_count - 1), string(
         "GET\n"
         "/\n"
@@ -885,7 +900,7 @@ FIXTURE_TEST_CASE(TestPrepareCanonicalHeaders, HttpRequestFixture) {
     const KDataBuffer* canoniclHdrs(&d.canonicalHeaders);
     assert(canoniclHdrs);
     REQUIRE_EQ(string((char*)canoniclHdrs->base, canoniclHdrs->elem_count - 1),
-        string(
+        string("host:TestPrepareCanonicalHeaders.com\n"
             "simple-header:simple-value\n"
             "x-amz-content-sha256" ":"
                             "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b9" "\n"
@@ -894,7 +909,7 @@ FIXTURE_TEST_CASE(TestPrepareCanonicalHeaders, HttpRequestFixture) {
     const KDataBuffer* signedHdrs(&d.signedHeaders);
     assert(signedHdrs);
     REQUIRE_EQ(string((char*)signedHdrs->base, signedHdrs->elem_count - 1),
-        string(
+        string("host;"
             "simple-header;"
             "x-amz-content-sha256;"
             "x-amz-date;"
@@ -920,12 +935,13 @@ FIXTURE_TEST_CASE(TestKClientHttpRequestAddReplaceHeader,
     const KDataBuffer* canoniclHdrs(&d.canonicalHeaders);
     assert(canoniclHdrs);
     REQUIRE_EQ(string((char*)canoniclHdrs->base, canoniclHdrs->elem_count - 1),
-        string("simple-header:simplE-valuE\n"));
+        string("host:TestKClientHttpRequestAddReplaceHeader.com\n"
+            "simple-header:simplE-valuE\n"));
 
     const KDataBuffer* signedHdrs(&d.signedHeaders);
     assert(signedHdrs);
     REQUIRE_EQ(string((char*)signedHdrs->base, signedHdrs->elem_count - 1),
-        string("simple-header;"));
+        string("host;simple-header;"));
 
     REQUIRE_RC(SAddHeaderDataFini(&d));
     
@@ -933,18 +949,20 @@ FIXTURE_TEST_CASE(TestKClientHttpRequestAddReplaceHeader,
         "simple-header", "simple-value"));
     REQUIRE_RC(KClientHttpRequestPrepareCanonicalHeaders(m_req, &d));
     REQUIRE_EQ(string((char*)canoniclHdrs->base, canoniclHdrs->elem_count - 1),
-        string("simple-header:simple-value\n"));
+        string("host:TestKClientHttpRequestAddReplaceHeader.com\n"
+            "simple-header:simple-value\n"));
     REQUIRE_EQ(string((char*)signedHdrs->base, signedHdrs->elem_count - 1),
-        string("simple-header;"));
+        string("host;simple-header;"));
     REQUIRE_RC(SAddHeaderDataFini(&d));
 
     REQUIRE_RC(KClientHttpRequestAddHeader(m_req,
         "Simple-Header", "Simple-Value"));
     REQUIRE_RC(KClientHttpRequestPrepareCanonicalHeaders(m_req, &d));
     REQUIRE_EQ(string((char*)canoniclHdrs->base, canoniclHdrs->elem_count - 1),
-        string("simple-header:Simple-Value\n"));
+        string("host:TestKClientHttpRequestAddReplaceHeader.com\n"
+            "simple-header:Simple-Value\n"));
     REQUIRE_EQ(string((char*)signedHdrs->base, signedHdrs->elem_count - 1),
-        string("simple-header;"));
+        string("host;simple-header;"));
     REQUIRE_RC(SAddHeaderDataFini(&d));
 
     BSTree* hdrs(const_cast<BSTree*>(KClientHttpRequestGetHeaders(m_req)));
@@ -952,9 +970,10 @@ FIXTURE_TEST_CASE(TestKClientHttpRequestAddReplaceHeader,
         "SIMPLE-HEADER", "not-simple-value"));
     REQUIRE_RC(KClientHttpRequestPrepareCanonicalHeaders(m_req, &d));
     REQUIRE_EQ(string((char*)canoniclHdrs->base, canoniclHdrs->elem_count - 1),
-        string("simple-header:not-simple-value\n"));
+        string("host:TestKClientHttpRequestAddReplaceHeader.com\n"
+            "simple-header:not-simple-value\n"));
     REQUIRE_EQ(string((char*)signedHdrs->base, signedHdrs->elem_count - 1),
-        string("simple-header;"));
+        string("host;simple-header;"));
     REQUIRE_RC(SAddHeaderDataFini(&d));
 }
 #endif

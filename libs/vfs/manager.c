@@ -947,7 +947,7 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
  */
 static
 rc_t VFSManagerMakeHTTPFile( const VFSManager * self,
-                             const KFile **cfp,
+                             const KFile ** cfp,
                              const VPath * path,
                              const char * cache_location,
                              uint32_t blocksize,
@@ -1036,13 +1036,14 @@ rc_t VFSManagerMakeHTTPFile( const VFSManager * self,
             }
         }
 
-        rc = KNSManagerMakeReliableHttpFile ( self -> kns,
+        rc = KNSManagerMakeReliableHttpFileVPath ( self -> kns,
                                               cfp,
                                               NULL,
                                               0x01010000,
                                               high_reliability,
                                               ceRequired,
                                               payRequired,
+                                              path,
                                               "%s", uri -> addr );
 
         /* in case we are not able to open the remote-file : return with error-code */

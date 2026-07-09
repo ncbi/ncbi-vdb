@@ -33,7 +33,9 @@
 #include <kfg/kfg-priv.h> /* KConfigMakeEmpty */
 #include <kfg/properties.h> /* KConfig_Set_Report_Cloud_Instance_Identity */
 
+#include <klib/data-buffer.h> /* KDataBufferWhack */
 #include <klib/debug.h> /* KDbgSetString */
+#include <klib/printf.h> /* string_printf */
 #include <klib/text.h> /* String */
 #include <klib/rc.h> /* SILENT_RC */
 
@@ -45,6 +47,8 @@
 #include "../../libs/cloud/aws-priv.h" /* TestBase64IIdentityDocument */
 #include "../../libs/cloud/cloud-priv.h" /* AWS */
 #include "../../libs/cloud/cloud-cmn.h" /* KNSManager_Read */
+
+#include "mbedtls/md.h" /* mbedtls_md_free */
 
 using std::string;
 using namespace::std;
@@ -350,7 +354,8 @@ TEST_CASE(GetLocation) {
         rc_t rc = CloudGetLocation ( cloud, & location );
         if ( rc != 0 )
         {
-            if ( rc != SILENT_RC(rcNS, rcFile, rcCreating, rcTimeout, rcExhausted) )
+            if ( rc
+                != SILENT_RC(rcNS, rcFile, rcCreating, rcTimeout, rcExhausted) )
             {
                 REQUIRE_RC( rc );
             }
@@ -371,23 +376,6 @@ TEST_CASE(GetLocation) {
 #endif
 
 #ifdef ALL
-#include "klib/printf.h" /*string_printf*/
-#include "mbedtls/sha256.h" /*mbedtls_sha256*/
-
-static rc_t CalculateSHA256Hash(
-    const unsigned char* input, size_t input_len, char hash[65])
-{
-    int i = 0;
-
-    unsigned char output[32] = "";
-    rc_t rc = mbedtls_sha256(input, input_len, output, 0);
-
-    for (i = 0; rc == 0 && i < 32; ++i)
-        rc = string_printf(hash + i * 2, 3, nullptr, "%02x", output[i]);
-
-    return rc;
-}
-
 TEST_CASE(TestSHA256OfTheEmptyString) {
     const unsigned char input[]("");
     char hex[65]("");
@@ -416,29 +404,9 @@ TEST_CASE(TestSHA256) {
 }
 #endif
 
-#include <klib/data-buffer.h> /* KDataBufferWhack */
-#include <klib/printf.h> /* KDataBufferPrintf */
 #ifdef ALL
-
-static rc_t buildStringToSign(KTime_t requestDateTime, const char* region,
-    const char* hashedCanonicalRequest, KDataBuffer* stringToSign)
-{
-    char t[17] = "";
-    size_t s = KTimeIso8601Basic(requestDateTime, t, sizeof t);
-    if (s == 0)
-        return RC(rcCloud, rcUri, rcEncoding, rcString, rcInsufficient);
-
-    return KDataBufferPrintf(stringToSign,
-        "AWS4-HMAC-SHA256\n"        /* Algorithm */
-        "%s\n"                      /* RequestDateTime */
-        "%.*s/%s/s3/aws4_request\n" /* CredentialScope:
-                                       date/region/service/aws4_request */
-        "%s"                        /* HashedCanonicalRequest */
-        , t, 8, t, region, hashedCanonicalRequest);
-}
-
 TEST_CASE(TestBuildStringToSign) {
-    KTime_t requestDateTime(1369353600);
+    const char requestDateTime[]("20130524T000000Z");
     const char region[]("us-east-1");
     const char hashedCanonicalRequest[](
         "7344ae5b7ee6c3e7e6b0fe0640412a37625d1fbfff95c48bbb2dc43964946972");
@@ -446,8 +414,8 @@ TEST_CASE(TestBuildStringToSign) {
     KDataBuffer stringToSign;
     REQUIRE_RC(KDataBufferMake(&stringToSign, 8, 0));
 
-    REQUIRE_RC(buildStringToSign(
-        requestDateTime, region, hashedCanonicalRequest, &stringToSign));
+    REQUIRE_RC(BuildStringToSign(
+        requestDateTime, region, "s3", hashedCanonicalRequest, &stringToSign));
 
     REQUIRE_EQ(string((char*)stringToSign.base, stringToSign.elem_count - 1),
         string(
@@ -461,14 +429,6 @@ TEST_CASE(TestBuildStringToSign) {
 }
 #endif
 
-#include "mbedtls/md.h" /* mbedtls_md_init */
-static rc_t HMAC_SHA256(const mbedtls_md_info_t* md_info,
-    const unsigned char* key, size_t keylen,
-    const unsigned char* input, size_t ilen, unsigned char* output)
-{
-    return mbedtls_md_hmac(md_info, key, keylen, input, ilen, output);
-}
-
 #ifdef ALL
 TEST_CASE(TestHMAC_SHA256) {
     mbedtls_md_context_t ctx;
@@ -479,7 +439,7 @@ TEST_CASE(TestHMAC_SHA256) {
     REQUIRE(md_info);
 
     const unsigned char key[]("secretKey");
-    const unsigned char payload[]("Hello HMAC SHA 256!");
+    const char payload[]("Hello HMAC SHA 256!");
     unsigned char h_output[32](""); // SHA-256 outputs 32 bytes
     REQUIRE_RC(HMAC_SHA256(md_info,
         key, sizeof key - 1, payload, sizeof payload - 1, h_output));
@@ -495,113 +455,19 @@ TEST_CASE(TestHMAC_SHA256) {
 #endif
 
 #ifdef ALL
-/* Calculate the signature for SigV4 for a signed AWS API request.
- *
- * User Guide:
- https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_sigv-create-signed-request.html
- *
- * Example:
- * https://docs.aws.amazon.com/AmazonS3/latest/developerguide/sig-v4-header-based-auth.html
- *
- * Perform a keyed hash operation on the string to sign
- * using the derived signing key as the hash key.
- * 
- * "secretAccessKey" [ IN ] -  a string that contains your secret access key
- * "date" [ IN ] - a string that contains the date used in the credential scope,
- *                 in the format YYYYMMDD. (date length is 6)
- * "region/regionLen" [ IN ] - a string that contains the Region code
- *                             (for example, us-east-1)
- *  Service is ec2 (hardcoded) - a string that contains the service code
- * "stringToSign/stringToSignLen" [ IN ] - the string to sign
- *     to perform a keyed hash operation to calculate
- *     the signature for a signed AWS API request
- * "signatureHex" [ OUT ] - the Signature for the Authorization Header 
- *                          in hexadecimal representation
- */
-static rc_t calculateSignature(
-    const unsigned char* secretAccessKey,
-    const unsigned char* date,
-    const unsigned char* region, size_t regionLen,
-    const unsigned char* stringToSign, size_t stringToSignLen,
-    char signatureHex[65])
-{
-    rc_t rc = 0;
-    int i = 0;
-
-    unsigned char service[] = "s3";
-    unsigned char termination[] = "aws4_request";
-
-    size_t num_writ = 0;
-    const mbedtls_md_info_t* md_info = NULL;
-
-    unsigned char key[99] = "";
-    unsigned char dateKey[32] = ""; // SHA-256 outputs 32 bytes
-    unsigned char dateRegionKey[32] = "";
-    unsigned char dateRegionServiceKey[32] = "";
-    unsigned char signingKey[32] = "";
-    unsigned char signature[32] = "";
-
-    mbedtls_md_context_t ctx;
-    mbedtls_md_init(&ctx);
-
-    md_info = mbedtls_md_info_from_type(MBEDTLS_MD_SHA256);
-    if (md_info == NULL) {
-        printf("Failed to locate SHA256 information.\n");
-        mbedtls_md_free(&ctx);
-        return 1;
-    }
-
-    /* DateKey = HMAC-SHA256("AWS4" + "<SecretAccessKey>", "<YYYYMMDD>") */
-    rc = string_printf(
-        (char*)key, sizeof key, &num_writ, "AWS4%s", secretAccessKey);
-    if (rc == 0)
-        rc = HMAC_SHA256(md_info, key, num_writ, date, 8, dateKey);
-
-    /* DateRegionKey = HMAC-SHA256(<DateKey>, "<aws-region>") */
-    if (rc == 0)
-        rc = HMAC_SHA256(md_info, dateKey, sizeof dateKey,
-            region, regionLen, dateRegionKey);
-
-    /* DateRegionServiceKey = HMAC-SHA256(<DateRegionKey>, "<aws-service>") */
-    if (rc == 0)
-        rc = HMAC_SHA256(md_info, dateRegionKey, sizeof dateRegionKey,
-            service, sizeof service - 1, dateRegionServiceKey);
-
-    /* SigningKey = HMAC-SHA256(<DateRegionServiceKey>, "aws4_request") */
-    if (rc == 0)
-        rc = HMAC_SHA256(md_info,
-            dateRegionServiceKey, sizeof dateRegionServiceKey,
-            termination, sizeof termination - 1, signingKey);
-
-    /* calculate a signature for SigV4
-       signature = hash(SigningKey, string-to-sign) */
-    if (rc == 0)
-        rc = HMAC_SHA256(md_info,
-            signingKey, 32,
-            stringToSign, stringToSignLen, signature);
-
-    /* Convert the signature from binary to hexadecimal representation,
-       in lowercase characters */
-    for (i = 0; rc == 0 && i < 32; ++i)
-        rc = string_printf(
-            signatureHex + i * 2, 3, nullptr, "%02x", signature[i]);
-
-    mbedtls_md_free(&ctx);
-
-    return rc;
-}
-
 TEST_CASE(TestDeriveSigningKey) {
-    const unsigned char secretKey[]("wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY");
-    const unsigned char stringToSign[](
+    const char secretKey[]("wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY");
+    const char stringToSign[](
         "AWS4-HMAC-SHA256\n"
         "20130524T000000Z\n"
         "20130524/us-east-1/s3/aws4_request\n"
         "7344ae5b7ee6c3e7e6b0fe0640412a37625d1fbfff95c48bbb2dc43964946972");
-    const unsigned char date[]("20130524");
-    const unsigned char region[]("us-east-1");
+    const char date[]("20130524");
+    const char region[]("us-east-1");
+    const char service[]("s3");
     char hex[65]("");
-    REQUIRE_RC(calculateSignature(secretKey, date, region, sizeof region - 1,
+    REQUIRE_RC(CalculateSignature(secretKey, date,
+        region, sizeof region - 1, service, sizeof service - 1,
         stringToSign, sizeof stringToSign - 1, hex));
     REQUIRE_EQ(string(hex), string(
         "f0e8bdb87c964420e857bd35b5d6ed310bd44f0170aba48dd91039c6036bdb41"));
@@ -610,24 +476,11 @@ TEST_CASE(TestDeriveSigningKey) {
 #endif
 
 #ifdef ALL
-static rc_t createAuthorizationHeader(const char* awsAccessKeyId,
-    const char* date, const char* region,
-    const char* signedHeaders, const char* signature,
-    KDataBuffer* header)
-{
-    return KDataBufferPrintf(header,
-        "AWS4-HMAC-SHA256 "
-        "Credential=%s/%s/%s/s3/aws4_request,"
-        "SignedHeaders=%s,"
-        "Signature=%s",
-        awsAccessKeyId, date, region, signedHeaders, signature);
-}
-
 TEST_CASE(TestCreateAuthorizationHeader) {
     KDataBuffer header;
     REQUIRE_RC(KDataBufferMake(&header, 8, 0)); //Authorization:
 
-    REQUIRE_RC(createAuthorizationHeader(
+    REQUIRE_RC(CreateAuthorizationHeader(
         "AKIAIOSFODNN7EXAMPLE", "20220830", "us-east-1", "host;x-amz-date",
         "f0e8bdb87c964420e857bd35b5d6ed310bd44f0170aba48dd91039c6036bdb41",
         &header));
@@ -635,8 +488,8 @@ TEST_CASE(TestCreateAuthorizationHeader) {
     string a((char*)header.base, 0, header.elem_count - 1);
     string e("AWS4-HMAC-SHA256 "
         "Credential="
-                    "AKIAIOSFODNN7EXAMPLE/20220830/us-east-1/s3/aws4_request,"
-        "SignedHeaders=host;x-amz-date,"
+                    "AKIAIOSFODNN7EXAMPLE/20220830/us-east-1/s3/aws4_request, "
+        "SignedHeaders=host;x-amz-date, "
         "Signature="
             "f0e8bdb87c964420e857bd35b5d6ed310bd44f0170aba48dd91039c6036bdb41");
     REQUIRE_EQ(a, e);

@@ -50,7 +50,7 @@
 #include <klib/vector.h>
 
 #include <kns/http.h>
-#include <kns/kns-mgr-priv.h> /* KNSManagerMakeReliableHttpFile */
+#include <kns/kns-mgr-priv.h> /* KNSManagerMakeReliableHttpFileVPath */
 #include <kns/manager.h>
 #include <kns/stream.h>
 
@@ -2005,7 +2005,9 @@ rc_t VResolverAlgRemoteResolve ( const VResolverAlg *self,
             }
             else
             {
-                rc = KNSManagerMakeReliableHttpFile ( kns, opt_file_rtn, NULL, 0x01010000, true, false, false, "%S", s );
+                assert(path);
+                rc = KNSManagerMakeReliableHttpFileVPath ( kns, opt_file_rtn, NULL,
+                    0x01010000, true, false, false, *path, "%S", s );
                 if (rc != 0)
                 {
                     PLOGERR(klogInt, (klogInt, rc,

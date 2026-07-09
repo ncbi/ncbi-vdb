@@ -34,6 +34,7 @@ extern "C" {
 
 struct AWS;
 struct KClientHttpRequest;
+struct mbedtls_md_info_t;
 
 rc_t AWSDoAuthentication(const struct AWS * self,
     struct KClientHttpRequest * req, const char * http_method,
@@ -53,6 +54,27 @@ rc_t Base64InIdentityPkcs7(const char *src, char *dst, size_t dlen);
 rc_t MakeLocation(const char *pkcs7, const char *document, char *dst, size_t dlen);
 
 rc_t GetPkcs7( const struct AWS * self, char *dst, size_t dlen );
+
+/* Prepare a signed AWS API request, version 4 */
+rc_t CalculateSHA256Hash(
+    const unsigned char* input, size_t input_len, char hash[65]);
+rc_t BuildStringToSign(const char* requestDateTime,
+    const char* region, const char* service,
+    const char* hashedCanonicalRequest, struct KDataBuffer* stringToSign);
+rc_t HMAC_SHA256(const struct mbedtls_md_info_t* md_info,
+    const unsigned char* key, size_t keylen,
+    const char* input, size_t ilen, unsigned char* output);
+rc_t CalculateSignature(
+    const char* secretAccessKey,
+    const char* date,
+    const char* region, size_t regionLen,
+    const char* service, size_t serviceLen,
+    const char* stringToSign, size_t stringToSignLen,
+    char signatureHex[65]);
+rc_t CreateAuthorizationHeader(const char* awsAccessKeyId,
+    const char* date, const char* region,
+    const char* signedHeaders, const char* signature,
+    struct KDataBuffer* header);
 
 #ifdef __cplusplus
 }

@@ -237,6 +237,7 @@ struct KClientHttpRequest
 
     bool ceRequired; /* computing environment token required to access this URL */
     bool payRequired; /* payment info required to access this URL */
+    const struct VPath * path;
 
     bool rangeRequested;
     bool ceAdded;
@@ -310,7 +311,7 @@ extern rc_t KClientHttpRequestUrlEncodeBase64(const String ** encoding);
 rc_t KNSManagerVMakeHttpFileIntUnstableFromBuffer(const struct KNSManager *self,
     const struct KFile **file, struct KStream *conn, ver_t vers, bool reliable,
     bool need_env_token, bool payRequired, const char *url,
-    const KDataBuffer *buf);
+    const struct VPath *path, const KDataBuffer *buf);
 
 rc_t KNSManagerVMakeHttpFileIntUnstable(const struct KNSManager *self,
     const struct KFile **file, struct KStream *conn, ver_t vers, bool reliable,
@@ -330,13 +331,14 @@ typedef struct SAddHeaderData {
     KDataBuffer canonicalHeaders;
     KDataBuffer signedHeaders;
     bool buildSignedHeaders;
+    bool hostAdded;
+    const String* host;
 } SAddHeaderData;
-rc_t SAddHeaderDataInit(struct SAddHeaderData* self, bool buildSignedHeaders);
+rc_t SAddHeaderDataInit(struct SAddHeaderData* self, bool buildSignedHeaders,
+    const String* host);
 rc_t SAddHeaderDataFini(struct SAddHeaderData* self);
 rc_t KClientHttpRequestPrepareCanonicalHeaders(
     const KClientHttpRequest* self, struct SAddHeaderData* d);
-rc_t KClientHttpRequestCreateCanonicalRequestString(
-    const KClientHttpRequest* self, KDataBuffer* request);
 
 #ifdef __cplusplus
 }
