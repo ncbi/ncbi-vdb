@@ -758,6 +758,14 @@ LIB_EXPORT rc_t CC KNSManagerMakeReliableHttpFile(const KNSManager *self,
     return rc;
 }
 
+/* reliable is taken from the caller,
+    not path because VPath can come not from resolver
+    (e.g. prefetching dependencies: reliable=true)
+   need_env_token, payRequired are taken from the caller,
+    not path because it can be set by environment
+   url is taken from the caller,
+    not path because there are different ways of getting URL string from VPath
+    and it needs more investigation */
 LIB_EXPORT rc_t CC KNSManagerMakeReliableHttpFileVPath(const KNSManager *self,
     const KFile **file, struct KStream *conn, ver_t vers, bool reliable,
     bool need_env_token, bool payRequired, const VPath *path,
