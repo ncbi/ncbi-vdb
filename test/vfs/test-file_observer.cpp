@@ -24,6 +24,7 @@
 * Tests of KFileMD5ReadObserver for HTTP file
 */
 
+#include <kfg/kfg-priv.h> /* KConfigDisableUserSettings */
 #include "file-observer-test.hpp" // ObserverTest
 
 TEST_SUITE(ReadObserverTestSuite)
@@ -449,6 +450,8 @@ TEST_CASE(TimedReadExactlyTwicePartially) {
 
 int main(int argc, char *argv[])
 {
+    KConfigDisableUserSettings();
+
     rc_t rc(ObserverTest::Begin(eHttp));
 
     if (rc == 0)
