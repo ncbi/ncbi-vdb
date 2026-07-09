@@ -465,7 +465,8 @@ KNS_EXTERN bool CC KFileIsKHttpFile ( const struct KFile * self );
 
 /* Prepare a signed AWS API request */
 KNS_EXTERN rc_t CC KClientHttpRequestCreateCanonicalRequestString(
-    const KClientHttpRequest* self, const char* http_method,
+    const KClientHttpRequest* self,
+    const char* http_method, const char* payload,
     struct KDataBuffer* request, char** signedHeaders);
 
 

@@ -2586,7 +2586,7 @@ https://docs.aws.amazon.com/AmazonS3/latest/developerguide/sig-v4-header-based-a
 */
 LIB_EXPORT rc_t CC KClientHttpRequestCreateCanonicalRequestString(
     const KClientHttpRequest* self, const char* http_method,
-    KDataBuffer* request, char** signedHeaders)
+    const char* payload, KDataBuffer* request, char** signedHeaders)
 {
     rc_t rc = 0;
 
@@ -2644,13 +2644,12 @@ LIB_EXPORT rc_t CC KClientHttpRequestCreateCanonicalRequestString(
         }
     }
     if (rc == 0) {
-        const char string[] =
+        /*const char string[] =
             "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
         DBGMSG(DBG_CLOUD, DBG_FLAG(DBG_CLOUD_SIGN),
             ("AWSAuthV4Signer: Using empty string sha256 "
-                "%s because payload is empty\n", string));
-        rc = KDataBufferPrintf(request, "%s", string);
-            /* <HashedPayload> (of no payload in the request: "" ) */
+                "%s because payload is empty\n", string));*/
+        rc = KDataBufferPrintf(request, "%s", payload); /* <HashedPayload> */
     }
 
     if (rc == 0)

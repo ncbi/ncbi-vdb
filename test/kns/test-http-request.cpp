@@ -784,7 +784,9 @@ FIXTURE_TEST_CASE(TestCanonicalRequestCreation, HttpRequestFixture) {
     REQUIRE_RC(KDataBufferMake(&request, 8, 0));
     char* signedHeaders(nullptr);
     REQUIRE_RC(KClientHttpRequestCreateCanonicalRequestString(
-        m_req, "GET", &request, &signedHeaders));
+        m_req, "GET",
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        &request, &signedHeaders));
     REQUIRE_EQ(string(signedHeaders), string());
     free((void*)signedHeaders); signedHeaders = nullptr;
     REQUIRE_EQ(string((char*)request.base, request.elem_count - 1), string(
@@ -806,7 +808,9 @@ FIXTURE_TEST_CASE(TestCanonicalRequestWithQueryCreation,
     REQUIRE_RC(KDataBufferMake(&request, 8, 0));
     char* signedHeaders(nullptr);
     REQUIRE_RC(KClientHttpRequestCreateCanonicalRequestString(
-        m_req, "GET", &request, &signedHeaders));
+        m_req, "GET",
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        &request, &signedHeaders));
     REQUIRE_EQ(string(signedHeaders), string());
     free((void*)signedHeaders); signedHeaders = nullptr;
     REQUIRE_EQ(string((char*)request.base, request.elem_count - 1), string(
@@ -828,7 +832,9 @@ FIXTURE_TEST_CASE(TestCanonicalRequestWithQueryNoValueCreation,
     REQUIRE_RC(KDataBufferMake(&request, 8, 0));
     char* signedHeaders(nullptr);
     REQUIRE_RC(KClientHttpRequestCreateCanonicalRequestString(
-        m_req, "GET", &request, &signedHeaders));
+        m_req, "GET",
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        &request, &signedHeaders));
     REQUIRE_EQ(string(signedHeaders), string());
     free((void*)signedHeaders); signedHeaders = nullptr;
     REQUIRE_EQ(string((char*)request.base, request.elem_count - 1), string(
@@ -858,7 +864,9 @@ FIXTURE_TEST_CASE(TestCanonicalRequestAwsExampleCreation,
     REQUIRE_RC(KDataBufferMake(&request, 8, 0));
     char* signedHeaders(nullptr);
     REQUIRE_RC(KClientHttpRequestCreateCanonicalRequestString(
-        m_req, "GET", &request, &signedHeaders));
+        m_req, "GET",
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        &request, &signedHeaders));
     REQUIRE_EQ(string(signedHeaders),
         string("host;x-amz-content-sha256;x-amz-date"));
     free((void*)signedHeaders); signedHeaders = nullptr;

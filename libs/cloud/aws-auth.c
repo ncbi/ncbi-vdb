@@ -35,6 +35,8 @@
 #include <kns/http.h> /* KClientHttpRequest */
 #include <kns/http-priv.h> /* KClientHttpRequestGetRegion */
 
+#include "../kns/http-priv.h" /* KClientHttpRequestGetBody */
+
 #include <mbedtls/base64.h> /* mbedtls_base64_encode */
 #include <mbedtls/md.h> /* mbedtls_md_hmac */
 #include "mbedtls/sha256.h" /* mbedtls_sha256 */
@@ -530,6 +532,7 @@ rc_t AWSDoAuthentication_v4(const struct AWS* self, KClientHttpRequest* req,
     char buf[4096] = "";
     char hashedCanonicalRequest[65] = "";
     char signature[65] = "";
+    char bodyHashHex[65] = "";
     char* signedHeaders = NULL;
     KDataBuffer b;
     rc_t rc = 0;
@@ -538,6 +541,8 @@ rc_t AWSDoAuthentication_v4(const struct AWS* self, KClientHttpRequest* req,
 
     char t[17] = "";
     size_t s = KTimeIso8601Basic(now, t, sizeof t);
+
+    const char* body = KClientHttpRequestGetBody(req);
 
     rc = KClientHttpRequestGetHeader(req, "authorization",
         buf, sizeof buf, NULL);
@@ -548,10 +553,14 @@ rc_t AWSDoAuthentication_v4(const struct AWS* self, KClientHttpRequest* req,
         return RC(rcCloud, rcUri, rcEncoding, rcString, rcInsufficient);
 
     rc = KClientHttpRequestAddHeader(req, "x-amz-date", t);
+    if (rc == 0) { /* the hash of payload */
+        uint32_t len = string_measure(body, NULL);
+        rc = CalculateSHA256Hash((unsigned char*)body, len, bodyHashHex);
+    }
+
     if (rc == 0)
         rc = KClientHttpRequestAddHeader(req, "x-amz-content-sha256",
-            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-        );
+            bodyHashHex);
 
     if (rc == 0)
         rc = KDataBufferMake(&b, 8, 0);
@@ -560,7 +569,7 @@ rc_t AWSDoAuthentication_v4(const struct AWS* self, KClientHttpRequest* req,
 
     if (rc == 0)
         rc = KClientHttpRequestCreateCanonicalRequestString(
-            req, http_method, &b, &signedHeaders);
+            req, http_method, bodyHashHex, &b, &signedHeaders);
     if (rc == 0)
         rc = CalculateSHA256Hash(b.base, b.elem_count - 1,
             hashedCanonicalRequest);
