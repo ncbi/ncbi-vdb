@@ -287,6 +287,9 @@ rc_t AWSDoAuthentication_v2(const struct AWS * self, KClientHttpRequest * req,
         return rc;
     }
 
+    DBGMSG(DBG_CLOUD, DBG_FLAG(DBG_CLOUD_SIGN),
+        ("AWSAuthV2Signer: use AWS Signature Version 2\n"));
+
     rc = KClientHttpRequestGetHeader(req, "Authorization",
         buf, sizeof buf, NULL);
     if (rc == 0)
@@ -548,6 +551,8 @@ rc_t AWSDoAuthentication_v4(const struct AWS* self, KClientHttpRequest* req,
         buf, sizeof buf, NULL);
     if (rc == 0)
         return 0; /* already has Authorization header */
+    else
+        rc = 0;
 
     if (s == 0)
         return RC(rcCloud, rcUri, rcEncoding, rcString, rcInsufficient);
