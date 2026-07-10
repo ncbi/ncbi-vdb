@@ -59,6 +59,8 @@
 
 #include <kproc/timeout.h>
 
+#include <vfs/path.h> /* VPathAddRef */
+
 #include <os-native.h>
 #include <strtol.h>
 #include <va_copy.h>
@@ -94,6 +96,7 @@
 static
 rc_t CC KHttpFileDestroy ( KHttpFile *self )
 {
+    rc_t rc = VPathRelease ( self -> path );
     KLockRelease ( self -> lock );
     KNSManagerRelease ( self -> kns );
     KClientHttpRelease ( self -> http );
@@ -101,7 +104,7 @@ rc_t CC KHttpFileDestroy ( KHttpFile *self )
     KDataBufferWhack ( & self -> orig_url_buffer );
     free ( self );
 
-    return 0;
+    return rc;
 }
 
 static
@@ -195,6 +198,9 @@ rc_t KHttpFileMakeRequest ( const KHttpFile *cself, uint64_t pos, size_t req_siz
                 else
                     req->rangeRequested = true;
             }
+
+            if (rc == 0)
+                rc = KClientHttpRequestSetVPathIfNotSet(req, cself->path);
 
             if ( rc == 0 )
             {
@@ -1273,10 +1279,10 @@ static KFile_vt_v1 vtKHttpFile =
 };
 
 static
-rc_t KHttpFileMake( KHttpFile ** self,
-             const KDataBuffer * aBuf, const char *url, va_list args )
+rc_t KHttpFileMake( KHttpFile ** self, const KDataBuffer * aBuf,
+    const char * url, const VPath * path, va_list args )
 {
-    rc_t rc;
+    rc_t rc = 0;
     KHttpFile * f = calloc ( 1, sizeof *f );
     if ( f == NULL )
     {
@@ -1304,7 +1310,10 @@ rc_t KHttpFileMake( KHttpFile ** self,
                     {
                         rc = ParseUrl ( & f -> block, buf -> base, buf -> elem_count - 1 );
                         if ( rc == 0 )
+                            rc = VPathAddRef ( path );
+                        if ( rc == 0 )
                         {
+                            f -> path = path;
                             *self = f;
                             return 0;
                         }
@@ -1322,7 +1331,7 @@ rc_t KHttpFileMake( KHttpFile ** self,
 
 static rc_t KNSManagerVMakeHttpFileIntUnstableImpl( const KNSManager *self,
     const KFile **file, KStream *conn, ver_t vers, bool reliable,
-    bool need_env_token, bool payRequired, const struct VPath *path,
+    bool need_env_token, bool payRequired, const VPath *path,
     const KDataBuffer *buf,
     const char *url, va_list args )
 {
@@ -1340,8 +1349,8 @@ static rc_t KNSManagerVMakeHttpFileIntUnstableImpl( const KNSManager *self,
             rc = RC ( rcNS, rcFile, rcConstructing, rcPath, rcInvalid );
         else
         {
-            KHttpFile * f;
-            rc = KHttpFileMake ( &f, buf, url, args );
+            KHttpFile * f = NULL;
+            rc = KHttpFileMake ( &f, buf, url, path, args );
 
             if ( rc == 0 )
             {
@@ -1534,7 +1543,7 @@ static rc_t KNSManagerVMakeHttpFileIntUnstableImpl( const KNSManager *self,
 
 static rc_t KNSManagerVMakeHttpFileIntUnstableImpl_noargs( const KNSManager *self,
     const KFile **file, KStream *conn, ver_t vers, bool reliable,
-    bool need_env_token, bool payRequired, const struct VPath *path,
+    bool need_env_token, bool payRequired, const VPath *path,
     const KDataBuffer *buf, const char *url, ... )
 {
     va_list vl;
@@ -1550,7 +1559,7 @@ static rc_t KNSManagerVMakeHttpFileIntUnstableImpl_noargs( const KNSManager *sel
 rc_t KNSManagerVMakeHttpFileIntUnstableFromBuffer(const KNSManager *self,
     const KFile **file, KStream *conn, ver_t vers, bool reliable,
     bool need_env_token, bool payRequired, const char *url,
-    const struct VPath *path, const KDataBuffer *buf)
+    const VPath *path, const KDataBuffer *buf)
 {
     return KNSManagerVMakeHttpFileIntUnstableImpl_noargs(self, file, conn, vers,
         reliable, need_env_token, payRequired, path, buf, url);
