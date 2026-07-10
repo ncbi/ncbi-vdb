@@ -58,7 +58,7 @@ struct KHttpFile
     const KNSManager * kns;
 
     KLock * lock;
-    KClientHttp *http;
+    KClientHttp * http;
 
     KDataBuffer orig_url_buffer;
     URLBlock block; /* the original URL, parsed */
@@ -73,6 +73,8 @@ struct KHttpFile
 
     /* if true, add user-account info headers to cloud URLs */
     bool payRequired;
+
+    const struct VPath * path; /* to keep arguments for AWS authentication */
 
     bool no_cache;
 };

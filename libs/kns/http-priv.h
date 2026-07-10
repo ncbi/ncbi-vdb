@@ -262,6 +262,9 @@ bool KEndPointArgsIterator_Next ( struct KEndPointArgsIterator * self,
 rc_t KClientHttpRequestAttachEnvironmentToken(
     struct KClientHttpRequest * self, struct Cloud * cloud );
 
+rc_t KClientHttpRequestSetVPathIfNotSet(
+    struct KClientHttpRequest* self, const struct VPath* path);
+
 /* exported private functions
 */
 

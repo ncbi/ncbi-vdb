@@ -2258,6 +2258,22 @@ const BSTree* KClientHttpResultGetHeaders(const KClientHttpResult* self) {
         return &self->hdrs;
 }
 
+rc_t KClientHttpRequestSetVPathIfNotSet(
+    KClientHttpRequest* self, const VPath* path)
+{
+    assert(self);
+
+    if (self->path != NULL)
+        return 0;
+    else if (path == NULL)
+        return 0;
+    else {
+        rc_t rc = VPathAddRef(path);
+        if (rc == 0)
+            self->path = path;
+        return rc;
+    }
+}
 
 /********************** Prepare a signed AWS API request **********************/
 static bool IsUnreserved(char c) {
