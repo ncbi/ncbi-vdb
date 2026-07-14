@@ -162,18 +162,15 @@ rc_t access_sra( const std::string& acc ) {
 int main ( int argc, char *argv [] )
 {
     rc_t rc = 0;
-    std::string dir;
-    if ( argc > 1 ) {
-        dir = argv[ 1 ];
-    } else {
-        dir = get_home_dir();
-    }
+    std::string dir = argc > 1 ? argv[ 1 ] : get_home_dir();
+    std::string acc = argc > 2 ? argv[ 2 ] : "SRR341578";
+
     if ( dir . empty() ) {
         FAIL( "cannot determine current working directory" );
     } else {
         rc = set_cache_root( dir );
         if ( rc == 0 ) {
-            rc = access_sra( "SRR341578" );
+            rc = access_sra( acc );
         }
     }
     return rc;
