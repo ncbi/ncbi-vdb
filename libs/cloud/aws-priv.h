@@ -59,7 +59,7 @@ rc_t GetPkcs7( const struct AWS * self, char *dst, size_t dlen );
 rc_t CalculateSHA256Hash(
     const unsigned char* input, size_t input_len, char hash[65]);
 rc_t BuildStringToSign(const char* requestDateTime,
-    const char* region, const char* service,
+    const char* region, int regionLen, const char* service, int serviceLen,
     const char* hashedCanonicalRequest, struct KDataBuffer* stringToSign);
 rc_t HMAC_SHA256(const struct mbedtls_md_info_t* md_info,
     const unsigned char* key, size_t keylen,

@@ -415,7 +415,8 @@ TEST_CASE(TestBuildStringToSign) {
     REQUIRE_RC(KDataBufferMake(&stringToSign, 8, 0));
 
     REQUIRE_RC(BuildStringToSign(
-        requestDateTime, region, "s3", hashedCanonicalRequest, &stringToSign));
+        requestDateTime, region, sizeof region - 1, "s3", 2,
+        hashedCanonicalRequest, &stringToSign));
 
     REQUIRE_EQ(string((char*)stringToSign.base, stringToSign.elem_count - 1),
         string(

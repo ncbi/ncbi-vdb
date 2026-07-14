@@ -247,7 +247,7 @@ static rc_t StringToSign(
  *  prepare a request object with credentials for authentication
  *  use AWS Signature Version 2
  */
-rc_t AWSDoAuthentication_v2(const struct AWS * self, KClientHttpRequest * req,
+rc_t AWSAuthV2Signer(const struct AWS * self, KClientHttpRequest * req,
     const char * http_method, bool requester_payer)
 {
     rc_t rc = 0;
@@ -368,17 +368,18 @@ rc_t CalculateSHA256Hash(
 }
 
 rc_t BuildStringToSign(const char* requestDateTime,
-    const char* region, const char* service,
+    const char* region, int regionLen,
+    const char* service, int serviceLen,
     const char* hashedCanonicalRequest, KDataBuffer* stringToSign)
 {
     rc_t rc = KDataBufferPrintf(stringToSign,
         "AWS4-HMAC-SHA256\n"        /* Algorithm */
         "%s\n"                      /* RequestDateTime */
-        "%.*s/%s/%s/aws4_request\n" /* CredentialScope:
+        "%.*s/%.*s/%.*s/aws4_request\n" /* CredentialScope:
                                        date/region/service/aws4_request */
         "%s"                        /* HashedCanonicalRequest */
         , requestDateTime
-        , (int)8, requestDateTime, region, service
+        , (int)8, requestDateTime, regionLen, region, serviceLen, service
         , hashedCanonicalRequest);
 
     if (rc == 0) {
@@ -529,7 +530,7 @@ rc_t CreateAuthorizationHeader(const char* awsAccessKeyId,
  *  prepare a request object with credentials for authentication
  *  use AWS Signature Version 4
  */
-rc_t AWSDoAuthentication_v4(const struct AWS* self, KClientHttpRequest* req,
+rc_t AWSAuthV4Signer(const struct AWS* self, KClientHttpRequest* req,
     const char* http_method, bool requester_payer)
 {
     char buf[4096] = "";
@@ -590,8 +591,8 @@ rc_t AWSDoAuthentication_v4(const struct AWS* self, KClientHttpRequest* req,
             rc = KClientHttpRequestGetService(req, &service);
 
         if (rc == 0)
-            rc = BuildStringToSign(
-                t, region.addr, service.addr, hashedCanonicalRequest, &b);
+            rc = BuildStringToSign(t, region.addr, region.size,
+                service.addr, service.size, hashedCanonicalRequest, &b);
 
         if (rc == 0)
             rc = CalculateSignature(self->secret_access_key, t,
@@ -629,9 +630,9 @@ rc_t AWSDoAuthentication(const struct AWS* self, KClientHttpRequest* req,
     assert(self);
 
     if (self->version2)
-        return AWSDoAuthentication_v2(self, req, http_method, requester_payer);
+        return AWSAuthV2Signer(self, req, http_method, requester_payer);
     else
-        return AWSDoAuthentication_v4(self, req, http_method, requester_payer);
+        return AWSAuthV4Signer(self, req, http_method, requester_payer);
 }
 
 /* get (allocate?) the following as char * or String (*?):
