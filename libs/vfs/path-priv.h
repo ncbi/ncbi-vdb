@@ -261,6 +261,9 @@ rc_t VPathClose ( const VPath * l, const VPath * r, int * notequal,
 rc_t VPathGetAccession(const VPath * self, String * acc);
 
 rc_t VPathSetRegion(VPath* self, const char * region);
+rc_t VPathSetCloudInfo(VPath* self, const char* info);
+rc_t VPathSetCeRequired(VPath* self, bool value);
+rc_t VPathSetPayRequired(VPath* self, bool value);
 
 rc_t VPathSetQuality(VPath * self, VQuality quality);
 rc_t VPathLoadQuality(VPath * self);

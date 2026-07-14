@@ -2366,18 +2366,35 @@ LIB_EXPORT rc_t CC VFSManagerMakePathWithExtension ( struct VFSManager const * s
 }
 
 
-static rc_t VPathSetService(VPath* self, const char* service) {
+static rc_t VPathSetService(VPath* self, const char* service, size_t size) {
     if (self == NULL || service == NULL || service[0] == '\0')
         return 0;
     else {
-        size_t size = 0;
-        char* c = string_dup_measure(service, &size);
+        char* c = string_dup(service, size);
         if (c == NULL)
             return RC(rcVFS, rcPath, rcAllocating, rcMemory, rcExhausted);
 
         free((void*)self->service.addr);
         StringInit(&self->service, c, size, size);
         return 0;
+    }
+}
+
+rc_t VPathSetCloudInfo(VPath* self, const char* info) {
+    if (info == NULL)
+        return RC(rcVFS, rcPath, rcUpdating, rcParam, rcNull);
+    else if (self == NULL)
+        return RC(rcVFS, rcPath, rcUpdating, rcSelf, rcNull);
+    else {
+        const char* region = string_chr(info, string_measure(info, NULL), '.');
+        if (region == NULL)
+            return RC(rcVFS, rcPath, rcUpdating, rcParam, rcIncorrect);
+        else {
+            rc_t rc = VPathSetService(self, info, region - info);
+            if (rc == 0)
+                rc = VPathSetRegion(self, region + 1);
+            return rc;
+        }
     }
 }
 
@@ -2395,14 +2412,20 @@ LIB_EXPORT rc_t CC VPathCopyForCloudAccess(const VPath* self, VPath** copy) {
         if (p == NULL)
             return RC(rcVFS, rcPath, rcCopying, rcMemory, rcExhausted);
 
-        rc = VPathSetService(p, self->service.addr);
+        rc = VPathSetService(p, self->service.addr, self->service.size);
 
         if (rc == 0)
             rc = VPathSetRegion(p, self->region.addr);
 
         if (rc == 0) {
+            p->ceRequired = self->ceRequired;
+            p->payRequired = self->payRequired;
+            p->highly_reliable = self->highly_reliable;
+
             p->path_type = vpCloudy;
+
             KRefcountInit(&p->refcount, 1, "VPath", "CopyForCloudAccess", "");
+
             *copy = p;
             return 0;
         }
@@ -4452,6 +4475,22 @@ rc_t VPathSetMagic(VPath * self, bool magic) {
     assert(self);
 
     self->magic = magic;
+
+    return 0;
+}
+
+rc_t VPathSetPayRequired(VPath* self, bool value) {
+    assert(self);
+
+    self->payRequired = value;
+
+    return 0;
+}
+
+rc_t VPathSetCeRequired(VPath* self, bool value) {
+    assert(self);
+
+    self->ceRequired = value;
 
     return 0;
 }
