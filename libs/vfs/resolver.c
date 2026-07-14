@@ -3029,6 +3029,28 @@ rc_t KDirectoryMagicResolve(const KDirectory * dir, const VPath ** path,
                 rc = VPathMarkHighReliability((VPath*)*path, true);
         }
 
+        if (rc == 0) {
+            const char* e = getenv(ENV_MAGIC_REMOTE_CLOUD_INFO);
+            if (e != NULL) {
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
+                    ("'%s' reliable magic '%s' found\n",
+                        ENV_MAGIC_REMOTE_CLOUD_INFO, e));
+                rc = VPathSetCloudInfo((VPath*)*path, e);
+            }
+        }
+
+        if (rc == 0 && getenv(ENV_MAGIC_REMOTE_NEED_PMT) != NULL) {
+            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
+                ("'%s' reliable magic found\n", ENV_MAGIC_REMOTE_NEED_PMT));
+            rc = VPathSetPayRequired((VPath*)*path, true);
+        }
+
+        if (rc == 0 && getenv(ENV_MAGIC_REMOTE_NEED_CE) != NULL) {
+            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
+                ("'%s' reliable magic found\n", ENV_MAGIC_REMOTE_NEED_CE));
+            rc = VPathSetCeRequired((VPath*)*path, true);
+        }
+
         if (rc != 0) {
             VPathRelease(*path);
             *path = NULL;
