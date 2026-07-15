@@ -138,6 +138,11 @@ void SetSraToolsHash(const char* str)
     string_copy_measure(HashSraTools, sizeof HashSraTools, str);
 }
 
+const char * GetSraToolsHash ()
+{
+    return HashSraTools;
+}
+
 ver_t SetKAppVersion ( ver_t ver )
 {
     ver_t ret = KAppVersion;

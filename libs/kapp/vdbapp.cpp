@@ -34,18 +34,21 @@
 using namespace std;
 using namespace VDB;
 
-Application::Application(int argc, char* argv[], const char * exe_name)
+Application::Application(int argc, char* argv[], const char * sra_hash, const char * exe_name) noexcept
     : m_argc( (unsigned int)argc ), m_argv( argv ), m_argvOwned ( false )
 {
+    SetSraToolsHash( sra_hash );
     SetUsageDefaultName( exe_name );
     m_rc = VdbInitialize(argc, argv, 0);
 }
 
 #if WINDOWS && UNICODE
 #include <kapp/win/main-priv-win.h>
-Application::Application(int argc, wchar_t* argv[], const char * exe_name)
+Application::Application(int argc, wchar_t* argv[], const char * sra_hash, const char * exe_name)
     : m_argc( (unsigned int)argc ), m_argvOwned ( false )
 {
+    SetSraToolsHash( sra_hash );
+
     int status = ConvertWArgsToUtf8(argc, argv, &m_argv, true);
     if (status != 0)
     {
@@ -108,8 +111,16 @@ Application::IsStandardOption( unsigned int index, bool & skipNext ) const
 }
 
 rc_t
-Application::HandleStandardOptions()
+Application::HandleStandardOptions( Usage_t helpFn, UsageSummary_t summaryFn ) noexcept
 {
+    if ( helpFn != nullptr )
+    {
+        SetUsage( helpFn );
+    }
+    if ( summaryFn != nullptr )
+    {
+        SetUsageSummary( summaryFn );
+    }
     Args * args = nullptr;
     // take care of the standard options
     ignore_unknown_arguments = true;
@@ -121,31 +132,43 @@ Application::HandleStandardOptions()
     }
     ignore_unknown_arguments = false;
 
-    // filter out standard options
-    char ** new_argv = (char**) malloc( m_argc * sizeof( *new_argv ) );
-    if ( m_argv == 0 )
-    {
-        throw std::bad_alloc();
-    }
-
     unsigned int new_argc = 0;
-    unsigned int i = 0;
-    while ( i < m_argc )
+    char ** new_argv = nullptr;
+    try
     {
-        bool skip = false;
-        if( i > 0 && IsStandardOption( i, skip ) )
+        // filter out standard options
+        new_argv = (char**) malloc( m_argc * sizeof( *new_argv ) );
+        if ( m_argv == 0 )
         {
-            if ( skip )
+            throw std::bad_alloc();
+        }
+
+        unsigned int i = 0;
+        while ( i < m_argc )
+        {
+            bool skip = false;
+            if( i > 0 && IsStandardOption( i, skip ) )
             {
-                ++i;
+                if ( skip )
+                {
+                    ++i;
+                }
             }
+            else
+            {
+                new_argv[ new_argc ] = string_dup( m_argv[i], string_size( m_argv [ i ] ) );
+                ++new_argc;
+            }
+            ++i;
         }
-        else
-        {
-            new_argv[ new_argc ] = string_dup( m_argv[i], string_size( m_argv [ i ] ) );
-            ++new_argc;
-        }
-        ++i;
+    }
+    catch(const std::bad_alloc& e)
+    {
+        return RC( rcExe, rcArgv, rcConstructing, rcMemory, rcExhausted );
+    }
+    catch(...)
+    {
+        return RC( rcExe, rcArgv, rcConstructing, rcError, rcUnknown );
     }
 
     m_argc = new_argc;

@@ -133,16 +133,25 @@ rc_t CC usage ( const Args * args )
     return 0;
 }
 
+rc_t CC summary (const char * prog_name )
+{
+    return 0;
+}
+
+const char * TEST_HASH = "123";
+
 TEST_CASE(App_HandleStandardOptions_None)
 {
     SetUsage( usage );
     usage_called = false;
     int argc = 1;
     const char* argv[] = { GetName() };
-    VDB::Application app( argc, (char**)argv);
-    REQUIRE_RC( app.HandleStandardOptions() );
+    VDB::Application app( argc, (char**)argv, TEST_HASH );
+    REQUIRE_RC( app.HandleStandardOptions( usage, summary ) );
     REQUIRE( ! usage_called );
     REQUIRE_EQ( 1, app.getArgC() );
+
+    REQUIRE_EQ( string( TEST_HASH ), string( GetSraToolsHash() ) );
 }
 
 TEST_CASE(App_HandleStandardOptions_Help)
@@ -151,9 +160,9 @@ TEST_CASE(App_HandleStandardOptions_Help)
     usage_called = false;
     int argc = 2;
     const char* argv[] = { GetName(), "-h" };
-    VDB::Application app( argc, (char**)argv);
+    VDB::Application app( argc, (char**)argv, TEST_HASH );
     exit_after_help_or_version = false;
-    REQUIRE_RC( app.HandleStandardOptions() );
+    REQUIRE_RC( app.HandleStandardOptions( usage, summary ) );
     REQUIRE( usage_called );
     REQUIRE_EQ( 1, app.getArgC() ); // -h filtered out
 }
@@ -162,9 +171,9 @@ TEST_CASE(App_HandleStandardOptions_Version)
 {
     int argc = 2;
     const char* argv[] = { GetName(), "-V" };
-    VDB::Application app( argc, (char**)argv );
+    VDB::Application app( argc, (char**)argv, TEST_HASH  );
     exit_after_help_or_version = false;
-    REQUIRE_RC( app.HandleStandardOptions() );
+    REQUIRE_RC( app.HandleStandardOptions( usage, summary ) );
     REQUIRE_EQ( 1, app.getArgC() ); // -V filtered out
 }
 
@@ -172,8 +181,8 @@ TEST_CASE(App_HandleStandardOptions_Log)
 {
     int argc = 3;
     const char* argv[] = { GetName(), "-L", "int" };
-    VDB::Application app( argc, (char**)argv );
-    REQUIRE_RC( app.HandleStandardOptions() );
+    VDB::Application app( argc, (char**)argv, TEST_HASH  );
+    REQUIRE_RC( app.HandleStandardOptions( usage, summary ) );
     REQUIRE_EQ( (int)klogInt, (int)KLogLevelGet() );
     REQUIRE_EQ( 1, app.getArgC() ); // "-L int" filtered out
 }
@@ -182,8 +191,8 @@ TEST_CASE(App_HandleStandardOptions_Verbose)
 {
     int argc = 2;
     const char* argv[] = { GetName(), "-vvv" };
-    VDB::Application app( argc, (char**)argv );
-    REQUIRE_RC( app.HandleStandardOptions() );
+    VDB::Application app( argc, (char**)argv, TEST_HASH  );
+    REQUIRE_RC( app.HandleStandardOptions( usage, summary ) );
     REQUIRE_EQ( 3, (int)KStsLevelGet() );
     REQUIRE_EQ( 1, app.getArgC() ); // "-vvv" filtered out
 }
@@ -192,8 +201,8 @@ TEST_CASE(App_HandleStandardOptions_Debug_Short)
 {
     int argc = 2;
     const char* argv[] = { GetName(), "-+KDB" };
-    VDB::Application app( argc, (char**)argv );
-    REQUIRE_RC( app.HandleStandardOptions() );
+    VDB::Application app( argc, (char**)argv, TEST_HASH  );
+    REQUIRE_RC( app.HandleStandardOptions( usage, summary ) );
     REQUIRE( KDbgTestModConds( DBG_KDB, DBG_FLAG(DBG_KDB_KDB) ) );
     REQUIRE_EQ( 1, app.getArgC() ); // "-+KDB" filtered out
 }
@@ -202,8 +211,8 @@ TEST_CASE(App_HandleStandardOptions_Debug_Long)
 {
     int argc = 3;
     const char* argv[] = { GetName(), "--debug", "KDB" };
-    VDB::Application app( argc, (char**)argv );
-    REQUIRE_RC( app.HandleStandardOptions() );
+    VDB::Application app( argc, (char**)argv, TEST_HASH  );
+    REQUIRE_RC( app.HandleStandardOptions( usage, summary ) );
     REQUIRE( KDbgTestModConds( DBG_KDB, DBG_FLAG(DBG_KDB_KDB) ) );
     REQUIRE_EQ( 1, app.getArgC() ); // "--debug KDB" filtered out
 }
@@ -212,8 +221,8 @@ TEST_CASE(App_HandleStandardOptions_Unknown)
 {   // ignore unknown arguments
     int argc = 2;
     const char* argv[] = { GetName(), "--whoami" };
-    VDB::Application app( argc, (char**)argv );
-    REQUIRE_RC( app.HandleStandardOptions() );
+    VDB::Application app( argc, (char**)argv, TEST_HASH  );
+    REQUIRE_RC( app.HandleStandardOptions( usage, summary ) );
     REQUIRE_EQ( 2, app.getArgC() ); // unchanged
 }
 

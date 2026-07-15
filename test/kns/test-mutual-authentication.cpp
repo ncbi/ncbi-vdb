@@ -185,7 +185,7 @@ rc_t MutualConnection(const char * own_cert, const char * pk_key,
 
 int main(int argc, char *argv[]) {
 
-    VDB::Application app(argc, argv);
+    VDB::Application app(argc, argv, "" );
 
     bool singleton = true;
     bool post = false;
