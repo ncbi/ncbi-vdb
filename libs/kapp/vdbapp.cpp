@@ -44,7 +44,7 @@ Application::Application(int argc, char* argv[], const char * sra_hash, const ch
 
 #if WINDOWS && UNICODE
 #include <kapp/win/main-priv-win.h>
-Application::Application(int argc, wchar_t* argv[], const char * sra_hash, const char * exe_name)
+Application::Application(int argc, wchar_t* argv[], const char * sra_hash, const char * exe_name) noexcept
     : m_argc( (unsigned int)argc ), m_argvOwned ( false )
 {
     SetSraToolsHash( sra_hash );
