@@ -237,6 +237,8 @@ struct KClientHttpRequest
 
     bool ceRequired; /* computing environment token required to access this URL */
     bool payRequired; /* payment info required to access this URL */
+    bool requiredSet; /* ceRequired/payRequired were set from VPath,
+                         KClientHttpRequestSetCloudParams will be NoOP */
     const struct VPath * path;
 
     bool rangeRequested;

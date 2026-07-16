@@ -69,7 +69,7 @@
 LIB_EXPORT rc_t CC KClientHttpRequestSetCloudParams(
     KClientHttpRequest * self, bool ceRequired, bool payRequired)
 {
-    if (self != NULL)
+    if (self != NULL && !self->requiredSet)
     {
         self->ceRequired = ceRequired;
         self->payRequired = payRequired;
@@ -149,7 +149,12 @@ rc_t KClientHttpRequestInit ( KClientHttpRequest * req,
 
         if (path != NULL) {
             rc = VPathAddRef(path);
+            if (rc == 0)
+                rc = VPathGetCeRequired(path, &req->ceRequired);
+            if (rc == 0)
+                rc = VPathGetPayRequired(path, &req->payRequired);
             if (rc == 0) {
+                req->requiredSet = true;
                 if (req->path != NULL)
                     rc = VPathRelease(req->path);
                 req->path = path;

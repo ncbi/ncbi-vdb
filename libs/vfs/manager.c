@@ -951,7 +951,6 @@ rc_t VFSManagerMakeHTTPFile( const VFSManager * self,
                              const VPath * path,
                              const char * cache_location,
                              uint32_t blocksize,
-                             bool high_reliability,
                              bool is_refseq,
                              bool promote )
 {
@@ -981,70 +980,12 @@ rc_t VFSManagerMakeHTTPFile( const VFSManager * self,
     }
 
     if ( rc == 0 ) {
-        bool ceRequired = false;
-        bool payRequired = false;
-
-        {
-            const char * name = path->sraClass == eSCvdbcache ?
-                ENV_MAGIC_CACHE_NEED_CE : ENV_MAGIC_REMOTE_NEED_CE;
-            const char * magic = getenv(name);
-            bool hasMagic = magic != NULL;
-            if (is_refseq) {
-                if (magic != NULL) {
-                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
-                        "'%s' magic ignored for %s\n",
-                        name, is_wgs ? "WGS" : "refseq"));
-                    magic = NULL;
-                }
-            }
-            if (magic != NULL) {
-                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
-                        "'%s' magic found\n", name));
-                    ceRequired = true;
-            }
-            else {
-                    ceRequired = path->ceRequired;
-                    if (!hasMagic)
-                        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
-                            "'%s' magic not set\n", name));
-            }
-        }
-
-        {
-            const char * name = path->sraClass == eSCvdbcache ?
-                ENV_MAGIC_CACHE_NEED_PMT : ENV_MAGIC_REMOTE_NEED_PMT;
-            const char * magic = getenv(name);
-            bool hasMagic = magic != NULL;
-            if (is_refseq) {
-                if (magic != NULL) {
-                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
-                        "'%s' pmtReq magic ignored for %s\n",
-                        name, is_wgs ? "WGS" : "refseq"));
-                    magic = NULL;
-                }
-            }
-            if (magic != NULL) {
-                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
-                    "'%s' magic found\n", name));
-                payRequired = true;
-            }
-            else {
-                payRequired = path->payRequired;
-                if (!hasMagic)
-                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
-                        "'%s' magic not set\n", name));
-            }
-        }
-
         rc = KNSManagerMakeReliableHttpFileVPath ( self -> kns,
                                               cfp,
                                               NULL,
                                               0x01010000,
-                                              high_reliability,
-                                              ceRequired,
-                                              payRequired,
                                               path,
-                                              "%s", uri -> addr );
+                                              "%S", uri );
 
         /* in case we are not able to open the remote-file : return with error-code */
         if ( rc == 0 )
@@ -1975,8 +1916,8 @@ static rc_t VFSManagerOpenCurlFile ( const VFSManager *self,
                                      uint32_t blocksize,
                                      bool promote )
 {
-    rc_t rc;
-    bool high_reliability, is_refseq;
+    rc_t rc = 0;
+    bool is_refseq = false;
 
     if ( f == NULL )
         return RC( rcVFS, rcMgr, rcOpening, rcParam, rcNull );
@@ -1986,7 +1927,6 @@ static rc_t VFSManagerOpenCurlFile ( const VFSManager *self,
     if ( path == NULL )
         return RC( rcVFS, rcMgr, rcOpening, rcParam, rcNull );
 
-    high_reliability = VPathIsHighlyReliable ( path );
     is_refseq = VPathHasRefseqContext ( path );
     if ( self->resolver != NULL )
     {
@@ -2002,7 +1942,6 @@ static rc_t VFSManagerOpenCurlFile ( const VFSManager *self,
                                          path,
                                          local_cache -> path.addr,
                                          blocksize,
-                                         high_reliability,
                                          is_refseq,
                                          promote );
             {
@@ -2021,7 +1960,6 @@ static rc_t VFSManagerOpenCurlFile ( const VFSManager *self,
                                          path,
                                          NULL,
                                          blocksize,
-                                         high_reliability,
                                          is_refseq,
                                          promote );
         }
@@ -2034,7 +1972,6 @@ static rc_t VFSManagerOpenCurlFile ( const VFSManager *self,
                                      path,
                                      NULL,
                                      blocksize,
-                                     high_reliability,
                                      is_refseq,
                                      promote );
     }
@@ -2428,7 +2365,6 @@ rc_t VFSManagerOpenDirectoryReadHttpResolved (const VFSManager *self,
     if ( rc == 0 )
     {
         /* check how the path has been marked */
-        bool high_reliability = VPathIsHighlyReliable ( path );
         bool is_refseq = VPathHasRefseqContext ( path );
 
         const KFile * file = NULL;
@@ -2437,16 +2373,12 @@ rc_t VFSManagerOpenDirectoryReadHttpResolved (const VFSManager *self,
                                      path,
                                      cache == NULL ? NULL : cache -> path . addr,
                                      DEFAULT_CACHE_PAGE_SIZE,
-                                     high_reliability,
                                      is_refseq,
                                      promote );
         if ( rc != 0 )
         {
-            if ( high_reliability )
-            {
-                PLOGERR ( klogErr, ( klogErr, rc, "error with https open '$(U)'",
+            PLOGERR ( klogErr, ( klogErr, rc, "error with https open '$(U)'",
                                      "U=%S", uri ) );
-            }
         }
         else
         {

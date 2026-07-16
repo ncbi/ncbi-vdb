@@ -390,7 +390,6 @@ rc_t CC KStblHttpFileDestroy(KStableHttpFile *self)
     if (rc == 0 && r2 != 0)
         rc = r2;
 
-    free(self->region);
     free(self->url);
 
     memset(self, 0, sizeof *self);
@@ -626,7 +625,6 @@ rc_t KNSManagerVMakeHttpFileInt(const KNSManager *self,
     bool need_env_token, bool payRequired, const VPath* path, const char *url,
     va_list args)
 {
-    const char* region = NULL;
     rc_t rc = 0;
 
     if (self != NULL && !self->retryFile)
@@ -699,8 +697,6 @@ rc_t KNSManagerVMakeHttpFileInt(const KNSManager *self,
                     f->need_env_token = need_env_token;
                     f->payRequired = payRequired;
                     f->url = string_dup_measure(url, NULL);
-                    if (region != NULL)
-                        f->region = string_dup_measure(region, NULL);
 
                     f->quitting = KNSManagerGetQuitting(self);
 
@@ -758,25 +754,31 @@ LIB_EXPORT rc_t CC KNSManagerMakeReliableHttpFile(const KNSManager *self,
     return rc;
 }
 
-/* reliable is taken from the caller,
-    not path because VPath can come not from resolver
-    (e.g. prefetching dependencies: reliable=true)
-   need_env_token, payRequired are taken from the caller,
-    not path because it can be set by environment
-   url is taken from the caller,
+/* url is taken from the caller,
     not path because there are different ways of getting URL string from VPath
     and it needs more investigation */
 LIB_EXPORT rc_t CC KNSManagerMakeReliableHttpFileVPath(const KNSManager *self,
-    const KFile **file, struct KStream *conn, ver_t vers, bool reliable,
-    bool need_env_token, bool payRequired, const VPath *path,
-    const char *url, ...)
+    const KFile **file, struct KStream *conn, ver_t vers,
+    const VPath *path, const char *url, ...)
 {
+    assert(path);
     rc_t rc = 0;
     va_list args;
+
+    bool need_env_token = false;
+    bool payRequired = false;
+    bool reliable = false;
+    if (path != NULL) {
+        reliable = VPathIsHighlyReliable(path);
+        VPathGetCeRequired(path, &need_env_token);
+        VPathGetPayRequired(path, &payRequired);
+    }
+
     va_start(args, url);
     rc = KNSManagerVMakeHttpFileInt(self, file, conn,
         vers, reliable, need_env_token, payRequired, path, url, args);
     va_end(args);
+
     return rc;
 }
 

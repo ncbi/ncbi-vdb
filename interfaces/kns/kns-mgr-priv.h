@@ -107,9 +107,9 @@ KNS_EXTERN rc_t CC KNSManagerMakeReliableHttpFile(
     bool reliable, bool need_env_token, bool payRequired,
     const char *url, ...);
 KNS_EXTERN rc_t CC KNSManagerMakeReliableHttpFileVPath(
-    struct KNSManager const *self, struct KFile const **file, struct KStream *conn, ver_t vers,
-    bool reliable, bool need_env_token, bool payRequired,
-    const struct VPath *path, const char *url, ...);
+    struct KNSManager const *self, struct KFile const **file,
+    struct KStream *conn, ver_t vers, const struct VPath *path,
+    const char *url, ...);
 
 /* KNSManagerMakeReliableClientRequest was deprecated in favor
 of KNSManagerMakeReliableClientRequestVPath */
