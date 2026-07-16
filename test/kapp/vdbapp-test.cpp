@@ -39,6 +39,8 @@
 using namespace std;
 using namespace ncbi::NK;
 
+const char* TEST_HASH = "123";
+
 TEST_SUITE(VDBAppTestSuite);
 
 TEST_CASE(NotQuitting)
@@ -109,7 +111,7 @@ TEST_CASE(WCharConversion)
 {
     wchar_t * wargv[] = {L"wide string 0", L"wide string 1"};
     int wargc = 2;
-    VDB::Application app(wargc, wargv);
+    VDB::Application app(wargc, wargv, TEST_HASH);
     REQUIRE_EQ( string("wide string 0"), string(app.getArgV()[0]) );
     REQUIRE_EQ( string("wide string 1"), string(app.getArgV()[1]) );
 }
@@ -118,7 +120,7 @@ TEST_CASE(WCharConversion_BadArgs)
 {
     wchar_t* wargv[] = { L"wide string 0", L"wide string 1", NULL };
     int wargc = 20;
-    VDB::Application app(wargc, wargv);
+    VDB::Application app(wargc, wargv, TEST_HASH);
     REQUIRE_RC_FAIL( app.getRc() );
 }
 
@@ -127,18 +129,19 @@ TEST_CASE(WCharConversion_BadArgs)
 // handling of standard options
 
 bool usage_called = false;
-rc_t CC usage ( const Args * args )
+extern "C"
 {
-    usage_called=true;
-    return 0;
-}
+    rc_t CC usage(const Args* args)
+    {
+        usage_called = true;
+        return 0;
+    }
 
-rc_t CC summary (const char * prog_name )
-{
-    return 0;
+    rc_t CC summary(const char* prog_name)
+    {
+        return 0;
+    }
 }
-
-const char * TEST_HASH = "123";
 
 TEST_CASE(App_HandleStandardOptions_None)
 {

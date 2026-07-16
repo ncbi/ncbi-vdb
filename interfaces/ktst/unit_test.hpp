@@ -219,7 +219,7 @@ int suite_name(int argc, char* argv[]) { \
         } \
     } catch (...) { return 1; } \
     ncbi::NK::counter_t ec = ncbi::NK::Main<AUTO_TEST_CASE_FIXTURE>(argc, argv, #suite_name); \
-    ncbi::NK::TestEnv::Terminate(ec); \
+    ncbi::NK::TestEnv::Terminate((rc_t)ec); \
     return ec == 0 ? 0 : -ec; /* positive rc represents the signal that killed the process */ \
 }
 
