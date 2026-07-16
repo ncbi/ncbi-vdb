@@ -71,7 +71,6 @@ struct KStableHttpFile
     bool need_env_token;
     bool payRequired;
     char * url;
-    char * region;
     const struct VPath * path;
     KDataBuffer buf;
 
