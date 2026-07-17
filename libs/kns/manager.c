@@ -152,6 +152,9 @@ static rc_t KNSManagerWhack ( KNSManager *self )
 
     rc = HttpRetrySpecsDestroy ( &self->retry_specs );
 
+    if ( rc == 0 )
+        rc = KLockRelease( self -> tls_lock );
+
     KTLSGlobalsWhack ( &self->tlsg );
 
     free ( self->own_cert );
@@ -1206,6 +1209,10 @@ static rc_t CC KNSManagerMakeConfigImpl ( KNSManager **mgrp, KConfig *kfg )
 
                     if ( rc == 0 ) {
                         rc = KNSManagerHttpProxyInit ( mgr, kfg );
+                    }
+
+                    if ( rc == 0 ) {
+                        rc = KLockMake( & mgr -> tls_lock );
                     }
 
                     if ( rc == 0 ) {

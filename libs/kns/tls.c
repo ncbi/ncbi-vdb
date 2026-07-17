@@ -40,6 +40,7 @@ struct KTLSStream;
 #include <klib/text.h>
 #include <klib/namelist.h>
 #include <kproc/timeout.h>
+#include <kproc/lock.h>
 #include <kfg/config.h>
 #include <kfs/directory.h>
 
@@ -1488,12 +1489,21 @@ LIB_EXPORT rc_t CC KNSManagerMakeTLSStream ( const KNSManager * self,
                 rc = ktls_ssl_setup ( ktls, host );
                 if ( rc == 0 )
                 {
-                    rc = ktls_handshake ( ktls );
+                    rc = KLockAcquire( self -> tls_lock );
                     if ( rc == 0 )
                     {
-                        ktls -> mgr = self;
-                        *plaintext = ktls;
-                        return 0;
+                        rc = ktls_handshake ( ktls );
+                        rc_t rc2 = KLockUnlock( self -> tls_lock );
+                        if ( rc == 0 && rc2 == 0 )
+                        {
+                            ktls -> mgr = self;
+                            *plaintext = ktls;
+                            return 0;
+                        }
+                        if ( rc == 0 )
+                        {
+                            rc = rc2;
+                        }
                     }
                     else {
                         if ( KNSManagerLogNcbiVdbNetError ( self ) ) {

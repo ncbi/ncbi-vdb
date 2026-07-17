@@ -478,21 +478,6 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
     KEndPointArgsIterator it;
     const KNSManager * mgr = NULL;
 
-    static bool INITED = false;
-    static bool PRINT_STAT = false;
-    if (!INITED) {
-#ifdef WINDOWS
-    {
-        size_t buf_size;
-        errno_t err = getenv_s ( & buf_size, NULL, 0, "NCBI_VDB_STS_SILENT" );
-        PRINT_STAT = ( err != 0 || buf_size == 0 );
-    }
-#else
-        PRINT_STAT = getenv("NCBI_VDB_STS_SILENT") == NULL;
-#endif
-        INITED = true;
-    }
-
     STATUS ( _STAT_QA, "%s - opening socket to %S:%u\n", __func__, aHostname, aPort );
 
     assert ( self );
@@ -561,7 +546,7 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
     else
     {
         rc_t r = KSocketGetLocalEndpoint ( sock, & self -> local_ep );
-        if (PRINT_STAT) {
+        if ( self -> PRINT_STAT) {
           if ( r == 0 )
             STATUS ( _STAT_USR, "%s - connected from '%s' to %S (%s)\n",
                                __func__, self -> local_ep . ip_address,
@@ -618,7 +603,7 @@ rc_t KClientHttpOpen ( KClientHttp * self, const String * aHostname, uint32_t aP
 
             if ( rc == 0 )
             {
-                if (PRINT_STAT)
+                if (self -> PRINT_STAT)
                     STATUS ( _STAT_USR, "%s - verifying CA cert\n", __func__ );
                 rc = KTLSStreamVerifyCACert ( tls_stream );
                 if ( rc != 0 )
@@ -690,6 +675,16 @@ rc_t KClientHttpInit ( KClientHttp * http, const KDataBuffer *hostname_buffer, v
 
     /* early setting of TLS property */
     http -> tls = tls;
+
+#ifdef WINDOWS
+    {
+        size_t buf_size;
+        errno_t err = getenv_s ( & buf_size, NULL, 0, "NCBI_VDB_STS_SILENT" );
+        http -> PRINT_STAT = ( err != 0 || buf_size == 0 );
+    }
+#else
+        http -> PRINT_STAT = getenv("NCBI_VDB_STS_SILENT") == NULL;
+#endif
 
     rc = KClientHttpOpen ( http, _host, port );
     if ( rc == 0 )
@@ -1297,7 +1292,7 @@ rc_t KClientHttpVAddHeader ( BSTree *hdrs, bool add,
     if ( rc == 0 && buf . elem_count != 0 )
     {
         size_t bsize = ( size_t ) buf . elem_count - 1;
-      
+
         /* get length of buf */
         size_t blen = string_len ( buf . base, bsize );
 

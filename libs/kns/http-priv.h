@@ -196,6 +196,8 @@ struct KClientHttp
 
     char * ua; /* user agent */
     char * ua_head; /* user agent for HEAD */
+
+    bool PRINT_STAT; /* if true, print more detailed status msgs */
 };
 
 void KClientHttpClose ( struct KClientHttp * self );
