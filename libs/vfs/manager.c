@@ -984,8 +984,7 @@ rc_t VFSManagerMakeHTTPFile( const VFSManager * self,
                                               cfp,
                                               NULL,
                                               0x01010000,
-                                              path,
-                                              "%S", uri );
+                                              path );
 
         /* in case we are not able to open the remote-file : return with error-code */
         if ( rc == 0 )

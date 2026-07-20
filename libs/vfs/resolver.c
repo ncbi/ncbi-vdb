@@ -2007,7 +2007,7 @@ rc_t VResolverAlgRemoteResolve ( const VResolverAlg *self,
             {
                 assert(path);
                 rc = KNSManagerMakeReliableHttpFileVPath ( kns, opt_file_rtn,
-                    NULL, 0x01010000, *path, "%S", s );
+                    NULL, 0x01010000, *path );
                 if (rc != 0)
                 {
                     PLOGERR(klogInt, (klogInt, rc,

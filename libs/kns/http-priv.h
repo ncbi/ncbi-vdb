@@ -273,7 +273,7 @@ rc_t KClientHttpRequestSetVPathIfNotSet(
 const char * KClientHttpRequestGetBody( struct KClientHttpRequest * self );
 
 const BSTree * KClientHttpRequestGetHeaders( const KClientHttpRequest * self );
-const BSTree * KClientHttpResultGetHeaders(const KClientHttpResult * self);
+const BSTree * KClientHttpResultGetHeaders( const KClientHttpResult * self );
 
 /* exported private functions
 */
@@ -320,7 +320,7 @@ rc_t KNSManagerVMakeHttpFileIntUnstableFromBuffer(const struct KNSManager *self,
 
 rc_t KNSManagerVMakeHttpFileIntUnstable(const struct KNSManager *self,
     const struct KFile **file, struct KStream *conn, ver_t vers, bool reliable,
-    bool need_env_token, bool payRequired, const char *url, va_list args);
+    bool need_env_token, bool payRequired, const char* url);
 
 bool KUnstableFileIsKHttpFile(const struct KFile * self);
 
