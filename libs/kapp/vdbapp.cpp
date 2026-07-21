@@ -24,22 +24,31 @@
 *
 */
 
-#include <kapp/vdbapp.h>
+#include "vdbapp-priv.h"
 
+#include <klib/text.h>
+
+#include <string>
+#include <stdexcept>
+
+using namespace std;
 using namespace VDB;
 
-Application::Application(int argc, char* argv[], const char * exe_name)
-    : m_argc( argc ), m_argv( argv ), m_argvOwned ( false )
+Application::Application(int argc, char* argv[], const char * sra_hash, const char * exe_name) noexcept
+    : m_argc( (unsigned int)argc ), m_argv( argv ), m_argvOwned ( false )
 {
+    SetSraToolsHash( sra_hash );
     SetUsageDefaultName( exe_name );
     m_rc = VdbInitialize(argc, argv, 0);
 }
 
 #if WINDOWS && UNICODE
 #include <kapp/win/main-priv-win.h>
-Application::Application(int argc, wchar_t* argv[], const char * exe_name)
-    : m_argc( argc ), m_argvOwned ( false )
+Application::Application(int argc, wchar_t* argv[], const char * sra_hash, const char * exe_name) noexcept
+    : m_argc( (unsigned int)argc ), m_argvOwned ( false )
 {
+    SetSraToolsHash( sra_hash );
+
     int status = ConvertWArgsToUtf8(argc, argv, &m_argv, true);
     if (status != 0)
     {
@@ -59,11 +68,117 @@ Application::~Application()
     VdbTerminate(m_rc);
     if (m_argvOwned)
     {
-        int i = m_argc;
-        while ( -- i >= 0 )
+        for ( unsigned int i = 0; i < m_argc; ++i )
         {
-            free ( m_argv [ i ] );
+            free(m_argv[i]);
         }
         free ( m_argv );
     }
+}
+
+bool
+Application::IsStandardOption( unsigned int index, bool & skipNext ) const
+{
+    string opt = m_argv[ index ];
+    skipNext = false;
+    if ( opt == "-h" || opt == "--help" )
+    {
+        return true;
+    }
+    if ( opt == "-V" || opt == "--version" )
+    {
+        return true;
+    }
+    if ( opt == "-L" || opt == "--log-level" )
+    {
+        skipNext = true;
+        return true;
+    }
+    if ( opt.substr(0, 2) == "-v" || opt == "--verbose" )
+    {
+        return true;
+    }
+    if ( opt.substr(0, 2) == "-+" )
+    {
+        return true;
+    }
+    if ( opt == "--debug" )
+    {
+        skipNext = true;
+        return true;
+    }
+    return false;
+}
+
+rc_t
+Application::HandleStandardOptions( Usage_t helpFn, UsageSummary_t summaryFn ) noexcept
+{
+    if ( helpFn != nullptr )
+    {
+        SetUsage( helpFn );
+    }
+    if ( summaryFn != nullptr )
+    {
+        SetUsageSummary( summaryFn );
+    }
+    Args * args = nullptr;
+    // take care of the standard options
+    ignore_unknown_arguments = true;
+    rc_t rc = ArgsMakeStandardOptions( &args );
+    if ( rc == 0 )
+    {
+        rc = ArgsParse( args, (int)m_argc, (const char **)m_argv );
+        ArgsRelease( args );
+    }
+    ignore_unknown_arguments = false;
+
+    unsigned int new_argc = 0;
+    char ** new_argv = nullptr;
+    try
+    {
+        // filter out standard options
+        new_argv = (char**) malloc( m_argc * sizeof( *new_argv ) );
+        if ( m_argv == 0 )
+        {
+            throw std::bad_alloc();
+        }
+
+        unsigned int i = 0;
+        while ( i < m_argc )
+        {
+            bool skip = false;
+            if( i > 0 && IsStandardOption( i, skip ) )
+            {
+                if ( skip )
+                {
+                    ++i;
+                }
+            }
+            else
+            {
+                new_argv[ new_argc ] = string_dup( m_argv[i], string_size( m_argv [ i ] ) );
+                ++new_argc;
+            }
+            ++i;
+        }
+    }
+    catch(const std::bad_alloc& e)
+    {
+        return RC( rcExe, rcArgv, rcConstructing, rcMemory, rcExhausted );
+    }
+    catch(...)
+    {
+        return RC( rcExe, rcArgv, rcConstructing, rcError, rcUnknown );
+    }
+
+    m_argc = new_argc;
+    // we do not own the original m_argv, replace it with a filtered copy
+    m_argv = new_argv;
+    m_argvOwned = true;
+
+    if ( rc != 0 )
+    {
+        setRc( rc );
+    }
+    return rc;
 }

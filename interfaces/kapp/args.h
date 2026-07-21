@@ -434,6 +434,7 @@ void CC ArgsAppendModeSet ( bool AppendMode );
 
 /* hash of sra-tools repository used to generate unique version string */
 void SetSraToolsHash ( const char* str );
+const char * GetSraToolsHash ();
 
 #ifdef __cplusplus
 }

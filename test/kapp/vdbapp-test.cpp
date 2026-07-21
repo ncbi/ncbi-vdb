@@ -25,15 +25,21 @@
  */
 
 #include <kapp/vdbapp.h>
+#include <../libs/kapp/vdbapp-priv.h>
 
 #include <ktst/unit_test.hpp>
 
 #include <kproc/procmgr.h>
 #include <klib/klib-priv.h>
+#include <klib/log.h>
+#include <klib/debug.h>
+#include <klib/status.h>
 #include <kns/manager.h>
 
 using namespace std;
 using namespace ncbi::NK;
+
+const char* TEST_HASH = "123";
 
 TEST_SUITE(VDBAppTestSuite);
 
@@ -105,7 +111,7 @@ TEST_CASE(WCharConversion)
 {
     wchar_t * wargv[] = {L"wide string 0", L"wide string 1"};
     int wargc = 2;
-    VDB::Application app(wargc, wargv);
+    VDB::Application app(wargc, wargv, TEST_HASH);
     REQUIRE_EQ( string("wide string 0"), string(app.getArgV()[0]) );
     REQUIRE_EQ( string("wide string 1"), string(app.getArgV()[1]) );
 }
@@ -114,11 +120,114 @@ TEST_CASE(WCharConversion_BadArgs)
 {
     wchar_t* wargv[] = { L"wide string 0", L"wide string 1", NULL };
     int wargc = 20;
-    VDB::Application app(wargc, wargv);
+    VDB::Application app(wargc, wargv, TEST_HASH);
     REQUIRE_RC_FAIL( app.getRc() );
 }
 
 #endif
+
+// handling of standard options
+
+bool usage_called = false;
+extern "C"
+{
+    rc_t CC usage(const Args* args)
+    {
+        usage_called = true;
+        return 0;
+    }
+
+    rc_t CC summary(const char* prog_name)
+    {
+        return 0;
+    }
+}
+
+TEST_CASE(App_HandleStandardOptions_None)
+{
+    SetUsage( usage );
+    usage_called = false;
+    int argc = 1;
+    const char* argv[] = { GetName() };
+    VDB::Application app( argc, (char**)argv, TEST_HASH );
+    REQUIRE_RC( app.HandleStandardOptions( usage, summary ) );
+    REQUIRE( ! usage_called );
+    REQUIRE_EQ( 1, app.getArgC() );
+
+    REQUIRE_EQ( string( TEST_HASH ), string( GetSraToolsHash() ) );
+}
+
+TEST_CASE(App_HandleStandardOptions_Help)
+{
+    SetUsage( usage );
+    usage_called = false;
+    int argc = 2;
+    const char* argv[] = { GetName(), "-h" };
+    VDB::Application app( argc, (char**)argv, TEST_HASH );
+    exit_after_help_or_version = false;
+    REQUIRE_RC( app.HandleStandardOptions( usage, summary ) );
+    REQUIRE( usage_called );
+    REQUIRE_EQ( 1, app.getArgC() ); // -h filtered out
+}
+
+TEST_CASE(App_HandleStandardOptions_Version)
+{
+    int argc = 2;
+    const char* argv[] = { GetName(), "-V" };
+    VDB::Application app( argc, (char**)argv, TEST_HASH  );
+    exit_after_help_or_version = false;
+    REQUIRE_RC( app.HandleStandardOptions( usage, summary ) );
+    REQUIRE_EQ( 1, app.getArgC() ); // -V filtered out
+}
+
+TEST_CASE(App_HandleStandardOptions_Log)
+{
+    int argc = 3;
+    const char* argv[] = { GetName(), "-L", "int" };
+    VDB::Application app( argc, (char**)argv, TEST_HASH  );
+    REQUIRE_RC( app.HandleStandardOptions( usage, summary ) );
+    REQUIRE_EQ( (int)klogInt, (int)KLogLevelGet() );
+    REQUIRE_EQ( 1, app.getArgC() ); // "-L int" filtered out
+}
+
+TEST_CASE(App_HandleStandardOptions_Verbose)
+{
+    int argc = 2;
+    const char* argv[] = { GetName(), "-vvv" };
+    VDB::Application app( argc, (char**)argv, TEST_HASH  );
+    REQUIRE_RC( app.HandleStandardOptions( usage, summary ) );
+    REQUIRE_EQ( 3, (int)KStsLevelGet() );
+    REQUIRE_EQ( 1, app.getArgC() ); // "-vvv" filtered out
+}
+
+TEST_CASE(App_HandleStandardOptions_Debug_Short)
+{
+    int argc = 2;
+    const char* argv[] = { GetName(), "-+KDB" };
+    VDB::Application app( argc, (char**)argv, TEST_HASH  );
+    REQUIRE_RC( app.HandleStandardOptions( usage, summary ) );
+    REQUIRE( KDbgTestModConds( DBG_KDB, DBG_FLAG(DBG_KDB_KDB) ) );
+    REQUIRE_EQ( 1, app.getArgC() ); // "-+KDB" filtered out
+}
+
+TEST_CASE(App_HandleStandardOptions_Debug_Long)
+{
+    int argc = 3;
+    const char* argv[] = { GetName(), "--debug", "KDB" };
+    VDB::Application app( argc, (char**)argv, TEST_HASH  );
+    REQUIRE_RC( app.HandleStandardOptions( usage, summary ) );
+    REQUIRE( KDbgTestModConds( DBG_KDB, DBG_FLAG(DBG_KDB_KDB) ) );
+    REQUIRE_EQ( 1, app.getArgC() ); // "--debug KDB" filtered out
+}
+
+TEST_CASE(App_HandleStandardOptions_Unknown)
+{   // ignore unknown arguments
+    int argc = 2;
+    const char* argv[] = { GetName(), "--whoami" };
+    VDB::Application app( argc, (char**)argv, TEST_HASH  );
+    REQUIRE_RC( app.HandleStandardOptions( usage, summary ) );
+    REQUIRE_EQ( 2, app.getArgC() ); // unchanged
+}
 
 int main(int argc, char* argv[])
 {
