@@ -52,7 +52,6 @@ struct KConfig;
 struct HttpRetrySpecs;
 struct KNSProxies;
 struct CloudMgr;
-struct KLock;
 
 struct KNSManager
 {
@@ -104,8 +103,6 @@ struct KNSManager
     char * pk_key;
 
     bool notSingleton;
-
-    struct KLock * tls_lock; /* synchronizing calls to ktls_handshake */
 };
 
 uint64_t KNSManagerLogNcbiVdbNetError ( const struct KNSManager * self );

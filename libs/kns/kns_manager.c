@@ -316,7 +316,7 @@ static rc_t KNSManagerDestroy( struct KNSManager *self )
     memset(self, 0, sizeof *self);
     free( self );
     kns_mgr_singleton = NULL;
-
+    
     return 0;
 }
 
@@ -339,7 +339,7 @@ LIB_EXPORT rc_t CC KNSManagerRelease( const struct KNSManager *self )
             return RC( rcNS, rcMgr, rcAttaching, rcRefcount, rcInvalid );
         default:
             rc = RC( rcNS, rcMgr, rcAttaching, rcRefcount, rcUnknown );
-            break;
+            break;            
         }
     }
     return rc;

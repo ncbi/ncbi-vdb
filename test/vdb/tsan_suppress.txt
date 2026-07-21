@@ -6,6 +6,13 @@ race:KDirectoryNativeDir_v1
 
 race:KLogLevelGet
 
+race:KClientHttpOpen
+race:KNSManagerGetUserAgent
+mutex:KNSManagerGetUserAgent
+race:KNSManagerMakeSingleton
+race:KNSManagerVMakeHttpFileInt
+race:KTLSStreamRead
+
 race:KRsrcGlobalInit
 
 race:DBManagerOpenVdbcache
