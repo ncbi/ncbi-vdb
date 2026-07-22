@@ -1883,10 +1883,17 @@ LIB_EXPORT rc_t CC KClientHttpRequestHEAD ( KClientHttpRequest *self, KClientHtt
                     if ( rc == 0 )
                     {
                         rc = self -> ceRequired ? KClientHttpRequestPOST ( self, rslt ) : KClientHttpRequestGET ( self, rslt );
+
+                        if (rc == 0) {
+                            assert(rslt);
+                            if ((*rslt)->status == 403)
+                                rc = RC(rcNS, rcFile, rcReading, rcData, rcUnauthorized);
+                        }
+
                         if ( rc == 0 )
                         {
                             uint64_t result_size64 = sizeof buf;
-                            KStream * response;
+                            KStream * response = NULL;
 
                             /* extractSize */
                             KClientHttpResultSize ( *rslt, & result_size64 );
