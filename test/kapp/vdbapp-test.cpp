@@ -200,6 +200,8 @@ TEST_CASE(App_HandleStandardOptions_Verbose)
     REQUIRE_EQ( 1, app.getArgC() ); // "-vvv" filtered out
 }
 
+#if _DEBUGGING
+
 TEST_CASE(App_HandleStandardOptions_Debug_Short)
 {
     int argc = 2;
@@ -219,6 +221,8 @@ TEST_CASE(App_HandleStandardOptions_Debug_Long)
     REQUIRE( KDbgTestModConds( DBG_KDB, DBG_FLAG(DBG_KDB_KDB) ) );
     REQUIRE_EQ( 1, app.getArgC() ); // "--debug KDB" filtered out
 }
+
+#endif
 
 TEST_CASE(App_HandleStandardOptions_Unknown)
 {   // ignore unknown arguments
