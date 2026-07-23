@@ -8,12 +8,11 @@ echo Starting Schema Diff test
 
 mkdir -p $WORKDIR/data
 
-echo "VDB_CONFIG=local.kfg $test_schema_diff -I$TOP/interfaces -o$WORKDIR/data $TOP/interfaces/vdb/built-in.vschema $TOP/interfaces/vdb/vdb.vschema"
+export VDB_CONFIG=local.kfg
+CMD="$test_schema_diff -I$TOP/interfaces -o$WORKDIR/data $TOP/interfaces/vdb/built-in.vschema $TOP/interfaces/vdb/vdb.vschema"
+echo "$CMD"
 
-output=$(VDB_CONFIG=local.kfg $test_schema_diff -I$TOP/interfaces -o$WORKDIR/data \
-	$TOP/interfaces/vdb/built-in.vschema \
-	$TOP/interfaces/vdb/vdb.vschema \
-)
+output=$($CMD)
 
 res=$?
 if [ "$res" != "0" ];

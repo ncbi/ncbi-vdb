@@ -74,7 +74,7 @@ DumpSchema ( const VSchema * p_schema, ostream & p_out )
 
 int main ( int argc, char *argv [] )
 {
-    VDB::Application app( argc, argv );
+    VDB::Application app( argc, argv, "" );
 
     int failed = 0;
     if ( argc < 2 )
