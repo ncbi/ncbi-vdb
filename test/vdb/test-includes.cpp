@@ -32,6 +32,7 @@
 #include <vdb/vdb-priv.h>
 
 #include <ktst/unit_test.hpp>
+#include <os-native.h> // setenv
 
 using namespace std;
 
