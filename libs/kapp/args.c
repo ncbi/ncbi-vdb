@@ -80,13 +80,16 @@ static Usage_t Usage = DefaultUsage;
 static UsageSummary_t UsageSummary = DefaultUsageSummary;
 static ver_t KAppVersion = 0;
 
+bool exit_after_help_or_version = true;
+bool ignore_unknown_arguments = false;
+
 rc_t DefaultUsage( const Args * args )
 {
     UNUSED( args );
     rc_t rc = UsageSummary ( UsageDefaultName );
     if (rc == 0)
     {
-        KOutMsg ("Options:\n");
+        KOutMsg ("\nOptions:\n");
         HelpOptionsStandard();
     }
     return rc;
@@ -94,7 +97,7 @@ rc_t DefaultUsage( const Args * args )
 
 rc_t DefaultUsageSummary( const char * progname )
 {
-    return KOutMsg ("\n"
+    return KOutMsg (
                     "Usage:\n"
                     "  %s [OPTIONS]\n",
                     progname);
@@ -133,6 +136,11 @@ static char HashSraTools[99] = "";
 void SetSraToolsHash(const char* str)
 {
     string_copy_measure(HashSraTools, sizeof HashSraTools, str);
+}
+
+const char * GetSraToolsHash ()
+{
+    return HashSraTools;
 }
 
 ver_t SetKAppVersion ( ver_t ver )
@@ -1283,13 +1291,16 @@ rc_t ArgsParseInt (Args * self, int argc, const char *argv[])
                 node = ( Option* )BSTreeFind( &self->names, name, OptionCmp );
                 if ( node == NULL )
                 {
-                    qrc = RC( rcApp, rcArgv, rcParsing, rcParam, rcUnknown );
-                    PLOGERR (klogErr,
-                             (klogErr, qrc,
-                              "Unknown argument '$(O)'", "O=--%s", name ));
-/*                     break; */
-                    if (orc == 0) /* non-fatal */
-                        orc = qrc;
+                    if ( ! ignore_unknown_arguments )
+                    {
+                        qrc = RC( rcApp, rcArgv, rcParsing, rcParam, rcUnknown );
+                        PLOGERR (klogErr,
+                                (klogErr, qrc,
+                                "Unknown argument '$(O)'", "O=--%s", name ));
+    /*                     break; */
+                        if (orc == 0) /* non-fatal */
+                            orc = qrc;
+                    }
                 }
                 else
                 {
@@ -1365,13 +1376,16 @@ rc_t ArgsParseInt (Args * self, int argc, const char *argv[])
                     alias = ( OptAlias* )BSTreeFind( &self->aliases, name, OptAliasCmp );
                     if ( alias == NULL )
                     {
-                        qrc = RC( rcApp, rcArgv, rcParsing, rcParam, rcUnknown );
-                        PLOGERR (klogErr,
-                                 (klogErr, qrc,
-                                  "Unknown argument '$(O)'", "O=-%s", name ));
+                        if ( ! ignore_unknown_arguments )
+                        {
+                            qrc = RC( rcApp, rcArgv, rcParsing, rcParam, rcUnknown );
+                            PLOGERR (klogErr,
+                                    (klogErr, qrc,
+                                    "Unknown argument '$(O)'", "O=-%s", name ));
 
-                        if (orc == 0)
-                            orc = qrc;
+                            if (orc == 0)
+                                orc = qrc;
+                        }
                     }
                     else
                     {
@@ -1496,6 +1510,10 @@ rc_t ArgsParseInt (Args * self, int argc, const char *argv[])
 #if _DEBUGGING
     (void)ArgsHandleDebug (self);
 #endif
+
+    (void)ArgsHandleLogLevel ( self );
+    (void)ArgsHandleStatusLevel ( self );
+
 #if USE_EARLY_HELP
     if (rc == 0)
     {
@@ -1527,10 +1545,10 @@ rc_t ArgsParseInt (Args * self, int argc, const char *argv[])
 
 rc_t CC ArgsParse_int (Args * self, int argc, const char *argv[])
 {
-    KLogLevel lvl = KLogLevelGet ();
-    rc_t rc = KLogLevelSet ( klogWarn );
-    rc = ArgsParseInt ( self, argc, argv );
-    KLogLevelSet ( lvl );
+    //KLogLevel lvl = KLogLevelGet ();
+    //rc_t rc = KLogLevelSet ( klogWarn );
+    rc_t rc = ArgsParseInt ( self, argc, argv );
+    //KLogLevelSet ( lvl );
     return rc;
 }
 
@@ -1887,8 +1905,11 @@ rc_t CC ArgsHandleHelp (Args * self)
             {
                 Usage(self);
             }
-            ArgsWhack (self);
-            exit (0);
+            if ( exit_after_help_or_version )
+            {
+                ArgsWhack (self);
+                exit (0);
+            }
         }
     }
     return rc;
@@ -1924,8 +1945,11 @@ rc_t CC ArgsHandleVersion (Args * self)
 
             HelpVersion (fullpath, KAppVersion);
 
-            ArgsWhack (self);
-            exit (0);
+            if ( exit_after_help_or_version )
+            {
+                ArgsWhack (self);
+                exit (0);
+            }
         }
     }
     return rc;
@@ -2156,6 +2180,7 @@ rc_t ArgsMakeAndHandleInt ( Args ** pself, int argc, const char ** argv,
             rc = ArgsCheckRequired (self);
             if (rc)
             {
+                OUTMSG(("\n"));
                 MiniUsage(self);
                 break;
             }
@@ -2264,10 +2289,10 @@ void CC HelpVersion (const char * fullpath, ver_t version)
         (sraVersion.version == version && sraVersion.revision == 0 &&
          sraVersion.type == eSraReleaseVersionTypeFinal))
     {
-        OUTMSG (("%s : %.3V\n\n", fullpath, version));
+        OUTMSG (("%s : %.3V\n", fullpath, version));
     }
     else {
-        OUTMSG (("%s : %.3V%s ( %s%s )\n\n",
+        OUTMSG (("%s : %.3V%s ( %s%s )\n",
             fullpath, version, HashSraTools, cSra, HASH_NCBI_VDB));
     }
 }
@@ -2459,7 +2484,7 @@ rc_t CC MiniUsage (const Args * args)
     {
         UsageSummary (progname);
     }
-    KOutMsg ("\nUse option --help for more information.\n\n");
+    KOutMsg ("\nUse option --help for more information.\n");
 
     KOutHandlerSet (w,d);
 

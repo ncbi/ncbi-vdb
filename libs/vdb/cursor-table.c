@@ -727,16 +727,16 @@ rc_t CC VTableCursorVGetColumnIdx ( const VCURSOR_IMPL *self,
                 /* find an appropriate column in schema */
                 uint32_t type;
                 VTypedecl cast;
-                const SNameOverload *name;
+                const SNameOverload *name_l;
                 const SColumn *scol = STableFind ( self -> tbl -> stbl,
                                                    self -> schema,
                                                    & cast,
-                                                   & name,
+                                                   & name_l,
                                                    & type,
                                                    colspec,
                                                    "VTableCursorVGetColumnIdx",
                                                    true );
-            rc = VCursorGetColidx ( & self -> dad, scol, name, type, idx );
+            rc = VCursorGetColidx ( & self -> dad, scol, name_l, type, idx );
             }
         }
     }
@@ -1861,11 +1861,16 @@ static rc_t VCursorParamsLookupOrCreate(struct VCursorParams const *cself,
     StringInitCString(&name, Name);
     node = (NamedParamNode *)BSTreeFind(&self->named_params, &name, NamedParamComp);
     if (node == NULL) {
-        node = malloc(sizeof(*node) + StringSize(&name) + 1);
+        size_t name_len = StringSize(&name);
+        node = malloc(sizeof(*node) + name_len + 1);
         if (node == NULL)
             return RC(rcVDB, rcCursor, rcAccessing, rcMemory, rcExhausted);
 
+#ifdef WINDOWS
+        strcpy_s((char *)(&node[1]), name_len + 1, Name);
+#else
         strcpy((char *)(&node[1]), Name);
+#endif
         StringInit ( & node -> name, (const char *)(&node[1]), name . size, name . len );
 
         memset ( & node -> value, 0, sizeof node -> value );

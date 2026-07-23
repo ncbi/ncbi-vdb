@@ -62,8 +62,8 @@
 #define PATH_MAX 4096
 #endif
 
-#define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
-    if (rc2 && !rc) { rc = rc2; } obj = NULL; } while (false)
+#define RELEASE(type, obj) do { rc_t rc2_release_macro = type##Release(obj); \
+    if (rc2_release_macro && !rc) { rc = rc2_release_macro; } obj = NULL; } while (false)
 
 /*
  * An unrecoverable error happened.
@@ -115,12 +115,12 @@ static rc_t ReportGet(Report** self)
     static bool latch;
     if ( ! latch )
     {
-        static Report self;
+        static Report s_self;
 
         rc = ReportInitVDB ( ReportObj, ReportSOFTWARE, ReportRelease );
         if ( rc == 0 )
         {
-            report_singleton . ptr = & self;
+            report_singleton . ptr = & s_self;
             latch = true;
         }
     }
@@ -196,7 +196,7 @@ static rc_t VDBDependenciesReportDepend1(const VDBDependencies *self,
 {
     KDirectory *dir = NULL;
     rc_t rc = 0;
-    uint32_t i = ~0;
+    uint32_t i = (uint32_t)~0;
 
     assert(missing);
 
@@ -234,38 +234,38 @@ static rc_t VDBDependenciesReportDepend1(const VDBDependencies *self,
             if (toreport) {
                 bool reported = false;
                 if (!isMissing && !local)  {
-                    rc_t rc = 0;
+                    rc_t rc2 = 0;
                     bool readable = false;
-                    uint64_t size = ~0;
+                    uint64_t size = (uint64_t)~0;
                     KTime_t date = 0;
                     bool ready = false;
                     if (dir == NULL)
-                    {   rc = KDirectoryNativeDir(&dir); }
+                    {   rc2 = KDirectoryNativeDir(&dir); }
                     assert(!local && path && path[0]);
                     if (dir != NULL) {
-                        rc = KDirectoryFileSize(dir, &size, "%s", path);
-                        if (rc == 0)
-                        {   rc = KDirectoryDate(dir, &date, "%s", path); }
-                        if (rc == 0) {
-                            const KFile* f = NULL;
-                            rc = KDirectoryOpenFileRead(dir, &f, "%s", path);
-                            if (rc == 0) {
+                        rc2 = KDirectoryFileSize(dir, &size, "%s", path);
+                        if (rc2 == 0)
+                        {   rc2 = KDirectoryDate(dir, &date, "%s", path); }
+                        if (rc2 == 0) {
+                            const KFile* f2 = NULL;
+                            rc2 = KDirectoryOpenFileRead(dir, &f2, "%s", path);
+                            if (rc2 == 0) {
                                 char buffer[1024];
                                 size_t num_read = 0;
                                 size_t bsize = size > sizeof buffer
                                              ? sizeof buffer : ( size_t ) size;
-                                rc = KFileReadAll(f,
+                                rc2 = KFileReadAll(f2,
                                     0, buffer, bsize, &num_read);
-                                if (rc == 0 && num_read != bsize) {
-                                    rc = RC(rcVDB, rcFile, rcReading,
+                                if (rc2 == 0 && num_read != bsize) {
+                                    rc2 = RC(rcVDB, rcFile, rcReading,
                                         rcBuffer, rcExcessive);
                                 }
-                                if (rc == 0)
+                                if (rc2 == 0)
                                 {   readable = true; }
                             }
-                            KFileRelease(f);
+                            KFileRelease(f2);
                         }
-                        if (rc == 0)
+                        if (rc2 == 0)
                         {   ready = true; }
                     }
                     if (ready) {
@@ -288,7 +288,7 @@ static rc_t VDBDependenciesReportDepend1(const VDBDependencies *self,
                             "seq_id", 's', seq_id,
                             "local", 's', local ? "true" : "false",
                             "path", 's', path,
-                            "error", 'R', rc);
+                            "error", 'R', rc2);
                         reported = true;
                     }
                 }
@@ -335,21 +335,21 @@ static rc_t ReportDepend(const ReportFuncs *f,
         }
         else {
             uint32_t missing = 0;
-            const char tag[] = "List";
+            const char tag2[] = "List";
             rc = VDBDependenciesReportDepend1(dep, f,
                 count, indent + 2, false, &missing);
 
             if (rc == 0) {
-                reportOpen(indent + 1, tag, 2, "count", 'd', count,
+                reportOpen(indent + 1, tag2, 2, "count", 'd', count,
                     "missing", 'd', missing);
             }
             else {
-                reportOpen(indent + 1, tag, 1, "count", 'd', count);
+                reportOpen(indent + 1, tag2, 1, "count", 'd', count);
             }
 
             rc = VDBDependenciesReportDepend1(dep, f,
                 count, indent + 2, true, &missing);
-            reportClose(indent + 1, tag);
+            reportClose(indent + 1, tag2);
         }
     }
 

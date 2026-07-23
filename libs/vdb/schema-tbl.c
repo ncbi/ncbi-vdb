@@ -939,7 +939,7 @@ rc_t CC STableCloneExtend ( const STable *self, STable **clone, VSchema *schema 
 rc_t STableImplicitPhysMember ( STable *self,
     const VTypedecl *td, KSymbol *sym, const String *name )
 {
-    rc_t rc;
+    rc_t rc = 0;
     SPhysMember *m = malloc ( sizeof * m );
     if ( m == NULL )
         rc = RC ( rcVDB, rcSchema, rcParsing, rcMemory, rcExhausted );
@@ -1124,7 +1124,7 @@ int64_t KSymbolDeepCompare ( const KSymbol *a, const KSymbol *b )
 static
 int64_t CC STableNameSort ( const void **a, const void **b, void *ignore )
 {
-    int diff;
+    int64_t diff;
     const STable *tb = * b;
     const STable *ta = * a;
     if ( tb == NULL )
@@ -1152,7 +1152,7 @@ rc_t CC STableCompare ( const STable *a, const STable *b, const STable **newer, 
     rc_t stage_rc, cmp_rc = 0;
     uint32_t stage_bits, cmp_bits = 0;
 
-    int diff;
+    int64_t diff;
     Vector va, vb;
     uint32_t ia, ib, ca, cb;
 
@@ -2172,7 +2172,7 @@ rc_t column_declaration ( KSymTable *tbl, KTokenSource *src, KToken *t,
                 rc = SNameOverloadMake ( & name, c -> name, eTable, 0, 4 );
                 if ( rc == 0 )
                 {
-                    name -> cid . ctx = -1;
+                    name -> cid . ctx = (uint32_t)-1;
                     rc = VectorAppend ( & table -> cname, & name -> cid . id, name );
                     if ( rc != 0 )
                         SNameOverloadWhack ( name, NULL );

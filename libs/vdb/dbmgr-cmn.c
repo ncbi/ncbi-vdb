@@ -719,7 +719,7 @@ LIB_EXPORT rc_t CC VDBManagerGetObjModDate ( const VDBManager *self, KTime_t *ti
         {
             const KTable *tbl;
             const KDatabase *db;
-            const KMetadata *meta;
+            const KMetadata *meta = NULL;
 
             int path_type = KDBManagerPathType ( self -> kmgr, "%s", path ) & ~ kptAlias;
             switch ( path_type )
@@ -1039,7 +1039,22 @@ static const char * VDBManagerGetQualityImpl(const VDBManager * self,
             CONST_STRING(&s_DfltQuality, "RZ");
 
         if (!s_EnvQualitySet) {
+#ifdef WINDOWS
+#pragma warning(push)
+#pragma warning(disable:4996)
+/* Disabling unsafe getenv function warning since
+   it cannot be substituted with a safe one, since
+   here the global result of getenv is assigned to
+   a global variable s_EnvQuality and in addition to
+   that is returned outside to be used there.
+   Significant redesign of VDBManagerGetQuality and
+   all its callers is required
+*/
+#endif
             char* e = getenv("NCBI_VDB_QUALITY");
+#ifdef WINDOWS
+#pragma warning(pop)
+#endif
             if (QualityInputValidForCgiCall(e, string_size(e)))
                 s_EnvQuality = e;
             else
@@ -1118,7 +1133,7 @@ bool fillPrefQual1(char * dst, const char * src, size_t sz, char q)
     if (dst[0] != '\0')
         return false;
     else {
-        int i = 0, j = 0;
+        size_t i = 0, j = 0;
 
         dst[i++] = q;
 

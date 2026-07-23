@@ -68,7 +68,7 @@ rc_t VBlobCreateEncode ( VBlob **blobp, const VBlob *in, uint32_t max_rl_bytes,u
 				VBlobHeader *hdr = BlobHeadersGetHdrWrite(blob->headers);
 				assert(hdr!=NULL);
 				if(hdr != 0){
-					int i;
+					uint32_t i;
 					VBlobHeaderSetVersion (hdr, 1);
 					rc = VBlobHeaderArgPushTail(hdr, max_rl_bytes);
 					assert(rc == 0);
@@ -108,13 +108,15 @@ rc_t VBlobCreateDecode ( VBlob **blobp, const VBlob *in, uint32_t *max_rl_bytes,
 		hdr = BlobHeadersGetHeader(in->headers);
 		if(hdr || VBlobHeaderVersion(hdr)!=1) {
 			int64_t len;
-			int64_t eb;
+			int64_t eb = 0;
 			rc = VBlobHeaderArgPopHead(hdr, &len);
 			if( rc == 0)
 				rc = VBlobHeaderArgPopHead(hdr, &eb);
 			if( rc == 0){
-				*max_rl_bytes=len;
-				*elem_bytes = eb;
+				assert(len <= UINT32_MAX);
+				assert(eb <= UINT32_MAX);
+				*max_rl_bytes=(uint32_t)len;
+				*elem_bytes = (uint32_t)eb;
 				if(len > 0){
 					rc = KDataBufferMake ( & blob -> data, in -> data . elem_bits, in -> data . elem_count );
 					if ( rc == 0){
@@ -170,7 +172,7 @@ rc_t CC undelta_average ( void *self, const VXformInfo *info, int64_t row_id,
     if(rc == 0 && max_rl_bytes > 0){
 	uint8_t *dst = (*rslt)->data.base; /** destination pointer **/
 	uint8_t *src = in -> data.base;
-	int	i,j,k;
+	uint32_t i,j,k;
 	PageMap *pm  = in->pm;
 
 	for(i=j=0,src = in -> data.base;i<pm->leng_recs;i++){
@@ -214,7 +216,7 @@ rc_t CC delta_average ( void *self, const VXformInfo *info, int64_t row_id,
     uint64_t	/*min_rl_bytes,*/ max_rl_bytes;
     uint32_t    *cnts;
     uint32_t    elem_bytes;
-    int         i,j,k;
+    uint32_t    i,j,k;
     uint8_t	*avg=NULL;
     uint64_t    sum_rle;
     uint8_t	last;
@@ -222,7 +224,8 @@ rc_t CC delta_average ( void *self, const VXformInfo *info, int64_t row_id,
     if(pm->row_count < 256 || (in->data.elem_bits & 7)!=0){
 	return VBlobCreateEncode ( rslt, in, 0,NULL,0 );
     }
-    elem_bytes = in->data.elem_bits >> 3;
+    assert((in->data.elem_bits >> 3) <= UINT32_MAX);
+    elem_bytes = (uint32_t)(in->data.elem_bits >> 3);
     PageMapRowLengthRange(pm,&min_row_len,&max_row_len);
     if(max_row_len > 1024){
 	return VBlobCreateEncode ( rslt, in, 0,NULL,0 );
@@ -262,11 +265,11 @@ rc_t CC delta_average ( void *self, const VXformInfo *info, int64_t row_id,
 	avg[i] = 0;
 	for(j=1;j<256;j++){
 		if(cnts[256*i+j] > cnts[256*i+avg[i]]){
-			avg[i]=j;
+			avg[i]=(uint8_t)j;
 		}
 	}
     }
-    rc = VBlobCreateEncode ( rslt, in, max_rl_bytes,avg,elem_bytes );
+    rc = VBlobCreateEncode ( rslt, in, (uint32_t)max_rl_bytes,avg,(uint32_t)elem_bytes );
     if (rc == 0 ){
 	uint8_t *dst = (*rslt)->data.base; /** destination pointer **/
 	for(i=j=0,src = in -> data.base;i<pm->leng_recs;i++){

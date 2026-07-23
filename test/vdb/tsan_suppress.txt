@@ -1,14 +1,10 @@
 race:CloudMgrGetCurrentCloud
 
-race:KConfigMakeImpl
-race:find_home_directory
-
 race:KDBOpenPathTypeReadInt
 
 race:KDirectoryNativeDir_v1
 
 race:KLogLevelGet
-race:SetRCFileFuncLine
 
 race:KClientHttpOpen
 race:KNSManagerGetUserAgent

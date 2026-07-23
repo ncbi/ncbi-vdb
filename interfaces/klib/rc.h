@@ -70,20 +70,22 @@ KLIB_EXTERN const char * CC GetRCFilename ( void );
 KLIB_EXTERN const char * CC GetRCFunction ( void );
 KLIB_EXTERN uint32_t CC GetRCLineno ( void );
 KLIB_EXTERN rc_t CC SetRCFileFuncLine ( rc_t rc, const char *filename, const char *funcname, uint32_t lineno );
+
+// this function is deprecated and will always return false
 KLIB_EXTERN bool CC GetUnreadRCInfo ( rc_t *rc, const char **filename, const char **funcname, uint32_t *lineno );
 
 #if RECORD_RC_FILE_LINE
 
     #if defined(__SUNPRO_CC)  &&  __SUNPRO_CC <= 0x590  &&  defined(__cplusplus)
-    
+
         #define SET_RC_FILE_FUNC_LINE( rc ) \
             SetRCFileFuncLine ( ( rc ), __FILE__, "(N/A)", __LINE__ )
-    
+
     #else
-    
+
         #define SET_RC_FILE_FUNC_LINE( rc ) \
             SetRCFileFuncLine ( ( rc ), __FILE__, __func__, __LINE__ )
-    
+
     #endif
 
 #else
