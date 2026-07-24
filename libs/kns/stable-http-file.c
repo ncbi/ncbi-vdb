@@ -49,8 +49,8 @@
 /*********************************** RETRIER **********************************/
 
 /* the last call to the file was successful */
-static
-void RetrierReset(const KStableHttpFile * cself, const char * func)
+static void RetrierReset(
+    const KStableHttpFile * cself, const char * func, bool init)
 {
     KStableHttpFile * self = (KStableHttpFile *)cself;
 
@@ -74,6 +74,9 @@ void RetrierReset(const KStableHttpFile * cself, const char * func)
             logLevel = atoi(e);
 #endif
     }
+
+    if (init)
+        return;
 
     self->live = true;
 
@@ -427,7 +430,7 @@ rc_t CC KStblHttpFileTimedRead(const KStableHttpFile *self, uint64_t pos,
     while (true) {
         rc_t rc = KFileTimedRead(self->file, pos, buffer, bsize, num_read, tm);
         if (rc == 0) {
-            RetrierReset(self, __func__);
+            RetrierReset(self, __func__, false);
             return rc;
         }
         else {
@@ -452,7 +455,7 @@ rc_t CC KStblHttpFileRead(const KStableHttpFile *self, uint64_t pos,
     while (true) {
         rc_t rc = KFileRead(self->file, pos, buffer, bsize, num_read);
         if (rc == 0) {
-            RetrierReset(self, __func__);
+            RetrierReset(self, __func__, false);
             return rc;
         }
         else {
@@ -502,7 +505,7 @@ rc_t CC KStblHttpFileTimedReadChunked(const KStableHttpFile * self,
         rc_t rc =
             KFileTimedReadChunked(self->file, pos, chunks, bytes, num_read, tm);
         if (rc == 0) {
-            RetrierReset(self, __func__);
+            RetrierReset(self, __func__, false);
             return rc;
         }
         else {
@@ -527,7 +530,7 @@ rc_t CC KStblHttpFileReadChunked(const KStableHttpFile * self, uint64_t pos,
     while (true) {
         rc_t rc = KFileReadChunked(self->file, pos, chunks, bytes, num_read);
         if (rc == 0) {
-            RetrierReset(self, __func__);
+            RetrierReset(self, __func__, false);
             return rc;
         }
         else {
@@ -700,8 +703,12 @@ rc_t KNSManagerVMakeHttpFileInt(const KNSManager *self,
 
             if (rc == 0) {
                 rc = RetrierReopenRemote(f, true);
-                if (rc == 0)
+                if (rc == 0) {
                     *file = &f->dad;
+
+                    /* initialize static variable to avoid race condition */
+                    RetrierReset(f, __func__, true);
+                }
             }
 
             if (rc != 0)
