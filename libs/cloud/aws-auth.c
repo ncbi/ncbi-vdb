@@ -447,14 +447,10 @@ rc_t CalculateSignature(
     unsigned char signingKey[32] = "";
     unsigned char signature[32] = "";
 
-    mbedtls_md_context_t ctx;
-    mbedtls_md_init(&ctx);
-
     md_info = mbedtls_md_info_from_type(MBEDTLS_MD_SHA256);
     if (md_info == NULL) {
         rc = RC(rcCloud, rcUri, rcInitializing, rcEncryption, rcFailed);
         LOGERR(klogErr, rc, "Failed to locate SHA256 information");
-        mbedtls_md_free(&ctx);
         return rc;
     }
 
@@ -492,8 +488,6 @@ rc_t CalculateSignature(
     for (i = 0; rc == 0 && i < 32; ++i)
         rc = string_printf(
             signatureHex + i * 2, 3, NULL, "%02x", signature[i]);
-
-    mbedtls_md_free(&ctx);
 
     if (rc == 0)
         DBGMSG(DBG_CLOUD, DBG_FLAG(DBG_CLOUD_SIGN),
