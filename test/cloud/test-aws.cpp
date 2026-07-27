@@ -432,9 +432,6 @@ TEST_CASE(TestBuildStringToSign) {
 
 #ifdef ALL
 TEST_CASE(TestHMAC_SHA256) {
-    mbedtls_md_context_t ctx;
-    mbedtls_md_init(&ctx);
-
     const mbedtls_md_info_t* md_info
         = mbedtls_md_info_from_type(MBEDTLS_MD_SHA256);
     REQUIRE(md_info);
@@ -450,8 +447,6 @@ TEST_CASE(TestHMAC_SHA256) {
         REQUIRE_RC(string_printf(hex + i * 2, 3, nullptr, "%02x", h_output[i]));
     REQUIRE_EQ(string(hex), string(
         "40f08b93b298f788109624ad3505882e0467fab1b30a76993a8327097c4f4e45"));
-
-    mbedtls_md_free(&ctx);
 }
 #endif
 
