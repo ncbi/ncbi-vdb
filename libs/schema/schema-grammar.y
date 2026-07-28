@@ -31,11 +31,16 @@
 
     #include "ParseTree.hpp"
     #include "ErrorReport.hpp"
+    #include "SchemaScanner.hpp"
 
     using namespace ncbi::SchemaParser;
 
     #include "schema-grammar.hpp"
     #include "schema-lex.h"
+
+    extern "C" {
+        int SchemaScan_yylex ( YYSTYPE *lvalp, YYLTYPE *llocp, SchemaScanBlock* sb );
+    }
     #define Schema_lex SchemaScan_yylex
 
     void Schema_error ( YYLTYPE *                   p_llocp,
@@ -49,11 +54,6 @@
         /* send message to the C++ parser for proper display and recovery */
         Token :: Location loc ( p_sb -> file_name, p_llocp -> first_line, p_llocp -> first_column );
         p_errors -> ReportError ( ctx, loc, "%s", p_msg);
-    }
-
-    extern "C"
-    {
-        extern enum Schema_tokentype SchemaScan_yylex ( SCHEMA_STYPE *lvalp, SCHEMA_LTYPE *llocp, SchemaScanBlock* sb );
     }
 
     static
@@ -131,8 +131,7 @@
 
 %}
 
-%define api.prefix "Schema_"
- /*%name-prefix "Schema_"*/
+%name-prefix "Schema_"
 %parse-param { ctx_t ctx }
 %parse-param { ParseTree** root }
 %parse-param { ErrorReport * errors }

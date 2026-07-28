@@ -1,8 +1,8 @@
-/* A Bison parser, made by GNU Bison 3.5.1.  */
+/* A Bison parser, made by GNU Bison 3.8.2.  */
 
 /* Bison implementation for Yacc-like parsers in C
 
-   Copyright (C) 1984, 1989-1990, 2000-2015, 2018-2020 Free Software Foundation,
+   Copyright (C) 1984, 1989-1990, 2000-2015, 2018-2021 Free Software Foundation,
    Inc.
 
    This program is free software: you can redistribute it and/or modify
@@ -16,7 +16,7 @@
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
+   along with this program.  If not, see <https://www.gnu.org/licenses/>.  */
 
 /* As a special exception, you may create a larger work that contains
    part or all of the Bison parser skeleton and distribute that work
@@ -34,6 +34,10 @@
 /* C LALR(1) parser skeleton written by Richard Stallman, by
    simplifying the original so-called "semantic" parser.  */
 
+/* DO NOT RELY ON FEATURES THAT ARE NOT DOCUMENTED in the manual,
+   especially those whose name start with YY_ or yy_.  They are
+   private implementation details that can be changed or removed.  */
+
 /* All symbols defined below should begin with yy or YY, to avoid
    infringing on user name space.  This should be done even for local
    variables, as they might otherwise be expanded by user macros.
@@ -41,14 +45,11 @@
    define necessary library symbols; they are noted "INFRINGES ON
    USER NAME SPACE" below.  */
 
-/* Undocumented macros, especially those whose name start with YY_,
-   are private implementation details.  Do not rely on them.  */
+/* Identify Bison output, and Bison version.  */
+#define YYBISON 30802
 
-/* Identify Bison output.  */
-#define YYBISON 1
-
-/* Bison version.  */
-#define YYBISON_VERSION "3.5.1"
+/* Bison version string.  */
+#define YYBISON_VERSION "3.8.2"
 
 /* Skeleton name.  */
 #define YYSKELETON_NAME "yacc.c"
@@ -62,8 +63,7 @@
 /* Pull parsers.  */
 #define YYPULL 1
 
-/* Substitute the type names.  */
-#define YYSTYPE         AST_STYPE
+
 /* Substitute the variable and function names.  */
 #define yyparse         AST_parse
 #define yylex           AST_lex
@@ -116,200 +116,285 @@
 #  endif
 # endif
 
-/* Enabling verbose error messages.  */
-#ifdef YYERROR_VERBOSE
-# undef YYERROR_VERBOSE
-# define YYERROR_VERBOSE 1
-#else
-# define YYERROR_VERBOSE 1
-#endif
-
-/* Use api.header.include to #include this header
-   instead of duplicating it here.  */
-#ifndef YY_AST_HOME_BOSHKINS_NCBI_DEVEL_NCBI_VDB_LIBS_SCHEMA_ZZ_SCHEMA_AST_HPP_INCLUDED
-# define YY_AST_HOME_BOSHKINS_NCBI_DEVEL_NCBI_VDB_LIBS_SCHEMA_ZZ_SCHEMA_AST_HPP_INCLUDED
-/* Debug traces.  */
-#ifndef AST_DEBUG
-# if defined YYDEBUG
-#if YYDEBUG
-#   define AST_DEBUG 1
-#  else
-#   define AST_DEBUG 0
-#  endif
-# else /* ! defined YYDEBUG */
-#  define AST_DEBUG 0
-# endif /* ! defined YYDEBUG */
-#endif  /* ! defined AST_DEBUG */
-#if AST_DEBUG
-extern int AST_debug;
-#endif
-
-/* Token type.  */
-#ifndef AST_TOKENTYPE
-# define AST_TOKENTYPE
-  enum AST_tokentype
-  {
-    END_SOURCE = 0,
-    UNRECOGNIZED = 258,
-    ELLIPSIS = 259,
-    INCREMENT = 260,
-    DECIMAL = 261,
-    OCTAL = 262,
-    HEX = 263,
-    FLOAT_ = 264,
-    EXP_FLOAT = 265,
-    STRING = 266,
-    ESCAPED_STRING = 267,
-    IDENTIFIER_1_0 = 268,
-    PHYSICAL_IDENTIFIER_1_0 = 269,
-    VERSION = 270,
-    UNTERM_STRING = 271,
-    UNTERM_ESCAPED_STRING = 272,
-    VERS_1_0 = 273,
-    VERS_2_0 = 274,
-    KW___no_header = 275,
-    KW___row_length = 276,
-    KW___untyped = 277,
-    KW_alias = 278,
-    KW_column = 279,
-    KW_const = 280,
-    KW_control = 281,
-    KW_database = 282,
-    KW_decode = 283,
-    KW_default = 284,
-    KW_encode = 285,
-    KW_extern = 286,
-    KW_false = 287,
-    KW_fmtdef = 288,
-    KW_function = 289,
-    KW_include = 290,
-    KW_limit = 291,
-    KW_physical = 292,
-    KW_read = 293,
-    KW_readonly = 294,
-    KW_return = 295,
-    KW_schema = 296,
-    KW_static = 297,
-    KW_table = 298,
-    KW_template = 299,
-    KW_trigger = 300,
-    KW_true = 301,
-    KW_type = 302,
-    KW_typedef = 303,
-    KW_typeset = 304,
-    KW_validate = 305,
-    KW_version = 306,
-    KW_view = 307,
-    KW_virtual = 308,
-    KW_void = 309,
-    KW_write = 310,
-    PT_ASTLIST = 311,
-    PT_PARSE = 312,
-    PT_SOURCE = 313,
-    PT_VERSION_1_0 = 314,
-    PT_VERSION_2 = 315,
-    PT_SCHEMA_1_0 = 316,
-    PT_SCHEMA_2_0 = 317,
-    PT_INCLUDE = 318,
-    PT_TYPEDEF = 319,
-    PT_FQN = 320,
-    PT_IDENT = 321,
-    PT_PHYSIDENT = 322,
-    PT_UINT = 323,
-    PT_TYPESET = 324,
-    PT_TYPESETDEF = 325,
-    PT_FORMAT = 326,
-    PT_CONST = 327,
-    PT_ALIAS = 328,
-    PT_EXTERN = 329,
-    PT_FUNCTION = 330,
-    PT_UNTYPED = 331,
-    PT_ROWLENGTH = 332,
-    PT_FUNCDECL = 333,
-    PT_EMPTY = 334,
-    PT_SCHEMASIG = 335,
-    PT_SCHEMAFORMAL = 336,
-    PT_RETURNTYPE = 337,
-    PT_FACTSIG = 338,
-    PT_FUNCSIG = 339,
-    PT_FUNCPARAMS = 340,
-    PT_FORMALPARAM = 341,
-    PT_ELLIPSIS = 342,
-    PT_FUNCPROLOGUE = 343,
-    PT_RETURN = 344,
-    PT_PRODSTMT = 345,
-    PT_PRODTRIGGER = 346,
-    PT_SCHEMA = 347,
-    PT_VALIDATE = 348,
-    PT_PHYSICAL = 349,
-    PT_PHYSPROLOGUE = 350,
-    PT_PHYSSTMT = 351,
-    PT_PHYSBODYSTMT = 352,
-    PT_TABLE = 353,
-    PT_TABLEPARENTS = 354,
-    PT_TABLEBODY = 355,
-    PT_FUNCEXPR = 356,
-    PT_FACTPARMS = 357,
-    PT_COLUMN = 358,
-    PT_COLUMNEXPR = 359,
-    PT_COLDECL = 360,
-    PT_TYPEDCOL = 361,
-    PT_COLSTMT = 362,
-    PT_DFLTVIEW = 363,
-    PT_PHYSMBR = 364,
-    PT_PHYSCOL = 365,
-    PT_PHYSCOLDEF = 366,
-    PT_COLSCHEMAPARMS = 367,
-    PT_COLSCHEMAPARAM = 368,
-    PT_COLUNTYPED = 369,
-    PT_DATABASE = 370,
-    PT_TYPEEXPR = 371,
-    PT_DBBODY = 372,
-    PT_DBDAD = 373,
-    PT_DBMEMBER = 374,
-    PT_TBLMEMBER = 375,
-    PT_NOHEADER = 376,
-    PT_CASTEXPR = 377,
-    PT_CONSTVECT = 378,
-    PT_NEGATE = 379,
-    PT_UNARYPLUS = 380,
-    PT_VERSNAME = 381,
-    PT_ARRAY = 382,
-    PT_PHYSENCREF = 383,
-    PT_TYPEDCOLEXPR = 384,
-    PT_VIEW = 385,
-    PT_VIEWPARAM = 386,
-    PT_VIEWPARENTS = 387,
-    PT_VIEWPARENT = 388,
-    PT_MEMBEREXPR = 389,
-    PT_JOINEXPR = 390,
-    PT_ALIASMEMBER = 391,
-    PT_VIEWSPEC = 392
-  };
-#endif
-
-/* Value type.  */
-#if ! defined AST_STYPE && ! defined AST_STYPE_IS_DECLARED
-union AST_STYPE
+#include "zz_schema-ast.hpp"
+/* Symbol kind.  */
+enum yysymbol_kind_t
 {
-
-  const Token*  tok;
-  AST*          node;
-  AST_FQN*      fqn;
-  AST_Expr*     expr;
-
-
+  YYSYMBOL_YYEMPTY = -2,
+  YYSYMBOL_YYEOF = 0,                      /* "end of source"  */
+  YYSYMBOL_YYerror = 1,                    /* error  */
+  YYSYMBOL_YYUNDEF = 2,                    /* "invalid token"  */
+  YYSYMBOL_UNRECOGNIZED = 3,               /* UNRECOGNIZED  */
+  YYSYMBOL_ELLIPSIS = 4,                   /* ELLIPSIS  */
+  YYSYMBOL_INCREMENT = 5,                  /* INCREMENT  */
+  YYSYMBOL_DECIMAL = 6,                    /* DECIMAL  */
+  YYSYMBOL_OCTAL = 7,                      /* OCTAL  */
+  YYSYMBOL_HEX = 8,                        /* HEX  */
+  YYSYMBOL_FLOAT_ = 9,                     /* FLOAT_  */
+  YYSYMBOL_EXP_FLOAT = 10,                 /* EXP_FLOAT  */
+  YYSYMBOL_STRING = 11,                    /* STRING  */
+  YYSYMBOL_ESCAPED_STRING = 12,            /* ESCAPED_STRING  */
+  YYSYMBOL_IDENTIFIER_1_0 = 13,            /* IDENTIFIER_1_0  */
+  YYSYMBOL_PHYSICAL_IDENTIFIER_1_0 = 14,   /* PHYSICAL_IDENTIFIER_1_0  */
+  YYSYMBOL_VERSION = 15,                   /* VERSION  */
+  YYSYMBOL_UNTERM_STRING = 16,             /* UNTERM_STRING  */
+  YYSYMBOL_UNTERM_ESCAPED_STRING = 17,     /* UNTERM_ESCAPED_STRING  */
+  YYSYMBOL_VERS_1_0 = 18,                  /* VERS_1_0  */
+  YYSYMBOL_VERS_2_0 = 19,                  /* VERS_2_0  */
+  YYSYMBOL_KW___no_header = 20,            /* KW___no_header  */
+  YYSYMBOL_KW___row_length = 21,           /* KW___row_length  */
+  YYSYMBOL_KW___untyped = 22,              /* KW___untyped  */
+  YYSYMBOL_KW_alias = 23,                  /* KW_alias  */
+  YYSYMBOL_KW_column = 24,                 /* KW_column  */
+  YYSYMBOL_KW_const = 25,                  /* KW_const  */
+  YYSYMBOL_KW_control = 26,                /* KW_control  */
+  YYSYMBOL_KW_database = 27,               /* KW_database  */
+  YYSYMBOL_KW_decode = 28,                 /* KW_decode  */
+  YYSYMBOL_KW_default = 29,                /* KW_default  */
+  YYSYMBOL_KW_encode = 30,                 /* KW_encode  */
+  YYSYMBOL_KW_extern = 31,                 /* KW_extern  */
+  YYSYMBOL_KW_false = 32,                  /* KW_false  */
+  YYSYMBOL_KW_fmtdef = 33,                 /* KW_fmtdef  */
+  YYSYMBOL_KW_function = 34,               /* KW_function  */
+  YYSYMBOL_KW_include = 35,                /* KW_include  */
+  YYSYMBOL_KW_limit = 36,                  /* KW_limit  */
+  YYSYMBOL_KW_physical = 37,               /* KW_physical  */
+  YYSYMBOL_KW_read = 38,                   /* KW_read  */
+  YYSYMBOL_KW_readonly = 39,               /* KW_readonly  */
+  YYSYMBOL_KW_return = 40,                 /* KW_return  */
+  YYSYMBOL_KW_schema = 41,                 /* KW_schema  */
+  YYSYMBOL_KW_static = 42,                 /* KW_static  */
+  YYSYMBOL_KW_table = 43,                  /* KW_table  */
+  YYSYMBOL_KW_template = 44,               /* KW_template  */
+  YYSYMBOL_KW_trigger = 45,                /* KW_trigger  */
+  YYSYMBOL_KW_true = 46,                   /* KW_true  */
+  YYSYMBOL_KW_type = 47,                   /* KW_type  */
+  YYSYMBOL_KW_typedef = 48,                /* KW_typedef  */
+  YYSYMBOL_KW_typeset = 49,                /* KW_typeset  */
+  YYSYMBOL_KW_validate = 50,               /* KW_validate  */
+  YYSYMBOL_KW_version = 51,                /* KW_version  */
+  YYSYMBOL_KW_view = 52,                   /* KW_view  */
+  YYSYMBOL_KW_virtual = 53,                /* KW_virtual  */
+  YYSYMBOL_KW_void = 54,                   /* KW_void  */
+  YYSYMBOL_KW_write = 55,                  /* KW_write  */
+  YYSYMBOL_PT_ASTLIST = 56,                /* PT_ASTLIST  */
+  YYSYMBOL_PT_PARSE = 57,                  /* PT_PARSE  */
+  YYSYMBOL_PT_SOURCE = 58,                 /* PT_SOURCE  */
+  YYSYMBOL_PT_VERSION_1_0 = 59,            /* PT_VERSION_1_0  */
+  YYSYMBOL_PT_VERSION_2 = 60,              /* PT_VERSION_2  */
+  YYSYMBOL_PT_SCHEMA_1_0 = 61,             /* PT_SCHEMA_1_0  */
+  YYSYMBOL_PT_SCHEMA_2_0 = 62,             /* PT_SCHEMA_2_0  */
+  YYSYMBOL_PT_INCLUDE = 63,                /* PT_INCLUDE  */
+  YYSYMBOL_PT_TYPEDEF = 64,                /* PT_TYPEDEF  */
+  YYSYMBOL_PT_FQN = 65,                    /* PT_FQN  */
+  YYSYMBOL_PT_IDENT = 66,                  /* PT_IDENT  */
+  YYSYMBOL_PT_PHYSIDENT = 67,              /* PT_PHYSIDENT  */
+  YYSYMBOL_PT_UINT = 68,                   /* PT_UINT  */
+  YYSYMBOL_PT_TYPESET = 69,                /* PT_TYPESET  */
+  YYSYMBOL_PT_TYPESETDEF = 70,             /* PT_TYPESETDEF  */
+  YYSYMBOL_PT_FORMAT = 71,                 /* PT_FORMAT  */
+  YYSYMBOL_PT_CONST = 72,                  /* PT_CONST  */
+  YYSYMBOL_PT_ALIAS = 73,                  /* PT_ALIAS  */
+  YYSYMBOL_PT_EXTERN = 74,                 /* PT_EXTERN  */
+  YYSYMBOL_PT_FUNCTION = 75,               /* PT_FUNCTION  */
+  YYSYMBOL_PT_UNTYPED = 76,                /* PT_UNTYPED  */
+  YYSYMBOL_PT_ROWLENGTH = 77,              /* PT_ROWLENGTH  */
+  YYSYMBOL_PT_FUNCDECL = 78,               /* PT_FUNCDECL  */
+  YYSYMBOL_PT_EMPTY = 79,                  /* PT_EMPTY  */
+  YYSYMBOL_PT_SCHEMASIG = 80,              /* PT_SCHEMASIG  */
+  YYSYMBOL_PT_SCHEMAFORMAL = 81,           /* PT_SCHEMAFORMAL  */
+  YYSYMBOL_PT_RETURNTYPE = 82,             /* PT_RETURNTYPE  */
+  YYSYMBOL_PT_FACTSIG = 83,                /* PT_FACTSIG  */
+  YYSYMBOL_PT_FUNCSIG = 84,                /* PT_FUNCSIG  */
+  YYSYMBOL_PT_FUNCPARAMS = 85,             /* PT_FUNCPARAMS  */
+  YYSYMBOL_PT_FORMALPARAM = 86,            /* PT_FORMALPARAM  */
+  YYSYMBOL_PT_ELLIPSIS = 87,               /* PT_ELLIPSIS  */
+  YYSYMBOL_PT_FUNCPROLOGUE = 88,           /* PT_FUNCPROLOGUE  */
+  YYSYMBOL_PT_RETURN = 89,                 /* PT_RETURN  */
+  YYSYMBOL_PT_PRODSTMT = 90,               /* PT_PRODSTMT  */
+  YYSYMBOL_PT_PRODTRIGGER = 91,            /* PT_PRODTRIGGER  */
+  YYSYMBOL_PT_SCHEMA = 92,                 /* PT_SCHEMA  */
+  YYSYMBOL_PT_VALIDATE = 93,               /* PT_VALIDATE  */
+  YYSYMBOL_PT_PHYSICAL = 94,               /* PT_PHYSICAL  */
+  YYSYMBOL_PT_PHYSPROLOGUE = 95,           /* PT_PHYSPROLOGUE  */
+  YYSYMBOL_PT_PHYSSTMT = 96,               /* PT_PHYSSTMT  */
+  YYSYMBOL_PT_PHYSBODYSTMT = 97,           /* PT_PHYSBODYSTMT  */
+  YYSYMBOL_PT_TABLE = 98,                  /* PT_TABLE  */
+  YYSYMBOL_PT_TABLEPARENTS = 99,           /* PT_TABLEPARENTS  */
+  YYSYMBOL_PT_TABLEBODY = 100,             /* PT_TABLEBODY  */
+  YYSYMBOL_PT_FUNCEXPR = 101,              /* PT_FUNCEXPR  */
+  YYSYMBOL_PT_FACTPARMS = 102,             /* PT_FACTPARMS  */
+  YYSYMBOL_PT_COLUMN = 103,                /* PT_COLUMN  */
+  YYSYMBOL_PT_COLUMNEXPR = 104,            /* PT_COLUMNEXPR  */
+  YYSYMBOL_PT_COLDECL = 105,               /* PT_COLDECL  */
+  YYSYMBOL_PT_TYPEDCOL = 106,              /* PT_TYPEDCOL  */
+  YYSYMBOL_PT_COLSTMT = 107,               /* PT_COLSTMT  */
+  YYSYMBOL_PT_DFLTVIEW = 108,              /* PT_DFLTVIEW  */
+  YYSYMBOL_PT_PHYSMBR = 109,               /* PT_PHYSMBR  */
+  YYSYMBOL_PT_PHYSCOL = 110,               /* PT_PHYSCOL  */
+  YYSYMBOL_PT_PHYSCOLDEF = 111,            /* PT_PHYSCOLDEF  */
+  YYSYMBOL_PT_COLSCHEMAPARMS = 112,        /* PT_COLSCHEMAPARMS  */
+  YYSYMBOL_PT_COLSCHEMAPARAM = 113,        /* PT_COLSCHEMAPARAM  */
+  YYSYMBOL_PT_COLUNTYPED = 114,            /* PT_COLUNTYPED  */
+  YYSYMBOL_PT_DATABASE = 115,              /* PT_DATABASE  */
+  YYSYMBOL_PT_TYPEEXPR = 116,              /* PT_TYPEEXPR  */
+  YYSYMBOL_PT_DBBODY = 117,                /* PT_DBBODY  */
+  YYSYMBOL_PT_DBDAD = 118,                 /* PT_DBDAD  */
+  YYSYMBOL_PT_DBMEMBER = 119,              /* PT_DBMEMBER  */
+  YYSYMBOL_PT_TBLMEMBER = 120,             /* PT_TBLMEMBER  */
+  YYSYMBOL_PT_NOHEADER = 121,              /* PT_NOHEADER  */
+  YYSYMBOL_PT_CASTEXPR = 122,              /* PT_CASTEXPR  */
+  YYSYMBOL_PT_CONSTVECT = 123,             /* PT_CONSTVECT  */
+  YYSYMBOL_PT_NEGATE = 124,                /* PT_NEGATE  */
+  YYSYMBOL_PT_UNARYPLUS = 125,             /* PT_UNARYPLUS  */
+  YYSYMBOL_PT_VERSNAME = 126,              /* PT_VERSNAME  */
+  YYSYMBOL_PT_ARRAY = 127,                 /* PT_ARRAY  */
+  YYSYMBOL_PT_PHYSENCREF = 128,            /* PT_PHYSENCREF  */
+  YYSYMBOL_PT_TYPEDCOLEXPR = 129,          /* PT_TYPEDCOLEXPR  */
+  YYSYMBOL_PT_VIEW = 130,                  /* PT_VIEW  */
+  YYSYMBOL_PT_VIEWPARAM = 131,             /* PT_VIEWPARAM  */
+  YYSYMBOL_PT_VIEWPARENTS = 132,           /* PT_VIEWPARENTS  */
+  YYSYMBOL_PT_VIEWPARENT = 133,            /* PT_VIEWPARENT  */
+  YYSYMBOL_PT_MEMBEREXPR = 134,            /* PT_MEMBEREXPR  */
+  YYSYMBOL_PT_JOINEXPR = 135,              /* PT_JOINEXPR  */
+  YYSYMBOL_PT_ALIASMEMBER = 136,           /* PT_ALIASMEMBER  */
+  YYSYMBOL_PT_VIEWSPEC = 137,              /* PT_VIEWSPEC  */
+  YYSYMBOL_138_ = 138,                     /* '@'  */
+  YYSYMBOL_139_ = 139,                     /* '('  */
+  YYSYMBOL_140_ = 140,                     /* ')'  */
+  YYSYMBOL_141_ = 141,                     /* ';'  */
+  YYSYMBOL_142_ = 142,                     /* ','  */
+  YYSYMBOL_143_ = 143,                     /* '['  */
+  YYSYMBOL_144_ = 144,                     /* ']'  */
+  YYSYMBOL_145_ = 145,                     /* '*'  */
+  YYSYMBOL_146_ = 146,                     /* '{'  */
+  YYSYMBOL_147_ = 147,                     /* '}'  */
+  YYSYMBOL_148_ = 148,                     /* '='  */
+  YYSYMBOL_149_ = 149,                     /* '<'  */
+  YYSYMBOL_150_ = 150,                     /* '>'  */
+  YYSYMBOL_151_ = 151,                     /* '|'  */
+  YYSYMBOL_152_ = 152,                     /* '+'  */
+  YYSYMBOL_153_ = 153,                     /* '-'  */
+  YYSYMBOL_154_ = 154,                     /* '/'  */
+  YYSYMBOL_155_ = 155,                     /* '.'  */
+  YYSYMBOL_156_ = 156,                     /* ':'  */
+  YYSYMBOL_YYACCEPT = 157,                 /* $accept  */
+  YYSYMBOL_parse = 158,                    /* parse  */
+  YYSYMBOL_source = 159,                   /* source  */
+  YYSYMBOL_version_1 = 160,                /* version_1  */
+  YYSYMBOL_version_2 = 161,                /* version_2  */
+  YYSYMBOL_schema_1 = 162,                 /* schema_1  */
+  YYSYMBOL_schema_2 = 163,                 /* schema_2  */
+  YYSYMBOL_schema_decls = 164,             /* schema_decls  */
+  YYSYMBOL_schema_decl = 165,              /* schema_decl  */
+  YYSYMBOL_typedef = 166,                  /* typedef  */
+  YYSYMBOL_new_type_names = 167,           /* new_type_names  */
+  YYSYMBOL_typespec = 168,                 /* typespec  */
+  YYSYMBOL_arrayspec = 169,                /* arrayspec  */
+  YYSYMBOL_dim = 170,                      /* dim  */
+  YYSYMBOL_typeset = 171,                  /* typeset  */
+  YYSYMBOL_typeset_spec = 172,             /* typeset_spec  */
+  YYSYMBOL_fmtdef = 173,                   /* fmtdef  */
+  YYSYMBOL_const = 174,                    /* const  */
+  YYSYMBOL_alias = 175,                    /* alias  */
+  YYSYMBOL_function = 176,                 /* function  */
+  YYSYMBOL_func_decl = 177,                /* func_decl  */
+  YYSYMBOL_schema_sig_opt = 178,           /* schema_sig_opt  */
+  YYSYMBOL_schema_formals = 179,           /* schema_formals  */
+  YYSYMBOL_schema_formal = 180,            /* schema_formal  */
+  YYSYMBOL_return_type = 181,              /* return_type  */
+  YYSYMBOL_fact_sig = 182,                 /* fact_sig  */
+  YYSYMBOL_param_sig = 183,                /* param_sig  */
+  YYSYMBOL_param_signature = 184,          /* param_signature  */
+  YYSYMBOL_formals_list = 185,             /* formals_list  */
+  YYSYMBOL_formals = 186,                  /* formals  */
+  YYSYMBOL_formal = 187,                   /* formal  */
+  YYSYMBOL_vararg = 188,                   /* vararg  */
+  YYSYMBOL_prologue = 189,                 /* prologue  */
+  YYSYMBOL_script_prologue = 190,          /* script_prologue  */
+  YYSYMBOL_script_stmts = 191,             /* script_stmts  */
+  YYSYMBOL_script_stmt = 192,              /* script_stmt  */
+  YYSYMBOL_production = 193,               /* production  */
+  YYSYMBOL_extern_function = 194,          /* extern_function  */
+  YYSYMBOL_script = 195,                   /* script  */
+  YYSYMBOL_script_decl = 196,              /* script_decl  */
+  YYSYMBOL_validate = 197,                 /* validate  */
+  YYSYMBOL_physical = 198,                 /* physical  */
+  YYSYMBOL_phys_return_type = 199,         /* phys_return_type  */
+  YYSYMBOL_phys_prologue = 200,            /* phys_prologue  */
+  YYSYMBOL_phys_body = 201,                /* phys_body  */
+  YYSYMBOL_phys_body_stmt = 202,           /* phys_body_stmt  */
+  YYSYMBOL_table = 203,                    /* table  */
+  YYSYMBOL_parents_opt = 204,              /* parents_opt  */
+  YYSYMBOL_tbl_parents = 205,              /* tbl_parents  */
+  YYSYMBOL_tbl_body = 206,                 /* tbl_body  */
+  YYSYMBOL_tbl_stmts = 207,                /* tbl_stmts  */
+  YYSYMBOL_tbl_stmt = 208,                 /* tbl_stmt  */
+  YYSYMBOL_column_decl = 209,              /* column_decl  */
+  YYSYMBOL_col_modifiers_opt = 210,        /* col_modifiers_opt  */
+  YYSYMBOL_col_modifiers = 211,            /* col_modifiers  */
+  YYSYMBOL_col_modifier = 212,             /* col_modifier  */
+  YYSYMBOL_col_decl = 213,                 /* col_decl  */
+  YYSYMBOL_phys_enc_ref = 214,             /* phys_enc_ref  */
+  YYSYMBOL_typed_col = 215,                /* typed_col  */
+  YYSYMBOL_col_ident = 216,                /* col_ident  */
+  YYSYMBOL_col_body_opt = 217,             /* col_body_opt  */
+  YYSYMBOL_col_body = 218,                 /* col_body  */
+  YYSYMBOL_col_stmt = 219,                 /* col_stmt  */
+  YYSYMBOL_physmbr_decl = 220,             /* physmbr_decl  */
+  YYSYMBOL_phys_coldef = 221,              /* phys_coldef  */
+  YYSYMBOL_col_schema_parms_opt = 222,     /* col_schema_parms_opt  */
+  YYSYMBOL_col_schema_parms = 223,         /* col_schema_parms  */
+  YYSYMBOL_col_schema_parm = 224,          /* col_schema_parm  */
+  YYSYMBOL_col_schema_value = 225,         /* col_schema_value  */
+  YYSYMBOL_database = 226,                 /* database  */
+  YYSYMBOL_dbdad_opt = 227,                /* dbdad_opt  */
+  YYSYMBOL_dbbody = 228,                   /* dbbody  */
+  YYSYMBOL_db_members = 229,               /* db_members  */
+  YYSYMBOL_db_member = 230,                /* db_member  */
+  YYSYMBOL_template_opt = 231,             /* template_opt  */
+  YYSYMBOL_view_spec = 232,                /* view_spec  */
+  YYSYMBOL_view_parms = 233,               /* view_parms  */
+  YYSYMBOL_include = 234,                  /* include  */
+  YYSYMBOL_cond_expr = 235,                /* cond_expr  */
+  YYSYMBOL_cond_chain = 236,               /* cond_chain  */
+  YYSYMBOL_expr = 237,                     /* expr  */
+  YYSYMBOL_func_expr = 238,                /* func_expr  */
+  YYSYMBOL_schema_parts_opt = 239,         /* schema_parts_opt  */
+  YYSYMBOL_schema_parms = 240,             /* schema_parms  */
+  YYSYMBOL_schema_parm = 241,              /* schema_parm  */
+  YYSYMBOL_factory_parms_opt = 242,        /* factory_parms_opt  */
+  YYSYMBOL_factory_parms_list = 243,       /* factory_parms_list  */
+  YYSYMBOL_factory_parms = 244,            /* factory_parms  */
+  YYSYMBOL_func_parms_opt = 245,           /* func_parms_opt  */
+  YYSYMBOL_expr_list = 246,                /* expr_list  */
+  YYSYMBOL_uint_expr = 247,                /* uint_expr  */
+  YYSYMBOL_float_expr = 248,               /* float_expr  */
+  YYSYMBOL_string_expr = 249,              /* string_expr  */
+  YYSYMBOL_const_vect_expr = 250,          /* const_vect_expr  */
+  YYSYMBOL_bool_expr = 251,                /* bool_expr  */
+  YYSYMBOL_negate_expr = 252,              /* negate_expr  */
+  YYSYMBOL_cast_expr = 253,                /* cast_expr  */
+  YYSYMBOL_type_expr = 254,                /* type_expr  */
+  YYSYMBOL_member_expr = 255,              /* member_expr  */
+  YYSYMBOL_join_expr = 256,                /* join_expr  */
+  YYSYMBOL_fqn = 257,                      /* fqn  */
+  YYSYMBOL_qualnames = 258,                /* qualnames  */
+  YYSYMBOL_ident = 259,                    /* ident  */
+  YYSYMBOL_fqn_opt_vers = 260,             /* fqn_opt_vers  */
+  YYSYMBOL_fqn_vers = 261,                 /* fqn_vers  */
+  YYSYMBOL_view = 262,                     /* view  */
+  YYSYMBOL_view_parm = 263,                /* view_parm  */
+  YYSYMBOL_view_body_opt = 264,            /* view_body_opt  */
+  YYSYMBOL_view_body = 265,                /* view_body  */
+  YYSYMBOL_view_member = 266,              /* view_member  */
+  YYSYMBOL_view_parents_opt = 267,         /* view_parents_opt  */
+  YYSYMBOL_view_parents = 268,             /* view_parents  */
+  YYSYMBOL_view_parent = 269,              /* view_parent  */
+  YYSYMBOL_view_parent_parms = 270         /* view_parent_parms  */
 };
-typedef union AST_STYPE AST_STYPE;
-# define AST_STYPE_IS_TRIVIAL 1
-# define AST_STYPE_IS_DECLARED 1
-#endif
+typedef enum yysymbol_kind_t yysymbol_kind_t;
 
-
-
-int AST_parse (ctx_t ctx, AST*& p_ast, ASTBuilder& p_builder, ParseTreeScanner& p_sb);
-
-#endif /* !YY_AST_HOME_BOSHKINS_NCBI_DEVEL_NCBI_VDB_LIBS_SCHEMA_ZZ_SCHEMA_AST_HPP_INCLUDED  */
 
 
 
@@ -348,6 +433,18 @@ typedef __INT_LEAST16_TYPE__ yytype_int16;
 typedef int_least16_t yytype_int16;
 #else
 typedef short yytype_int16;
+#endif
+
+/* Work around bug in HP-UX 11.23, which defines these macros
+   incorrectly for preprocessor constants.  This workaround can likely
+   be removed in 2023, as HPE has promised support for HP-UX 11.23
+   (aka HP-UX 11i v2) only through the end of 2022; see Table 2 of
+   <https://h20195.www2.hpe.com/V2/getpdf.aspx/4AA4-7673ENW.pdf>.  */
+#ifdef __hpux
+# undef UINT_LEAST8_MAX
+# undef UINT_LEAST16_MAX
+# define UINT_LEAST8_MAX 255
+# define UINT_LEAST16_MAX 65535
 #endif
 
 #if defined __UINT_LEAST8_MAX__ && __UINT_LEAST8_MAX__ <= __INT_MAX__
@@ -409,6 +506,7 @@ typedef int yytype_uint16;
 
 #define YYSIZEOF(X) YY_CAST (YYPTRDIFF_T, sizeof (X))
 
+
 /* Stored state numbers (used for stacks). */
 typedef yytype_int16 yy_state_t;
 
@@ -426,6 +524,7 @@ typedef int yy_state_fast_t;
 #  define YY_(Msgid) Msgid
 # endif
 #endif
+
 
 #ifndef YY_ATTRIBUTE_PURE
 # if defined __GNUC__ && 2 < __GNUC__ + (96 <= __GNUC_MINOR__)
@@ -445,17 +544,23 @@ typedef int yy_state_fast_t;
 
 /* Suppress unused-variable warnings by "using" E.  */
 #if ! defined lint || defined __GNUC__
-# define YYUSE(E) ((void) (E))
+# define YY_USE(E) ((void) (E))
 #else
-# define YYUSE(E) /* empty */
+# define YY_USE(E) /* empty */
 #endif
 
-#if defined __GNUC__ && ! defined __ICC && 407 <= __GNUC__ * 100 + __GNUC_MINOR__
 /* Suppress an incorrect diagnostic about yylval being uninitialized.  */
-# define YY_IGNORE_MAYBE_UNINITIALIZED_BEGIN                            \
+#if defined __GNUC__ && ! defined __ICC && 406 <= __GNUC__ * 100 + __GNUC_MINOR__
+# if __GNUC__ * 100 + __GNUC_MINOR__ < 407
+#  define YY_IGNORE_MAYBE_UNINITIALIZED_BEGIN                           \
+    _Pragma ("GCC diagnostic push")                                     \
+    _Pragma ("GCC diagnostic ignored \"-Wuninitialized\"")
+# else
+#  define YY_IGNORE_MAYBE_UNINITIALIZED_BEGIN                           \
     _Pragma ("GCC diagnostic push")                                     \
     _Pragma ("GCC diagnostic ignored \"-Wuninitialized\"")              \
     _Pragma ("GCC diagnostic ignored \"-Wmaybe-uninitialized\"")
+# endif
 # define YY_IGNORE_MAYBE_UNINITIALIZED_END      \
     _Pragma ("GCC diagnostic pop")
 #else
@@ -484,7 +589,7 @@ typedef int yy_state_fast_t;
 
 #define YY_ASSERT(E) ((void) (0 && (E)))
 
-#if ! defined yyoverflow || YYERROR_VERBOSE
+#if 1
 
 /* The parser invokes alloca or malloc; define the necessary symbols.  */
 
@@ -549,12 +654,11 @@ void free (void *); /* INFRINGES ON USER NAME SPACE */
 #   endif
 #  endif
 # endif
-#endif /* ! defined yyoverflow || YYERROR_VERBOSE */
-
+#endif /* 1 */
 
 #if (! defined yyoverflow \
      && (! defined __cplusplus \
-         || (defined AST_STYPE_IS_TRIVIAL && AST_STYPE_IS_TRIVIAL)))
+         || (defined YYSTYPE_IS_TRIVIAL && YYSTYPE_IS_TRIVIAL)))
 
 /* A type that is properly aligned for any stack member.  */
 union yyalloc
@@ -626,14 +730,16 @@ union yyalloc
 /* YYNSTATES -- Number of states.  */
 #define YYNSTATES  879
 
-#define YYUNDEFTOK  2
+/* YYMAXUTOK -- Last valid token kind.  */
 #define YYMAXUTOK   392
 
 
 /* YYTRANSLATE(TOKEN-NUM) -- Symbol number corresponding to TOKEN-NUM
    as returned by yylex, with out-of-bounds checking.  */
-#define YYTRANSLATE(YYX)                                                \
-  (0 <= (YYX) && (YYX) <= YYMAXUTOK ? yytranslate[YYX] : YYUNDEFTOK)
+#define YYTRANSLATE(YYX)                                \
+  (0 <= (YYX) && (YYX) <= YYMAXUTOK                     \
+   ? YY_CAST (yysymbol_kind_t, yytranslate[YYX])        \
+   : YYSYMBOL_YYUNDEF)
 
 /* YYTRANSLATE[TOKEN-NUM] -- Symbol number corresponding to TOKEN-NUM
    as returned by yylex.  */
@@ -681,8 +787,8 @@ static const yytype_uint8 yytranslate[] =
      135,   136,   137
 };
 
-#if AST_DEBUG
-  /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
+#if YYDEBUG
+/* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_int16 yyrline[] =
 {
        0,   265,   265,   266,   270,   271,   272,   276,   280,   284,
@@ -713,31 +819,38 @@ static const yytype_int16 yyrline[] =
 };
 #endif
 
-#if AST_DEBUG || YYERROR_VERBOSE || 1
+/** Accessing symbol of state STATE.  */
+#define YY_ACCESSING_SYMBOL(State) YY_CAST (yysymbol_kind_t, yystos[State])
+
+#if 1
+/* The user-facing name of the symbol whose (internal) number is
+   YYSYMBOL.  No bounds checking.  */
+static const char *yysymbol_name (yysymbol_kind_t yysymbol) YY_ATTRIBUTE_UNUSED;
+
 /* YYTNAME[SYMBOL-NUM] -- String name of the symbol SYMBOL-NUM.
    First, the terminals, then, starting at YYNTOKENS, nonterminals.  */
 static const char *const yytname[] =
 {
-  "\"end of source\"", "error", "$undefined", "UNRECOGNIZED", "ELLIPSIS",
-  "INCREMENT", "DECIMAL", "OCTAL", "HEX", "FLOAT_", "EXP_FLOAT", "STRING",
-  "ESCAPED_STRING", "IDENTIFIER_1_0", "PHYSICAL_IDENTIFIER_1_0", "VERSION",
-  "UNTERM_STRING", "UNTERM_ESCAPED_STRING", "VERS_1_0", "VERS_2_0",
-  "KW___no_header", "KW___row_length", "KW___untyped", "KW_alias",
-  "KW_column", "KW_const", "KW_control", "KW_database", "KW_decode",
-  "KW_default", "KW_encode", "KW_extern", "KW_false", "KW_fmtdef",
-  "KW_function", "KW_include", "KW_limit", "KW_physical", "KW_read",
-  "KW_readonly", "KW_return", "KW_schema", "KW_static", "KW_table",
-  "KW_template", "KW_trigger", "KW_true", "KW_type", "KW_typedef",
-  "KW_typeset", "KW_validate", "KW_version", "KW_view", "KW_virtual",
-  "KW_void", "KW_write", "PT_ASTLIST", "PT_PARSE", "PT_SOURCE",
-  "PT_VERSION_1_0", "PT_VERSION_2", "PT_SCHEMA_1_0", "PT_SCHEMA_2_0",
-  "PT_INCLUDE", "PT_TYPEDEF", "PT_FQN", "PT_IDENT", "PT_PHYSIDENT",
-  "PT_UINT", "PT_TYPESET", "PT_TYPESETDEF", "PT_FORMAT", "PT_CONST",
-  "PT_ALIAS", "PT_EXTERN", "PT_FUNCTION", "PT_UNTYPED", "PT_ROWLENGTH",
-  "PT_FUNCDECL", "PT_EMPTY", "PT_SCHEMASIG", "PT_SCHEMAFORMAL",
-  "PT_RETURNTYPE", "PT_FACTSIG", "PT_FUNCSIG", "PT_FUNCPARAMS",
-  "PT_FORMALPARAM", "PT_ELLIPSIS", "PT_FUNCPROLOGUE", "PT_RETURN",
-  "PT_PRODSTMT", "PT_PRODTRIGGER", "PT_SCHEMA", "PT_VALIDATE",
+  "\"end of source\"", "error", "\"invalid token\"", "UNRECOGNIZED",
+  "ELLIPSIS", "INCREMENT", "DECIMAL", "OCTAL", "HEX", "FLOAT_",
+  "EXP_FLOAT", "STRING", "ESCAPED_STRING", "IDENTIFIER_1_0",
+  "PHYSICAL_IDENTIFIER_1_0", "VERSION", "UNTERM_STRING",
+  "UNTERM_ESCAPED_STRING", "VERS_1_0", "VERS_2_0", "KW___no_header",
+  "KW___row_length", "KW___untyped", "KW_alias", "KW_column", "KW_const",
+  "KW_control", "KW_database", "KW_decode", "KW_default", "KW_encode",
+  "KW_extern", "KW_false", "KW_fmtdef", "KW_function", "KW_include",
+  "KW_limit", "KW_physical", "KW_read", "KW_readonly", "KW_return",
+  "KW_schema", "KW_static", "KW_table", "KW_template", "KW_trigger",
+  "KW_true", "KW_type", "KW_typedef", "KW_typeset", "KW_validate",
+  "KW_version", "KW_view", "KW_virtual", "KW_void", "KW_write",
+  "PT_ASTLIST", "PT_PARSE", "PT_SOURCE", "PT_VERSION_1_0", "PT_VERSION_2",
+  "PT_SCHEMA_1_0", "PT_SCHEMA_2_0", "PT_INCLUDE", "PT_TYPEDEF", "PT_FQN",
+  "PT_IDENT", "PT_PHYSIDENT", "PT_UINT", "PT_TYPESET", "PT_TYPESETDEF",
+  "PT_FORMAT", "PT_CONST", "PT_ALIAS", "PT_EXTERN", "PT_FUNCTION",
+  "PT_UNTYPED", "PT_ROWLENGTH", "PT_FUNCDECL", "PT_EMPTY", "PT_SCHEMASIG",
+  "PT_SCHEMAFORMAL", "PT_RETURNTYPE", "PT_FACTSIG", "PT_FUNCSIG",
+  "PT_FUNCPARAMS", "PT_FORMALPARAM", "PT_ELLIPSIS", "PT_FUNCPROLOGUE",
+  "PT_RETURN", "PT_PRODSTMT", "PT_PRODTRIGGER", "PT_SCHEMA", "PT_VALIDATE",
   "PT_PHYSICAL", "PT_PHYSPROLOGUE", "PT_PHYSSTMT", "PT_PHYSBODYSTMT",
   "PT_TABLE", "PT_TABLEPARENTS", "PT_TABLEBODY", "PT_FUNCEXPR",
   "PT_FACTPARMS", "PT_COLUMN", "PT_COLUMNEXPR", "PT_COLDECL",
@@ -775,31 +888,13 @@ static const char *const yytname[] =
   "view_parm", "view_body_opt", "view_body", "view_member",
   "view_parents_opt", "view_parents", "view_parent", "view_parent_parms", YY_NULLPTR
 };
-#endif
 
-# ifdef YYPRINT
-/* YYTOKNUM[NUM] -- (External) token number corresponding to the
-   (internal) symbol number NUM (which must be that of a token).  */
-static const yytype_int16 yytoknum[] =
+static const char *
+yysymbol_name (yysymbol_kind_t yysymbol)
 {
-       0,   256,   257,   258,   259,   260,   261,   262,   263,   264,
-     265,   266,   267,   268,   269,   270,   271,   272,   273,   274,
-     275,   276,   277,   278,   279,   280,   281,   282,   283,   284,
-     285,   286,   287,   288,   289,   290,   291,   292,   293,   294,
-     295,   296,   297,   298,   299,   300,   301,   302,   303,   304,
-     305,   306,   307,   308,   309,   310,   311,   312,   313,   314,
-     315,   316,   317,   318,   319,   320,   321,   322,   323,   324,
-     325,   326,   327,   328,   329,   330,   331,   332,   333,   334,
-     335,   336,   337,   338,   339,   340,   341,   342,   343,   344,
-     345,   346,   347,   348,   349,   350,   351,   352,   353,   354,
-     355,   356,   357,   358,   359,   360,   361,   362,   363,   364,
-     365,   366,   367,   368,   369,   370,   371,   372,   373,   374,
-     375,   376,   377,   378,   379,   380,   381,   382,   383,   384,
-     385,   386,   387,   388,   389,   390,   391,   392,    64,    40,
-      41,    59,    44,    91,    93,    42,   123,   125,    61,    60,
-      62,   124,    43,    45,    47,    46,    58
-};
-# endif
+  return yytname[yysymbol];
+}
+#endif
 
 #define YYPACT_NINF (-676)
 
@@ -811,8 +906,8 @@ static const yytype_int16 yytoknum[] =
 #define yytable_value_is_error(Yyn) \
   0
 
-  /* YYPACT[STATE-NUM] -- Index in YYTABLE of the portion describing
-     STATE-NUM.  */
+/* YYPACT[STATE-NUM] -- Index in YYTABLE of the portion describing
+   STATE-NUM.  */
 static const yytype_int16 yypact[] =
 {
       92,   138,   280,    84,  -676,    12,   183,   347,  -676,   238,
@@ -905,9 +1000,9 @@ static const yytype_int16 yypact[] =
      778,   781,   782,   783,   784,  -676,  -676,  -676,  -676
 };
 
-  /* YYDEFACT[STATE-NUM] -- Default reduction number in state STATE-NUM.
-     Performed when YYTABLE does not specify something else to do.  Zero
-     means the default is an error.  */
+/* YYDEFACT[STATE-NUM] -- Default reduction number in state STATE-NUM.
+   Performed when YYTABLE does not specify something else to do.  Zero
+   means the default is an error.  */
 static const yytype_uint8 yydefact[] =
 {
        0,     0,     0,     0,     1,     0,     0,     0,     2,     0,
@@ -1000,7 +1095,7 @@ static const yytype_uint8 yydefact[] =
        0,     0,     0,     0,     0,   151,   141,   139,   140
 };
 
-  /* YYPGOTO[NTERM-NUM].  */
+/* YYPGOTO[NTERM-NUM].  */
 static const yytype_int16 yypgoto[] =
 {
     -676,  -676,  -676,  -676,  -676,   797,  -676,   790,    30,  -676,
@@ -1017,10 +1112,10 @@ static const yytype_int16 yypgoto[] =
     -676,  -676,   207,  -676
 };
 
-  /* YYDEFGOTO[NTERM-NUM].  */
+/* YYDEFGOTO[NTERM-NUM].  */
 static const yytype_int16 yydefgoto[] =
 {
-      -1,     2,     7,    15,    16,    17,    25,    44,    45,    46,
+       0,     2,     7,    15,    16,    17,    25,    44,    45,    46,
      187,   229,   108,   248,    47,   328,    48,    49,    50,    51,
      115,   122,   308,   309,   148,   234,   345,   354,   452,   545,
      546,   503,   386,   387,   631,   632,   633,    52,    53,   118,
@@ -1034,9 +1129,9 @@ static const yytype_int16 yydefgoto[] =
      424,   667,   668,   820
 };
 
-  /* YYTABLE[YYPACT[STATE-NUM]] -- What to do in state STATE-NUM.  If
-     positive, shift that token.  If negative, reduce the rule whose
-     number is the opposite.  If YYTABLE_NINF, syntax error.  */
+/* YYTABLE[YYPACT[STATE-NUM]] -- What to do in state STATE-NUM.  If
+   positive, shift that token.  If negative, reduce the rule whose
+   number is the opposite.  If YYTABLE_NINF, syntax error.  */
 static const yytype_int16 yytable[] =
 {
      103,   104,   105,   208,   110,   107,   124,   125,   126,   427,
@@ -1283,8 +1378,8 @@ static const yytype_int16 yycheck[] =
      418
 };
 
-  /* YYSTOS[STATE-NUM] -- The (internal number of the) accessing
-     symbol of state STATE-NUM.  */
+/* YYSTOS[STATE-NUM] -- The symbol kind of the accessing symbol of
+   state STATE-NUM.  */
 static const yytype_int16 yystos[] =
 {
        0,    57,   158,   139,     0,     0,    58,   159,   140,   139,
@@ -1377,7 +1472,7 @@ static const yytype_int16 yystos[] =
      235,   225,   141,   141,   141,   140,   140,   140,   140
 };
 
-  /* YYR1[YYN] -- Symbol number of symbol that rule YYN derives.  */
+/* YYR1[RULE-NUM] -- Symbol kind of the left-hand side of rule RULE-NUM.  */
 static const yytype_int16 yyr1[] =
 {
        0,   157,   158,   158,   159,   159,   159,   160,   161,   162,
@@ -1407,7 +1502,7 @@ static const yytype_int16 yyr1[] =
      266,   266,   266,   267,   267,   268,   268,   269,   270,   270
 };
 
-  /* YYR2[YYN] -- Number of symbols on the right hand side of rule YYN.  */
+/* YYR2[RULE-NUM] -- Number of symbols on the right-hand side of rule RULE-NUM.  */
 static const yytype_int8 yyr2[] =
 {
        0,     2,     4,     5,     4,     5,     5,     6,     6,     4,
@@ -1438,14 +1533,15 @@ static const yytype_int8 yyr2[] =
 };
 
 
+enum { YYENOMEM = -2 };
+
 #define yyerrok         (yyerrstatus = 0)
 #define yyclearin       (yychar = YYEMPTY)
-#define YYEMPTY         (-2)
-#define YYEOF           0
 
 #define YYACCEPT        goto yyacceptlab
 #define YYABORT         goto yyabortlab
 #define YYERROR         goto yyerrorlab
+#define YYNOMEM         goto yyexhaustedlab
 
 
 #define YYRECOVERING()  (!!yyerrstatus)
@@ -1467,14 +1563,13 @@ static const yytype_int8 yyr2[] =
       }                                                           \
   while (0)
 
-/* Error token number */
-#define YYTERROR        1
-#define YYERRCODE       256
-
+/* Backward compatibility with an undocumented macro.
+   Use YYerror or YYUNDEF. */
+#define YYERRCODE YYUNDEF
 
 
 /* Enable debugging if requested.  */
-#if AST_DEBUG
+#if YYDEBUG
 
 # ifndef YYFPRINTF
 #  include <stdio.h> /* INFRINGES ON USER NAME SPACE */
@@ -1487,19 +1582,16 @@ do {                                            \
     YYFPRINTF Args;                             \
 } while (0)
 
-/* This macro is provided for backward compatibility. */
-#ifndef YY_LOCATION_PRINT
-# define YY_LOCATION_PRINT(File, Loc) ((void) 0)
-#endif
 
 
-# define YY_SYMBOL_PRINT(Title, Type, Value, Location)                    \
+
+# define YY_SYMBOL_PRINT(Title, Kind, Value, Location)                    \
 do {                                                                      \
   if (yydebug)                                                            \
     {                                                                     \
       YYFPRINTF (stderr, "%s ", Title);                                   \
       yy_symbol_print (stderr,                                            \
-                  Type, Value, ctx, p_ast, p_builder, p_sb); \
+                  Kind, Value, ctx, p_ast, p_builder, p_sb); \
       YYFPRINTF (stderr, "\n");                                           \
     }                                                                     \
 } while (0)
@@ -1510,22 +1602,19 @@ do {                                                                      \
 `-----------------------------------*/
 
 static void
-yy_symbol_value_print (FILE *yyo, int yytype, YYSTYPE const * const yyvaluep, ctx_t ctx, AST*& p_ast, ASTBuilder& p_builder, ParseTreeScanner& p_sb)
+yy_symbol_value_print (FILE *yyo,
+                       yysymbol_kind_t yykind, YYSTYPE const * const yyvaluep, ctx_t ctx, AST*& p_ast, ASTBuilder& p_builder, ParseTreeScanner& p_sb)
 {
   FILE *yyoutput = yyo;
-  YYUSE (yyoutput);
-  YYUSE (ctx);
-  YYUSE (p_ast);
-  YYUSE (p_builder);
-  YYUSE (p_sb);
+  YY_USE (yyoutput);
+  YY_USE (ctx);
+  YY_USE (p_ast);
+  YY_USE (p_builder);
+  YY_USE (p_sb);
   if (!yyvaluep)
     return;
-# ifdef YYPRINT
-  if (yytype < YYNTOKENS)
-    YYPRINT (yyo, yytoknum[yytype], *yyvaluep);
-# endif
   YY_IGNORE_MAYBE_UNINITIALIZED_BEGIN
-  YYUSE (yytype);
+  YY_USE (yykind);
   YY_IGNORE_MAYBE_UNINITIALIZED_END
 }
 
@@ -1535,12 +1624,13 @@ yy_symbol_value_print (FILE *yyo, int yytype, YYSTYPE const * const yyvaluep, ct
 `---------------------------*/
 
 static void
-yy_symbol_print (FILE *yyo, int yytype, YYSTYPE const * const yyvaluep, ctx_t ctx, AST*& p_ast, ASTBuilder& p_builder, ParseTreeScanner& p_sb)
+yy_symbol_print (FILE *yyo,
+                 yysymbol_kind_t yykind, YYSTYPE const * const yyvaluep, ctx_t ctx, AST*& p_ast, ASTBuilder& p_builder, ParseTreeScanner& p_sb)
 {
   YYFPRINTF (yyo, "%s %s (",
-             yytype < YYNTOKENS ? "token" : "nterm", yytname[yytype]);
+             yykind < YYNTOKENS ? "token" : "nterm", yysymbol_name (yykind));
 
-  yy_symbol_value_print (yyo, yytype, yyvaluep, ctx, p_ast, p_builder, p_sb);
+  yy_symbol_value_print (yyo, yykind, yyvaluep, ctx, p_ast, p_builder, p_sb);
   YYFPRINTF (yyo, ")");
 }
 
@@ -1573,7 +1663,8 @@ do {                                                            \
 `------------------------------------------------*/
 
 static void
-yy_reduce_print (yy_state_t *yyssp, YYSTYPE *yyvsp, int yyrule, ctx_t ctx, AST*& p_ast, ASTBuilder& p_builder, ParseTreeScanner& p_sb)
+yy_reduce_print (yy_state_t *yyssp, YYSTYPE *yyvsp,
+                 int yyrule, ctx_t ctx, AST*& p_ast, ASTBuilder& p_builder, ParseTreeScanner& p_sb)
 {
   int yylno = yyrline[yyrule];
   int yynrhs = yyr2[yyrule];
@@ -1585,9 +1676,8 @@ yy_reduce_print (yy_state_t *yyssp, YYSTYPE *yyvsp, int yyrule, ctx_t ctx, AST*&
     {
       YYFPRINTF (stderr, "   $%d = ", yyi + 1);
       yy_symbol_print (stderr,
-                       yystos[+yyssp[yyi + 1 - yynrhs]],
-                       &yyvsp[(yyi + 1) - (yynrhs)]
-                                              , ctx, p_ast, p_builder, p_sb);
+                       YY_ACCESSING_SYMBOL (+yyssp[yyi + 1 - yynrhs]),
+                       &yyvsp[(yyi + 1) - (yynrhs)], ctx, p_ast, p_builder, p_sb);
       YYFPRINTF (stderr, "\n");
     }
 }
@@ -1601,12 +1691,12 @@ do {                                    \
 /* Nonzero means print parse trace.  It is left uninitialized so that
    multiple parsers can coexist.  */
 int yydebug;
-#else /* !AST_DEBUG */
-# define YYDPRINTF(Args)
-# define YY_SYMBOL_PRINT(Title, Type, Value, Location)
+#else /* !YYDEBUG */
+# define YYDPRINTF(Args) ((void) 0)
+# define YY_SYMBOL_PRINT(Title, Kind, Value, Location)
 # define YY_STACK_PRINT(Bottom, Top)
 # define YY_REDUCE_PRINT(Rule)
-#endif /* !AST_DEBUG */
+#endif /* !YYDEBUG */
 
 
 /* YYINITDEPTH -- initial size of the parser's stacks.  */
@@ -1626,12 +1716,60 @@ int yydebug;
 #endif
 
 
-#if YYERROR_VERBOSE
+/* Context of a parse error.  */
+typedef struct
+{
+  yy_state_t *yyssp;
+  yysymbol_kind_t yytoken;
+} yypcontext_t;
 
-# ifndef yystrlen
-#  if defined __GLIBC__ && defined _STRING_H
-#   define yystrlen(S) (YY_CAST (YYPTRDIFF_T, strlen (S)))
-#  else
+/* Put in YYARG at most YYARGN of the expected tokens given the
+   current YYCTX, and return the number of tokens stored in YYARG.  If
+   YYARG is null, return the number of expected tokens (guaranteed to
+   be less than YYNTOKENS).  Return YYENOMEM on memory exhaustion.
+   Return 0 if there are more than YYARGN expected tokens, yet fill
+   YYARG up to YYARGN. */
+static int
+yypcontext_expected_tokens (const yypcontext_t *yyctx,
+                            yysymbol_kind_t yyarg[], int yyargn)
+{
+  /* Actual size of YYARG. */
+  int yycount = 0;
+  int yyn = yypact[+*yyctx->yyssp];
+  if (!yypact_value_is_default (yyn))
+    {
+      /* Start YYX at -YYN if negative to avoid negative indexes in
+         YYCHECK.  In other words, skip the first -YYN actions for
+         this state because they are default actions.  */
+      int yyxbegin = yyn < 0 ? -yyn : 0;
+      /* Stay within bounds of both yycheck and yytname.  */
+      int yychecklim = YYLAST - yyn + 1;
+      int yyxend = yychecklim < YYNTOKENS ? yychecklim : YYNTOKENS;
+      int yyx;
+      for (yyx = yyxbegin; yyx < yyxend; ++yyx)
+        if (yycheck[yyx + yyn] == yyx && yyx != YYSYMBOL_YYerror
+            && !yytable_value_is_error (yytable[yyx + yyn]))
+          {
+            if (!yyarg)
+              ++yycount;
+            else if (yycount == yyargn)
+              return 0;
+            else
+              yyarg[yycount++] = YY_CAST (yysymbol_kind_t, yyx);
+          }
+    }
+  if (yyarg && yycount == 0 && 0 < yyargn)
+    yyarg[0] = YYSYMBOL_YYEMPTY;
+  return yycount;
+}
+
+
+
+
+#ifndef yystrlen
+# if defined __GLIBC__ && defined _STRING_H
+#  define yystrlen(S) (YY_CAST (YYPTRDIFF_T, strlen (S)))
+# else
 /* Return the length of YYSTR.  */
 static YYPTRDIFF_T
 yystrlen (const char *yystr)
@@ -1641,13 +1779,13 @@ yystrlen (const char *yystr)
     continue;
   return yylen;
 }
-#  endif
 # endif
+#endif
 
-# ifndef yystpcpy
-#  if defined __GLIBC__ && defined _STRING_H && defined _GNU_SOURCE
-#   define yystpcpy stpcpy
-#  else
+#ifndef yystpcpy
+# if defined __GLIBC__ && defined _STRING_H && defined _GNU_SOURCE
+#  define yystpcpy stpcpy
+# else
 /* Copy YYSRC to YYDEST, returning the address of the terminating '\0' in
    YYDEST.  */
 static char *
@@ -1661,10 +1799,10 @@ yystpcpy (char *yydest, const char *yysrc)
 
   return yyd - 1;
 }
-#  endif
 # endif
+#endif
 
-# ifndef yytnamerr
+#ifndef yytnamerr
 /* Copy to YYRES the contents of YYSTR after stripping away unnecessary
    quotes and backslashes, so that it's suitable for yyerror.  The
    heuristic is that double-quoting is unnecessary unless the string
@@ -1679,7 +1817,6 @@ yytnamerr (char *yyres, const char *yystr)
     {
       YYPTRDIFF_T yyn = 0;
       char const *yyp = yystr;
-
       for (;;)
         switch (*++yyp)
           {
@@ -1713,31 +1850,15 @@ yytnamerr (char *yyres, const char *yystr)
   else
     return yystrlen (yystr);
 }
-# endif
+#endif
 
-/* Copy into *YYMSG, which is of size *YYMSG_ALLOC, an error message
-   about the unexpected token YYTOKEN for the state stack whose top is
-   YYSSP.
 
-   Return 0 if *YYMSG was successfully written.  Return 1 if *YYMSG is
-   not large enough to hold the message.  In that case, also set
-   *YYMSG_ALLOC to the required number of bytes.  Return 2 if the
-   required number of bytes is too large to store.  */
 static int
-yysyntax_error (YYPTRDIFF_T *yymsg_alloc, char **yymsg,
-                yy_state_t *yyssp, int yytoken)
+yy_syntax_error_arguments (const yypcontext_t *yyctx,
+                           yysymbol_kind_t yyarg[], int yyargn)
 {
-  enum { YYERROR_VERBOSE_ARGS_MAXIMUM = 5 };
-  /* Internationalized format string. */
-  const char *yyformat = YY_NULLPTR;
-  /* Arguments of yyformat: reported tokens (one for the "unexpected",
-     one per "expected"). */
-  char const *yyarg[YYERROR_VERBOSE_ARGS_MAXIMUM];
   /* Actual size of YYARG. */
   int yycount = 0;
-  /* Cumulated lengths of YYARG.  */
-  YYPTRDIFF_T yysize = 0;
-
   /* There are many possibilities here to consider:
      - If this state is a consistent state with a default action, then
        the only way this function was invoked is if the default action
@@ -1761,52 +1882,54 @@ yysyntax_error (YYPTRDIFF_T *yymsg_alloc, char **yymsg,
        one exception: it will still contain any token that will not be
        accepted due to an error action in a later state.
   */
-  if (yytoken != YYEMPTY)
+  if (yyctx->yytoken != YYSYMBOL_YYEMPTY)
     {
-      int yyn = yypact[+*yyssp];
-      YYPTRDIFF_T yysize0 = yytnamerr (YY_NULLPTR, yytname[yytoken]);
-      yysize = yysize0;
-      yyarg[yycount++] = yytname[yytoken];
-      if (!yypact_value_is_default (yyn))
-        {
-          /* Start YYX at -YYN if negative to avoid negative indexes in
-             YYCHECK.  In other words, skip the first -YYN actions for
-             this state because they are default actions.  */
-          int yyxbegin = yyn < 0 ? -yyn : 0;
-          /* Stay within bounds of both yycheck and yytname.  */
-          int yychecklim = YYLAST - yyn + 1;
-          int yyxend = yychecklim < YYNTOKENS ? yychecklim : YYNTOKENS;
-          int yyx;
-
-          for (yyx = yyxbegin; yyx < yyxend; ++yyx)
-            if (yycheck[yyx + yyn] == yyx && yyx != YYTERROR
-                && !yytable_value_is_error (yytable[yyx + yyn]))
-              {
-                if (yycount == YYERROR_VERBOSE_ARGS_MAXIMUM)
-                  {
-                    yycount = 1;
-                    yysize = yysize0;
-                    break;
-                  }
-                yyarg[yycount++] = yytname[yyx];
-                {
-                  YYPTRDIFF_T yysize1
-                    = yysize + yytnamerr (YY_NULLPTR, yytname[yyx]);
-                  if (yysize <= yysize1 && yysize1 <= YYSTACK_ALLOC_MAXIMUM)
-                    yysize = yysize1;
-                  else
-                    return 2;
-                }
-              }
-        }
+      int yyn;
+      if (yyarg)
+        yyarg[yycount] = yyctx->yytoken;
+      ++yycount;
+      yyn = yypcontext_expected_tokens (yyctx,
+                                        yyarg ? yyarg + 1 : yyarg, yyargn - 1);
+      if (yyn == YYENOMEM)
+        return YYENOMEM;
+      else
+        yycount += yyn;
     }
+  return yycount;
+}
+
+/* Copy into *YYMSG, which is of size *YYMSG_ALLOC, an error message
+   about the unexpected token YYTOKEN for the state stack whose top is
+   YYSSP.
+
+   Return 0 if *YYMSG was successfully written.  Return -1 if *YYMSG is
+   not large enough to hold the message.  In that case, also set
+   *YYMSG_ALLOC to the required number of bytes.  Return YYENOMEM if the
+   required number of bytes is too large to store.  */
+static int
+yysyntax_error (YYPTRDIFF_T *yymsg_alloc, char **yymsg,
+                const yypcontext_t *yyctx)
+{
+  enum { YYARGS_MAX = 5 };
+  /* Internationalized format string. */
+  const char *yyformat = YY_NULLPTR;
+  /* Arguments of yyformat: reported tokens (one for the "unexpected",
+     one per "expected"). */
+  yysymbol_kind_t yyarg[YYARGS_MAX];
+  /* Cumulated lengths of YYARG.  */
+  YYPTRDIFF_T yysize = 0;
+
+  /* Actual size of YYARG. */
+  int yycount = yy_syntax_error_arguments (yyctx, yyarg, YYARGS_MAX);
+  if (yycount == YYENOMEM)
+    return YYENOMEM;
 
   switch (yycount)
     {
-# define YYCASE_(N, S)                      \
+#define YYCASE_(N, S)                       \
       case N:                               \
         yyformat = S;                       \
-      break
+        break
     default: /* Avoid compiler warnings. */
       YYCASE_(0, YY_("syntax error"));
       YYCASE_(1, YY_("syntax error, unexpected %s"));
@@ -1814,17 +1937,23 @@ yysyntax_error (YYPTRDIFF_T *yymsg_alloc, char **yymsg,
       YYCASE_(3, YY_("syntax error, unexpected %s, expecting %s or %s"));
       YYCASE_(4, YY_("syntax error, unexpected %s, expecting %s or %s or %s"));
       YYCASE_(5, YY_("syntax error, unexpected %s, expecting %s or %s or %s or %s"));
-# undef YYCASE_
+#undef YYCASE_
     }
 
+  /* Compute error message size.  Don't count the "%s"s, but reserve
+     room for the terminator.  */
+  yysize = yystrlen (yyformat) - 2 * yycount + 1;
   {
-    /* Don't count the "%s"s in the final size, but reserve room for
-       the terminator.  */
-    YYPTRDIFF_T yysize1 = yysize + (yystrlen (yyformat) - 2 * yycount) + 1;
-    if (yysize <= yysize1 && yysize1 <= YYSTACK_ALLOC_MAXIMUM)
-      yysize = yysize1;
-    else
-      return 2;
+    int yyi;
+    for (yyi = 0; yyi < yycount; ++yyi)
+      {
+        YYPTRDIFF_T yysize1
+          = yysize + yytnamerr (YY_NULLPTR, yytname[yyarg[yyi]]);
+        if (yysize <= yysize1 && yysize1 <= YYSTACK_ALLOC_MAXIMUM)
+          yysize = yysize1;
+        else
+          return YYENOMEM;
+      }
   }
 
   if (*yymsg_alloc < yysize)
@@ -1833,7 +1962,7 @@ yysyntax_error (YYPTRDIFF_T *yymsg_alloc, char **yymsg,
       if (! (yysize <= *yymsg_alloc
              && *yymsg_alloc <= YYSTACK_ALLOC_MAXIMUM))
         *yymsg_alloc = YYSTACK_ALLOC_MAXIMUM;
-      return 1;
+      return -1;
     }
 
   /* Avoid sprintf, as that infringes on the user's name space.
@@ -1845,7 +1974,7 @@ yysyntax_error (YYPTRDIFF_T *yymsg_alloc, char **yymsg,
     while ((*yyp = *yyformat) != '\0')
       if (*yyp == '%' && yyformat[1] == 's' && yyi < yycount)
         {
-          yyp += yytnamerr (yyp, yyarg[yyi++]);
+          yyp += yytnamerr (yyp, yytname[yyarg[yyi++]]);
           yyformat += 2;
         }
       else
@@ -1856,28 +1985,31 @@ yysyntax_error (YYPTRDIFF_T *yymsg_alloc, char **yymsg,
   }
   return 0;
 }
-#endif /* YYERROR_VERBOSE */
+
 
 /*-----------------------------------------------.
 | Release the memory associated to this symbol.  |
 `-----------------------------------------------*/
 
 static void
-yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, ctx_t ctx, AST*& p_ast, ASTBuilder& p_builder, ParseTreeScanner& p_sb)
+yydestruct (const char *yymsg,
+            yysymbol_kind_t yykind, YYSTYPE *yyvaluep, ctx_t ctx, AST*& p_ast, ASTBuilder& p_builder, ParseTreeScanner& p_sb)
 {
-  YYUSE (yyvaluep);
-  YYUSE (ctx);
-  YYUSE (p_ast);
-  YYUSE (p_builder);
-  YYUSE (p_sb);
+  YY_USE (yyvaluep);
+  YY_USE (ctx);
+  YY_USE (p_ast);
+  YY_USE (p_builder);
+  YY_USE (p_sb);
   if (!yymsg)
     yymsg = "Deleting";
-  YY_SYMBOL_PRINT (yymsg, yytype, yyvaluep, yylocationp);
+  YY_SYMBOL_PRINT (yymsg, yykind, yyvaluep, yylocationp);
 
   YY_IGNORE_MAYBE_UNINITIALIZED_BEGIN
-  YYUSE (yytype);
+  YY_USE (yykind);
   YY_IGNORE_MAYBE_UNINITIALIZED_END
 }
+
+
 
 
 
@@ -1889,7 +2021,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, ctx_t ctx, AST*& p
 int
 yyparse (ctx_t ctx, AST*& p_ast, ASTBuilder& p_builder, ParseTreeScanner& p_sb)
 {
-/* The lookahead symbol.  */
+/* Lookahead token kind.  */
 int yychar;
 
 
@@ -1900,45 +2032,41 @@ YY_INITIAL_VALUE (static YYSTYPE yyval_default;)
 YYSTYPE yylval YY_INITIAL_VALUE (= yyval_default);
 
     /* Number of syntax errors so far.  */
-    int yynerrs;
+    int yynerrs = 0;
 
-    yy_state_fast_t yystate;
+    yy_state_fast_t yystate = 0;
     /* Number of tokens to shift before error messages enabled.  */
-    int yyerrstatus;
+    int yyerrstatus = 0;
 
-    /* The stacks and their tools:
-       'yyss': related to states.
-       'yyvs': related to semantic values.
-
-       Refer to the stacks through separate pointers, to allow yyoverflow
+    /* Refer to the stacks through separate pointers, to allow yyoverflow
        to reallocate them elsewhere.  */
 
-    /* The state stack.  */
+    /* Their size.  */
+    YYPTRDIFF_T yystacksize = YYINITDEPTH;
+
+    /* The state stack: array, bottom, top.  */
     yy_state_t yyssa[YYINITDEPTH];
-    yy_state_t *yyss;
-    yy_state_t *yyssp;
+    yy_state_t *yyss = yyssa;
+    yy_state_t *yyssp = yyss;
 
-    /* The semantic value stack.  */
+    /* The semantic value stack: array, bottom, top.  */
     YYSTYPE yyvsa[YYINITDEPTH];
-    YYSTYPE *yyvs;
-    YYSTYPE *yyvsp;
-
-    YYPTRDIFF_T yystacksize;
+    YYSTYPE *yyvs = yyvsa;
+    YYSTYPE *yyvsp = yyvs;
 
   int yyn;
+  /* The return value of yyparse.  */
   int yyresult;
-  /* Lookahead token as an internal (translated) token number.  */
-  int yytoken = 0;
+  /* Lookahead symbol kind.  */
+  yysymbol_kind_t yytoken = YYSYMBOL_YYEMPTY;
   /* The variables used to return semantic value and location from the
      action routines.  */
   YYSTYPE yyval;
 
-#if YYERROR_VERBOSE
   /* Buffer for error messages, and its allocated size.  */
   char yymsgbuf[128];
   char *yymsg = yymsgbuf;
   YYPTRDIFF_T yymsg_alloc = sizeof yymsgbuf;
-#endif
 
 #define YYPOPSTACK(N)   (yyvsp -= (N), yyssp -= (N))
 
@@ -1946,16 +2074,10 @@ YYSTYPE yylval YY_INITIAL_VALUE (= yyval_default);
      Keep to zero when no symbol should be popped.  */
   int yylen = 0;
 
-  yyssp = yyss = yyssa;
-  yyvsp = yyvs = yyvsa;
-  yystacksize = YYINITDEPTH;
-
   YYDPRINTF ((stderr, "Starting parse\n"));
 
-  yystate = 0;
-  yyerrstatus = 0;
-  yynerrs = 0;
   yychar = YYEMPTY; /* Cause a token to be read.  */
+
   goto yysetstate;
 
 
@@ -1977,10 +2099,11 @@ yysetstate:
   YY_IGNORE_USELESS_CAST_BEGIN
   *yyssp = YY_CAST (yy_state_t, yystate);
   YY_IGNORE_USELESS_CAST_END
+  YY_STACK_PRINT (yyss, yyssp);
 
   if (yyss + yystacksize - 1 <= yyssp)
 #if !defined yyoverflow && !defined YYSTACK_RELOCATE
-    goto yyexhaustedlab;
+    YYNOMEM;
 #else
     {
       /* Get the current used size of the three stacks, in elements.  */
@@ -2008,7 +2131,7 @@ yysetstate:
 # else /* defined YYSTACK_RELOCATE */
       /* Extend the stack our own way.  */
       if (YYMAXDEPTH <= yystacksize)
-        goto yyexhaustedlab;
+        YYNOMEM;
       yystacksize *= 2;
       if (YYMAXDEPTH < yystacksize)
         yystacksize = YYMAXDEPTH;
@@ -2019,10 +2142,10 @@ yysetstate:
           YY_CAST (union yyalloc *,
                    YYSTACK_ALLOC (YY_CAST (YYSIZE_T, YYSTACK_BYTES (yystacksize))));
         if (! yyptr)
-          goto yyexhaustedlab;
+          YYNOMEM;
         YYSTACK_RELOCATE (yyss_alloc, yyss);
         YYSTACK_RELOCATE (yyvs_alloc, yyvs);
-# undef YYSTACK_RELOCATE
+#  undef YYSTACK_RELOCATE
         if (yyss1 != yyssa)
           YYSTACK_FREE (yyss1);
       }
@@ -2040,6 +2163,7 @@ yysetstate:
         YYABORT;
     }
 #endif /* !defined yyoverflow && !defined YYSTACK_RELOCATE */
+
 
   if (yystate == YYFINAL)
     YYACCEPT;
@@ -2061,17 +2185,28 @@ yybackup:
 
   /* Not known => get a lookahead token if don't already have one.  */
 
-  /* YYCHAR is either YYEMPTY or YYEOF or a valid lookahead symbol.  */
+  /* YYCHAR is either empty, or end-of-input, or a valid lookahead.  */
   if (yychar == YYEMPTY)
     {
-      YYDPRINTF ((stderr, "Reading a token: "));
+      YYDPRINTF ((stderr, "Reading a token\n"));
       yychar = yylex (&yylval, p_sb);
     }
 
-  if (yychar <= YYEOF)
+  if (yychar <= END_SOURCE)
     {
-      yychar = yytoken = YYEOF;
+      yychar = END_SOURCE;
+      yytoken = YYSYMBOL_YYEOF;
       YYDPRINTF ((stderr, "Now at end of input.\n"));
+    }
+  else if (yychar == YYerror)
+    {
+      /* The scanner already issued an error message, process directly
+         to error recovery.  But do not keep the error token as
+         lookahead, it is too special and may lead us to an endless
+         loop in error recovery. */
+      yychar = YYUNDEF;
+      yytoken = YYSYMBOL_YYerror;
+      goto yyerrlab1;
     }
   else
     {
@@ -2141,883 +2276,883 @@ yyreduce:
   YY_REDUCE_PRINT (yyn);
   switch (yyn)
     {
-  case 2:
+  case 2: /* parse: PT_PARSE '(' "end of source" ')'  */
                                                     { p_ast = AST :: Make ( ctx, (yyvsp[-1].tok) ); }
     break;
 
-  case 3:
+  case 3: /* parse: PT_PARSE '(' source "end of source" ')'  */
                                                     { p_ast = (yyvsp[-2].node); }
     break;
 
-  case 4:
+  case 4: /* source: PT_SOURCE '(' schema_1 ')'  */
                                                     { (yyval.node) = (yyvsp[-1].node); }
     break;
 
-  case 5:
+  case 5: /* source: PT_SOURCE '(' version_1 schema_1 ')'  */
                                                     { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( ctx, (yyvsp[-2].tok) ); }
     break;
 
-  case 6:
+  case 6: /* source: PT_SOURCE '(' version_2 schema_2 ')'  */
                                                     { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( ctx, (yyvsp[-2].tok) ); }
     break;
 
-  case 7:
+  case 7: /* version_1: PT_VERSION_1_0 '(' KW_version VERS_1_0 ';' ')'  */
                                                         { (yyval.tok) = (yyvsp[-5].tok); }
     break;
 
-  case 8:
+  case 8: /* version_2: PT_VERSION_2 '(' KW_version VERS_2_0 ';' ')'  */
                                                        { (yyval.tok) = (yyvsp[-5].tok); }
     break;
 
-  case 9:
+  case 9: /* schema_1: PT_SCHEMA_1_0 '(' schema_decls ')'  */
                                                     { (yyval.node) = AST :: Make ( ctx, (yyvsp[-3].tok), (yyvsp[-1].node) ); }
     break;
 
-  case 10:
+  case 10: /* schema_1: PT_EMPTY  */
                                                     { (yyval.node) = AST :: Make ( ctx, PT_SCHEMA_1_0 ); }
     break;
 
-  case 11:
+  case 11: /* schema_2: PT_SCHEMA_2_0 '(' schema_decls ')'  */
                                                     { (yyval.node) = AST :: Make ( ctx, (yyvsp[-3].tok), (yyvsp[-1].node) ); }
     break;
 
-  case 12:
+  case 12: /* schema_2: PT_EMPTY  */
                                                     { (yyval.node) = AST :: Make ( ctx, PT_SCHEMA_2_0 ); }
     break;
 
-  case 13:
+  case 13: /* schema_decls: schema_decl  */
                                                     { (yyval.node) = AST :: Make ( ctx ); (yyval.node) -> AddNode ( ctx, (yyvsp[0].node) ); }
     break;
 
-  case 14:
+  case 14: /* schema_decls: schema_decls schema_decl  */
                                                     { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( ctx, (yyvsp[0].node) ); }
     break;
 
-  case 15:
+  case 15: /* schema_decl: typedef  */
                         { (yyval.node) = (yyvsp[0].node); }
     break;
 
-  case 16:
+  case 16: /* schema_decl: typeset  */
                         { (yyval.node) = (yyvsp[0].node); }
     break;
 
-  case 17:
+  case 17: /* schema_decl: fmtdef  */
                         { (yyval.node) = (yyvsp[0].node); }
     break;
 
-  case 18:
+  case 18: /* schema_decl: const  */
                         { (yyval.node) = (yyvsp[0].node); }
     break;
 
-  case 19:
+  case 19: /* schema_decl: alias  */
                         { (yyval.node) = (yyvsp[0].node); }
     break;
 
-  case 20:
+  case 20: /* schema_decl: function  */
                         { (yyval.node) = (yyvsp[0].node); }
     break;
 
-  case 21:
+  case 21: /* schema_decl: extern_function  */
                         { (yyval.node) = (yyvsp[0].node); }
     break;
 
-  case 22:
+  case 22: /* schema_decl: script  */
                         { (yyval.node) = (yyvsp[0].node); }
     break;
 
-  case 23:
+  case 23: /* schema_decl: validate  */
                         { (yyval.node) = (yyvsp[0].node); }
     break;
 
-  case 24:
+  case 24: /* schema_decl: physical  */
                         { (yyval.node) = (yyvsp[0].node); }
     break;
 
-  case 25:
+  case 25: /* schema_decl: table  */
                         { (yyval.node) = (yyvsp[0].node); }
     break;
 
-  case 26:
+  case 26: /* schema_decl: database  */
                         { (yyval.node) = (yyvsp[0].node); }
     break;
 
-  case 27:
+  case 27: /* schema_decl: include  */
                         { (yyval.node) = (yyvsp[0].node); }
     break;
 
-  case 28:
+  case 28: /* schema_decl: view  */
                         { (yyval.node) = (yyvsp[0].node); }
     break;
 
-  case 29:
+  case 29: /* schema_decl: ';'  */
                         { (yyval.node) = AST :: Make ( ctx ); }
     break;
 
-  case 30:
+  case 30: /* typedef: PT_TYPEDEF '(' KW_typedef fqn PT_ASTLIST '(' new_type_names ')' ';' ')'  */
                                             { (yyval.node) = p_builder . TypeDef ( ctx, (yyvsp[-9].tok), (yyvsp[-6].fqn), (yyvsp[-3].node) ); }
     break;
 
-  case 31:
+  case 31: /* new_type_names: typespec  */
                                        { (yyval.node) = AST :: Make ( ctx ); (yyval.node) -> AddNode ( ctx, (yyvsp[0].node) ); }
     break;
 
-  case 32:
+  case 32: /* new_type_names: new_type_names ',' typespec  */
                                        { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( ctx, (yyvsp[0].node) ); }
     break;
 
-  case 33:
+  case 33: /* typespec: fqn  */
                 { (yyval.node) = (yyvsp[0].fqn); }
     break;
 
-  case 34:
+  case 34: /* typespec: arrayspec  */
                 { (yyval.node) = (yyvsp[0].node); }
     break;
 
-  case 35:
+  case 35: /* arrayspec: PT_ARRAY '(' fqn '[' dim ']' ')'  */
                                         { (yyval.node) = AST :: Make ( ctx, (yyvsp[-6].tok), (yyvsp[-4].fqn), (yyvsp[-2].node) ); }
     break;
 
-  case 36:
+  case 36: /* dim: expr  */
              { (yyval.node) = (yyvsp[0].expr); }
     break;
 
-  case 37:
+  case 37: /* dim: '*'  */
              { (yyval.node) = AST :: Make ( ctx, PT_EMPTY ); }
     break;
 
-  case 38:
+  case 38: /* typeset: PT_TYPESET '(' KW_typeset fqn PT_TYPESETDEF '(' '{' PT_ASTLIST '(' typeset_spec ')' '}' ')' ';' ')'  */
                 { (yyval.node) = p_builder . TypeSet ( ctx, (yyvsp[-14].tok), (yyvsp[-11].fqn), (yyvsp[-5].node) ); }
     break;
 
-  case 39:
+  case 39: /* typeset_spec: typespec  */
                                     { (yyval.node) = AST :: Make ( ctx ); (yyval.node) -> AddNode ( ctx, (yyvsp[0].node) ); }
     break;
 
-  case 40:
+  case 40: /* typeset_spec: typeset_spec ',' typespec  */
                                     { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( ctx, (yyvsp[0].node) ); }
     break;
 
-  case 41:
+  case 41: /* fmtdef: PT_FORMAT '(' KW_fmtdef fqn ';' ')'  */
                                                 { (yyval.node) = p_builder . FmtDef ( ctx, (yyvsp[-5].tok), (yyvsp[-2].fqn), 0 ); }
     break;
 
-  case 42:
+  case 42: /* fmtdef: PT_FORMAT '(' KW_fmtdef fqn fqn ';' ')'  */
                                                 { (yyval.node) = p_builder . FmtDef ( ctx, (yyvsp[-6].tok), (yyvsp[-2].fqn), (yyvsp[-3].fqn) ); }
     break;
 
-  case 43:
+  case 43: /* const: PT_CONST '(' KW_const typespec fqn '=' expr ';' ')'  */
                                                                  { (yyval.node) = p_builder . ConstDef ( ctx, (yyvsp[-8].tok), (yyvsp[-5].node), (yyvsp[-4].fqn), (yyvsp[-2].expr) ); }
     break;
 
-  case 44:
+  case 44: /* alias: PT_ALIAS '(' KW_alias fqn fqn ';' ')'  */
                                              { (yyval.node) = p_builder . AliasDef ( ctx, (yyvsp[-6].tok), (yyvsp[-3].fqn), (yyvsp[-2].fqn) ); }
     break;
 
-  case 45:
+  case 45: /* function: PT_FUNCTION '(' KW_function func_decl ')'  */
                                                 { (yyval.node) = (yyvsp[-1].node); }
     break;
 
-  case 46:
+  case 46: /* func_decl: PT_UNTYPED '(' KW___untyped fqn '(' ')' ')'  */
                                                        { (yyval.node) = p_builder . UntypedFunctionDecl ( ctx, (yyvsp[-6].tok), (yyvsp[-3].fqn) ); }
     break;
 
-  case 47:
+  case 47: /* func_decl: PT_ROWLENGTH '(' KW___row_length fqn '(' ')' ')'  */
                                                        { (yyval.node) = p_builder . RowlenFunctionDecl ( ctx, (yyvsp[-6].tok), (yyvsp[-3].fqn) ); }
     break;
 
-  case 48:
+  case 48: /* func_decl: PT_FUNCDECL '(' schema_sig_opt return_type fqn_opt_vers fact_sig param_sig prologue ')'  */
                 { (yyval.node) = p_builder . FunctionDecl ( ctx, (yyvsp[-8].tok), false, (yyvsp[-6].node), (yyvsp[-5].node), (yyvsp[-4].fqn), (yyvsp[-3].node), (yyvsp[-2].node), (yyvsp[-1].node) ); }
     break;
 
-  case 49:
+  case 49: /* schema_sig_opt: PT_EMPTY  */
                                                                         { (yyval.node) = AST :: Make ( ctx, (yyvsp[0].tok) ); }
     break;
 
-  case 50:
+  case 50: /* schema_sig_opt: PT_SCHEMASIG '(' '<' PT_ASTLIST '(' schema_formals ')' '>' ')'  */
                                                                         { (yyval.node) = (yyvsp[-3].node); }
     break;
 
-  case 51:
+  case 51: /* schema_formals: schema_formal  */
                                         { (yyval.node) = AST :: Make ( ctx ); (yyval.node) -> AddNode ( ctx, (yyvsp[0].node) ); }
     break;
 
-  case 52:
+  case 52: /* schema_formals: schema_formals ',' schema_formal  */
                                         { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( ctx, (yyvsp[0].node) ); }
     break;
 
-  case 53:
+  case 53: /* schema_formal: PT_SCHEMAFORMAL '(' KW_type ident ')'  */
                                                 { (yyval.node) = AST :: Make ( ctx, (yyvsp[-4].tok), (yyvsp[-1].fqn) ); }
     break;
 
-  case 54:
+  case 54: /* schema_formal: PT_SCHEMAFORMAL '(' type_expr ident ')'  */
                                                 { (yyval.node) = AST :: Make ( ctx, (yyvsp[-4].tok), (yyvsp[-2].node), (yyvsp[-1].fqn) ); }
     break;
 
-  case 55:
+  case 55: /* return_type: PT_RETURNTYPE '(' KW_void ')'  */
                                         { (yyval.node) = AST :: Make ( ctx ); }
     break;
 
-  case 56:
+  case 56: /* return_type: PT_RETURNTYPE '(' type_expr ')'  */
                                         { (yyval.node) = (yyvsp[-1].node); }
     break;
 
-  case 57:
+  case 57: /* fact_sig: PT_EMPTY  */
                                                  { (yyval.node) = AST :: Make ( ctx, (yyvsp[0].tok) ); }
     break;
 
-  case 58:
+  case 58: /* fact_sig: PT_FACTSIG '(' '<' param_signature '>' ')'  */
                                                  { (yyval.node) = (yyvsp[-2].node); }
     break;
 
-  case 59:
+  case 59: /* param_sig: PT_FUNCSIG '(' '(' param_signature ')' ')'  */
                                                   { (yyval.node) = (yyvsp[-2].node); }
     break;
 
-  case 60:
+  case 60: /* param_signature: PT_EMPTY  */
                                                                         { (yyval.node) = AST :: Make ( ctx, (yyvsp[0].tok) ); }
     break;
 
-  case 61:
+  case 61: /* param_signature: PT_FUNCPARAMS '(' formals_list vararg ')'  */
                                                                         { (yyval.node) = AST :: Make ( ctx, (yyvsp[-4].tok), (yyvsp[-2].node), AST :: Make ( ctx ), (yyvsp[-1].node) ); }
     break;
 
-  case 62:
+  case 62: /* param_signature: PT_FUNCPARAMS '(' '*' formals_list vararg ')'  */
                                                                         { (yyval.node) = AST :: Make ( ctx, (yyvsp[-5].tok), AST :: Make ( ctx ), (yyvsp[-2].node), (yyvsp[-1].node) ); }
     break;
 
-  case 63:
+  case 63: /* param_signature: PT_FUNCPARAMS '(' formals_list '*' formals_list vararg ')'  */
                                                                         { (yyval.node) = AST :: Make ( ctx, (yyvsp[-6].tok), (yyvsp[-4].node), (yyvsp[-2].node), (yyvsp[-1].node) ); }
     break;
 
-  case 64:
+  case 64: /* param_signature: PT_FUNCPARAMS '(' formals_list ',' '*' formals_list vararg ')'  */
                                                                         { (yyval.node) = AST :: Make ( ctx, (yyvsp[-7].tok), (yyvsp[-5].node), (yyvsp[-2].node), (yyvsp[-1].node) ); }
     break;
 
-  case 65:
+  case 65: /* formals_list: PT_ASTLIST '(' formals ')'  */
                                     { (yyval.node) = (yyvsp[-1].node); }
     break;
 
-  case 66:
+  case 66: /* formals: formal  */
                             { (yyval.node) = AST :: Make ( ctx ); (yyval.node) -> AddNode ( ctx, (yyvsp[0].node) ); }
     break;
 
-  case 67:
+  case 67: /* formals: formals ',' formal  */
                             { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( ctx, (yyvsp[0].node) ); }
     break;
 
-  case 68:
+  case 68: /* formal: PT_FORMALPARAM '(' typespec IDENTIFIER_1_0 ')'  */
                                                                 { (yyval.node) = AST :: Make ( ctx, (yyvsp[-4].tok), (yyvsp[-2].node), AST :: Make ( ctx, (yyvsp[-1].tok) ), AST :: Make ( ctx ) ); }
     break;
 
-  case 69:
+  case 69: /* formal: PT_FORMALPARAM '(' KW_control typespec IDENTIFIER_1_0 ')'  */
                                                                 { (yyval.node) = AST :: Make ( ctx, (yyvsp[-5].tok), (yyvsp[-2].node), AST :: Make ( ctx, (yyvsp[-1].tok) ), AST :: Make ( ctx, (yyvsp[-3].tok) ) ); }
     break;
 
-  case 70:
+  case 70: /* vararg: PT_EMPTY  */
                                         { (yyval.node) = AST :: Make ( ctx, (yyvsp[0].tok) ); }
     break;
 
-  case 71:
+  case 71: /* vararg: PT_ELLIPSIS '(' ',' ELLIPSIS ')'  */
                                         { (yyval.node) = AST :: Make ( ctx, (yyvsp[-4].tok) ); }
     break;
 
-  case 72:
+  case 72: /* prologue: PT_FUNCPROLOGUE '(' ';' ')'  */
                                             { (yyval.node) = AST :: Make ( ctx, PT_EMPTY ); }
     break;
 
-  case 73:
+  case 73: /* prologue: PT_FUNCPROLOGUE '(' '=' fqn ';' ')'  */
                                             { (yyval.node) = (yyvsp[-2].fqn); }
     break;
 
-  case 75:
+  case 75: /* script_prologue: PT_FUNCPROLOGUE '(' '{' PT_ASTLIST '(' script_stmts ')' '}' ')'  */
                                                                         { (yyval.node) = (yyvsp[-3].node); }
     break;
 
-  case 76:
+  case 76: /* script_stmts: script_stmt  */
                                 { (yyval.node) = AST :: Make ( ctx ); (yyval.node) -> AddNode ( ctx, (yyvsp[0].node) ); }
     break;
 
-  case 77:
+  case 77: /* script_stmts: script_stmts script_stmt  */
                                 { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( ctx, (yyvsp[0].node) ); }
     break;
 
-  case 78:
+  case 78: /* script_stmt: PT_RETURN '(' KW_return cond_expr ';' ')'  */
                                                     { (yyval.node) = AST :: Make ( ctx, (yyvsp[-3].tok), (yyvsp[-2].expr) ); }
     break;
 
-  case 79:
+  case 79: /* script_stmt: production  */
                                                     { (yyval.node) = (yyvsp[0].node); }
     break;
 
-  case 80:
+  case 80: /* production: PT_PRODSTMT '(' type_expr ident '=' cond_expr ';' ')'  */
                                                                    { (yyval.node) = AST :: Make ( ctx, (yyvsp[-7].tok), (yyvsp[-5].node), (yyvsp[-4].fqn), (yyvsp[-2].expr) ); }
     break;
 
-  case 81:
+  case 81: /* production: PT_PRODTRIGGER '(' KW_trigger ident '=' cond_expr ';' ')'  */
                                                                    { (yyval.node) = AST :: Make ( ctx, (yyvsp[-7].tok), (yyvsp[-4].fqn), (yyvsp[-2].expr) ); }
     break;
 
-  case 82:
+  case 82: /* extern_function: PT_EXTERN '(' KW_extern function ')'  */
                                               { (yyval.node) = (yyvsp[-1].node); }
     break;
 
-  case 83:
+  case 83: /* script: PT_SCHEMA '(' KW_schema script_decl ')'  */
                                                           { (yyval.node) = (yyvsp[-1].node); }
     break;
 
-  case 84:
+  case 84: /* script: PT_SCHEMA '(' KW_schema KW_function script_decl ')'  */
                                                           { (yyval.node) = (yyvsp[-1].node); }
     break;
 
-  case 85:
+  case 85: /* script_decl: PT_FUNCDECL '(' schema_sig_opt return_type fqn_opt_vers fact_sig param_sig script_prologue ')'  */
                 { (yyval.node) = p_builder . FunctionDecl ( ctx, (yyvsp[-8].tok), true, (yyvsp[-6].node), (yyvsp[-5].node), (yyvsp[-4].fqn), (yyvsp[-3].node), (yyvsp[-2].node), (yyvsp[-1].node) ); }
     break;
 
-  case 86:
+  case 86: /* validate: PT_VALIDATE '(' KW_validate PT_FUNCTION '(' KW_function PT_FUNCDECL '(' schema_sig_opt return_type fqn_opt_vers fact_sig param_sig prologue ')' ')' ')'  */
         { (yyval.node) = p_builder . FunctionDecl ( ctx, (yyvsp[-16].tok), false, (yyvsp[-8].node), (yyvsp[-7].node), (yyvsp[-6].fqn), (yyvsp[-5].node), (yyvsp[-4].node), (yyvsp[-3].node) ); }
     break;
 
-  case 87:
+  case 87: /* physical: PT_PHYSICAL '(' KW_physical schema_sig_opt phys_return_type fqn_vers fact_sig phys_prologue ')'  */
             { (yyval.node) = p_builder . PhysicalDecl ( ctx, (yyvsp[-8].tok), (yyvsp[-5].node), (yyvsp[-4].node), (yyvsp[-3].fqn), (yyvsp[-2].node), (yyvsp[-1].node) ); }
     break;
 
-  case 88:
+  case 88: /* phys_return_type: return_type  */
                                                         { (yyval.node) = (yyvsp[0].node); }
     break;
 
-  case 89:
+  case 89: /* phys_return_type: PT_NOHEADER '(' KW___no_header return_type ')'  */
                                                         { (yyval.node) = AST :: Make ( ctx, (yyvsp[-4].tok), (yyvsp[-1].node) ); }
     break;
 
-  case 90:
+  case 90: /* phys_prologue: PT_PHYSPROLOGUE '(' '=' PT_PHYSSTMT '(' '{' PT_ASTLIST '(' script_stmts ')' '}' ')' ')'  */
                 { (yyval.node) = AST :: Make ( ctx, (yyvsp[-9].tok), (yyvsp[-4].node) ); }
     break;
 
-  case 91:
+  case 91: /* phys_prologue: PT_PHYSPROLOGUE '(' '{' PT_ASTLIST '(' phys_body ')' '}' ')'  */
                 { (yyval.node) = (yyvsp[-3].node); }
     break;
 
-  case 92:
+  case 92: /* phys_body: phys_body_stmt  */
                                 { (yyval.node) = AST :: Make ( ctx ); (yyval.node) -> AddNode ( ctx, (yyvsp[0].node) ); }
     break;
 
-  case 93:
+  case 93: /* phys_body: phys_body phys_body_stmt  */
                                 { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( ctx, (yyvsp[0].node) ); }
     break;
 
-  case 94:
+  case 94: /* phys_body_stmt: PT_PHYSBODYSTMT '(' ';' ')'  */
         { (yyval.node) = AST :: Make ( ctx, PT_EMPTY ); }
     break;
 
-  case 95:
+  case 95: /* phys_body_stmt: PT_PHYSBODYSTMT '(' KW_decode PT_PHYSSTMT '(' '{' PT_ASTLIST '(' script_stmts ')' '}' ')' ')'  */
         { (yyval.node) = AST :: Make ( ctx, (yyvsp[-10].tok), (yyvsp[-4].node) ) ; }
     break;
 
-  case 96:
+  case 96: /* phys_body_stmt: PT_PHYSBODYSTMT '(' KW_encode PT_PHYSSTMT '(' '{' PT_ASTLIST '(' script_stmts ')' '}' ')' ')'  */
         { (yyval.node) = AST :: Make ( ctx, (yyvsp[-10].tok), (yyvsp[-4].node) ); }
     break;
 
-  case 97:
+  case 97: /* phys_body_stmt: PT_PHYSBODYSTMT '(' KW___row_length '=' fqn '(' ')' ')'  */
         { (yyval.node) = AST :: Make ( ctx, (yyvsp[-5].tok), (yyvsp[-3].fqn) ); }
     break;
 
-  case 98:
+  case 98: /* table: PT_TABLE '(' KW_table fqn_vers parents_opt PT_TABLEBODY '(' '{' tbl_body '}' ')' ')'  */
                 { (yyval.node) = p_builder . TableDef ( ctx, (yyvsp[-11].tok), (yyvsp[-8].fqn), (yyvsp[-7].node), (yyvsp[-3].node) ); }
     break;
 
-  case 99:
+  case 99: /* parents_opt: PT_EMPTY  */
                                                                     { (yyval.node) = AST :: Make ( ctx, (yyvsp[0].tok) ); }
     break;
 
-  case 100:
+  case 100: /* parents_opt: PT_TABLEPARENTS '(' '=' PT_ASTLIST '(' tbl_parents ')' ')'  */
                                                                     { (yyval.node) = (yyvsp[-2].node); }
     break;
 
-  case 101:
+  case 101: /* tbl_parents: fqn_opt_vers  */
                                     { (yyval.node) = AST :: Make ( ctx ); (yyval.node) -> AddNode ( ctx, (yyvsp[0].fqn) ); }
     break;
 
-  case 102:
+  case 102: /* tbl_parents: tbl_parents ',' fqn_opt_vers  */
                                     { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( ctx, (yyvsp[0].fqn) ); }
     break;
 
-  case 103:
+  case 103: /* tbl_body: %empty  */
                                     { (yyval.node) = AST :: Make ( ctx, PT_EMPTY ); }
     break;
 
-  case 104:
+  case 104: /* tbl_body: PT_ASTLIST '(' tbl_stmts ')'  */
                                     { (yyval.node) = (yyvsp[-1].node); }
     break;
 
-  case 105:
+  case 105: /* tbl_stmts: tbl_stmt  */
                             { (yyval.node) = AST :: Make ( ctx ); (yyval.node) -> AddNode ( ctx, (yyvsp[0].node) ); }
     break;
 
-  case 106:
+  case 106: /* tbl_stmts: tbl_stmts tbl_stmt  */
                             { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( ctx, (yyvsp[0].node) ); }
     break;
 
-  case 107:
+  case 107: /* tbl_stmt: production  */
                                                                         { (yyval.node) = (yyvsp[0].node); }
     break;
 
-  case 108:
+  case 108: /* tbl_stmt: column_decl  */
                                                                         { (yyval.node) = (yyvsp[0].node); }
     break;
 
-  case 109:
+  case 109: /* tbl_stmt: PT_COLUMNEXPR '(' KW_column KW_limit '=' expr ';' ')'  */
                                                                         { (yyval.node) = AST :: Make ( ctx, (yyvsp[-7].tok), (yyvsp[-2].expr) ); }
     break;
 
-  case 110:
+  case 110: /* tbl_stmt: PT_COLUMNEXPR '(' KW_column KW_default KW_limit '=' expr ';' ')'  */
                                                                         { (yyval.node) = AST :: Make ( ctx, (yyvsp[-8].tok), (yyvsp[-2].expr) ); }
     break;
 
-  case 111:
+  case 111: /* tbl_stmt: PT_PHYSCOL '(' KW_static physmbr_decl ')'  */
                                                                         { (yyval.node) = AST :: Make ( ctx, (yyvsp[-2].tok), (yyvsp[-1].node) ); }
     break;
 
-  case 112:
+  case 112: /* tbl_stmt: PT_PHYSCOL '(' KW_physical physmbr_decl ')'  */
                                                                         { (yyval.node) = AST :: Make ( ctx, (yyvsp[-2].tok), (yyvsp[-1].node) ); }
     break;
 
-  case 113:
+  case 113: /* tbl_stmt: PT_PHYSCOL '(' KW_static KW_physical physmbr_decl ')'  */
                                                                         { (yyval.node) = AST :: Make ( ctx, (yyvsp[-3].tok), (yyvsp[-1].node) ); }
     break;
 
-  case 114:
+  case 114: /* tbl_stmt: PT_COLUNTYPED '(' KW___untyped '=' fqn '(' ')' ';' ')'  */
                                                                         { (yyval.node) = AST :: Make ( ctx, (yyvsp[-8].tok), (yyvsp[-4].fqn) ); }
     break;
 
-  case 115:
+  case 115: /* tbl_stmt: ';'  */
                                                                         { (yyval.node) = AST :: Make ( ctx ); }
     break;
 
-  case 116:
+  case 116: /* column_decl: PT_COLUMN '(' col_modifiers_opt col_decl ')'  */
                                                    { (yyval.node) = AST :: Make ( ctx, (yyvsp[-4].tok), (yyvsp[-2].node), (yyvsp[-1].node) ); }
     break;
 
-  case 117:
+  case 117: /* col_modifiers_opt: KW_column  */
                                                     { (yyval.node) = AST :: Make ( ctx, (yyvsp[0].tok) ); }
     break;
 
-  case 118:
+  case 118: /* col_modifiers_opt: PT_ASTLIST '(' col_modifiers KW_column ')'  */
                                                     { (yyval.node) = (yyvsp[-2].node); }
     break;
 
-  case 119:
+  case 119: /* col_modifiers: col_modifier  */
                                     { (yyval.node) = AST :: Make ( ctx ); (yyval.node) -> AddNode ( ctx, (yyvsp[0].node) ); }
     break;
 
-  case 120:
+  case 120: /* col_modifiers: col_modifiers col_modifier  */
                                     { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( ctx, (yyvsp[0].node) ); }
     break;
 
-  case 121:
+  case 121: /* col_modifier: KW_default  */
                     { (yyval.node) = AST :: Make ( ctx, (yyvsp[0].tok) ); }
     break;
 
-  case 122:
+  case 122: /* col_modifier: KW_extern  */
                     { (yyval.node) = AST :: Make ( ctx, (yyvsp[0].tok) ); }
     break;
 
-  case 123:
+  case 123: /* col_modifier: KW_readonly  */
                     { (yyval.node) = AST :: Make ( ctx, (yyvsp[0].tok) ); }
     break;
 
-  case 124:
+  case 124: /* col_decl: PT_COLDECL '(' typespec typed_col ')'  */
                                                 { (yyval.node) = AST :: Make ( ctx, (yyvsp[-4].tok), (yyvsp[-2].node), (yyvsp[-1].node) ); }
     break;
 
-  case 125:
+  case 125: /* col_decl: PT_COLDECL '(' phys_enc_ref typed_col ')'  */
                                                 { (yyval.node) = AST :: Make ( ctx, (yyvsp[-4].tok), (yyvsp[-2].node), (yyvsp[-1].node) ); }
     break;
 
-  case 126:
+  case 126: /* phys_enc_ref: PT_PHYSENCREF '(' '<' PT_ASTLIST '(' schema_parms ')' '>' fqn_opt_vers factory_parms_opt ')'  */
                                                         { (yyval.node) = AST :: Make ( ctx, (yyvsp[-10].tok), (yyvsp[-5].node), (yyvsp[-2].fqn), (yyvsp[-1].node) ); }
     break;
 
-  case 127:
+  case 127: /* phys_enc_ref: PT_PHYSENCREF '(' fqn_vers factory_parms_opt ')'  */
                                                         { (yyval.node) = AST :: Make ( ctx, (yyvsp[-4].tok), (yyvsp[-2].fqn), (yyvsp[-1].node) ); }
     break;
 
-  case 128:
+  case 128: /* phys_enc_ref: PT_PHYSENCREF '(' fqn factory_parms_list ')'  */
                                                         { (yyval.node) = AST :: Make ( ctx, (yyvsp[-4].tok), (yyvsp[-2].fqn), (yyvsp[-1].node) ); }
     break;
 
-  case 129:
+  case 129: /* typed_col: PT_TYPEDCOL '(' col_ident '{' col_body_opt '}' ')'  */
                                                             {  (yyval.node) = AST :: Make ( ctx, (yyvsp[-6].tok), (yyvsp[-4].node), (yyvsp[-2].node) ); }
     break;
 
-  case 130:
+  case 130: /* typed_col: PT_TYPEDCOLEXPR '(' col_ident '=' cond_expr ';' ')'  */
                                                             {  (yyval.node) = AST :: Make ( ctx, (yyvsp[-6].tok), (yyvsp[-4].node), (yyvsp[-2].expr) ); }
     break;
 
-  case 131:
+  case 131: /* typed_col: PT_TYPEDCOL '(' col_ident ';' ')'  */
                                                             {  (yyval.node) = AST :: Make ( ctx, (yyvsp[-4].tok), (yyvsp[-2].node) ); }
     break;
 
-  case 132:
+  case 132: /* col_ident: ident  */
                                 { (yyval.node) = (yyvsp[0].fqn); }
     break;
 
-  case 133:
+  case 133: /* col_ident: PHYSICAL_IDENTIFIER_1_0  */
                                 { (yyval.node) = AST :: Make ( ctx, (yyvsp[0].tok) ); }
     break;
 
-  case 134:
+  case 134: /* col_body_opt: PT_EMPTY  */
                                     { (yyval.node) = AST :: Make ( ctx ); }
     break;
 
-  case 135:
+  case 135: /* col_body_opt: PT_ASTLIST '(' col_body ')'  */
                                     { (yyval.node) = (yyvsp[-1].node); }
     break;
 
-  case 136:
+  case 136: /* col_body: col_stmt  */
                         { (yyval.node) = AST :: Make ( ctx ); (yyval.node) -> AddNode ( ctx, (yyvsp[0].node) ); }
     break;
 
-  case 137:
+  case 137: /* col_body: col_body col_stmt  */
                         { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( ctx, (yyvsp[0].node) ); }
     break;
 
-  case 138:
+  case 138: /* col_stmt: ';'  */
                                                         { (yyval.node) = AST :: Make ( ctx ); }
     break;
 
-  case 139:
+  case 139: /* col_stmt: PT_COLSTMT '(' KW_read '=' cond_expr ';' ')'  */
                                                         { (yyval.node) = AST :: Make ( ctx, (yyvsp[-6].tok), AST :: Make ( ctx, (yyvsp[-4].tok) ), (yyvsp[-2].expr) ); }
     break;
 
-  case 140:
+  case 140: /* col_stmt: PT_COLSTMT '(' KW_validate '=' cond_expr ';' ')'  */
                                                         { (yyval.node) = AST :: Make ( ctx, (yyvsp[-6].tok), AST :: Make ( ctx, (yyvsp[-4].tok) ), (yyvsp[-2].expr) ); }
     break;
 
-  case 141:
+  case 141: /* col_stmt: PT_COLSTMT '(' KW_limit '=' uint_expr ';' ')'  */
                                                         { (yyval.node) = AST :: Make ( ctx, (yyvsp[-6].tok), AST :: Make ( ctx, (yyvsp[-4].tok) ), (yyvsp[-2].expr) ); }
     break;
 
-  case 142:
+  case 142: /* physmbr_decl: PT_PHYSMBR '(' phys_coldef PHYSICAL_IDENTIFIER_1_0 ';' ')'  */
                                                 { (yyval.node) = AST :: Make ( ctx, (yyvsp[-5].tok), (yyvsp[-3].node), AST :: Make ( ctx, (yyvsp[-2].tok) ) ); }
     break;
 
-  case 143:
+  case 143: /* physmbr_decl: PT_PHYSMBR '(' KW_column phys_coldef PHYSICAL_IDENTIFIER_1_0 ';' ')'  */
                                                 { (yyval.node) = AST :: Make ( ctx, (yyvsp[-6].tok), (yyvsp[-3].node), AST :: Make ( ctx, (yyvsp[-2].tok) ) ); }
     break;
 
-  case 144:
+  case 144: /* physmbr_decl: PT_PHYSMBR '(' phys_coldef PHYSICAL_IDENTIFIER_1_0 '=' cond_expr ';' ')'  */
                                                 { (yyval.node) = AST :: Make ( ctx, (yyvsp[-7].tok), (yyvsp[-5].node), AST :: Make ( ctx, (yyvsp[-4].tok) ), (yyvsp[-2].expr) ); }
     break;
 
-  case 145:
+  case 145: /* physmbr_decl: PT_PHYSMBR '(' KW_column phys_coldef PHYSICAL_IDENTIFIER_1_0 '=' cond_expr ';' ')'  */
                                                 { (yyval.node) = AST :: Make ( ctx, (yyvsp[-8].tok), (yyvsp[-5].node), AST :: Make ( ctx, (yyvsp[-4].tok) ), (yyvsp[-2].expr) ); }
     break;
 
-  case 146:
+  case 146: /* phys_coldef: PT_PHYSCOLDEF '(' col_schema_parms_opt fqn_opt_vers factory_parms_opt ')'  */
                                                                                    { (yyval.node) = AST :: Make ( ctx, (yyvsp[-5].tok), (yyvsp[-3].node), (yyvsp[-2].fqn), (yyvsp[-1].node) ); }
     break;
 
-  case 147:
+  case 147: /* col_schema_parms_opt: PT_EMPTY  */
                                                                             { (yyval.node) = AST :: Make ( ctx ); }
     break;
 
-  case 148:
+  case 148: /* col_schema_parms_opt: PT_COLSCHEMAPARMS '(' '<' PT_ASTLIST '(' col_schema_parms ')' '>' ')'  */
                                                                             { (yyval.node) = (yyvsp[-3].node); }
     break;
 
-  case 149:
+  case 149: /* col_schema_parms: col_schema_parm  */
                                         { (yyval.node) = AST :: Make ( ctx ); (yyval.node) -> AddNode ( ctx, (yyvsp[0].node) ); }
     break;
 
-  case 150:
+  case 150: /* col_schema_parms: col_schema_parms col_schema_parm  */
                                         { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( ctx, (yyvsp[0].node) ); }
     break;
 
-  case 151:
+  case 151: /* col_schema_parm: PT_COLSCHEMAPARAM '(' fqn '=' col_schema_value ')'  */
                                                             { (yyval.node) = AST :: Make ( ctx, (yyvsp[-5].tok), (yyvsp[-3].fqn), (yyvsp[-1].node) ); }
     break;
 
-  case 152:
+  case 152: /* col_schema_parm: col_schema_value  */
                                                             { (yyval.node) = (yyvsp[0].node); }
     break;
 
-  case 153:
+  case 153: /* col_schema_value: fqn  */
                 { (yyval.node) = (yyvsp[0].fqn); }
     break;
 
-  case 154:
+  case 154: /* col_schema_value: uint_expr  */
                 { (yyval.node) = (yyvsp[0].expr); }
     break;
 
-  case 155:
+  case 155: /* database: PT_DATABASE '(' KW_database fqn_vers dbdad_opt dbbody ')'  */
                                                                 { (yyval.node) = p_builder . DatabaseDef ( ctx, (yyvsp[-6].tok), (yyvsp[-3].fqn), (yyvsp[-2].node), (yyvsp[-1].node) ); }
     break;
 
-  case 156:
+  case 156: /* dbdad_opt: PT_EMPTY  */
                                            { (yyval.node) = AST :: Make ( ctx, (yyvsp[0].tok) ); }
     break;
 
-  case 157:
+  case 157: /* dbdad_opt: PT_DBDAD '(' '=' fqn_opt_vers ')'  */
                                            { (yyval.node) = (yyvsp[-1].fqn); }
     break;
 
-  case 158:
+  case 158: /* dbbody: PT_DBBODY '(' '{' PT_ASTLIST '(' db_members ')' '}' ')'  */
                                                                 { (yyval.node) = (yyvsp[-3].node); }
     break;
 
-  case 159:
+  case 159: /* dbbody: PT_DBBODY '(' '{' '}' ')'  */
                                                                 { (yyval.node) = AST :: Make ( ctx, (yyvsp[-4].tok) ); }
     break;
 
-  case 160:
+  case 160: /* db_members: db_member  */
                               { (yyval.node) = AST :: Make ( ctx ); (yyval.node) -> AddNode ( ctx, (yyvsp[0].node) ); }
     break;
 
-  case 161:
+  case 161: /* db_members: ';'  */
                               { (yyval.node) = AST :: Make ( ctx ); }
     break;
 
-  case 162:
+  case 162: /* db_members: db_members db_member  */
                               { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( ctx, (yyvsp[0].node) ); }
     break;
 
-  case 163:
+  case 163: /* db_members: db_members ';'  */
                               { (yyval.node) = (yyvsp[-1].node); }
     break;
 
-  case 164:
+  case 164: /* db_member: PT_DBMEMBER '(' template_opt KW_database fqn_opt_vers ident ';' ')'  */
         { (yyval.node) = AST :: Make ( ctx, (yyvsp[-7].tok), (yyvsp[-5].node), (yyvsp[-3].fqn), (yyvsp[-2].fqn) ); }
     break;
 
-  case 165:
+  case 165: /* db_member: PT_TBLMEMBER '(' template_opt KW_table fqn_opt_vers ident ';' ')'  */
         { (yyval.node) = AST :: Make ( ctx, (yyvsp[-7].tok), (yyvsp[-5].node), (yyvsp[-3].fqn), (yyvsp[-2].fqn) ); }
     break;
 
-  case 166:
+  case 166: /* db_member: PT_ALIASMEMBER '(' KW_alias view_spec ident ';' ')'  */
         { (yyval.node) = AST :: Make ( ctx, (yyvsp[-6].tok), (yyvsp[-3].node), (yyvsp[-2].fqn) ); }
     break;
 
-  case 167:
+  case 167: /* template_opt: PT_EMPTY  */
                     { (yyval.node) = AST :: Make ( ctx, (yyvsp[0].tok) ); }
     break;
 
-  case 168:
+  case 168: /* template_opt: KW_template  */
                     { (yyval.node) = AST :: Make ( ctx, (yyvsp[0].tok) ); }
     break;
 
-  case 169:
+  case 169: /* view_spec: PT_VIEWSPEC '(' fqn_opt_vers '<' PT_ASTLIST '(' view_parms ')' '>' ')'  */
         { (yyval.node) = AST :: Make ( ctx, (yyvsp[-9].tok) ); (yyval.node) -> AddNode ( ctx, (yyvsp[-7].fqn) ); (yyval.node) -> AddNode ( ctx, (yyvsp[-3].node) ); }
     break;
 
-  case 170:
+  case 170: /* view_parms: ident  */
                             { (yyval.node) = AST :: Make ( ctx ); (yyval.node) -> AddNode ( ctx, (yyvsp[0].fqn) ); }
     break;
 
-  case 171:
+  case 171: /* view_parms: view_parms ',' ident  */
                             { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( ctx, (yyvsp[0].fqn) ); }
     break;
 
-  case 172:
+  case 172: /* include: PT_INCLUDE '(' KW_include STRING ')'  */
                                            { (yyval.node) = p_builder . Include ( ctx, (yyvsp[-2].tok), (yyvsp[-1].tok) ); }
     break;
 
-  case 173:
+  case 173: /* cond_expr: PT_ASTLIST '(' cond_chain ')'  */
                                     { (yyval.expr) = (yyvsp[-1].expr); }
     break;
 
-  case 174:
+  case 174: /* cond_chain: expr  */
                              { (yyval.expr) = AST_Expr :: Make ( ctx, (yyvsp[0].expr) ); }
     break;
 
-  case 175:
+  case 175: /* cond_chain: cond_chain '|' expr  */
                              { (yyval.expr) = (yyvsp[-2].expr); (yyval.expr) -> AddNode ( ctx, (yyvsp[0].expr) ); }
     break;
 
-  case 176:
+  case 176: /* expr: fqn  */
                                     { (yyval.expr) = AST_Expr :: Make ( ctx, (yyvsp[0].fqn) ); }
     break;
 
-  case 177:
+  case 177: /* expr: PHYSICAL_IDENTIFIER_1_0  */
                                     { (yyval.expr) = AST_Expr :: Make ( ctx, (yyvsp[0].tok) ); }
     break;
 
-  case 178:
+  case 178: /* expr: '@'  */
                                     { (yyval.expr) = AST_Expr :: Make ( ctx, (yyvsp[0].tok) ); }
     break;
 
-  case 179:
+  case 179: /* expr: func_expr  */
                                     { (yyval.expr) = (yyvsp[0].expr); }
     break;
 
-  case 180:
+  case 180: /* expr: uint_expr  */
                                     { (yyval.expr) = (yyvsp[0].expr); }
     break;
 
-  case 181:
+  case 181: /* expr: float_expr  */
                                     { (yyval.expr) = (yyvsp[0].expr); }
     break;
 
-  case 182:
+  case 182: /* expr: string_expr  */
                                     { (yyval.expr) = (yyvsp[0].expr); }
     break;
 
-  case 183:
+  case 183: /* expr: const_vect_expr  */
                                     { (yyval.expr) = (yyvsp[0].expr); }
     break;
 
-  case 184:
+  case 184: /* expr: bool_expr  */
                                     { (yyval.expr) = (yyvsp[0].expr); }
     break;
 
-  case 185:
+  case 185: /* expr: negate_expr  */
                                     { (yyval.expr) = (yyvsp[0].expr); }
     break;
 
-  case 186:
+  case 186: /* expr: PT_UNARYPLUS '(' '+' expr ')'  */
                                     { (yyval.expr) = (yyvsp[-1].expr); }
     break;
 
-  case 187:
+  case 187: /* expr: cast_expr  */
                                     { (yyval.expr) = (yyvsp[0].expr); }
     break;
 
-  case 188:
+  case 188: /* expr: member_expr  */
                                     { (yyval.expr) = (yyvsp[0].expr); }
     break;
 
-  case 189:
+  case 189: /* expr: join_expr  */
                                     { (yyval.expr) = (yyvsp[0].expr); }
     break;
 
-  case 190:
+  case 190: /* func_expr: PT_FUNCEXPR '(' schema_parts_opt fqn_opt_vers factory_parms_opt '(' func_parms_opt ')' ')'  */
         { (yyval.expr) = AST_Expr :: Make ( ctx, (yyvsp[-8].tok) ); (yyval.expr) -> AddNode ( ctx, (yyvsp[-6].node) ); (yyval.expr) -> AddNode ( ctx, (yyvsp[-5].fqn) ); (yyval.expr) -> AddNode ( ctx, (yyvsp[-4].node) ); (yyval.expr) -> AddNode ( ctx, (yyvsp[-2].node) ); }
     break;
 
-  case 191:
+  case 191: /* schema_parts_opt: %empty  */
                                                 { (yyval.node) = AST :: Make ( ctx, PT_EMPTY ); }
     break;
 
-  case 192:
+  case 192: /* schema_parts_opt: '<' PT_ASTLIST '(' schema_parms ')' '>'  */
                                                 { (yyval.node) = (yyvsp[-2].node); }
     break;
 
-  case 193:
+  case 193: /* schema_parms: schema_parm  */
                                     { (yyval.node) = AST :: Make ( ctx ); (yyval.node) -> AddNode ( ctx, (yyvsp[0].node) ); }
     break;
 
-  case 194:
+  case 194: /* schema_parms: schema_parms ',' schema_parm  */
                                     { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( ctx, (yyvsp[0].node) ); }
     break;
 
-  case 195:
+  case 195: /* schema_parm: fqn  */
                     { (yyval.node) = (yyvsp[0].fqn); }
     break;
 
-  case 196:
+  case 196: /* schema_parm: arrayspec  */
                     { (yyval.node) = (yyvsp[0].node); }
     break;
 
-  case 197:
+  case 197: /* schema_parm: uint_expr  */
                     { (yyval.node) = (yyvsp[0].expr); }
     break;
 
-  case 198:
+  case 198: /* factory_parms_opt: PT_EMPTY  */
                             { (yyval.node) = AST :: Make ( ctx, (yyvsp[0].tok) ); }
     break;
 
-  case 199:
+  case 199: /* factory_parms_opt: factory_parms_list  */
                             { (yyval.node) = (yyvsp[0].node); }
     break;
 
-  case 200:
+  case 200: /* factory_parms_list: PT_FACTPARMS '(' '<' PT_ASTLIST '(' factory_parms ')' '>' ')'  */
                                                                         { (yyval.node) = (yyvsp[-3].node); }
     break;
 
-  case 201:
+  case 201: /* factory_parms: expr  */
                                 { (yyval.node) = AST :: Make ( ctx ); (yyval.node) -> AddNode ( ctx, (yyvsp[0].expr) ); }
     break;
 
-  case 202:
+  case 202: /* factory_parms: factory_parms ',' expr  */
                                 { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( ctx, (yyvsp[0].expr) ); }
     break;
 
-  case 203:
+  case 203: /* func_parms_opt: PT_EMPTY  */
                                     { (yyval.node) = AST :: Make ( ctx, (yyvsp[0].tok) ); }
     break;
 
-  case 204:
+  case 204: /* func_parms_opt: PT_ASTLIST '(' expr_list ')'  */
                                     { (yyval.node) = (yyvsp[-1].node); }
     break;
 
-  case 205:
+  case 205: /* expr_list: expr  */
                             { (yyval.node) = AST :: Make ( ctx ); (yyval.node) -> AddNode ( ctx, (yyvsp[0].expr) ); }
     break;
 
-  case 206:
+  case 206: /* expr_list: expr_list ',' expr  */
                             { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( ctx, (yyvsp[0].expr) ); }
     break;
 
-  case 207:
+  case 207: /* uint_expr: PT_UINT '(' DECIMAL ')'  */
                                 { (yyval.expr) = AST_Expr :: Make ( ctx, (yyvsp[-3].tok) ); (yyval.expr) -> AddNode ( ctx, (yyvsp[-1].tok) ); }
     break;
 
-  case 208:
+  case 208: /* uint_expr: PT_UINT '(' HEX ')'  */
                                 { (yyval.expr) = AST_Expr :: Make ( ctx, (yyvsp[-3].tok) ); (yyval.expr) -> AddNode ( ctx, (yyvsp[-1].tok) ); }
     break;
 
-  case 209:
+  case 209: /* uint_expr: PT_UINT '(' OCTAL ')'  */
                                 { (yyval.expr) = AST_Expr :: Make ( ctx, (yyvsp[-3].tok) ); (yyval.expr) -> AddNode ( ctx, (yyvsp[-1].tok) ); }
     break;
 
-  case 210:
+  case 210: /* float_expr: FLOAT_  */
                  { (yyval.expr) = AST_Expr :: Make ( ctx, (yyvsp[0].tok) ); }
     break;
 
-  case 211:
+  case 211: /* float_expr: EXP_FLOAT  */
                 { (yyval.expr) = AST_Expr :: Make ( ctx, (yyvsp[0].tok) ); }
     break;
 
-  case 212:
+  case 212: /* string_expr: STRING  */
                         { (yyval.expr) = AST_Expr :: Make ( ctx, (yyvsp[0].tok) ); }
     break;
 
-  case 213:
+  case 213: /* string_expr: ESCAPED_STRING  */
                         { (yyval.expr) = AST_Expr :: Make ( ctx, (yyvsp[0].tok) ); }
     break;
 
-  case 214:
+  case 214: /* const_vect_expr: PT_CONSTVECT '(' '[' PT_ASTLIST '(' expr_list ')' ']' ')'  */
                                                                     { (yyval.expr) = AST_Expr :: Make ( ctx, (yyvsp[-8].tok) ); (yyval.expr) -> AddNode ( ctx, (yyvsp[-3].node) ); }
     break;
 
-  case 215:
+  case 215: /* bool_expr: KW_true  */
                 { (yyval.expr) = AST_Expr :: Make ( ctx, (yyvsp[0].tok) ); }
     break;
 
-  case 216:
+  case 216: /* bool_expr: KW_false  */
                 { (yyval.expr) = AST_Expr :: Make ( ctx, (yyvsp[0].tok) ); }
     break;
 
-  case 217:
+  case 217: /* negate_expr: PT_NEGATE '(' '-' expr ')'  */
                                  { (yyval.expr) = AST_Expr :: Make ( ctx, (yyvsp[-4].tok) ); (yyval.expr) -> AddNode ( ctx, (yyvsp[-1].expr) ); }
     break;
 
-  case 218:
+  case 218: /* cast_expr: PT_CASTEXPR '(' '(' type_expr ')' expr ')'  */
                                                   { (yyval.expr) = AST_Expr :: Make ( ctx, (yyvsp[-6].tok) ); (yyval.expr) -> AddNode ( ctx, (yyvsp[-3].node) ); (yyval.expr) -> AddNode ( ctx, (yyvsp[-1].expr) ); }
     break;
 
-  case 219:
+  case 219: /* type_expr: typespec  */
                                         { (yyval.node) = (yyvsp[0].node); }
     break;
 
-  case 220:
+  case 220: /* type_expr: PT_TYPEEXPR '(' fqn '/' fqn ')'  */
                                         { (yyval.node) = AST :: Make ( ctx, (yyvsp[-5].tok), (yyvsp[-3].fqn), (yyvsp[-1].fqn) ); }
     break;
 
-  case 221:
+  case 221: /* member_expr: PT_MEMBEREXPR '(' ident '.' ident ')'  */
                                                             { (yyval.expr) = AST_Expr :: Make ( ctx, (yyvsp[-5].tok) ); (yyval.expr) -> AddNode ( ctx, (yyvsp[-3].fqn) ); (yyval.expr) -> AddNode ( ctx, (yyvsp[-1].fqn) ); }
     break;
 
-  case 222:
+  case 222: /* member_expr: PT_MEMBEREXPR '(' ident PHYSICAL_IDENTIFIER_1_0 ')'  */
         {   /* remove leading '.'*/
             (yyval.expr) = AST_Expr :: Make ( ctx, (yyvsp[-4].tok) );
             (yyval.expr) -> AddNode ( ctx, (yyvsp[-2].fqn) );
@@ -3028,11 +3163,11 @@ yyreduce:
         }
     break;
 
-  case 223:
+  case 223: /* join_expr: PT_JOINEXPR '(' ident '[' cond_expr ']' '.' ident ')'  */
         { (yyval.expr) = AST_Expr :: Make ( ctx, (yyvsp[-8].tok) ); (yyval.expr) -> AddNode ( ctx, (yyvsp[-6].fqn) ); (yyval.expr) -> AddNode ( ctx, (yyvsp[-4].expr) ); (yyval.expr) -> AddNode ( ctx, (yyvsp[-1].fqn) ); }
     break;
 
-  case 224:
+  case 224: /* join_expr: PT_JOINEXPR '(' ident '[' cond_expr ']' PHYSICAL_IDENTIFIER_1_0 ')'  */
         {   /* remove leading '.'*/
             (yyval.expr) = AST_Expr :: Make ( ctx, (yyvsp[-7].tok) );
             (yyval.expr) -> AddNode ( ctx, (yyvsp[-5].fqn) );
@@ -3044,103 +3179,103 @@ yyreduce:
         }
     break;
 
-  case 225:
+  case 225: /* fqn: PT_FQN '(' qualnames ')'  */
                                 { (yyval.fqn) = (yyvsp[-1].fqn); }
     break;
 
-  case 226:
+  case 226: /* qualnames: PT_IDENT '(' IDENTIFIER_1_0 ')'  */
                                                         { (yyval.fqn) = AST_FQN :: Make ( ctx, (yyvsp[-3].tok) ); (yyval.fqn) -> AddNode ( ctx, (yyvsp[-1].tok) ); }
     break;
 
-  case 227:
+  case 227: /* qualnames: qualnames ':' PT_IDENT '(' IDENTIFIER_1_0 ')'  */
                                                         { (yyval.fqn) = (yyvsp[-5].fqn); (yyval.fqn) -> AddNode ( ctx, (yyvsp[-1].tok) ); }
     break;
 
-  case 228:
+  case 228: /* ident: PT_IDENT '(' IDENTIFIER_1_0 ')'  */
                                         { (yyval.fqn) = AST_FQN :: Make ( ctx, (yyvsp[-3].tok) ); (yyval.fqn) -> AddNode ( ctx, (yyvsp[-1].tok) ); }
     break;
 
-  case 229:
+  case 229: /* fqn_opt_vers: fqn  */
                 { (yyval.fqn) = (yyvsp[0].fqn); }
     break;
 
-  case 230:
+  case 230: /* fqn_opt_vers: fqn_vers  */
                 { (yyval.fqn) = (yyvsp[0].fqn); }
     break;
 
-  case 231:
+  case 231: /* fqn_vers: PT_VERSNAME '(' fqn VERSION ')'  */
                                         { (yyval.fqn) = (yyvsp[-2].fqn); (yyval.fqn) -> SetVersion ( (yyvsp[-1].tok) -> GetValue () ); }
     break;
 
-  case 232:
+  case 232: /* view: PT_VIEW '(' KW_view fqn_vers '<' PT_ASTLIST '(' view_parms ')' '>' view_parents_opt '{' view_body_opt '}' ')'  */
         { (yyval.node) = p_builder . ViewDef ( ctx, (yyvsp[-14].tok), (yyvsp[-11].fqn), (yyvsp[-7].node), (yyvsp[-4].node), (yyvsp[-2].node) ); }
     break;
 
-  case 233:
+  case 233: /* view_parms: view_parm  */
                                 { (yyval.node) = AST :: Make ( ctx ); (yyval.node) -> AddNode ( ctx, (yyvsp[0].node) ); }
     break;
 
-  case 234:
+  case 234: /* view_parms: view_parms ',' view_parm  */
                                 { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( ctx, (yyvsp[0].node) ); }
     break;
 
-  case 235:
+  case 235: /* view_parm: PT_VIEWPARAM '(' fqn_opt_vers ident ')'  */
                                                 { (yyval.node) = AST :: Make ( ctx, (yyvsp[-4].tok), (yyvsp[-2].fqn), (yyvsp[-1].fqn) ); }
     break;
 
-  case 236:
+  case 236: /* view_body_opt: PT_EMPTY  */
                                     { (yyval.node) = AST :: Make ( ctx, (yyvsp[0].tok) ); }
     break;
 
-  case 237:
+  case 237: /* view_body_opt: PT_ASTLIST '(' view_body ')'  */
                                     { (yyval.node) = (yyvsp[-1].node); }
     break;
 
-  case 238:
+  case 238: /* view_body: view_member  */
                             { (yyval.node) = AST :: Make ( ctx ); (yyval.node) -> AddNode ( ctx, (yyvsp[0].node) ); }
     break;
 
-  case 239:
+  case 239: /* view_body: view_body view_member  */
                             { (yyval.node) = (yyvsp[-1].node); (yyval.node) -> AddNode ( ctx, (yyvsp[0].node) ); }
     break;
 
-  case 240:
+  case 240: /* view_member: PT_PRODSTMT '(' typespec ident '=' cond_expr ';' ')'  */
                                                                     { (yyval.node) = AST :: Make ( ctx, (yyvsp[-7].tok), (yyvsp[-5].node), (yyvsp[-4].fqn), (yyvsp[-2].expr) ); }
     break;
 
-  case 241:
+  case 241: /* view_member: PT_COLUMN '(' KW_column typespec ident '=' cond_expr ';' ')'  */
                                                                     { (yyval.node) = AST :: Make ( ctx, (yyvsp[-8].tok), (yyvsp[-5].node), (yyvsp[-4].fqn), (yyvsp[-2].expr) ); }
     break;
 
-  case 242:
+  case 242: /* view_member: ';'  */
                                                                     { (yyval.node) = AST :: Make ( ctx, PT_EMPTY ); }
     break;
 
-  case 243:
+  case 243: /* view_parents_opt: PT_EMPTY  */
                                                                     { (yyval.node) = AST :: Make ( ctx, (yyvsp[0].tok) ); }
     break;
 
-  case 244:
+  case 244: /* view_parents_opt: PT_VIEWPARENTS '(' '=' PT_ASTLIST '(' view_parents ')' ')'  */
                                                                     { (yyval.node) = AST :: Make ( ctx, (yyvsp[-7].tok), (yyvsp[-2].node) ); }
     break;
 
-  case 245:
+  case 245: /* view_parents: view_parent  */
                                     { (yyval.node) = AST :: Make ( ctx ); (yyval.node) -> AddNode ( ctx, (yyvsp[0].node) ); }
     break;
 
-  case 246:
+  case 246: /* view_parents: view_parents ',' view_parent  */
                                     { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( ctx, (yyvsp[0].node) ); }
     break;
 
-  case 247:
+  case 247: /* view_parent: PT_VIEWPARENT '(' fqn_opt_vers '<' PT_ASTLIST '(' view_parent_parms ')' '>' ')'  */
         { (yyval.node) = AST :: Make ( ctx, (yyvsp[-9].tok), (yyvsp[-7].fqn), (yyvsp[-3].node) ); }
     break;
 
-  case 248:
+  case 248: /* view_parent_parms: ident  */
                                     { (yyval.node) = AST :: Make ( ctx ); (yyval.node) -> AddNode ( ctx, (yyvsp[0].fqn) ); }
     break;
 
-  case 249:
+  case 249: /* view_parent_parms: view_parent_parms ',' ident  */
                                     { (yyval.node) = (yyvsp[-2].node); (yyval.node) -> AddNode ( ctx, (yyvsp[0].fqn) ); }
     break;
 
@@ -3159,11 +3294,10 @@ yyreduce:
      case of YYERROR or YYBACKUP, subsequent parser actions might lead
      to an incorrect destructor call or verbose syntax error message
      before the lookahead is translated.  */
-  YY_SYMBOL_PRINT ("-> $$ =", yyr1[yyn], &yyval, &yyloc);
+  YY_SYMBOL_PRINT ("-> $$ =", YY_CAST (yysymbol_kind_t, yyr1[yyn]), &yyval, &yyloc);
 
   YYPOPSTACK (yylen);
   yylen = 0;
-  YY_STACK_PRINT (yyss, yyssp);
 
   *++yyvsp = yyval;
 
@@ -3187,59 +3321,53 @@ yyreduce:
 yyerrlab:
   /* Make sure we have latest lookahead translation.  See comments at
      user semantic actions for why this is necessary.  */
-  yytoken = yychar == YYEMPTY ? YYEMPTY : YYTRANSLATE (yychar);
-
+  yytoken = yychar == YYEMPTY ? YYSYMBOL_YYEMPTY : YYTRANSLATE (yychar);
   /* If not already recovering from an error, report this error.  */
   if (!yyerrstatus)
     {
       ++yynerrs;
-#if ! YYERROR_VERBOSE
-      yyerror (ctx, p_ast, p_builder, p_sb, YY_("syntax error"));
-#else
-# define YYSYNTAX_ERROR yysyntax_error (&yymsg_alloc, &yymsg, \
-                                        yyssp, yytoken)
       {
+        yypcontext_t yyctx
+          = {yyssp, yytoken};
         char const *yymsgp = YY_("syntax error");
         int yysyntax_error_status;
-        yysyntax_error_status = YYSYNTAX_ERROR;
+        yysyntax_error_status = yysyntax_error (&yymsg_alloc, &yymsg, &yyctx);
         if (yysyntax_error_status == 0)
           yymsgp = yymsg;
-        else if (yysyntax_error_status == 1)
+        else if (yysyntax_error_status == -1)
           {
             if (yymsg != yymsgbuf)
               YYSTACK_FREE (yymsg);
-            yymsg = YY_CAST (char *, YYSTACK_ALLOC (YY_CAST (YYSIZE_T, yymsg_alloc)));
-            if (!yymsg)
+            yymsg = YY_CAST (char *,
+                             YYSTACK_ALLOC (YY_CAST (YYSIZE_T, yymsg_alloc)));
+            if (yymsg)
               {
-                yymsg = yymsgbuf;
-                yymsg_alloc = sizeof yymsgbuf;
-                yysyntax_error_status = 2;
+                yysyntax_error_status
+                  = yysyntax_error (&yymsg_alloc, &yymsg, &yyctx);
+                yymsgp = yymsg;
               }
             else
               {
-                yysyntax_error_status = YYSYNTAX_ERROR;
-                yymsgp = yymsg;
+                yymsg = yymsgbuf;
+                yymsg_alloc = sizeof yymsgbuf;
+                yysyntax_error_status = YYENOMEM;
               }
           }
         yyerror (ctx, p_ast, p_builder, p_sb, yymsgp);
-        if (yysyntax_error_status == 2)
-          goto yyexhaustedlab;
+        if (yysyntax_error_status == YYENOMEM)
+          YYNOMEM;
       }
-# undef YYSYNTAX_ERROR
-#endif
     }
-
-
 
   if (yyerrstatus == 3)
     {
       /* If just tried and failed to reuse lookahead token after an
          error, discard it.  */
 
-      if (yychar <= YYEOF)
+      if (yychar <= END_SOURCE)
         {
           /* Return failure if at end of input.  */
-          if (yychar == YYEOF)
+          if (yychar == END_SOURCE)
             YYABORT;
         }
       else
@@ -3263,6 +3391,7 @@ yyerrorlab:
      label yyerrorlab therefore never appears in user code.  */
   if (0)
     YYERROR;
+  ++yynerrs;
 
   /* Do not reclaim the symbols of the rule whose action triggered
      this YYERROR.  */
@@ -3279,13 +3408,14 @@ yyerrorlab:
 yyerrlab1:
   yyerrstatus = 3;      /* Each real token shifted decrements this.  */
 
+  /* Pop stack until we find a state that shifts the error token.  */
   for (;;)
     {
       yyn = yypact[yystate];
       if (!yypact_value_is_default (yyn))
         {
-          yyn += YYTERROR;
-          if (0 <= yyn && yyn <= YYLAST && yycheck[yyn] == YYTERROR)
+          yyn += YYSYMBOL_YYerror;
+          if (0 <= yyn && yyn <= YYLAST && yycheck[yyn] == YYSYMBOL_YYerror)
             {
               yyn = yytable[yyn];
               if (0 < yyn)
@@ -3299,7 +3429,7 @@ yyerrlab1:
 
 
       yydestruct ("Error: popping",
-                  yystos[yystate], yyvsp, ctx, p_ast, p_builder, p_sb);
+                  YY_ACCESSING_SYMBOL (yystate), yyvsp, ctx, p_ast, p_builder, p_sb);
       YYPOPSTACK (1);
       yystate = *yyssp;
       YY_STACK_PRINT (yyss, yyssp);
@@ -3311,7 +3441,7 @@ yyerrlab1:
 
 
   /* Shift the error token.  */
-  YY_SYMBOL_PRINT ("Shifting", yystos[yyn], yyvsp, yylsp);
+  YY_SYMBOL_PRINT ("Shifting", YY_ACCESSING_SYMBOL (yyn), yyvsp, yylsp);
 
   yystate = yyn;
   goto yynewstate;
@@ -3322,7 +3452,7 @@ yyerrlab1:
 `-------------------------------------*/
 yyacceptlab:
   yyresult = 0;
-  goto yyreturn;
+  goto yyreturnlab;
 
 
 /*-----------------------------------.
@@ -3330,24 +3460,22 @@ yyacceptlab:
 `-----------------------------------*/
 yyabortlab:
   yyresult = 1;
-  goto yyreturn;
+  goto yyreturnlab;
 
 
-#if !defined yyoverflow || YYERROR_VERBOSE
-/*-------------------------------------------------.
-| yyexhaustedlab -- memory exhaustion comes here.  |
-`-------------------------------------------------*/
+/*-----------------------------------------------------------.
+| yyexhaustedlab -- YYNOMEM (memory exhaustion) comes here.  |
+`-----------------------------------------------------------*/
 yyexhaustedlab:
   yyerror (ctx, p_ast, p_builder, p_sb, YY_("memory exhausted"));
   yyresult = 2;
-  /* Fall through.  */
-#endif
+  goto yyreturnlab;
 
 
-/*-----------------------------------------------------.
-| yyreturn -- parsing is finished, return the result.  |
-`-----------------------------------------------------*/
-yyreturn:
+/*----------------------------------------------------------.
+| yyreturnlab -- parsing is finished, clean up and return.  |
+`----------------------------------------------------------*/
+yyreturnlab:
   if (yychar != YYEMPTY)
     {
       /* Make sure we have latest lookahead translation.  See comments at
@@ -3363,16 +3491,15 @@ yyreturn:
   while (yyssp != yyss)
     {
       yydestruct ("Cleanup: popping",
-                  yystos[+*yyssp], yyvsp, ctx, p_ast, p_builder, p_sb);
+                  YY_ACCESSING_SYMBOL (+*yyssp), yyvsp, ctx, p_ast, p_builder, p_sb);
       YYPOPSTACK (1);
     }
 #ifndef yyoverflow
   if (yyss != yyssa)
     YYSTACK_FREE (yyss);
 #endif
-#if YYERROR_VERBOSE
   if (yymsg != yymsgbuf)
     YYSTACK_FREE (yymsg);
-#endif
   return yyresult;
 }
+

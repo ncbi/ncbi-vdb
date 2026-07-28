@@ -46,7 +46,7 @@ if( FLEX_FOUND AND BISON_FOUND )
         COMPILE_FLAGS "--debug --noline" )
     set( JsonScanner ${FLEX_JsonFlex_OUTPUTS} )
     BISON_TARGET( JsonGrammar json-grammar.y ${CMAKE_CURRENT_SOURCE_DIR}/zz_json-grammar.c
-        COMPILE_FLAGS "-Wno-other --no-lines -r state --defines=${CMAKE_CURRENT_SOURCE_DIR}/zz_json-grammar.h" )
+        COMPILE_FLAGS "-Wno-other --no-lines -r state --defines=${CMAKE_CURRENT_SOURCE_DIR}/zz_json-grammar.h  -Wno-deprecated" )
     set( JsonParser ${BISON_JsonGrammar_OUTPUT_SOURCE} )
     ADD_FLEX_BISON_DEPENDENCY(JsonFlex JsonGrammar)
     SET_DIRECTORY_PROPERTIES(PROPERTIES CLEAN_NO_CUSTOM 1)
