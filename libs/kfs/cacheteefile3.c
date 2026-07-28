@@ -590,7 +590,9 @@ rc_t CC KCacheTeeFileDestroy ( KCacheTeeFile_v3 *self )
 
        this must be done before sealing the queue */
     STATUS ( STAT_PRG, "%s - setting 'quitting' flag\n", __func__ );
+    KLockAcquire(self->cache_lock);
     self -> quitting = true;
+    KLockUnlock(self->cache_lock);
 
     /* wake the background thread */
     STATUS ( STAT_PRG, "%s - signaling background thread to exit\n", __func__ );
@@ -1424,8 +1426,14 @@ rc_t KCacheTeeFileBGLoop ( KCacheTeeFile_v3 * self )
     size_t min_read_amount = self -> page_size * self -> cluster_fact;
 
     STATUS ( STAT_PRG, "BG: %s - entering loop\n", __func__ );
-    while ( ! self -> quitting )
+    while ( true )
     {
+        KLockAcquire(self->cache_lock);
+        if (self->quitting) {
+            KLockUnlock(self->cache_lock);
+            break;
+        }
+        KLockUnlock(self->cache_lock);
         STATUS ( STAT_PRG, "BG: %s - acquiring queue lock\n", __func__ );
         rc = KLockAcquire ( self -> qlock );
         if ( rc != 0 )
