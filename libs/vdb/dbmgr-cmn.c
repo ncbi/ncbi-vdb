@@ -683,7 +683,7 @@ LIB_EXPORT rc_t CC VDBManagerGetObjVersion ( const VDBManager *self, ver_t * ver
             }
 
             VPathRelease(vp); vp = NULL;
- 
+
             if ( rc == 0 )
             {
                 * version = VDBManagerGetVersFromMeta ( meta, path_type == kptDatabase );
@@ -1027,7 +1027,7 @@ static const char * VDBManagerGetQualityImpl(const VDBManager * self,
     rc_t rc = 0;
 
     static bool latch;
-    
+
     if (force) {
         /* reset for test-only */
         latch = false;
