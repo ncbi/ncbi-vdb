@@ -323,6 +323,9 @@ rc_t FileAddSdlLocation(struct File * file, const KJsonObject * node,
                 rc = VPath_SetQuality(path, &data);
 
             if (rc == 0)
+                rc = VPathSetRegion(path, ldata.reg);
+
+            if (rc == 0)
                 VPathMarkHighReliability(path, true);
 
             if (rc != 0)

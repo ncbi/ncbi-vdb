@@ -340,9 +340,20 @@ static Cloud_vt_v1 AWS_vt_v1 =
  */
 LIB_EXPORT rc_t CC CloudMgrMakeAWS ( const CloudMgr * self, AWS ** p_aws )
 {
-    rc_t rc;
-//TODO: check self, aws
-    AWS * aws = calloc ( 1, sizeof * aws );
+    rc_t rc = 0;
+    AWS* aws = NULL;
+
+    if (p_aws == NULL)
+        rc = RC(rcCloud, rcMgr, rcAllocating, rcParam, rcNull);
+    *p_aws = NULL;
+
+    if (self == NULL)
+        rc = RC(rcCloud, rcMgr, rcAllocating, rcSelf, rcNull);
+    
+    if (rc != 0)
+        return rc;
+
+    aws = calloc ( 1, sizeof * aws );
     if ( aws == NULL )
     {
         rc = RC ( rcCloud, rcMgr, rcAllocating, rcMemory, rcExhausted );
@@ -352,7 +363,16 @@ LIB_EXPORT rc_t CC CloudMgrMakeAWS ( const CloudMgr * self, AWS ** p_aws )
         /* capture from self->kfg */
         bool user_agrees_to_pay = false;
         bool user_agrees_to_reveal_instance_identity = false;
-        if (self != NULL) {
+        bool version2 = false;
+        {
+            char* e = getenv("NCBI_VDB_AWS_VERSION");
+            if (e != NULL) {
+                if (e[0] == '2')
+                    version2 = true;
+            }
+            else
+                KConfig_Use_Aws_Version2(self->kfg, &version2);
+         
             KConfig_Get_User_Accept_Aws_Charges(self->kfg,
                 &user_agrees_to_pay);
             KConfig_Get_Report_Cloud_Instance_Identity(self->kfg,
@@ -368,6 +388,7 @@ LIB_EXPORT rc_t CC CloudMgrMakeAWS ( const CloudMgr * self, AWS ** p_aws )
             if ( rc == 0 )
             {
                 AWSInitAccess( aws );
+                aws->version2 = version2;
                 * p_aws = aws;
             }
             else

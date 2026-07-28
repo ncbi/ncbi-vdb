@@ -58,14 +58,21 @@ TEST_SUITE( HttpRequestVerifyURLSuite );
 using namespace std;
 using namespace ncbi::NK;
 
-#define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); if (rc2 != 0 && rc == 0) { rc = rc2; } obj = NULL; } while (false)
+#define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
+              if (rc2 != 0 && rc == 0) { rc = rc2; } obj = NULL; } while (false)
 
 class HttpRequestFixture : public HttpFixture
 {
 public:
-    void MakeRequest(const char * p_urlBase)
+    void MakeRequest(const char * p_urlBase, const char * query = nullptr,
+        const char * url = nullptr)
     {
-        m_url = MakeURL( p_urlBase );
+        string q, u;
+        if (query != nullptr)
+            q = query;
+        if (url != nullptr)
+            u = url;
+        m_url = MakeURL( p_urlBase, q, u );
         if ( KNSManagerMakeClientRequest ( m_mgr, &m_req, 0x01010000, & m_stream, m_url.c_str() ) != 0 )
         {
             throw logic_error( "HttpRequestFixture::MakeRequest(): KNSManagerMakeClientRequest() failed" );
@@ -88,6 +95,7 @@ public:
     string m_url;
 };
 
+#ifdef ALL
 FIXTURE_TEST_CASE(HttpRequest_POST_Failure, HttpRequestFixture) {
     // Bug: KClientHttpRequestPOST crashed if KStreamRead returned rc
     MakeRequest(GetName());
@@ -99,7 +107,6 @@ FIXTURE_TEST_CASE(HttpRequest_POST_Failure, HttpRequestFixture) {
     TestStream::ForceFailure(false);
 }
 
-#ifdef ALL
 FIXTURE_TEST_CASE(HttpRequest_POST_NoParams, HttpRequestFixture)
 {   // Bug: KClientHttpRequestPOST crashed if request had no parameters
     MakeRequest( GetName() );
@@ -111,6 +118,7 @@ FIXTURE_TEST_CASE(HttpRequest_POST_NoParams, HttpRequestFixture)
 }
 #endif
 
+#ifdef ALL
 FIXTURE_TEST_CASE(HttpRequest_PUT_sra, HttpRequestFixture)
 {
     MakeRequest( GetName() );
@@ -125,18 +133,20 @@ FIXTURE_TEST_CASE(HttpRequest_PUT_sra, HttpRequestFixture)
         version, sizeof version, NULL, "%.3V", VDB_RELEASE_VERSION));
     assert(m_req && m_req->http);
     string expected("PUT ");
+    const char* ua(nullptr);
+    KNSManagerGetUserAgent(&ua);
     if (m_req->http->uf == eUFAbsolute)
         expected += "http://HttpRequest_PUT_sra.com";
     expected +=
         "/blah HTTP/1.1\r\n"
-        "Host: HttpRequest_PUT_sra.com\r\n"
-        "Accept: */*\r\n"
-        "X-SRA-Release: " + string(version) + "\r\n"
-        "X-VDB-Release: " + string(version) + "\r\n"
-        "User-Agent: ";
+        "host: HttpRequest_PUT_sra.com\r\n"
+        "accept: */*\r\n"
+        "user-agent: " + string(ua) + "\r\n"
+        "x-sra-release: " + string(version) + "\r\n"
+        "x-vdb-release: " + string(version) + "\r\n";
     assert(!expected.empty());
 
-    // match expected against the start of the actual (stop before OS)
+    // match expected against the start of the actual
     auto m = mismatch(expected.begin(), expected.end(), TestStream::m_requests.front().begin() );
     if ( m.first != expected.end() )
     {
@@ -162,7 +172,7 @@ FIXTURE_TEST_CASE(HttpRequest_PUT_non_sra, HttpRequestFixture)
         expected += "http://HttpRequest_PUT_non_sra.com";
     expected +=
         "/blah HTTP/1.1\r\n"
-        "Host: HttpRequest_PUT_non_sra.com\r\n"
+        "host: HttpRequest_PUT_non_sra.com\r\n"
         "\r\n";
     assert(!expected.empty());
 
@@ -175,7 +185,9 @@ FIXTURE_TEST_CASE(HttpRequest_PUT_non_sra, HttpRequestFixture)
 
     REQUIRE_RC ( KClientHttpResultRelease ( rslt ) );
 }
+#endif
 
+#ifdef ALL
 FIXTURE_TEST_CASE(HttpRequest_head_as_get, HttpRequestFixture)
 {
     MakeRequest( GetName() );
@@ -185,8 +197,8 @@ FIXTURE_TEST_CASE(HttpRequest_head_as_get, HttpRequestFixture)
 
     TestStream::AddResponse(
         "HTTP/1.1 206 Partial Content\r\n"
-        "Content-Range: bytes 0-6/7\r\n"
-        "Content-Length: 7\r\n"
+        "content-range: bytes 0-6/7\r\n"
+        "content-length: 7\r\n"
         "\r\n"
         "1234567"
         "\r\n");
@@ -213,8 +225,8 @@ FIXTURE_TEST_CASE(HttpRequest_head_as_post, HttpRequestFixture)
 
     TestStream::AddResponse(
         "HTTP/1.1 206 Partial Content\r\n"
-        "Content-Range: bytes 0-6/7\r\n"
-        "Content-Length: 7\r\n"
+        "content-range: bytes 0-6/7\r\n"
+        "content-length: 7\r\n"
         "\r\n"
         "1234567"
         "\r\n");
@@ -242,8 +254,8 @@ FIXTURE_TEST_CASE(HttpRequest_HEAD_as_POST_preserveUAsuffix, HttpRequestFixture)
 
     TestStream::AddResponse(
         "HTTP/1.1 206 Partial Content\r\n"
-        "Content-Range: bytes 0-6/7\r\n"
-        "Content-Length: 7\r\n"
+        "content-range: bytes 0-6/7\r\n"
+        "content-length: 7\r\n"
         "\r\n"
         "1234567"
         "\r\n");
@@ -262,6 +274,7 @@ FIXTURE_TEST_CASE(HttpRequest_HEAD_as_POST_preserveUAsuffix, HttpRequestFixture)
     // -head is appended to the UserAgent string with original suffix
     REQUIRE_NE(string::npos, req.find("suffix-head"));
 }
+#endif
 
 // KClientHttpRequestAddQueryParam
 
@@ -336,11 +349,11 @@ FIXTURE_TEST_CASE(HttpRequestAddQueryParam_URL_encoding, HttpRequestFixture)
 FIXTURE_TEST_CASE(HttpRequestAddHeader, HttpRequestFixture)
 {
     MakeRequest( GetName() );
-    REQUIRE_RC( KClientHttpRequestAddHeader(m_req, "Accept", "text/html") );
+    REQUIRE_RC( KClientHttpRequestAddHeader(m_req, "accept", "text/html") );
     KDataBuffer buffer;
     THROW_ON_RC( KDataBufferMake( & buffer, 8, 0 ) );
     REQUIRE_RC( KClientHttpRequestFormatMsg(m_req, & buffer, "HEAD") );
-    REQUIRE( strstr((char*)buffer.base, "Accept: */*") == NULL) ;
+    REQUIRE( strstr((char*)buffer.base, "accept: */*") == NULL) ;
     REQUIRE_RC ( KDataBufferWhack( &buffer ) );
 }
 
@@ -353,7 +366,6 @@ FIXTURE_TEST_CASE(RequestAddPostParam, HttpRequestFixture)
 }
 
 // KClientHttpRequestAddPostFileParam
-
 FIXTURE_TEST_CASE(HttpRequestAddPostFileParam_SelfNull, HttpRequestFixture)
 {
     REQUIRE_RC_FAIL ( KClientHttpRequestAddPostFileParam ( nullptr, "name", "data/fileToPost" ) );
@@ -470,7 +482,9 @@ FIXTURE_TEST_CASE(HttpReliableRequest_POST_5xx_retry, HttpFixture)
 
     REQUIRE_RC ( KClientHttpResultRelease ( rslt ) );
 }
+#endif
 
+#ifdef ALL
 FIXTURE_TEST_CASE(HttpReliableRequest_BadCgi, HttpFixture)
 {
     /* calling non-existing cgi returns 404 */
@@ -487,6 +501,7 @@ FIXTURE_TEST_CASE(HttpReliableRequest_BadCgi, HttpFixture)
 }
 #endif
 
+#ifdef ALL
 TEST_CASE(Test_urlEncodePluses) {
     REQUIRE_RC(KClientHttpRequestUrlEncodeBase64(NULL));
 
@@ -500,25 +515,27 @@ TEST_CASE(Test_urlEncodePluses) {
     String s, d;
 
     CONST_STRING(&s, "");
-    StringCopy(&encoding, &s);
+    REQUIRE_RC(StringCopy(&encoding, &s));
     REQUIRE_RC(KClientHttpRequestUrlEncodeBase64(&encoding));
     REQUIRE_EQ(StringCompare(encoding, &s), 0);
     StringWhack(encoding);
 
     CONST_STRING(&s, "a");
-    StringCopy(&encoding, &s);
+    REQUIRE_RC(StringCopy(&encoding, &s));
     REQUIRE_RC(KClientHttpRequestUrlEncodeBase64(&encoding));
     REQUIRE_EQ(StringCompare(encoding, &s), 0);
     StringWhack(encoding);
 
     CONST_STRING(&s, "+/");
-    StringCopy(&encoding, &s);
+    REQUIRE_RC(StringCopy(&encoding, &s));
     REQUIRE_RC(KClientHttpRequestUrlEncodeBase64(&encoding));
     CONST_STRING(&d, "%2b%2f");
     REQUIRE_EQ(StringCompare(encoding, &d), 0);
     StringWhack(encoding);
 }
+#endif
 
+#ifdef ALL
 // Tests of Version Headers
 TEST_CASE(TestVersionHeaders) {
     char b[99]("");
@@ -551,6 +568,423 @@ TEST_CASE(TestVersionHeaders) {
     REQUIRE_RC(VdbVersionPrint(v, b, sizeof b, "X-VDB-Release: ", "\r\n"));
     REQUIRE_EQ(string(b), string("X-VDB-Release: 4.0.0\r\n"));
 }
+#endif
+
+#ifdef ALL
+TEST_CASE(TestUriEncodeForS3) {
+    const String* encoding(nullptr);
+    String s, d;
+    CONST_STRING(&s, "/test+A/b!1#-$.&_'~(Z)z*0,9:a.txt");
+    CONST_STRING(&d, "/test%2BA/b%211%23-%24.%26_%27~%28Z%29z%2A0%2C9%3Aa.txt");
+    REQUIRE_RC(StringCopy(&encoding, &s));
+    REQUIRE_RC(UriEncodeForAWS(&encoding));
+    REQUIRE_EQ(StringCompare(encoding, &d), 0);
+    StringWhack(encoding);
+
+    CONST_STRING(&s, ";b=c?d@e[f]g H\"i%J\\k<L>m^N\0");
+    CONST_STRING(&d, "%3Bb%3Dc%3Fd%40e%5Bf%5Dg%20H%22i%25J%5Ck%3CL%3Em%5EN%00");
+    REQUIRE_RC(StringCopy(&encoding, &s));
+    REQUIRE_RC(UriEncodeForAWS(&encoding));
+    REQUIRE_EQ(StringCompare(encoding, &d), 0);
+    StringWhack(encoding);
+}
+#endif
+
+#ifdef ALL
+TEST_CASE(TestAbsolutePathComponentOfTheURIExtraction) {
+    String s, q;
+    const String* uri = NULL;
+    /* parse the URL */
+    URLBlock block;
+    memset(&block, 0, sizeof block);
+    const char *url("https://examplebucket.s3.amazonaws.com/photos/photo1.jpg");
+    CONST_STRING(&s, "/photos/photo1.jpg");
+    REQUIRE_RC(ParseUrl(&block, url, string_measure(url, nullptr)));
+    REQUIRE_EQ(StringCompare(&block.path, &s), 0);
+
+    /* Encode URI for S3 */
+    REQUIRE_RC(StringCopy(&uri, &block.path));
+    REQUIRE_RC(UriEncodeForAWS(&uri));
+    REQUIRE_EQ(StringCompare(uri, &s), 0);
+    StringWhack(uri);
+
+    /* do not normalize URI paths for requests to Amazon S3 */
+    url = "http://s3.amazonaws.com/my-object//example//photo.user";
+    CONST_STRING(&s, "/my-object//example//photo.user");
+    REQUIRE_RC(ParseUrl(&block, url, string_measure(url, nullptr)));
+    REQUIRE_EQ(StringCompare(&block.path, &s), 0);
+
+    REQUIRE_RC(StringCopy(&uri, &block.path));
+    REQUIRE_RC(UriEncodeForAWS(&uri));
+    REQUIRE_EQ(StringCompare(uri, &s), 0);
+    StringWhack(uri);
+
+    url = "http://s3.amazonaws.com/examplebucket"
+        "?prefix=somePrefix&marker=someMarker&max-keys=20";
+    //    12345678101234567 12345678101234567 12345678101
+    //    123456 1234567810 123456 1234567810 12345678 12
+    CONST_STRING(&s, "/examplebucket");
+    REQUIRE_RC(ParseUrl(&block, url, string_measure(url, nullptr)));
+    REQUIRE_EQ(StringCompare(&block.path, &s), 0);
+    CONST_STRING(&q, "prefix=somePrefix&marker=someMarker&max-keys=20");
+    REQUIRE_EQ(StringCompare(&block.query, &q), 0);
+
+    REQUIRE_RC(StringCopy(&uri, &block.path));
+    REQUIRE_RC(UriEncodeForAWS(&uri));
+    REQUIRE_EQ(StringCompare(uri, &s), 0);
+    StringWhack(uri);
+
+    KDataBuffer canonicalQueryString;
+
+    REQUIRE_RC(KDataBufferMake(&canonicalQueryString, 8, 0));
+    REQUIRE_RC(PrepareCanonicalQueryStringForAWSRequest(
+        &block.query, &canonicalQueryString));
+    string a((char*)canonicalQueryString.base, 0,
+        canonicalQueryString.elem_count - 1);
+    string e("marker=someMarker&max-keys=20&prefix=somePrefix");
+    REQUIRE_EQ(a, e);
+    REQUIRE_RC(KDataBufferWhack(&canonicalQueryString));
+
+    // When a request targets a subresource,
+    // the corresponding query parameter value will be an empty string ("")
+    url = "http://s3.amazonaws.com/examplebucket?acl";
+    CONST_STRING(&s, "/examplebucket");
+    REQUIRE_RC(ParseUrl(&block, url, string_measure(url, nullptr)));
+    REQUIRE_EQ(StringCompare(&block.path, &s), 0);
+    CONST_STRING(&q, "acl");
+    REQUIRE_EQ(StringCompare(&block.query, &q), 0);
+
+    REQUIRE_RC(StringCopy(&uri, &block.path));
+    REQUIRE_RC(UriEncodeForAWS(&uri));
+    REQUIRE_EQ(StringCompare(uri, &s), 0);
+    StringWhack(uri);
+
+    REQUIRE_RC(KDataBufferMake(&canonicalQueryString, 8, 0));
+    REQUIRE_RC(PrepareCanonicalQueryStringForAWSRequest(
+        &block.query, &canonicalQueryString));
+    a = string((char*)canonicalQueryString.base, 0,
+        canonicalQueryString.elem_count - 1);
+    e = string("acl=");
+    REQUIRE_EQ(a, e);
+    KDataBufferWhack(&canonicalQueryString);
+
+    // mo query
+    url = "http://examplebucket.s3.amazonaws.com/test.txt";
+    CONST_STRING(&s, "/test.txt");
+    REQUIRE_RC(ParseUrl(&block, url, string_measure(url, nullptr)));
+    REQUIRE_EQ(StringCompare(&block.path, &s), 0);
+    CONST_STRING(&q, "");
+    REQUIRE_EQ(StringCompare(&block.query, &q), 0);
+
+    REQUIRE_RC(StringCopy(&uri, &block.path));
+    REQUIRE_RC(UriEncodeForAWS(&uri));
+    REQUIRE_EQ(StringCompare(uri, &s), 0);
+    StringWhack(uri);
+
+    REQUIRE_RC(KDataBufferMake(&canonicalQueryString, 8, 0));
+    REQUIRE_RC(PrepareCanonicalQueryStringForAWSRequest(
+        &block.query, &canonicalQueryString));
+    a = string((char*)canonicalQueryString.base, 0,
+        canonicalQueryString.elem_count - 1);
+    e = string("");
+    REQUIRE_EQ(a, e);
+    KDataBufferWhack(&canonicalQueryString);
+}
+#endif
+
+#ifdef ALL
+FIXTURE_TEST_CASE(test_ClientHttpResultHeaders, HttpFixture) {
+    REQUIRE_RC(KNSManagerMakeClientRequest(m_mgr, &m_req, 0x01010000, &m_stream,
+        MakeURL(GetName()).c_str()));
+    TestStream::AddResponse("HTTP/1.1 200 OK\r\n"
+        "Duplicated-Header: Value2\r\n"
+        "Unique-Header: ValueU\r\n"
+        "duplicateD-headeR: Value1\r\n");
+
+    KClientHttpResult* rslt(nullptr);
+    REQUIRE_RC(KClientHttpRequestGET(m_req, &rslt));
+
+    REQUIRE_NULL(KClientHttpResultGetHeaders(nullptr));
+
+    const BSTree* hdrs(KClientHttpResultGetHeaders(rslt));
+    SAddHeaderData d;
+    REQUIRE_RC(SAddHeaderDataInit(&d, false, nullptr));
+    BSTreeForEach(hdrs, false, AddHeaderForAWSRequest, &d);
+
+    REQUIRE_RC(KClientHttpResultRelease(rslt));
+
+    const KDataBuffer* canoniclHdrs(&d.canonicalHeaders);
+    assert(canoniclHdrs);
+    REQUIRE_EQ(string((char*)canoniclHdrs->base, canoniclHdrs->elem_count - 1),
+        string(
+            "duplicated-header:Value2,Value1\n"
+            "unique-header:ValueU\n"));
+
+    REQUIRE_RC(SAddHeaderDataFini(&d));
+}
+#endif
+
+#ifdef ALL
+FIXTURE_TEST_CASE(TestHeadersCanonization, HttpRequestFixture) {
+    MakeRequest(GetName());
+
+    REQUIRE_RC_FAIL(KClientHttpRequestAddHeader(m_req, "", "no-name"));
+
+    REQUIRE_RC(KClientHttpRequestAddHeader(m_req, "X-VDB-Release", "1.2.3"));
+    REQUIRE_RC(KClientHttpRequestAddHeader(m_req,
+        "X-SRA-Release", "45.678.90XY"));
+
+    REQUIRE_RC(KClientHttpRequestAddHeader(m_req, "X-aMz-DaTe",
+        //                                         1234567810
+        " \t\v\n\r\f20130708T220855Z \t\v\n\r\f"));
+    //              1234567810123456
+
+    REQUIRE_RC(KClientHttpRequestAddHeader(m_req, "x-AmZ-cOnTeNt-ShA256",
+        //                                         12345678101234567820
+        " \t\v\n\r\fe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b9 \t\v\n\r\f"));
+    //              123456781012345678201234567830123456784012345
+
+    REQUIRE_RC(KClientHttpRequestAddHeader(m_req,
+        "simple-header", "simple-value"));
+
+    SAddHeaderData d;
+    REQUIRE_RC(KClientHttpRequestPrepareCanonicalHeaders(m_req, &d));
+
+    const KDataBuffer* canoniclHdrs(&d.canonicalHeaders);
+    assert(canoniclHdrs);
+    REQUIRE_EQ(string((char*)canoniclHdrs->base, canoniclHdrs->elem_count - 1),
+        string("host:TestHeadersCanonization.com\n"
+            "simple-header:simple-value\n"
+            "x-amz-content-sha256" ":"
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b9" "\n"
+            "x-amz-date" ":" "20130708T220855Z" "\n"
+            "x-sra-release" ":" "45.678.90XY" "\n"
+            "x-vdb-release" ":" "1.2.3" "\n"
+        ));
+
+    const KDataBuffer* signedHdrs(&d.signedHeaders);
+    assert(signedHdrs);
+    REQUIRE_EQ(string((char*)signedHdrs->base, signedHdrs->elem_count - 1),
+        string("host;"
+            "simple-header;"
+            "x-amz-content-sha256;"
+            "x-amz-date;"
+            "x-sra-release;"
+            "x-vdb-release;"
+        ));
+
+    REQUIRE_RC(SAddHeaderDataFini(&d));
+}
+#endif
+
+#ifdef ALL
+FIXTURE_TEST_CASE(TestCanonicalRequestCreation, HttpRequestFixture) {
+    MakeRequest(GetName());
+    KDataBuffer request;
+    REQUIRE_RC(KDataBufferMake(&request, 8, 0));
+    char* signedHeaders(nullptr);
+    REQUIRE_RC(KClientHttpRequestCreateCanonicalRequestString(
+        m_req, "GET",
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        &request, &signedHeaders));
+    REQUIRE_EQ(string(signedHeaders), string());
+    free((void*)signedHeaders); signedHeaders = nullptr;
+    REQUIRE_EQ(string((char*)request.base, request.elem_count - 1), string(
+        "GET\n"
+        "/blah\n"
+        "\n"
+        "\n"
+        "\n"
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"));
+    REQUIRE_RC(KDataBufferWhack(&request));
+
+}
+
+FIXTURE_TEST_CASE(TestCanonicalRequestWithQueryCreation,
+    HttpRequestFixture)
+{
+    MakeRequest(GetName(), "max-keys=2&prefix=J");
+    KDataBuffer request;
+    REQUIRE_RC(KDataBufferMake(&request, 8, 0));
+    char* signedHeaders(nullptr);
+    REQUIRE_RC(KClientHttpRequestCreateCanonicalRequestString(
+        m_req, "GET",
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        &request, &signedHeaders));
+    REQUIRE_EQ(string(signedHeaders), string());
+    free((void*)signedHeaders); signedHeaders = nullptr;
+    REQUIRE_EQ(string((char*)request.base, request.elem_count - 1), string(
+        "GET\n"
+        "/blah\n"
+        "max-keys=2&prefix=J\n"
+        "\n"
+        "\n"
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"));
+    REQUIRE_RC(KDataBufferWhack(&request));
+
+}
+
+FIXTURE_TEST_CASE(TestCanonicalRequestWithQueryNoValueCreation,
+    HttpRequestFixture)
+{
+    MakeRequest(GetName(), "acl");
+    KDataBuffer request;
+    REQUIRE_RC(KDataBufferMake(&request, 8, 0));
+    char* signedHeaders(nullptr);
+    REQUIRE_RC(KClientHttpRequestCreateCanonicalRequestString(
+        m_req, "GET",
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        &request, &signedHeaders));
+    REQUIRE_EQ(string(signedHeaders), string());
+    free((void*)signedHeaders); signedHeaders = nullptr;
+    REQUIRE_EQ(string((char*)request.base, request.elem_count - 1), string(
+        "GET\n"
+        "/blah\n"
+        "acl=\n"
+        "\n"
+        "\n"
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"));
+    REQUIRE_RC(KDataBufferWhack(&request));
+}
+
+FIXTURE_TEST_CASE(TestCanonicalRequestAwsExampleCreation,
+    HttpRequestFixture)
+{
+    MakeRequest("", "max-keys=2&prefix=J",
+        "https://examplebucket.s3.amazonaws.com/");
+    assert(m_req);
+    REQUIRE_RC(KClientHttpRequestAddHeader(m_req, "x-amz-content-sha256",
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"));
+    REQUIRE_RC(KClientHttpRequestAddHeader(m_req, "x-amz-date",
+        "20130524T000000Z"));
+    m_req->testing = true; // allow setting Host header
+    REQUIRE_RC(KClientHttpRequestAddHeader(m_req, "Host",
+        "examplebucket.s3.amazonaws.com"));
+    KDataBuffer request;
+    REQUIRE_RC(KDataBufferMake(&request, 8, 0));
+    char* signedHeaders(nullptr);
+    REQUIRE_RC(KClientHttpRequestCreateCanonicalRequestString(
+        m_req, "GET",
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        &request, &signedHeaders));
+    REQUIRE_EQ(string(signedHeaders),
+        string("host;x-amz-content-sha256;x-amz-date"));
+    free((void*)signedHeaders); signedHeaders = nullptr;
+    REQUIRE_EQ(string((char*)request.base, request.elem_count - 1), string(
+        "GET\n"
+        "/\n"
+        "max-keys=2&prefix=J\n"
+        "host:examplebucket.s3.amazonaws.com\n"
+        "x-amz-content-sha256:"
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        "x-amz-date:20130524T000000Z\n"
+        "\n"
+        "host;x-amz-content-sha256;x-amz-date\n"
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"));
+    REQUIRE_RC(KDataBufferWhack(&request));
+}
+#endif
+
+#ifdef ALL
+FIXTURE_TEST_CASE(TestPrepareCanonicalHeaders, HttpRequestFixture) {
+    MakeRequest(GetName());
+
+    REQUIRE_RC(KClientHttpRequestAddHeader(m_req, "X-aMz-DaTe",
+        //                                         1234567810
+        " \t\v\n\r\f20130708T220855Z \t\v\n\r\f"));
+    //              1234567810123456
+
+    REQUIRE_RC(KClientHttpRequestAddHeader(m_req, "x-AmZ-cOnTeNt-ShA256",
+        //                                         12345678101234567820
+        " \t\v\n\r\fe3b0c44298fc1c149afbf4c8996fb92427ae41e4649b9 \t\v\n\r\f"));
+    //              123456781012345678201234567830123456784012345
+
+    REQUIRE_RC(KClientHttpRequestAddHeader(m_req,
+        "simple-header", "simple-value"));
+
+    SAddHeaderData d;
+    REQUIRE_RC(KClientHttpRequestPrepareCanonicalHeaders(m_req, &d));
+
+    const KDataBuffer* canoniclHdrs(&d.canonicalHeaders);
+    assert(canoniclHdrs);
+    REQUIRE_EQ(string((char*)canoniclHdrs->base, canoniclHdrs->elem_count - 1),
+        string("host:TestPrepareCanonicalHeaders.com\n"
+            "simple-header:simple-value\n"
+            "x-amz-content-sha256" ":"
+                            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b9" "\n"
+            "x-amz-date" ":" "20130708T220855Z" "\n"));
+
+    const KDataBuffer* signedHdrs(&d.signedHeaders);
+    assert(signedHdrs);
+    REQUIRE_EQ(string((char*)signedHdrs->base, signedHdrs->elem_count - 1),
+        string("host;"
+            "simple-header;"
+            "x-amz-content-sha256;"
+            "x-amz-date;"
+        ));
+
+    REQUIRE_RC(SAddHeaderDataFini(&d));
+}
+#endif
+
+#ifdef ALL
+FIXTURE_TEST_CASE(TestKClientHttpRequestAddReplaceHeader,
+    HttpRequestFixture)
+{
+    MakeRequest(GetName());
+
+    REQUIRE_RC(KClientHttpRequestAddHeader(m_req,
+        "simple-header", "simplE-valuE"));
+
+    SAddHeaderData d;
+
+    REQUIRE_RC(KClientHttpRequestPrepareCanonicalHeaders(m_req, &d));
+
+    const KDataBuffer* canoniclHdrs(&d.canonicalHeaders);
+    assert(canoniclHdrs);
+    REQUIRE_EQ(string((char*)canoniclHdrs->base, canoniclHdrs->elem_count - 1),
+        string("host:TestKClientHttpRequestAddReplaceHeader.com\n"
+            "simple-header:simplE-valuE\n"));
+
+    const KDataBuffer* signedHdrs(&d.signedHeaders);
+    assert(signedHdrs);
+    REQUIRE_EQ(string((char*)signedHdrs->base, signedHdrs->elem_count - 1),
+        string("host;simple-header;"));
+
+    REQUIRE_RC(SAddHeaderDataFini(&d));
+    
+    REQUIRE_RC(KClientHttpRequestAddHeader(m_req,
+        "simple-header", "simple-value"));
+    REQUIRE_RC(KClientHttpRequestPrepareCanonicalHeaders(m_req, &d));
+    REQUIRE_EQ(string((char*)canoniclHdrs->base, canoniclHdrs->elem_count - 1),
+        string("host:TestKClientHttpRequestAddReplaceHeader.com\n"
+            "simple-header:simple-value\n"));
+    REQUIRE_EQ(string((char*)signedHdrs->base, signedHdrs->elem_count - 1),
+        string("host;simple-header;"));
+    REQUIRE_RC(SAddHeaderDataFini(&d));
+
+    REQUIRE_RC(KClientHttpRequestAddHeader(m_req,
+        "Simple-Header", "Simple-Value"));
+    REQUIRE_RC(KClientHttpRequestPrepareCanonicalHeaders(m_req, &d));
+    REQUIRE_EQ(string((char*)canoniclHdrs->base, canoniclHdrs->elem_count - 1),
+        string("host:TestKClientHttpRequestAddReplaceHeader.com\n"
+            "simple-header:Simple-Value\n"));
+    REQUIRE_EQ(string((char*)signedHdrs->base, signedHdrs->elem_count - 1),
+        string("host;simple-header;"));
+    REQUIRE_RC(SAddHeaderDataFini(&d));
+
+    BSTree* hdrs(const_cast<BSTree*>(KClientHttpRequestGetHeaders(m_req)));
+    REQUIRE_RC(KClientHttpReplaceHeader(hdrs,
+        "SIMPLE-HEADER", "not-simple-value"));
+    REQUIRE_RC(KClientHttpRequestPrepareCanonicalHeaders(m_req, &d));
+    REQUIRE_EQ(string((char*)canoniclHdrs->base, canoniclHdrs->elem_count - 1),
+        string("host:TestKClientHttpRequestAddReplaceHeader.com\n"
+            "simple-header:not-simple-value\n"));
+    REQUIRE_EQ(string((char*)signedHdrs->base, signedHdrs->elem_count - 1),
+        string("host;simple-header;"));
+    REQUIRE_RC(SAddHeaderDataFini(&d));
+}
+#endif
 
 //////////////////////////////////////////// Main
 

@@ -42,12 +42,13 @@
 extern "C" {
 #endif
 
-struct KStream;
+struct KClientHttpRequest;
+struct KConfig;
+struct KFile;
 struct KHttpFile;
 struct KNSManager;
-struct KFile;
-struct KConfig;
-struct KClientHttpRequest;
+struct KStream;
+struct VPath;
 
 /************************** HTTP-retry-related stuff **************************/
 struct HttpRetrySchedule;
@@ -92,19 +93,33 @@ KNS_EXTERN
 rc_t CC KNSManagerGetResolveToCache(const struct KNSManager* self,
     bool * resolveToCache);
 
-/** MakeReliableHttpFile, KNSManagerMakeReliableClientRequest:
+/** MakeReliableHttpFile, KNSManagerMakeReliableHttpFileVPath,
+ *  KNSManagerMakeReliableClientRequest, KNSManagerMakeReliableClientRequestVPath:
  * Make HTTP file/request from a reliable URL:
  * we will try harder to recover upon any error
  * (make more retries)
  */
+
+ /* KNSManagerMakeReliableHttpFile was deprecated in favor
+ of KNSManagerMakeReliableHttpFileVPath */
 KNS_EXTERN rc_t CC KNSManagerMakeReliableHttpFile(
     struct KNSManager const *self, struct KFile const **file, struct KStream *conn, ver_t vers,
     bool reliable, bool need_env_token, bool payRequired,
     const char *url, ...);
+KNS_EXTERN rc_t CC KNSManagerMakeReliableHttpFileVPath(
+    struct KNSManager const *self, struct KFile const **file,
+    struct KStream *conn, ver_t vers, const struct VPath *path);
 
+/* KNSManagerMakeReliableClientRequest was deprecated in favor
+of KNSManagerMakeReliableClientRequestVPath */
 KNS_EXTERN rc_t CC KNSManagerMakeReliableClientRequest (
     struct KNSManager const *self, struct KClientHttpRequest **req,
     ver_t version, struct KStream *conn, const char *url, ... );
+KNS_EXTERN rc_t CC KNSManagerMakeReliableClientRequestVPath (
+    struct KNSManager const *self, struct KClientHttpRequest **req,
+    ver_t version, struct KStream *conn, const struct VPath* path,
+    const char *url, ... );
+
 KNS_EXTERN rc_t CC KNSManagerMakePaidHttpFile(struct KNSManager const *self,
     struct KFile const **file, struct KStream *conn, ver_t vers,
     bool payRequired, const char *url, ...);

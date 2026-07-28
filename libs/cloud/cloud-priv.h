@@ -110,7 +110,10 @@ struct AWS
     char * region;
     char * output;
 
-    uint8_t IMDS_version; // 1 or 2; 0 if not on AWS
+    uint8_t IMDS_version; /* 1 or 2; 0 if not on AWS */
+
+    bool version2;  /* true if use AWS Signature Version 2,
+                       Version 4 otherwise */
 };
 
 /* WithinAWS

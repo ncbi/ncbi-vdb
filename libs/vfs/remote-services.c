@@ -2261,7 +2261,7 @@ static rc_t SHttpRequestHelperFini ( SHttpRequestHelper * self ) {
 
     if (self->log) {
         char* p = self->request.base;
-        uint32_t l = self->request.elem_count;
+        int l = self->request.elem_count;
         while (l > 0 && (p[l - 1] == '\0' || p[l - 1] == '&'))
             --l;
         if (l > 0)
@@ -2290,7 +2290,7 @@ static rc_t LogSdlResponse(const char* s) {
     rc = MaskSdlResponse(s, &b);
     if (rc == 0)
         STATUS(STAT_ALWAYS,
-            "RESPONSE: '%.*s'\n", (uint32_t)b.elem_count, b.base);
+            "RESPONSE: '%.*s'\n", (int)b.elem_count, b.base);
 
     KDataBufferWhack(&b);
 
@@ -2317,8 +2317,8 @@ rc_t MaskSdlRequestArg(const String* arg, KDataBuffer* out) {
         if (s <= 99)
             rc = KDataBufferPrintf(out, "%s", arg->addr);
         else {
-            size_t l = 96;
-            rc = KDataBufferPrintf(out, "%.*s", 99, arg->addr);
+            int l = 96;
+            rc = KDataBufferPrintf(out, "%.*s", (int)99, arg->addr);
             if (rc != 0)
                 return rc;
 
@@ -2371,7 +2371,7 @@ rc_t MaskSdlResponse(const char* in, KDataBuffer* out) {
         else {
             /* found "link" */
             e += sizeof link - 1;
-            KDataBufferPrintf(out, "%.*s", e - b, b); /* print "link" */
+            KDataBufferPrintf(out, "%.*s", (int)(e - b), b); /* print "link" */
             /* const char* p = (char*)out->base; */
             
             while (*e != '\0')
@@ -2403,22 +2403,23 @@ rc_t MaskSdlResponse(const char* in, KDataBuffer* out) {
                     s = e - b;
                     if (s > 99) {
                         /* mask a long link */
-                        KDataBufferPrintf(out, "%.*s...", 96, b);
+                        KDataBufferPrintf(out, "%.*s...", (int)96, b);
                         break;
                     }
                     else {
                         /* look for URL with query */
                         i = string_chr(b, e - b, '?');
                         if (i == NULL)
-                            KDataBufferPrintf(out, "%.*s", e - b, b);
+                            KDataBufferPrintf(out, "%.*s", (int)(e - b), b);
                         else {
                             /* URL has query */
                             s = e - i;
                             if (s < 32)
-                                KDataBufferPrintf(out, "%.*s", e - b, b);
+                                KDataBufferPrintf(out, "%.*s", (int)(e - b), b);
                             else {
                                 /* mask long query */
-                                KDataBufferPrintf(out, "%.*s", i - b + 9, b);
+                                KDataBufferPrintf(out, "%.*s",
+                                    (int)(i - b + 9), b);
                                 KDataBufferPrintf(out, "******************...");
                             }
                         }
@@ -3650,6 +3651,27 @@ rc_t SRequestInitNamesSCgiRequest ( SRequest * request, SHelper * helper,
             }
         }
     }
+    {
+        static bool CHECKED = false;
+        static bool INTERNAL = false;
+        if (!CHECKED) {
+            if (getenv("NCBI_VDB_SDL_INTERNAL") != NULL)
+                INTERNAL = true;
+            CHECKED = true;
+        }
+        if (INTERNAL) {
+            const char n[] = "internal";
+            const char v[] = "0";
+            rc = SKVMake(&kv, n, v);
+            if (rc == 0) {
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_SERVICE),
+                    ("  %s=%s\n", n, v));
+                rc = VectorAppend(&self->params, NULL, kv);
+            }
+            if (rc != 0)
+                return rc;
+        }
+    }
 
     if (rc == 0) {
         if (request->sdl && request->forced != NULL) {
@@ -4390,7 +4412,7 @@ static rc_t KServiceProcessStreamByParts ( KService * self,
             if ( rc != 0 || num_read == 0 )
                 break;
             DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ),
-                ( "%.*s", ( int ) num_read - 1, buffer + offW ) );
+                ( "%.*s", ( int ) (num_read - 1), buffer + offW ) );
             sizeR += num_read;
             offW += num_read;
             if (sizeW >= num_read )
@@ -4430,7 +4452,7 @@ static rc_t KServiceProcessStreamByParts ( KService * self,
                 break;
             }
             DBGMSG ( DBG_VFS, DBG_FLAG ( DBG_VFS_SERVICE ),
-                ( "%.*s", ( int ) num_read - 1, buffer + offW ) );
+                ( "%.*s", ( int ) (num_read - 1), buffer + offW ) );
             sizeR += num_read;
             offW += num_read;
             if (sizeW >= num_read )

@@ -235,6 +235,10 @@ rc_t VFSManagerSetCachedKSrvResponse
 rc_t VFSManagerGetCachedKSrvResponse
 (const struct VFSManager * self, const char * id, const KSrvResponse ** resp);
 
+/******************************************************************************/
+/* exposed internal function for testing */
+rc_t _VPathGetId(const VPath* self, const String** newId,
+    String* oldId, const struct VFSManager* mgr);
 rc_t MaskSdlRequestArg(const String* arg, KDataBuffer* out);
 rc_t MaskSdlResponse(const char* in, KDataBuffer* out);
 

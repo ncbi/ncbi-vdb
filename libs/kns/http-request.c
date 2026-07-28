@@ -43,6 +43,8 @@
 #include <kfs/file.h>
 #include <kfs/mmap.h>
 
+#include <vfs/path.h>/* VPathAddRef */
+
 #include "http-priv.h"
 #include "mgr-priv.h"
 #include "../klib/int_checks-priv.h"
@@ -67,7 +69,7 @@
 LIB_EXPORT rc_t CC KClientHttpRequestSetCloudParams(
     KClientHttpRequest * self, bool ceRequired, bool payRequired)
 {
-    if (self != NULL)
+    if (self != NULL && !self->requiredSet)
     {
         self->ceRequired = ceRequired;
         self->payRequired = payRequired;
@@ -128,15 +130,38 @@ KClientHttpRequestGetBody( struct KClientHttpRequest * self )
     return ( const char * ) ( self -> body . base );
 }
 
+const BSTree *
+KClientHttpRequestGetHeaders( const struct KClientHttpRequest * self )
+{
+    assert ( self );
+    return & self -> hdrs;
+}
+
+
 rc_t KClientHttpRequestInit ( KClientHttpRequest * req,
-    const URLBlock *b, const KDataBuffer *buf )
+    const URLBlock *b, const KDataBuffer *buf, const VPath *path )
 {
     rc_t rc = KDataBufferSub ( buf, & req -> url_buffer, 0, UINT64_MAX );
     if ( rc == 0 )
     {
         /* assign url_block */
         req -> url_block = * b;
+
+        if (path != NULL) {
+            rc = VPathAddRef(path);
+            if (rc == 0)
+                rc = VPathGetCeRequired(path, &req->ceRequired);
+            if (rc == 0)
+                rc = VPathGetPayRequired(path, &req->payRequired);
+            if (rc == 0) {
+                req->requiredSet = true;
+                if (req->path != NULL)
+                    rc = VPathRelease(req->path);
+                req->path = path;
+            }
+        }
     }
+
     return rc;
 }
 
@@ -151,13 +176,30 @@ rc_t KClientHttpRequestGetQuery( struct KClientHttpRequest * self, const struct 
     return 0;
 }
 
+rc_t KClientHttpRequestGetRegion(const KClientHttpRequest* self,
+    String* str)
+{
+    if (self == NULL)
+        return RC(rcNS, rcNoTarg, rcReading, rcSelf, rcNull);
+    else
+        return VPathGetRegion(self->path, str);
+}
+rc_t KClientHttpRequestGetService(const KClientHttpRequest* self,
+    String* str)
+{
+    if (self == NULL)
+        return RC(rcNS, rcNoTarg, rcReading, rcSelf, rcNull);
+    else
+        return VPathGetService(self->path, str);
+}
 
 /* MakeRequestInt[ernal]
  */
-rc_t KClientHttpMakeRequestInt ( const KClientHttp *self,
-    KClientHttpRequest **_req, const URLBlock *block, const KDataBuffer *buf )
+rc_t KClientHttpMakeRequestIntVPath ( const KClientHttp *self,
+    KClientHttpRequest **_req, const URLBlock *block, const KDataBuffer *buf,
+    const VPath *path )
 {
-    rc_t rc;
+    rc_t rc = 0;
 
     /* create the object with empty buffer */
     KClientHttpRequest * req
@@ -180,13 +222,13 @@ rc_t KClientHttpMakeRequestInt ( const KClientHttp *self,
                     "make", (char*) buf -> base );
 
                 /* fill out url_buffer with URL */
-                rc = KClientHttpRequestInit ( req, block, buf );
+                rc = KClientHttpRequestInit ( req, block, buf, path );
                 if ( rc == 0 )
                 {
                     * _req = req;
     /*              DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS_HTTP ),
                         ( " KClientHttpMakeRequestInt (path=%S) = (path:%S)\n",
-                        & block -> path, & ( * _req ) -> url_block . path ) ); */
+                        & block -> path, & ( * _req ) -> url_block . path ) );*/
                     return 0;
                 }
             }
@@ -198,6 +240,12 @@ rc_t KClientHttpMakeRequestInt ( const KClientHttp *self,
     free ( req );
 
     return rc;
+}
+
+rc_t KClientHttpMakeRequestInt ( const KClientHttp *self,
+    KClientHttpRequest **_req, const URLBlock *block, const KDataBuffer *buf )
+{
+    return KClientHttpMakeRequestIntVPath(self, _req, block, buf, NULL);
 }
 
 
@@ -216,7 +264,7 @@ rc_t KClientHttpMakeRequestInt ( const KClientHttp *self,
 LIB_EXPORT rc_t CC KClientHttpVMakeRequest ( const KClientHttp *self,
     KClientHttpRequest **_req, const char *url, va_list args )
 {
-    rc_t rc;
+    rc_t rc = 0;
 
     if ( _req == NULL )
         rc = RC ( rcNS, rcNoTarg, rcValidating, rcParam, rcNull );
@@ -268,7 +316,7 @@ LIB_EXPORT rc_t CC KClientHttpVMakeRequest ( const KClientHttp *self,
 LIB_EXPORT rc_t CC KClientHttpMakeRequest ( const KClientHttp *self,
     KClientHttpRequest **_req, const char *url, ... )
 {
-    rc_t rc;
+    rc_t rc = 0;
     va_list args;
 
     va_start ( args, url );
@@ -294,9 +342,10 @@ static
 rc_t CC KNSManagerMakeClientRequestInt ( const KNSManager *self,
     KClientHttpRequest **req,
     ver_t vers, int32_t connMillis, int32_t readMillis, int32_t writeMillis,
-    KStream *conn, bool reliable, const char *url, va_list args )
+    KStream *conn, bool reliable, const VPath *path,
+    const char *url, va_list args )
 {
-    rc_t rc;
+    rc_t rc = 0;
 
     if ( req == NULL )
         rc = RC ( rcNS, rcNoTarg, rcValidating, rcParam, rcNull );
@@ -327,7 +376,7 @@ rc_t CC KNSManagerMakeClientRequestInt ( const KNSManager *self,
                         buf . elem_count - 1 );
                     if ( rc == 0 )
                     {
-                        KClientHttp * http;
+                        KClientHttp * http = NULL;
 
                         rc = KNSManagerMakeClientHttpInt ( self, & http, & buf,
                             conn, vers, connMillis,
@@ -335,7 +384,8 @@ rc_t CC KNSManagerMakeClientRequestInt ( const KNSManager *self,
                             block . port, reliable, block . tls );
                         if ( rc == 0 )
                         {
-                            rc = KClientHttpMakeRequestInt ( http, req, & block, & buf );
+                            rc = KClientHttpMakeRequestIntVPath ( http, req,
+                                & block, & buf, path );
                             KClientHttpRelease ( http );
                         }
                     }
@@ -350,29 +400,46 @@ rc_t CC KNSManagerMakeClientRequestInt ( const KNSManager *self,
 LIB_EXPORT rc_t CC KNSManagerMakeClientRequest ( const KNSManager *self,
     KClientHttpRequest **req, ver_t vers, KStream *conn, const char *url, ... )
 {
-    rc_t rc;
+    rc_t rc = 0;
     va_list args;
     if (self == NULL)
         return RC(rcNS, rcNoTarg, rcValidating, rcSelf, rcNull);
     va_start ( args, url );
     rc = KNSManagerMakeClientRequestInt ( self, req, vers,
         self->conn_timeout, self->http_read_timeout, self->http_write_timeout,
-        conn, false, url, args );
+        conn, false, NULL, url, args );
+    va_end ( args );
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KNSManagerMakeReliableClientRequestVPath ( const KNSManager *self,
+    KClientHttpRequest **req, ver_t vers, KStream *conn, const VPath* path,
+    const char *url, ... )
+{
+    rc_t rc = 0;
+    va_list args;
+    if (self == NULL)
+        return RC(rcNS, rcNoTarg, rcValidating, rcSelf, rcNull);
+    va_start ( args, url );
+    rc = KNSManagerMakeClientRequestInt ( self, req, vers,
+        self->conn_timeout, self->http_read_timeout, self->http_write_timeout,
+        conn, true, path, url, args );
     va_end ( args );
     return rc;
 }
 
 LIB_EXPORT rc_t CC KNSManagerMakeReliableClientRequest ( const KNSManager *self,
-    KClientHttpRequest **req, ver_t vers, KStream *conn, const char *url, ... )
+    KClientHttpRequest **req, ver_t vers, KStream *conn,
+    const char *url, ... )
 {
-    rc_t rc;
+    rc_t rc = 0;
     va_list args;
     if (self == NULL)
         return RC(rcNS, rcNoTarg, rcValidating, rcSelf, rcNull);
     va_start ( args, url );
     rc = KNSManagerMakeClientRequestInt ( self, req, vers,
         self->conn_timeout, self->http_read_timeout, self->http_write_timeout,
-        conn, true, url, args );
+        conn, true, NULL, url, args );
     va_end ( args );
     return rc;
 }
@@ -382,11 +449,11 @@ LIB_EXPORT rc_t CC KNSManagerMakeTimedClientRequest(const KNSManager *self,
     ver_t vers, int32_t connMillis, int32_t readMillis,
     int32_t writeMillis, KStream *conn, const char *url, ...)
 {
-    rc_t rc;
+    rc_t rc = 0;
     va_list args;
     va_start(args, url);
-    rc = KNSManagerMakeClientRequestInt(self, req,
-        vers, connMillis, readMillis, writeMillis, conn, false, url, args);
+    rc = KNSManagerMakeClientRequestInt(self, req, vers,
+        connMillis, readMillis, writeMillis, conn, false, NULL, url, args);
     va_end(args);
     return rc;
 }
@@ -417,6 +484,10 @@ LIB_EXPORT rc_t CC KClientHttpRequestAddRef ( const KClientHttpRequest *self )
 static
 rc_t KClientHttpRequestWhack ( KClientHttpRequest * self )
 {
+    rc_t rc = 0;
+
+    assert(self);
+
     KClientHttpRequestClear ( self );
 
     KClientHttpRelease ( self -> http );
@@ -424,8 +495,13 @@ rc_t KClientHttpRequestWhack ( KClientHttpRequest * self )
 
     BSTreeWhack  ( & self -> hdrs, KHttpHeaderWhack, NULL );
     KRefcountWhack ( & self -> refcount, "KClientHttpRequest" );
+
+    rc = VPathRelease ( self -> path );
+    self -> path = NULL;
+
     free ( self );
-    return 0;
+
+    return rc;
 }
 
 LIB_EXPORT rc_t CC KClientHttpRequestRelease ( const KClientHttpRequest *self )
@@ -465,8 +541,8 @@ LIB_EXPORT rc_t CC KClientHttpRequestConnection ( KClientHttpRequest *self, bool
     {
         String name, value;
 
-        CONST_STRING ( & name, "Connection" );
-        /* if version is 1.1 and close is true, add 'close' to Connection header value. */
+        CONST_STRING ( & name, "connection" );
+        /* if version is 1.1 and close is true, add 'close' to connection header value. */
         /* if version if 1.1 default is false - no action needed */
         if ( self -> http -> vers == 0x01010000 && close == true )
             CONST_STRING ( & value, "close" );
@@ -487,7 +563,7 @@ LIB_EXPORT rc_t CC KClientHttpRequestConnection ( KClientHttpRequest *self, bool
  */
 LIB_EXPORT rc_t CC KClientHttpRequestSetNoCache ( KClientHttpRequest *self )
 {
-    rc_t rc;
+    rc_t rc = 0;
 
     if ( self == NULL )
         rc = RC ( rcNS, rcNoTarg, rcUpdating, rcSelf, rcNull );
@@ -512,7 +588,7 @@ LIB_EXPORT rc_t CC KClientHttpRequestSetNoCache ( KClientHttpRequest *self )
  */
 LIB_EXPORT rc_t CC KClientHttpRequestByteRange ( KClientHttpRequest *self, uint64_t pos, size_t bytes )
 {
-    rc_t rc;
+    rc_t rc = 0;
 
     if ( self == NULL )
         rc = RC ( rcNS, rcNoTarg, rcValidating, rcSelf, rcNull);
@@ -542,7 +618,7 @@ LIB_EXPORT rc_t CC KClientHttpRequestByteRange ( KClientHttpRequest *self, uint6
 LIB_EXPORT rc_t CC KClientHttpRequestAddHeader ( KClientHttpRequest *self,
     const char *name, const char *val, ... )
 {
-    rc_t rc;
+    rc_t rc = 0;
 
     if ( self == NULL )
         rc = RC ( rcNS, rcNoTarg, rcValidating, rcSelf, rcNull);
@@ -566,7 +642,7 @@ LIB_EXPORT rc_t CC KClientHttpRequestAddHeader ( KClientHttpRequest *self,
             va_list args;
             va_start ( args, val );
 
-            /* disallow setting of "Host" and other headers */
+            /* disallow setting of "host" and other headers */
             name_size = string_size ( name );
 
 #define CSTRLEN( str ) \
@@ -579,20 +655,20 @@ LIB_EXPORT rc_t CC KClientHttpRequestAddHeader ( KClientHttpRequest *self,
 
             switch ( name_size )
             {
-            case CSTRLEN ( "Host" ):
-                if ( NAMEIS ( "Host" ) )
+            case CSTRLEN ( "host" ):
+                if ( NAMEIS ( "host" ) && ! self -> testing )
                     rc = RC ( rcNS, rcNoTarg, rcComparing, rcParam, rcUnsupported );
                 break;
-            case CSTRLEN ( "Content-Length" ):
-                if ( NAMEIS ( "Content-Length" ) )
+            case CSTRLEN ( "content-length" ):
+                if ( NAMEIS ( "content-length" ) )
                     rc = RC ( rcNS, rcNoTarg, rcComparing, rcParam, rcUnsupported );
                 break;
-            case CSTRLEN ( "If-None-Match" ):
-                if ( NAMEIS ( "If-None-Match" ) )
+            case CSTRLEN ( "if-none-match" ):
+                if ( NAMEIS ( "if-none-match" ) )
                     accept_not_modified = true;
                 break;
-            case CSTRLEN ( "If-Modified-Since" ):
-                if ( NAMEIS ( "If-Modified-Since" ) )
+            case CSTRLEN ( "if-modified-since" ):
+                if ( NAMEIS ( "if-modified-since" ) )
                     accept_not_modified = true;
                 break;
             }
@@ -705,7 +781,7 @@ LIB_EXPORT rc_t CC KClientHttpRequestGetPath(const KClientHttpRequest *self,
  */
 LIB_EXPORT rc_t CC KClientHttpRequestVAddPostParam ( KClientHttpRequest *self, const char *fmt, va_list args )
 {
-    rc_t rc;
+    rc_t rc = 0;
 
     if ( self == NULL )
     {
@@ -742,7 +818,7 @@ LIB_EXPORT rc_t CC KClientHttpRequestVAddPostParam ( KClientHttpRequest *self, c
 
 LIB_EXPORT rc_t CC KClientHttpRequestAddPostParam ( KClientHttpRequest *self, const char *fmt, ... )
 {
-    rc_t rc;
+    rc_t rc = 0;
 
     va_list args;
     va_start ( args, fmt );
@@ -843,7 +919,7 @@ UrlEncode( const char * source, size_t size, char ** res )
 LIB_EXPORT rc_t CC KClientHttpRequestVAddQueryParam ( KClientHttpRequest *self,
                                 const char * name, const char *fmt, va_list args )
 {
-    rc_t rc;
+    rc_t rc = 0;
 
     if ( self == NULL )
         rc = RC ( rcNS, rcNoTarg, rcValidating, rcSelf, rcNull );
@@ -899,7 +975,7 @@ LIB_EXPORT rc_t CC KClientHttpRequestVAddQueryParam ( KClientHttpRequest *self,
 
 LIB_EXPORT rc_t CC KClientHttpRequestAddQueryParam ( KClientHttpRequest *self, const char * name, const char *fmt, ... )
 {
-    rc_t rc;
+    rc_t rc = 0;
 
     va_list args;
     va_start ( args, fmt );
@@ -1118,7 +1194,7 @@ static rc_t KClientHttpRequestFormatMsgBegin (
     if ( ! http -> proxy_ep )
     {   /* direct connection */
         rc = KDataBufferPrintf ( buffer,
-                             "%s %S%s%S HTTP/%.2V\r\nHost: %S\r\n"
+                             "%s %S%s%S HTTP/%.2V\r\nhost: %S\r\n"
                              , method
                              , & self -> url_block . path
                              , has_query
@@ -1130,11 +1206,11 @@ static rc_t KClientHttpRequestFormatMsgBegin (
     else { /* using proxy */
         http -> uf = EUriFormGuess ( & hostname, uriForm, http -> uf );
         if ( http -> uf == eUFOrigin ||
-	     ( http -> uf == eUFOriginNoPort && http -> port != 443 ) )
-	{
+	       ( http -> uf == eUFOriginNoPort && http -> port != 443 ) )
+        {
 /* the host does not like absoluteURI: use abs_path ( origin-form ) with port */
             rc = KDataBufferPrintf ( buffer,
-                             "%s %S%s%S HTTP/%.2V\r\nHost: %S:%u\r\n"
+                             "%s %S%s%S HTTP/%.2V\r\nhost: %S:%u\r\n"
                              , method
                              , & self -> url_block . path
                              , has_query
@@ -1149,7 +1225,7 @@ static rc_t KClientHttpRequestFormatMsgBegin (
         {   /* the host does not like absoluteURI:
 	       use abs_path ( origin-form ) without port */
             rc = KDataBufferPrintf ( buffer,
-                             "%s %S%s%S HTTP/%.2V\r\nHost: %S\r\n"
+                             "%s %S%s%S HTTP/%.2V\r\nhost: %S\r\n"
                              , method
                              , & self -> url_block . path
                              , has_query
@@ -1159,7 +1235,7 @@ static rc_t KClientHttpRequestFormatMsgBegin (
         }
         else if ( http -> port != 80 ) { /* absoluteURI: non-default port */
             rc = KDataBufferPrintf ( buffer,
-                             "%s %S://%S:%u%S%s%S HTTP/%.2V\r\nHost: %S\r\n"
+                             "%s %S://%S:%u%S%s%S HTTP/%.2V\r\nhost: %S\r\n"
                              , method
                              , & self -> url_block . scheme
                              , & hostname
@@ -1173,7 +1249,7 @@ static rc_t KClientHttpRequestFormatMsgBegin (
         }
         else {                           /* absoluteURI: default port */
             rc = KDataBufferPrintf ( buffer,
-                             "%s %S://%S%S%s%S HTTP/%.2V\r\nHost: %S\r\n"
+                             "%s %S://%S%S%s%S HTTP/%.2V\r\nhost: %S\r\n"
                              , method
                              , & self -> url_block . scheme
                              , & hostname
@@ -1329,12 +1405,14 @@ rc_t VdbVersionPrint( ver_t self, char *buffer, size_t size,
 
 
 static
-rc_t CC KClientHttpRequestFormatMsgInt( const KClientHttpRequest *self,
+rc_t CC KClientHttpRequestFormatMsgInt( const KClientHttpRequest *cself,
     struct KDataBuffer *buffer, const char *method,
     uint32_t uriForm, bool format_sra )
 {
-    rc_t rc;
+    rc_t rc = 0;
     rc_t r2 = 0;
+
+    KClientHttpRequest* self = (KClientHttpRequest*)cself;
 
     bool have_accept = false;
     bool have_user_agent = false;
@@ -1355,10 +1433,94 @@ rc_t CC KClientHttpRequestFormatMsgInt( const KClientHttpRequest *self,
          return RC ( rcNS, rcNoTarg, rcReading, rcParam, rcNull );
     }
 
-    CONST_STRING ( &accept_string     , "Accept" );        /*  6 */
+    CONST_STRING ( &accept_string     , "accept" );        /*  6 */
     CONST_STRING ( &sra_release_string, "X-SRA-Release" ); /* 13 */
     CONST_STRING ( &vdb_release_string, "X-VDB-Release" ); /* 13 */
     CONST_STRING ( &user_agent_string , "User-Agent" );    /* 10 */
+
+    /* check headers */
+    for (node = (const KHttpHeader*)BSTreeFirst(&self->hdrs);
+        rc == 0 && node != NULL;
+        node = (const KHttpHeader*)BSTNodeNext(&node->dad))
+    {
+        /* look for "User-Agent" */
+        if ( !have_user_agent && node -> name . len == 10 )
+        {
+            if ( StringCaseCompare ( & node -> name, & user_agent_string ) == 0 )
+                have_user_agent = true;
+        }
+        /* look for "accept" */
+        else if (!have_accept && node->name.len == 6) {
+            if (StringCaseCompare(&node->name, &accept_string) == 0)
+                have_accept = true;
+        }
+        /* look for "X-SRA-Release" */
+        else if (!have_sra_release && node->name.len == 13) {
+            if (StringCaseCompare(&node->name, &sra_release_string) == 0)
+                have_sra_release = true;
+        }
+        /* look for "X-VDB-Release" */
+        else if (!have_vdb_release && node->name.len == 13) {
+            if (StringCaseCompare(&node->name, &vdb_release_string) == 0)
+                have_vdb_release = true;
+        }
+    }
+
+    if ( format_sra )
+    {
+        char buf[512] = "";
+        SraReleaseVersion version;
+        rc_t rs = SraReleaseVersionGet(&version);
+
+        /* add an accept header if we did not find one already in the header tree */
+        if (!have_accept) {
+            r2 = KClientHttpRequestAddHeader(self, "accept", "*/*");
+            if (r2 != 0 && rc == 0)
+                rc = r2;
+        }
+
+        /* add a X-SRA-Release header if we did not find one
+        already in the header tree */
+        if (!have_sra_release) {
+            if (rs == 0) {
+                r2 = VdbVersionPrint(version.version, buf, sizeof buf, "", "");
+                if (r2 == 0)
+                    r2 = KClientHttpRequestAddHeader(self,
+                        "X-SRA-Release", "%s", buf);
+                if (r2 != 0 && rc == 0)
+                    rc = r2;
+            }
+        }
+
+        /* add a X-VDB-Release header if we did not find one
+        already in the header tree */
+        if (!have_vdb_release) {
+            if (rs == 0) {
+                r2 = KClientHttpRequestAddHeader(self,
+                    "X-VDB-Release", "%s", buf);
+                if (r2 != 0 && rc == 0)
+                    rc = r2;
+            }
+        }
+
+        /* add an User-Agent header from the kns-manager if we did not find one already in the header tree */
+        if ( !have_user_agent )
+        {
+            rc_t r3 = 0;
+            const char * ua = NULL;
+            if ( self -> http != NULL ) {
+                ua = self -> head ? self -> http -> ua_head : self -> http -> ua;
+            }
+            if ( ua == NULL )
+                r3 = KNSManagerGetUserAgent ( &ua );
+            if (r3 == 0) {
+                r2 = KClientHttpRequestAddHeader(self,
+                    "User-Agent", "%s", ua);
+                if (r2 != 0 && rc == 0)
+                    rc = r2;
+            }
+        }
+    }
 
     assert(method);
     if (method[0] != 'P') {
@@ -1379,92 +1541,10 @@ rc_t CC KClientHttpRequestFormatMsgInt( const KClientHttpRequest *self,
           rc == 0 && node != NULL;
           node = ( const KHttpHeader* ) BSTNodeNext ( & node -> dad ) )
     {
-        /* look for "User-Agent" */
-        if ( !have_user_agent && node -> name . len == 10 )
-        {
-            if ( StringCaseCompare ( & node -> name, & user_agent_string ) == 0 )
-                have_user_agent = true;
-        }
-        /* look for "Accept" */
-        else if (!have_accept && node->name.len == 6) {
-            if (StringCaseCompare(&node->name, &accept_string) == 0)
-                have_accept = true;
-        }
-        /* look for "X-SRA-Release" */
-        else if (!have_sra_release && node->name.len == 13) {
-            if (StringCaseCompare(&node->name, &sra_release_string) == 0)
-                have_sra_release = true;
-        }
-        /* look for "X-VDB-Release" */
-        else if (!have_vdb_release && node->name.len == 13) {
-            if (StringCaseCompare(&node->name, &vdb_release_string) == 0)
-                have_vdb_release = true;
-        }
-
         /* add header line */
         rc = KDataBufferPrintf ( buffer, "%S: %S\r\n"
                                 , & node -> name
                                 , & node -> value );
-    }
-
-    if ( format_sra )
-    {
-        char buf[512] = "";
-        SraReleaseVersion version;
-        rc_t rs = SraReleaseVersionGet(&version);
-
-        /* add an Accept header if we did not find one already in the header tree */
-        if (!have_accept) {
-            r2 = KDataBufferPrintf(buffer, "Accept: */*\r\n");
-            if (rc == 0 && r2 != 0)
-                rc = r2;
-        }
-
-        /* add a X-SRA-Release header if we did not find one
-        already in the header tree */
-        if (!have_sra_release) {
-            if (rs == 0) {
-                r2 = VdbVersionPrint(version.version, buf, sizeof buf,
-                    "X-SRA-Release: ", "\r\n");
-                if (r2 == 0)
-                    r2 = KDataBufferPrintf(buffer, "%s", buf);
-                if (rc == 0 && r2 != 0)
-                    rc = r2;
-            }
-        }
-
-        /* add a X-VDB-Release header if we did not find one
-        already in the header tree */
-        if (!have_vdb_release) {
-            if (rs == 0) {
-                r2 = VdbVersionPrint(version.version, buf, sizeof buf,
-                    "X-VDB-Release: ", "\r\n");
-                if (r2 == 0)
-                    r2 = KDataBufferPrintf(buffer, "%s", buf);
-                if (rc == 0 && r2 != 0)
-                    rc = r2;
-            }
-        }
-
-        /* add an User-Agent header from the kns-manager if we did not find one already in the header tree */
-        if ( !have_user_agent )
-        {
-            rc_t r3 = 0;
-            const char * ua = NULL;
-            if ( self -> http != NULL ) {
-                ua = self -> head ? self -> http -> ua_head : self -> http -> ua;
-            }
-            if ( ua == NULL )
-                r3 = KNSManagerGetUserAgent ( &ua );
-            if ( r3 == 0 )
-            {
-                r2 = KDataBufferPrintf ( buffer, "User-Agent: %s\r\n", ua );
-                if ( rc == 0 )
-                {
-                    rc = r2;
-                }
-            }
-        }
     }
 
     /* add terminating empty header line */
@@ -1559,7 +1639,7 @@ rc_t KClientHttpRequestHandleRedirection ( KClientHttpRequest *self, const char 
                 if ( rc == 0 )
                 {
                     KClientHttpRequestClear ( self );
-                    rc = KClientHttpRequestInit ( self, &b, &uri );
+                    rc = KClientHttpRequestInit ( self, &b, &uri, NULL );
                     if ( rc == 0 )
                     {
                         http -> uf = eUFUndefined; /* reset in after redirection */
@@ -1587,7 +1667,7 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
 
     uint32_t uriForm = 1;
 
-    /* TBD - may want to prevent a Content-Type or other headers here */
+    /* TBD - may want to prevent a content-type or other headers here */
 
     if ( self -> body . elem_count != 0 )
         return RC ( rcNS, rcNoTarg, rcValidating, rcNoObj, rcIncorrect );
@@ -1641,7 +1721,7 @@ rc_t KClientHttpRequestSendReceiveNoBodyInt ( KClientHttpRequest *self, KClientH
         case 206:
             return 0;
         case 304:
-            /* check for "If-Modified-Since" or "If-None-Match" header in request and allow if present */
+            /* check for "if-modified-since" or "if-none-match" header in request and allow if present */
             if ( self -> accept_not_modified )
                 return 0;
             break;
@@ -1803,10 +1883,17 @@ LIB_EXPORT rc_t CC KClientHttpRequestHEAD ( KClientHttpRequest *self, KClientHtt
                     if ( rc == 0 )
                     {
                         rc = self -> ceRequired ? KClientHttpRequestPOST ( self, rslt ) : KClientHttpRequestGET ( self, rslt );
+
+                        if (rc == 0) {
+                            assert(rslt);
+                            if ((*rslt)->status == 403)
+                                rc = RC(rcNS, rcFile, rcReading, rcData, rcUnauthorized);
+                        }
+
                         if ( rc == 0 )
                         {
                             uint64_t result_size64 = sizeof buf;
-                            KStream * response;
+                            KStream * response = NULL;
 
                             /* extractSize */
                             KClientHttpResultSize ( *rslt, & result_size64 );
@@ -1857,7 +1944,7 @@ LIB_EXPORT rc_t CC KClientHttpRequestHEAD ( KClientHttpRequest *self, KClientHtt
  */
 LIB_EXPORT rc_t CC KClientHttpRequestGET ( KClientHttpRequest *self, KClientHttpResult **rslt )
 {
-    return KClientHttpRequestSendReceiveNoBody ( self, rslt, "GET", true ); // fotmat for SRA
+    return KClientHttpRequestSendReceiveNoBody ( self, rslt, "GET", true ); // format for SRA
 }
 
 rc_t CC KClientHttpRequestPOST_Int ( KClientHttpRequest *self, KClientHttpResult **_rslt )
@@ -1883,20 +1970,20 @@ rc_t CC KClientHttpRequestPOST_Int ( KClientHttpRequest *self, KClientHttpResult
     {
         /* "body" contains data plus NUL byte */
         rc = KClientHttpReplaceHeader ( & self -> hdrs,
-            "Content-Length", "%lu", self -> body . elem_count - 1 );
+            "content-length", "%lu", self -> body . elem_count - 1 );
         if ( rc == 0 )
         {
             String Content_Type;
             const KHttpHeader *node;
 
-            CONST_STRING ( & Content_Type, "Content-Type" );
+            CONST_STRING ( & Content_Type, "content-type" );
 
             node = ( const KHttpHeader* ) BSTreeFind ( & self -> hdrs, & Content_Type, KHttpHeaderCmp );
             if ( node == NULL )
             {
                 /* add content type for form parameters */
                 /* TBD - before general application, need to perform URL-encoding! */
-                rc = KClientHttpAddHeader ( & self -> hdrs, "Content-Type", "application/x-www-form-urlencoded" );
+                rc = KClientHttpAddHeader ( & self -> hdrs, "content-type", "application/x-www-form-urlencoded" );
             }
         }
 
@@ -1963,7 +2050,7 @@ rc_t CC KClientHttpRequestPOST_Int ( KClientHttpRequest *self, KClientHttpResult
             expiration = NULL;
             return 0;
         case 304:
-            /* check for "If-Modified-Since" or "If-None-Match" header in request and allow if present */
+            /* check for "if-modified-since" or "if-none-match" header in request and allow if present */
             if ( self -> accept_not_modified )
                 return 0;
             break;
@@ -1982,13 +2069,13 @@ rc_t CC KClientHttpRequestPOST_Int ( KClientHttpRequest *self, KClientHttpResult
             rc = KDataBufferResize ( & self -> body , 0 ); /* drop POST parameters */
             if (rc == 0 )
             {
-                rc = KClientHttpReplaceHeader ( & self -> hdrs, "Content-Length", "0" );
+                rc = KClientHttpReplaceHeader ( & self -> hdrs, "content-length", "0" );
                 if ( rc == 0 )
                 {
                    String Content_Type;
                    BSTNode *node;
 
-                   CONST_STRING ( & Content_Type, "Content-Type" );
+                   CONST_STRING ( & Content_Type, "content-type" );
 
                    node = BSTreeFind ( & self -> hdrs, & Content_Type, KHttpHeaderCmp );
                    if ( node != NULL )
@@ -2176,3 +2263,439 @@ LIB_EXPORT rc_t CC KClientHttpRequestPOST ( KClientHttpRequest *self, KClientHtt
     return rc;
 }
 
+const BSTree* KClientHttpResultGetHeaders(const KClientHttpResult* self) {
+    if (self == NULL)
+        return NULL;
+    else
+        return &self->hdrs;
+}
+
+rc_t KClientHttpRequestSetVPathIfNotSet(
+    KClientHttpRequest* self, const VPath* path)
+{
+    assert(self);
+
+    if (self->path != NULL)
+        return 0;
+    else if (path == NULL)
+        return 0;
+    else {
+        rc_t rc = VPathAddRef(path);
+        if (rc == 0)
+            self->path = path;
+        return rc;
+    }
+}
+
+/********************** Prepare a signed AWS API request **********************/
+static bool IsUnreserved(char c) {
+    static const char unreserved[] =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        "abcdefghijklmnopqrstuvwxyz"
+        "0123456789"
+        "-._~"
+        "/"; /* Encode the forward slash character, '/', everywhere except in
+                the object key name.
+                For example, if the object key name is photos/Jan/sample.jpg,
+                the forward slash in the key name is not encoded. */
+    return string_chr(unreserved, sizeof unreserved - 1, c) != NULL;
+}
+
+rc_t UriEncodeForAWS(const String** encoding) {
+    size_t i = 0;
+    int n = 0;
+    if (encoding == NULL || *encoding == NULL || (*encoding)->addr == NULL)
+        return 0;
+    for (i = 0; i < (*encoding)->size; ++i)
+        if (!IsUnreserved(((*encoding)->addr)[i]))
+            ++n;
+    if (n > 0) {
+        size_t iFrom = 0, iTo = 0;
+        const char* from = (*encoding)->addr;
+        char* to = NULL;
+        assert(FITS_INTO_INT32((*encoding)->size + n + n));
+        uint32_t len = (uint32_t)((*encoding)->size + n + n);
+
+        String* encoded = (String*)calloc(1, sizeof * encoded + len + 1);
+        if (encoded == NULL)
+            return RC(rcNS, rcString, rcAllocating, rcMemory, rcExhausted);
+
+        to = (char*)(encoded + 1);
+        StringInit(encoded, to, len, len);
+
+        for (iFrom = 0; iFrom < (*encoding)->size; ++iFrom) {
+            char c = from[iFrom];
+            if (IsUnreserved(c))
+                to[iTo++] = c;
+            else {
+                size_t num_writ = 0;
+                rc_t rc = string_printf(to + iTo, len, &num_writ, "%%%02X", c);
+                if (rc != 0)
+                    return rc;
+                iTo += num_writ;
+            }
+        }
+        to[iTo] = '\0';
+        assert(iTo == len);
+        StringWhack(*encoding);
+        *encoding = encoded;
+    }
+    return 0;
+}
+
+typedef struct PParameter {
+    BSTNode dad;
+
+    const String* name;
+    const String* value;
+} PParameter;
+
+typedef struct SParameter {
+    String parameter;
+
+    String name;
+    String value;
+
+    PParameter* encoded;
+} SParameter;
+
+static rc_t
+ParameterInit(SParameter* parameter, const char* buf, size_t size)
+{
+    rc_t rc = 0;
+
+    const char* end = buf + size;
+    char* sep = string_chr(buf, end - buf, '=');
+
+    assert(parameter);
+    memset(parameter, 0, sizeof * parameter);
+
+    StringInit(&parameter->parameter, buf, size, (uint32_t)size);
+
+    if (sep != NULL) {
+        StringInit(&parameter->name, buf, sep - buf, (uint32_t)(sep - buf));
+        StringInit(&parameter->value, sep + 1,
+            end - sep - 1, (uint32_t)(end - sep - 1));
+    }
+    else {
+        StringInit(&parameter->name, buf, end - buf, (uint32_t)(end - buf));
+        StringInit(&parameter->value, "", 0, 0);
+    }
+
+    parameter->encoded = (PParameter*)calloc(1, sizeof * parameter->encoded);
+    if (parameter->encoded == NULL)
+        return RC(rcNS, rcString, rcAllocating, rcMemory, rcExhausted);
+
+    rc = StringCopy(&parameter->encoded->name, &parameter->name);
+    if (rc == 0)
+        rc = UriEncodeForAWS(&parameter->encoded->name);
+
+    if (rc == 0)
+        rc = StringCopy(&parameter->encoded->value, &parameter->value);
+    if (rc == 0)
+        rc = UriEncodeForAWS(&parameter->encoded->value);
+
+    return rc;
+}
+
+static int64_t CC PParameterSort(const BSTNode* na, const BSTNode* nb) {
+    const PParameter* a = (const PParameter*)na;
+    const PParameter* b = (const PParameter*)nb;
+
+    return StringCaseCompare(a->name, b->name);
+}
+
+static void AddParameter(BSTNode* n, void* data) {
+    PParameter* self = (PParameter*)n;
+    KDataBuffer* buf = (KDataBuffer*)data;
+
+    assert(buf && self && self->name);
+
+    if (self->name->size > 0)
+        KDataBufferPrintf(buf, "%s%S=%S",
+            buf->elem_count != 0 ? "&" : "", self->name, self->value);
+}
+
+static void CC PParameterWhack(BSTNode* n, void* ignore) {
+    PParameter* self = (PParameter*)n;
+
+    assert(self);
+
+    StringWhack(self->name);
+    StringWhack(self->value);
+
+    free(self);
+}
+
+rc_t PrepareCanonicalQueryStringForAWSRequest(const String* query,
+    KDataBuffer* canonicalQueryString)
+{
+    rc_t rc = 0;
+
+    const char* buf = NULL;
+    const char* end = NULL;
+    char* sep = NULL;
+
+    SParameter parameter;
+
+    BSTree parameters;
+    BSTreeInit(&parameters);
+
+    assert(query && canonicalQueryString);
+
+    buf = query->addr;
+    end = buf + query->size;
+
+    sep = string_chr(buf, end - buf, '&');
+    if (sep == NULL) {
+        rc = ParameterInit(&parameter, buf, query->size);
+        if (rc != 0)
+            return rc;
+        rc = BSTreeInsert(&parameters, &parameter.encoded->dad, PParameterSort);
+        if (rc != 0)
+            return rc;
+    }
+
+    while (sep != NULL) {
+        rc = ParameterInit(&parameter, buf, sep - buf);
+        if (rc != 0)
+            return rc;
+        rc = BSTreeInsert(&parameters, &parameter.encoded->dad, PParameterSort);
+        if (rc != 0)
+            return rc;
+
+        buf = sep + 1;
+        sep = string_chr(buf, end - buf, '&');
+        if (sep == NULL) {
+            rc = ParameterInit(&parameter, buf, end - buf);
+            if (rc != 0)
+                return rc;
+            rc = BSTreeInsert(&parameters, &parameter.encoded->dad,
+                PParameterSort);
+            if (rc != 0)
+                return rc;
+        }
+    }
+
+    BSTreeForEach(&parameters, false, AddParameter, canonicalQueryString);
+    BSTreeWhack(&parameters, PParameterWhack, NULL);
+
+    if (canonicalQueryString->elem_count == 0)
+        rc = KDataBufferPrintf(canonicalQueryString, "%s", "");
+
+    return rc;
+}
+
+rc_t SAddHeaderDataInit(SAddHeaderData* self, bool buildSignedHeaders,
+    const String* host)
+{
+    rc_t rc = 0;
+
+    assert(self);
+    memset(self, 0, sizeof * self);
+    
+    if (host == NULL)
+        self->hostAdded = true;
+    else
+        self->host = host;
+
+    rc = KDataBufferMake(&self->canonicalHeaders, 8, 0);
+
+    if (rc == 0 && buildSignedHeaders) {
+        rc = KDataBufferMake(&self->signedHeaders, 8, 0);
+        self->buildSignedHeaders = true;
+    }
+
+    return rc;
+}
+
+rc_t SAddHeaderDataFini(SAddHeaderData* self) {
+    rc_t rc = 0;
+
+    assert(self);
+
+    rc = KDataBufferWhack(&self->canonicalHeaders);
+
+    if (self->buildSignedHeaders) {
+        rc_t r2 = KDataBufferWhack(&self->signedHeaders);
+        if (r2 != 0 && rc == 0)
+            rc = r2;
+    }
+
+    return rc;
+}
+
+static rc_t AddHostHeaderForAWSRequest(SAddHeaderData* d) {
+    assert(d);
+
+    if (d->host == NULL)
+        return 0;
+    else if (!d->hostAdded) {
+        rc_t rc = KDataBufferPrintf(&d->canonicalHeaders, "host:%S\n", d->host);
+
+        if (rc == 0 && d->buildSignedHeaders)
+            rc = KDataBufferPrintf(&d->signedHeaders, "host;");
+
+        d->hostAdded = true;
+        return rc;
+    }
+    else
+        return 0;
+}
+
+void AddHeaderForAWSRequest(BSTNode* n, void* data) {
+    KHttpHeader* self = (KHttpHeader*)n;
+    SAddHeaderData* d = (SAddHeaderData*)data;
+
+    assert(self && d);
+
+    if(!d->hostAdded){
+        int c = 0;
+
+        String host;
+        CONST_STRING(&host, "host");
+
+        c = StringCaseCompare(&host, &self->name);
+        if (c < 0) {
+            AddHostHeaderForAWSRequest(d);
+            d->hostAdded = true;
+        }
+
+        else if (c == 0) /* "host" header exists already */
+            d->hostAdded = true;
+    }
+
+    KDataBufferPrintf(&d->canonicalHeaders, "%.*s:%.*s\n",
+        (uint32_t)self->name.size, self->name.addr,
+        (uint32_t)self->value.size, self->value.addr);
+
+    if (d->buildSignedHeaders)
+        KDataBufferPrintf(&d->signedHeaders, "%.*s;",
+            (uint32_t)self->name.size, self->name.addr);
+}
+
+rc_t KClientHttpRequestPrepareCanonicalHeaders(
+    const KClientHttpRequest* self, SAddHeaderData* d)
+{
+    rc_t rc = SAddHeaderDataInit(d, true, &self->url_block.host);
+
+    const BSTree* hdrs = KClientHttpRequestGetHeaders(self);
+
+    if (rc == 0 && hdrs != NULL)
+        BSTreeForEach(hdrs, false, AddHeaderForAWSRequest, d);
+
+    assert(d);
+    if (rc == 0 && d->canonicalHeaders.elem_count == 0)
+        rc = KDataBufferPrintf(&d->canonicalHeaders, "%s", "");
+    if (rc == 0 && d->buildSignedHeaders && d->signedHeaders.elem_count == 0)
+        rc = KDataBufferPrintf(&d->signedHeaders, "%s", "");
+
+    if (rc == 0) {
+        DBGMSG(DBG_CLOUD, DBG_FLAG(DBG_CLOUD_SIGN),
+            ("AWSAuthV4Signer: Canonical Header String: %.*s\n",
+                (int)(d->canonicalHeaders.elem_count - 1),
+                d->canonicalHeaders.base));
+        if (d->buildSignedHeaders) {
+            int i = d->signedHeaders.elem_count - 1;
+            if (i > 0)
+                --i;
+            DBGMSG(DBG_CLOUD, DBG_FLAG(DBG_CLOUD_SIGN),
+                ("AWSAuthV4Signer: Signed Headers value:%.*s\n",
+                    i, d->signedHeaders.base));
+        }
+    }
+
+    return rc;
+}
+
+/*
+https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_sigv-create-signed-request.html
+https://docs.aws.amazon.com/AmazonS3/latest/developerguide/sig-v4-header-based-auth.html
+*/
+LIB_EXPORT rc_t CC KClientHttpRequestCreateCanonicalRequestString(
+    const KClientHttpRequest* self, const char* http_method,
+    const char* payload, KDataBuffer* request, char** signedHeaders)
+{
+    rc_t rc = 0;
+
+    const URLBlock* block = NULL;
+    const String* uri = NULL;
+
+    KDataBuffer canonicalQueryString;
+    SAddHeaderData d;
+
+    assert(self);
+
+    block = &self->url_block;
+
+    rc = StringCopy(&uri, &block->path);
+    if (rc == 0)
+        rc = UriEncodeForAWS(&uri);
+
+    if (rc == 0)
+        rc = KDataBufferMake(&canonicalQueryString, 8, 0);
+
+    if (rc == 0)
+        rc = PrepareCanonicalQueryStringForAWSRequest(
+            &block->query, &canonicalQueryString);
+
+    if (rc == 0)
+        rc = KClientHttpRequestPrepareCanonicalHeaders(self, &d);
+
+    if (rc == 0)                                      /* <HTTPMethod>\n */
+        rc = KDataBufferPrintf(request, "%s\n", http_method);
+    if (rc == 0)
+        rc = KDataBufferPrintf(request, "%S\n", uri); /* <CanonicalURI>\n */
+    if (rc == 0)
+        rc = KDataBufferPrintf(request, "%.*s\n", /* <CanonicalQueryString>\n */
+            (uint32_t)canonicalQueryString.elem_count - 1,
+            canonicalQueryString.base);
+    if (rc == 0) {
+        const KDataBuffer* canoniclHdrs = &d.canonicalHeaders;
+        rc = KDataBufferPrintf(request, "%.*s\n", /* <CanonicalHeaders>\n */
+            (uint32_t)canoniclHdrs->elem_count - 1, canoniclHdrs->base);
+    }
+    if (rc == 0) {
+        const KDataBuffer* signedHdrs = &d.signedHeaders;
+        uint32_t l = signedHdrs->elem_count - 1;
+        if (l > 0)
+            --l; /* remove trailing ';' */
+        rc = KDataBufferPrintf(request, "%.*s\n", /* <SignedHeaders>\n */
+            l, signedHdrs->base);
+        if (rc == 0 && signedHeaders != NULL) {
+            *signedHeaders
+                = string_dup(signedHdrs->base, signedHdrs->elem_count);
+            if (*signedHeaders == NULL)
+                rc = RC(rcNS, rcNoTarg, rcAllocating, rcMemory, rcNull);
+            /* remove trailing ';' */
+            ((char*)*signedHeaders)[l] = '\0';
+        }
+    }
+    if (rc == 0) {
+        /*const char string[] =
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+        DBGMSG(DBG_CLOUD, DBG_FLAG(DBG_CLOUD_SIGN),
+            ("AWSAuthV4Signer: Using empty string sha256 "
+                "%s because payload is empty\n", string));*/
+        rc = KDataBufferPrintf(request, "%s", payload); /* <HashedPayload> */
+    }
+
+    if (rc == 0)
+        DBGMSG(DBG_CLOUD, DBG_FLAG(DBG_CLOUD_SIGN),
+            ("AWSAuthV4Signer: Canonical Request String: %.*s\n",
+                (int)(request->elem_count - 1), request->base));
+
+    StringWhack(uri);
+
+    {
+        rc_t r2 = KDataBufferWhack(&canonicalQueryString);
+        if (r2 != 0 && rc == 0)
+            rc = r2;
+
+        r2 = SAddHeaderDataFini(&d);
+        if (r2 != 0 && rc == 0)
+            rc = r2;
+    }
+
+    return rc;
+}

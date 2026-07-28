@@ -160,6 +160,7 @@ VFS_EXTERN rc_t CC VFSManagerMakeOidPath ( struct VFSManager const * self,
 VFS_EXTERN rc_t CC VFSManagerMakePathWithExtension ( struct VFSManager const * self,
     VPath ** new_path, const VPath * orig, const char * extension );
 
+VFS_EXTERN rc_t CC VPathCopyForCloudAccess(const VPath* self, VPath** copy);
 
 /* ExtractAccessionOrOID
  *  given an arbitrary path, possibly with extensions,
@@ -290,15 +291,17 @@ VFS_EXTERN rc_t CC VPathGetVdbcache(const VPath * self,
  *  returns pointers to internal String data
  *  Strings remain valid while "self" is valid
  */
-VFS_EXTERN rc_t CC VPathGetScheme ( const VPath * self, struct String * str );
 VFS_EXTERN rc_t CC VPathGetAuth ( const VPath * self, struct String * str );
+VFS_EXTERN rc_t CC VPathGetFragment ( const VPath * self, struct String * str );
 VFS_EXTERN rc_t CC VPathGetHost ( const VPath * self, struct String * str );
+VFS_EXTERN rc_t CC VPathGetParam ( const VPath * self, const char * param, struct String * str );
+VFS_EXTERN rc_t CC VPathGetPath ( const VPath * self, struct String * str );
 VFS_EXTERN rc_t CC VPathGetPortName ( const VPath * self, struct String * str );
 VFS_EXTERN uint16_t CC VPathGetPortNum ( const VPath * self );
-VFS_EXTERN rc_t CC VPathGetPath ( const VPath * self, struct String * str );
 VFS_EXTERN rc_t CC VPathGetQuery ( const VPath * self, struct String * str );
-VFS_EXTERN rc_t CC VPathGetParam ( const VPath * self, const char * param, struct String * str );
-VFS_EXTERN rc_t CC VPathGetFragment ( const VPath * self, struct String * str );
+VFS_EXTERN rc_t CC VPathGetRegion ( const VPath * self, struct String * str );
+VFS_EXTERN rc_t CC VPathGetScheme ( const VPath * self, struct String * str );
+VFS_EXTERN rc_t CC VPathGetService ( const VPath * self, struct String * str );
 /* TEMPORARY */
 VFS_EXTERN uint32_t CC VPathGetOid ( const VPath * self );
 
