@@ -76,6 +76,43 @@ LIB_EXPORT rc_t CC StringCopy ( const String **cpy, const String *str )
     return RC ( rcText, rcString, rcCopying, rcParam, rcNull );
 }
 
+/* StringCopyToLower
+ *  allocates a copy of a string in lower-case
+ */
+rc_t StringCopyToLower(const String** cpy, const String* str)
+{
+    if (cpy != NULL)
+    {
+        if (str != NULL)
+        {
+            size_t size = str->size;
+            String* s = malloc(sizeof * s + str->size + 1);
+            if (s != NULL)
+            {
+                char* addr = (char*)(s + 1);
+                StringInit(s, addr, size, str->len);
+                memmove(addr, str->addr, size);
+                addr[size] = 0;
+                *cpy = s;
+
+                /* Convert to lowercase */
+                {
+                    int i = 0;
+                    for (i = 0; i < s->size; ++i)
+                        addr[i] = tolower(s->addr[i]);
+                }
+                return 0;
+            }
+
+            *cpy = NULL;
+            return RC(rcText, rcString, rcCopying, rcMemory, rcInsufficient);
+        }
+
+        *cpy = NULL;
+    }
+    return RC(rcText, rcString, rcCopying, rcParam, rcNull);
+}
+
 /* StringConcat
  *  concatenate one string onto another
  */

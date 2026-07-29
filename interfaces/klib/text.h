@@ -145,6 +145,11 @@ struct String
  */
 KLIB_EXTERN rc_t CC StringCopy ( const String **cpy, const String *str );
 
+/* StringCopyToLower
+ *  allocates a copy of a string in lower-case
+ */
+KLIB_EXTERN rc_t CC StringCopyToLower ( const String **cpy, const String *str );
+
 /* StringConcat
  *  concatenate one string onto another
  */

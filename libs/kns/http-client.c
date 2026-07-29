@@ -1176,40 +1176,6 @@ rc_t KClientHttpGetLine ( KClientHttp *self, struct timeout_t *tm )
     return rc;
 }
 
-rc_t StringCopyToLower(const String** cpy, const String* str)
-{
-    if (cpy != NULL)
-    {
-        if (str != NULL)
-        {
-            size_t size = str->size;
-            String* s = malloc(sizeof * s + str->size + 1);
-            if (s != NULL)
-            {
-                char* addr = (char*)(s + 1);
-                StringInit(s, addr, size, str->len);
-                memmove(addr, str->addr, size);
-                addr[size] = 0;
-                *cpy = s;
-
-                /* Convert to lowercase */
-                {
-                    int i = 0;
-                    for (i = 0; i < s->size; ++i)
-                        addr[i] = tolower(s->addr[i]);
-                }
-                return 0;
-            }
-
-            *cpy = NULL;
-            return RC(rcText, rcString, rcCopying, rcMemory, rcInsufficient);
-        }
-
-        *cpy = NULL;
-    }
-    return RC(rcText, rcString, rcCopying, rcParam, rcNull);
-}
-
 /* AddHeaderString
  *  performs task of entering a header into BSTree
  *  or updating an existing node
