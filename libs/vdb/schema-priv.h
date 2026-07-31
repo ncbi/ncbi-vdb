@@ -263,7 +263,7 @@ struct VSchema
 
     /* include path - vector of char *, ordered by happenstance */
     Vector inc;
-    Vector inc_env; // include paths from env var VDB_SCHEMA_INCLUDE, get checked before inv
+    Vector inc_env; // include paths from env var VDB_SCHEMA_INCLUDES, get checked before inv
 
     /* alias names - owned by scope, but recorded for dumping */
     Vector alias;
