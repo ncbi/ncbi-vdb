@@ -2376,7 +2376,8 @@ rc_t VFSManagerOpenDirectoryReadHttpResolved (const VFSManager *self,
                                      promote );
         if ( rc != 0 )
         {
-            PLOGERR ( klogErr, ( klogErr, rc, "error with https open '$(U)'",
+            if (VPathIsHighlyReliable(path))
+               PLOGERR ( klogErr, ( klogErr, rc, "error with https open '$(U)'",
                                      "U=%S", uri ) );
         }
         else
