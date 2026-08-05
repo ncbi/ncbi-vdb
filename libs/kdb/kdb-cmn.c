@@ -758,8 +758,16 @@ static rc_t KDBVGetPathContents_1(KDBContents const **presult, int levelOfDetail
         if ((bits & scan_col) != 0) {
             // tables only contain columns
             if ((bits & (scan_db | scan_tbl)) == 0) {
-                KDBGetPathContents_Table(result, dir);
-                result->dbtype = kptTable;
+                if ((bits & (scan_meta | scan_md )) == scan_meta
+                 || (bits & (scan_skey | scan_idx)) == scan_skey)
+                {
+                    KDBGetPathContents_GatherColumns(result, dir);
+                    result->dbtype = kptPrereleaseTbl;
+                }
+                else {
+                    KDBGetPathContents_Table(result, dir);
+                    result->dbtype = kptTable;
+                }
             }
         }
         else {
