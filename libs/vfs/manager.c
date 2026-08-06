@@ -994,7 +994,27 @@ rc_t VFSManagerMakeHTTPFile( const VFSManager * self,
             get_caching_params( &cps, blocksize, is_refseq, promote );
             if ( cps . version == cachetee_3 )
             {
-                rc = wrap_in_cachetee3( self -> cwd, cfp, cache_location, &cps, path );
+                int retry = 0;
+                for (retry = 0; retry < 2; ++retry) {
+                    rc = wrap_in_cachetee3( self -> cwd, cfp, cache_location,
+                        &cps, path );
+                    if (rc != SILENT_RC(
+                        rcPS, rcThread, rcCreating, rcThread, rcExhausted))
+                    {
+                        break;
+                    }
+                    else if (!self->notCleanCacheIfThreadExhausted) {
+                        rc_t r2 = 0;
+                        PLOGERR(klogSys, (klogSys, 0,
+                            "$(func) - failed to start background thread: "
+                            "finishing cached threads...", "func=%s", __func__));
+                        STATUS(STAT_PRG, "%s - failed to start background thread: "
+                            "calling VFSManagerSdlCacheClear()...\n", __func__);
+                        r2 = VFSManagerSdlCacheClear((VFSManager*)self);
+                        if (r2 != 0)
+                            break;
+                    }
+                }
             }
             else
             {
@@ -3296,6 +3316,9 @@ static rc_t CC VFSManagerMakeFromKfgImpl ( struct VFSManager ** pmanager,
 
             obj->notCachingSdlResponse
                 = getenv("NCBI_VDB_NO_CACHE_SDL_RESPONSE") != NULL;
+            obj->notCleanCacheIfThreadExhausted
+                = getenv("NCBI_VDB_NOT_CLEAN_SDL_CACHE_IF_NO_MORE_THREADS")
+                           != NULL;
             BSTreeInit(&obj->trSdl);
             rc = KLockMake(&obj->trSdlMutex);
 
