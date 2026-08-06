@@ -279,8 +279,8 @@ VFS_EXTERN rc_t CC VPathMakeString ( const VPath * self,
     struct String const ** str );
 
 /* GetVdbcache
- *  return attached vdbcahe
- * and boolian telling that there is no neew to check remove vdbcache URL
+ *  return attached vdbcache
+ * and boolian telling that there is no need to check remote vdbcache URL
  */
 VFS_EXTERN rc_t CC VPathGetVdbcache(const VPath * self,
     const VPath ** vdbcache, bool * vdbcacheChecked);
