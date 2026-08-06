@@ -249,7 +249,11 @@ size_t CC KCacheTeeChunkReaderBufferSize ( const KCacheTeeChunkReader * self )
 static
 rc_t CC KCacheTeeChunkReaderNext ( KCacheTeeChunkReader * self, void ** buf, size_t * size )
 {
-    if ( self -> ctf -> quitting )
+    bool quitting = false;
+    KLockAcquire ( self -> ctf -> cache_lock );
+    quitting = self -> ctf -> quitting;
+    KLockUnlock ( self -> ctf -> cache_lock );
+    if ( quitting )
     {
         STATUS ( STAT_PRG, "BG: %s - refusing request due to quitting\n", __func__ );
         * buf = NULL;
@@ -602,9 +606,9 @@ rc_t CC KCacheTeeFileDestroy ( KCacheTeeFile_v3 *self )
 
        this must be done before sealing the queue */
     STATUS ( STAT_PRG, "%s - setting 'quitting' flag\n", __func__ );
-    KLockAcquire(self->cache_lock);
+    KLockAcquire ( self -> cache_lock );
     self -> quitting = true;
-    KLockUnlock(self->cache_lock);
+    KLockUnlock ( self -> cache_lock );
 
     /* wake the background thread */
     STATUS ( STAT_PRG, "%s - signaling background thread to exit\n", __func__ );
@@ -1440,12 +1444,12 @@ rc_t KCacheTeeFileBGLoop ( KCacheTeeFile_v3 * self )
     STATUS ( STAT_PRG, "BG: %s - entering loop\n", __func__ );
     while ( true )
     {
+        bool quitting = false;
         KLockAcquire(self->cache_lock);
-        if (self->quitting) {
-            KLockUnlock(self->cache_lock);
-            break;
-        }
+        quitting = self->quitting;
         KLockUnlock(self->cache_lock);
+        if (quitting)
+            break;
         STATUS ( STAT_PRG, "BG: %s - acquiring queue lock\n", __func__ );
         rc = KLockAcquire ( self -> qlock );
         if ( rc != 0 )
