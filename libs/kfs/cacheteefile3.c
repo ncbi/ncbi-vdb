@@ -561,12 +561,23 @@ static rc_t finalize_v3 ( KCacheTeeFile_v3 * self );
 static
 rc_t CC KCacheTeeFileDestroy ( KCacheTeeFile_v3 *self )
 {
-    rc_t rc;
+    rc_t rc = 0;
+
+    bool threadless = false;
+    assert(self);
+    threadless = self->thread == NULL;
 
     /* remove cache file entry from open-cache-file cache */
     if ( self -> cache_file != NULL )
     {
-        int status = ENTER_CRIT_SECTION ();
+        int status = 0;
+        /* If thread was not opened
+           then the file was not added to open_cache_tee_files.
+           It happens when "ulimit -u" was hit.
+           We are already in CRIT_SECTION in KDirectoryVMakeKCacheTeeFile_v */
+        
+        if (!threadless)
+            status = ENTER_CRIT_SECTION ();
         if ( status == 0 )
         {
             BSTNode * node = BSTreeFind ( & open_cache_tee_files, self -> path, KCacheTeeFileTreeNodeFind );
@@ -576,7 +587,8 @@ rc_t CC KCacheTeeFileDestroy ( KCacheTeeFile_v3 *self )
                 free ( node );
             }
 
-            EXIT_CRIT_SECTION ();
+            if (!threadless)
+                EXIT_CRIT_SECTION ();
         }
     }
 
