@@ -3317,8 +3317,7 @@ static rc_t CC VFSManagerMakeFromKfgImpl ( struct VFSManager ** pmanager,
             obj->notCachingSdlResponse
                 = getenv("NCBI_VDB_NO_CACHE_SDL_RESPONSE") != NULL;
             obj->notCleanCacheIfThreadExhausted
-                = getenv("NCBI_VDB_NOT_CLEAN_SDL_CACHE_IF_NO_MORE_THREADS")
-                           != NULL;
+                = getenv("NOT_CLEAN_SDL_CACHE_IF_NO_MORE_THREADS") != NULL;
             BSTreeInit(&obj->trSdl);
             rc = KLockMake(&obj->trSdlMutex);
 
