@@ -79,12 +79,15 @@ rc_t SignalHup ( void )
 static
 void SigQuitHandler ( int sig )
 {
-    const char *msg;
+    const char *msg = NULL;
 
     SetQuitting();
 
     switch ( sig )
     {
+    case SIGABRT:
+        msg = "ABORT";
+        break;
     case SIGINT:
         msg = "^C";
         break;
@@ -108,6 +111,12 @@ void SigQuitHandler ( int sig )
 static
 void SigCoreHandler ( int sig )
 {
+    if ( sig == SIGABRT ) {
+        const char *msg = "ABORT";
+        PLOGMSG ( klogFatal, ( klogFatal, "SIGNAL - $(sig)", "sig=%s", msg ));
+        return;
+    }
+
     PLOGMSG ( klogFatal, ( klogFatal, "SIGNAL - $(sig)\n", "sig=%d", sig ));
     exit ( 1 );
 }
