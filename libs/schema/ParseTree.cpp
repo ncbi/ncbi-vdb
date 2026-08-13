@@ -134,6 +134,17 @@ ParseTree :: MoveChildren ( ctx_t ctx, ParseTree& p_source )
     }
 }
 
+void
+ParseTree :: traverse( VisitFn fn ) const
+{   // for now, top-down left-right only
+    fn( *this );
+    auto count = ChildrenCount();
+    for ( uint32_t i = 0; i < count; ++i )
+    {
+        GetChild( i ) -> traverse( fn );
+    }
+}
+
 // ParseTreeScanner
 
 static const uint32_t StackBlockSize = 1024; //TODO: pick a good initial size

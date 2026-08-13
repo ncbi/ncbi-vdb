@@ -70,7 +70,7 @@ namespace ncbi
             AST ( const Token* token );
             AST ( Token :: TokenType tokenType ); // no-value token
             explicit AST (); // no token; a synthesized node
-            ~AST(); // call Destroy() instead
+            virtual ~AST(); // call Destroy() instead
         };
 
         class AST_FQN : public AST
@@ -119,7 +119,7 @@ namespace ncbi
         protected:
             AST_Expr ( const Token* );
             AST_Expr ();
-            ~AST_Expr(); // call AST::Destroy() instead
+            virtual ~AST_Expr(); // call AST::Destroy() instead
 
         private:
             SExpression * MakeFloat ( ctx_t ctx, ASTBuilder & ) const;
