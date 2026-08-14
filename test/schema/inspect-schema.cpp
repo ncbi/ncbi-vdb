@@ -35,108 +35,166 @@
  #include <klib/out.h>
 // #include <kfs/directory.h>
 // #include <vdb/schema.h>
-// #include <vdb/manager.h>
+#include <vdb/manager.h>
 // #include <vfs/manager.h>
 // #include <vfs/path.h>
 
+#include "AST_Fixture.hpp"
+
 #include <iostream>
-// #include <fstream>
-// #include <sstream>
+#include <fstream>
+#include <sstream>
 #include <stdexcept>
 // #include <algorithm>
 
 using namespace std;
 //using namespace ncbi::SchemaParser;
 
-rc_t CC UsageSummary (const char * progname) {
-    return KOutMsg (
-        "Summary:\n"
-        "  Inspect schema AST\n"
-        "\n""Usage:\n"
-        "  %s [options] \n",
-        progname);
+rc_t CC UsageSummary (const char * progname)
+{
+    cout << "Usage:" << endl
+         << "  " << progname << " [Options] schemafile query ..." << endl
+        << "Summary:" << endl
+        << "  Performs static analysis of a schema" << endl
+        << endl
+        << "Example:" << endl
+        << "  " << progname << " --database NCBI:align:db:alignment_sorted --table REFERENCE align/seq.vschema coltofn" << endl
+        << endl;
+    return 0;
  }
 
 const char UsageDefaultName[] = "vdb-inspect-schema";
 
-rc_t CC Usage(const Args* args) {
-    rc_t rc = 0 ;
+rc_t CC Usage(const Args* args)
+{
+    UNUSED( args );
+    UsageSummary ( UsageDefaultName );
 
-    const char* progname = UsageDefaultName;
-    const char* fullpath = UsageDefaultName;
+    cout
+        << "Query:" << endl
+        << "  coltofn     " << endl
+        << endl;
 
-    if (args == NULL)
-    {    rc = RC(rcExe, rcArgv, rcAccessing, rcSelf, rcNull); }
-    else
-    {    rc = ArgsProgram(args, &fullpath, &progname); }
+    cout
+        << "Options:" << endl
+        << "  -I|--include <paths>     " << endl
+        << "  -d|--database <name>     " << endl
+        << "  -t|--table <name>        " << endl
+        << "  -o|--output <path>       " << endl
+        << "  --json                   " << endl
+        ;
 
-    UsageSummary(progname);
+    cout << endl;
 
-    KOutMsg ("\nOptions:\n");
+    HelpOptionsStandard();
+    cout << endl;
 
-    // HelpOptionLine (ALIAS_ALL, OPTION_ALL, NULL, USAGE_ALL);
-    // HelpOptionLine (ALIAS_REF, OPTION_REF, NULL, USAGE_REF);
-    // HelpOptionLine (ALIAS_BAM, OPTION_BAM, NULL, USAGE_BAM);
-    // HelpOptionLine (ALIAS_QUA, OPTION_QUA, NULL, USAGE_QUA);
-    // HelpOptionLine (ALIAS_HEA, OPTION_HEA, NULL, USAGE_HEA);
-    // HelpOptionLine (ALIAS_NGC, OPTION_NGC, "path",USAGE_NGC);
+    HelpVersion ( UsageDefaultName, GetKAppVersion () );
 
-    KOutMsg ("\n");
+    return 0;
+}
 
-    HelpOptionsStandard ();
+void
+ColToFn( AST * ast )
+{
 
-    KOutMsg("\n");
-
-    HelpVersion (fullpath, GetKAppVersion());
-
-    return rc;
 }
 
 void
 run( int argc, char *argv [] )
 {
-    // int failed = 0;
-    // if ( argc < 2 )
-    // {
-    //     cout << "Usage:\n\t" << argv[0] << " [-Ipath ... ] schema-file " << endl;
-    //     return 1;
-    // }
-    // struct KDirectory * wd;
-    // if ( KDirectoryNativeDir ( & wd ) != 0 )
-    // {
-    //     throw runtime_error ( "KDirectoryNativeDir failed" );
-    // }
+    struct VDBManager const * vdb;
+    if ( VDBManagerMakeRead ( & vdb, nullptr ) != 0 )
+    {
+        throw runtime_error ( "VDBManagerMakeRead failed" );
+    }
 
-    // struct VDBManager const * vdb;
-    // if ( VDBManagerMakeRead ( & vdb, wd ) != 0 )
-    // {
-    //     throw runtime_error ( "VDBManagerMakeRead failed" );
-    // }
+    string input;
+    string action;
+    unsigned int args_seen = 0;
+    int i = 1;
+    while ( i < argc )
+    {
+        const char * arg = argv [ i ];
+        if ( arg [ 0 ] == '-' )
+        {   // an option
+            switch ( arg [ 1 ] )
+            {
+                case 'I':
+                    ++i;
+                    if ( i >= argc )
+                    {
+                        throw runtime_error ( "Option -I requires an argument" );
+                    }
+                    if ( VDBManagerAddSchemaIncludePath ( vdb, argv [ i ]) )
+                    {
+                        throw runtime_error ( string ( "VDBManagerAddSchemaIncludePath(" ) + argv [ i ] + ") failed" );
+                    }
+                    break;
+                default:
+                    cout << "Unknown option " << arg << endl;
+                    break;
+            }
+            ++i;
+            continue;
+        }
+        else // an argument
+        {
+            switch ( args_seen )
+            {
+                case 0:
+                {
+                    input = arg;
+                    ++ args_seen;
+                    break;
+                }
+                case 1:
+                {
+                    action = arg;
+                    ++ args_seen;
+                    break;
+                }
+                default:
+                {
+                    throw runtime_error ( "Too many arguments" );
+                }
+            }
+            ++i;
+        }
+    }
 
-    // for ( int i = 0 ; i < argc - 1; ++i )
-    // {
-    //     const char * arg = argv [ i + 1 ];
-    //     if ( arg [ 0 ] == '-' )
-    //     {
-    //         switch ( arg [ 1 ] )
-    //         {
-    //             case 'I':
-    //                 if ( VDBManagerAddSchemaIncludePath ( vdb, arg + 2 ) )
-    //                 {
-    //                     throw runtime_error ( string ( "VDBManagerAddSchemaIncludePath(" ) + ( arg + 2 ) + ") failed" );
-    //                 }
-    //                 break;
-    //             default:
-    //                 cout << "Unknown option " << arg << endl;
-    //                 break;
-    //         }
-    //         continue;
-    //     }
-    // }
+    if ( args_seen < 2 )
+    {
+        UsageSummary( argv[0] );
+        throw runtime_error ( "Missing argument(s)" );
+    }
 
-    // VDBManagerRelease ( vdb );
-    // KDirectoryRelease ( wd );
+    string input_str;
+    std::ifstream file( input );
+    if ( ! file.is_open() )
+    {
+        throw runtime_error ( string( "File not found: " ) + input );
+    }
+    else
+    {
+        std::ostringstream sstr;
+        sstr << file.rdbuf();
+        input_str = sstr.str();
+    }
 
+    if ( action != "coltofn" )
+    {
+        throw runtime_error ( string( "Unknown action: " ) + action );
+    }
+
+    AST_Fixture fixture;
+    AST* ast = fixture.MakeAst( input_str.c_str() );
+
+    ColToFn( ast );
+
+    AST :: Destroy( ast );
+
+    VDBManagerRelease ( vdb );
 }
 
 int main ( int argc, char *argv [] )
@@ -150,7 +208,7 @@ int main ( int argc, char *argv [] )
     }
     catch ( exception& ex)
     {
-        cerr << " Exception: " << ex . what () << endl;
+        cerr << " Error: " << ex . what () << endl;
         return 2;
     }
     catch ( ... )

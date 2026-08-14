@@ -57,5 +57,5 @@ endif()
 # Test_SCHEMA_454_db and Test_SCHEMA_IonTorrent_db moved to sra-tools/test/schema because of their dependemcy on the SRA schema. VDB-4792
 
 # a tool to apply static analysis to a schema
-    BuildExecutableForTest( "vdb-inspect-schema" "inspect-schema" "${LIBS}" )
+    BuildExecutableForTest( "vdb-inspect-schema" "inspect-schema;AST_Fixture" "${LIBS}" )
 
