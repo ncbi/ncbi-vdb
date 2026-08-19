@@ -41,7 +41,7 @@
 #include <kfc/ctx.h> /* HYBRID_FUNC_ENTRY */
 #include <kfc/rsrc-global.h> /* KRsrcGlobalWhack */
 #include <os-native.h> // setenv
-//#define ALL
+#define ALL
 
 #define RELEASE(type, obj) do { rc_t rc2 = type##Release(obj); \
     if (rc2 != 0 && rc == 0) { rc = rc2; } obj = NULL; } while (false)
@@ -356,12 +356,12 @@ public:
     {}
 };
 
-#ifndef ALL
+#ifdef ALL
 TEST_CASE ( SRR_INCOMPLETE_USER_REPO ) {
     NonCaching ( this );
 }
 #endif
-#ifndef ALL
+#ifdef ALL
 TEST_CASE ( REFSEQ_INCOMPLETE_USER_REPO ) {
     NonCaching ( this, eNone, eRefseq );
 }

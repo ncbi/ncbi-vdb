@@ -45,6 +45,7 @@ struct KDataBuffer;
 struct KFile;
 struct String;
 struct URLBlock;
+struct VPath;
 
 #ifdef __cplusplus
 extern "C" {
@@ -60,17 +61,28 @@ KNS_EXTERN rc_t CC KClientHttpRequestFormatPostMsg (
 KNS_EXTERN rc_t CC KClientHttpResultFormatMsg (
     const struct KClientHttpResult * self, struct KDataBuffer * buffer, const char * bol, const char * eol );
 
+/* KClientHttpMakeRequestInt was deprecated in favor of KClientHttpMakeRequestIntVPath */
 rc_t KClientHttpMakeRequestInt ( struct KClientHttp const *self,
     struct KClientHttpRequest **req, const struct URLBlock *block, const struct KDataBuffer *buf );
+rc_t KClientHttpMakeRequestIntVPath ( struct KClientHttp const *self,
+    struct KClientHttpRequest **req, const struct URLBlock *block,
+    const struct KDataBuffer *buf, const struct VPath *path );
 
 /* if the request followed redirects, the final URL will be different than the initial URL */
 rc_t KClientHttpRequestURL ( struct KClientHttpRequest const *self, struct KDataBuffer *rslt );
 
 rc_t KClientHttpRequestClear ( struct KClientHttpRequest *self );
 
-rc_t KClientHttpRequestInit ( struct KClientHttpRequest * req, const struct URLBlock *b, const struct KDataBuffer *buf );
+rc_t KClientHttpRequestInit ( struct KClientHttpRequest *req,
+    const struct URLBlock *b, const struct KDataBuffer *buf,
+    const struct VPath *path );
 
-rc_t KClientHttpRequestGetQuery( struct KClientHttpRequest * req, const struct String ** query );
+rc_t KClientHttpRequestGetQuery( const struct KClientHttpRequest * self,
+    const struct String ** query );
+rc_t KClientHttpRequestGetRegion(const struct KClientHttpRequest* self,
+    struct String* str);
+rc_t KClientHttpRequestGetService(const struct KClientHttpRequest* self,
+    struct String* str);
 
 /* Get read timeout and Maximum TotalWait time for Read calls */
 rc_t HttpFileGetReadTimeouts(const struct KFile * self, int32_t * millis,

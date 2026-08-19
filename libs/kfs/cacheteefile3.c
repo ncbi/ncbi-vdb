@@ -249,7 +249,11 @@ size_t CC KCacheTeeChunkReaderBufferSize ( const KCacheTeeChunkReader * self )
 static
 rc_t CC KCacheTeeChunkReaderNext ( KCacheTeeChunkReader * self, void ** buf, size_t * size )
 {
-    if ( self -> ctf -> quitting )
+    bool quitting = false;
+    KLockAcquire ( self -> ctf -> cache_lock );
+    quitting = self -> ctf -> quitting;
+    KLockUnlock ( self -> ctf -> cache_lock );
+    if ( quitting )
     {
         STATUS ( STAT_PRG, "BG: %s - refusing request due to quitting\n", __func__ );
         * buf = NULL;
@@ -561,12 +565,23 @@ static rc_t finalize_v3 ( KCacheTeeFile_v3 * self );
 static
 rc_t CC KCacheTeeFileDestroy ( KCacheTeeFile_v3 *self )
 {
-    rc_t rc;
+    rc_t rc = 0;
+
+    bool threadless = false;
+    assert(self);
+    threadless = self->thread == NULL;
 
     /* remove cache file entry from open-cache-file cache */
     if ( self -> cache_file != NULL )
     {
-        int status = ENTER_CRIT_SECTION ();
+        int status = 0;
+        /* If thread was not opened
+           then the file was not added to open_cache_tee_files.
+           It happens when "ulimit -u" was hit.
+           We are already in CRIT_SECTION in KDirectoryVMakeKCacheTeeFile_v */
+        
+        if (!threadless)
+            status = ENTER_CRIT_SECTION ();
         if ( status == 0 )
         {
             BSTNode * node = BSTreeFind ( & open_cache_tee_files, self -> path, KCacheTeeFileTreeNodeFind );
@@ -576,7 +591,8 @@ rc_t CC KCacheTeeFileDestroy ( KCacheTeeFile_v3 *self )
                 free ( node );
             }
 
-            EXIT_CRIT_SECTION ();
+            if (!threadless)
+                EXIT_CRIT_SECTION ();
         }
     }
 
@@ -590,7 +606,9 @@ rc_t CC KCacheTeeFileDestroy ( KCacheTeeFile_v3 *self )
 
        this must be done before sealing the queue */
     STATUS ( STAT_PRG, "%s - setting 'quitting' flag\n", __func__ );
+    KLockAcquire ( self -> cache_lock );
     self -> quitting = true;
+    KLockUnlock ( self -> cache_lock );
 
     /* wake the background thread */
     STATUS ( STAT_PRG, "%s - signaling background thread to exit\n", __func__ );
@@ -1424,8 +1442,14 @@ rc_t KCacheTeeFileBGLoop ( KCacheTeeFile_v3 * self )
     size_t min_read_amount = self -> page_size * self -> cluster_fact;
 
     STATUS ( STAT_PRG, "BG: %s - entering loop\n", __func__ );
-    while ( ! self -> quitting )
+    while ( true )
     {
+        bool quitting = false;
+        KLockAcquire(self->cache_lock);
+        quitting = self->quitting;
+        KLockUnlock(self->cache_lock);
+        if (quitting)
+            break;
         STATUS ( STAT_PRG, "BG: %s - acquiring queue lock\n", __func__ );
         rc = KLockAcquire ( self -> qlock );
         if ( rc != 0 )

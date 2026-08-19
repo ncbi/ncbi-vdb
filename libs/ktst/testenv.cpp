@@ -128,7 +128,7 @@ void TestEnv::Terminate(rc_t rc)
     VdbTerminate(rc);
 }
 
-char TestEnv::lastLocation[] = "<init>";
+std::string TestEnv::lastLocation = "<init>";
 LogLevel::E TestEnv::verbosity = LogLevel::e_error;
 bool TestEnv::verbositySet = false;
 bool TestEnv::useUserConfig = false;;
@@ -288,8 +288,7 @@ void ::ncbi::NK::saveLocation(const char* file, unsigned int line)
     std::ostringstream s;
     s << file << "(" << line << ")";
     saveLocation_mtx.lock();
-    strncpy( TestEnv::lastLocation, s.str().c_str(), sizeof(TestEnv::lastLocation) - 1 );
-    TestEnv::lastLocation [ sizeof(TestEnv::lastLocation) - 1 ] = 0;
+    TestEnv::lastLocation = s.str();
     saveLocation_mtx.unlock();
 }
 

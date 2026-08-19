@@ -33,7 +33,9 @@
 #include <kfg/kfg-priv.h> /* KConfigMakeEmpty */
 #include <kfg/properties.h> /* KConfig_Set_Report_Cloud_Instance_Identity */
 
+#include <klib/data-buffer.h> /* KDataBufferWhack */
 #include <klib/debug.h> /* KDbgSetString */
+#include <klib/printf.h> /* string_printf */
 #include <klib/text.h> /* String */
 #include <klib/rc.h> /* SILENT_RC */
 
@@ -46,17 +48,23 @@
 #include "../../libs/cloud/cloud-priv.h" /* AWS */
 #include "../../libs/cloud/cloud-cmn.h" /* KNSManager_Read */
 
+#include "mbedtls/md.h" /* mbedtls_md_free */
+
 using std::string;
 using namespace::std;
 
 #define TO_SHOW_RESULTS 0
+#define ALL
 
 TEST_SUITE(AwsTestSuite)
+
+static KConfig* KFG = nullptr;
 
 //
 // Unit tests for functions in cloud/aws-auth.c
 //
 
+#ifdef ALL
 TEST_CASE(TestBase64InIdentityDocument) {
     const char src[] =
         "{\n"
@@ -200,8 +208,6 @@ TEST_CASE(TestBase64MakeLocation) {
 // Unit tests for functions in cloud/aws.c
 //
 
-static KConfig * KFG = nullptr;
-
 TEST_CASE(Get_IMDS_version)
 {
     CloudMgr * mgr = nullptr;
@@ -219,6 +225,7 @@ TEST_CASE(Get_IMDS_version)
 #endif
         REQUIRE( aws -> IMDS_version == 1 || aws -> IMDS_version == 2);
     }
+    REQUIRE_RC(CloudMgrRelease(mgr));
 }
 
 TEST_CASE(Get_Pkcs7)
@@ -347,7 +354,8 @@ TEST_CASE(GetLocation) {
         rc_t rc = CloudGetLocation ( cloud, & location );
         if ( rc != 0 )
         {
-            if ( rc != SILENT_RC(rcNS, rcFile, rcCreating, rcTimeout, rcExhausted) )
+            if ( rc
+                != SILENT_RC(rcNS, rcFile, rcCreating, rcTimeout, rcExhausted) )
             {
                 REQUIRE_RC( rc );
             }
@@ -365,9 +373,128 @@ TEST_CASE(GetLocation) {
 
     REQUIRE_RC( CloudMgrRelease(mgr) );
 }
+#endif
+
+#ifdef ALL
+TEST_CASE(TestSHA256OfTheEmptyString) {
+    const unsigned char input[]("");
+    char hex[65]("");
+    REQUIRE_RC(CalculateSHA256Hash(input, sizeof input - 1, hex));
+    REQUIRE_EQ(string(hex), string(
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"));
+}
+
+TEST_CASE(TestSHA256) {
+    const unsigned char input[](
+        "GET\n"
+        "/test.txt\n"
+        "\n"
+        "host:examplebucket.s3.amazonaws.com\n"
+        "range:bytes=0-9\n"
+        "x-amz-content-sha256:"
+            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\n"
+        "x-amz-date:20130524T000000Z\n"
+        "\n"
+        "host;range;x-amz-content-sha256;x-amz-date\n"
+        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
+    char hex[65]("");
+    REQUIRE_RC(CalculateSHA256Hash(input, sizeof input - 1, hex));
+    REQUIRE_EQ(string(hex), string(
+        "7344ae5b7ee6c3e7e6b0fe0640412a37625d1fbfff95c48bbb2dc43964946972"));
+}
+#endif
+
+#ifdef ALL
+TEST_CASE(TestBuildStringToSign) {
+    const char requestDateTime[]("20130524T000000Z");
+    const char region[]("us-east-1");
+    const char hashedCanonicalRequest[](
+        "7344ae5b7ee6c3e7e6b0fe0640412a37625d1fbfff95c48bbb2dc43964946972");
+
+    KDataBuffer stringToSign;
+    REQUIRE_RC(KDataBufferMake(&stringToSign, 8, 0));
+
+    REQUIRE_RC(BuildStringToSign(
+        requestDateTime, region, sizeof region - 1, "s3", 2,
+        hashedCanonicalRequest, &stringToSign));
+
+    REQUIRE_EQ(string((char*)stringToSign.base, stringToSign.elem_count - 1),
+        string(
+            "AWS4-HMAC-SHA256\n"
+            "20130524T000000Z\n"
+            "20130524/us-east-1/s3/aws4_request\n"
+            "7344ae5b7ee6c3e7e6b0fe0640412a37625d1fbfff95c48bbb2dc43964946972")
+    );
+
+    REQUIRE_RC(KDataBufferWhack(&stringToSign));
+}
+#endif
+
+#ifdef ALL
+TEST_CASE(TestHMAC_SHA256) {
+    const mbedtls_md_info_t* md_info
+        = mbedtls_md_info_from_type(MBEDTLS_MD_SHA256);
+    REQUIRE(md_info);
+
+    const unsigned char key[]("secretKey");
+    const char payload[]("Hello HMAC SHA 256!");
+    unsigned char h_output[32](""); // SHA-256 outputs 32 bytes
+    REQUIRE_RC(HMAC_SHA256(md_info,
+        key, sizeof key - 1, payload, sizeof payload - 1, h_output));
+
+    char hex[65]("");
+    for (int i = 0; i < 32; ++i)
+        REQUIRE_RC(string_printf(hex + i * 2, 3, nullptr, "%02x", h_output[i]));
+    REQUIRE_EQ(string(hex), string(
+        "40f08b93b298f788109624ad3505882e0467fab1b30a76993a8327097c4f4e45"));
+}
+#endif
+
+#ifdef ALL
+TEST_CASE(TestDeriveSigningKey) {
+    const char secretKey[]("wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY");
+    const char stringToSign[](
+        "AWS4-HMAC-SHA256\n"
+        "20130524T000000Z\n"
+        "20130524/us-east-1/s3/aws4_request\n"
+        "7344ae5b7ee6c3e7e6b0fe0640412a37625d1fbfff95c48bbb2dc43964946972");
+    const char date[]("20130524");
+    const char region[]("us-east-1");
+    const char service[]("s3");
+    char hex[65]("");
+    REQUIRE_RC(CalculateSignature(secretKey, date,
+        region, sizeof region - 1, service, sizeof service - 1,
+        stringToSign, sizeof stringToSign - 1, hex));
+    REQUIRE_EQ(string(hex), string(
+        "f0e8bdb87c964420e857bd35b5d6ed310bd44f0170aba48dd91039c6036bdb41"));
+}
+
+#endif
+
+#ifdef ALL
+TEST_CASE(TestCreateAuthorizationHeader) {
+    KDataBuffer header;
+    REQUIRE_RC(KDataBufferMake(&header, 8, 0)); //Authorization:
+
+    REQUIRE_RC(CreateAuthorizationHeader(
+        "AKIAIOSFODNN7EXAMPLE", "20220830", "us-east-1", "host;x-amz-date",
+        "f0e8bdb87c964420e857bd35b5d6ed310bd44f0170aba48dd91039c6036bdb41",
+        &header));
+
+    string a((char*)header.base, 0, header.elem_count - 1);
+    string e("AWS4-HMAC-SHA256 "
+        "Credential="
+                    "AKIAIOSFODNN7EXAMPLE/20220830/us-east-1/s3/aws4_request, "
+        "SignedHeaders=host;x-amz-date, "
+        "Signature="
+            "f0e8bdb87c964420e857bd35b5d6ed310bd44f0170aba48dd91039c6036bdb41");
+    REQUIRE_EQ(a, e);
+
+    REQUIRE_RC(KDataBufferWhack(&header));
+}
+#endif
 
 //////////////////////////////////////////// Main
-
 int main ( int argc, char *argv [] )
 {
     rc_t rc = KConfigMakeEmpty(&KFG);

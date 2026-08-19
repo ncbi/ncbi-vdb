@@ -133,6 +133,7 @@ struct VPath
 
     String     service;      /* s3, gs, sra-ncbi, ftp-ncbi, sra-sos, etc. */
     String     objectType;
+    String     region;
     String     type;
     String     acc;
 
@@ -171,7 +172,8 @@ enum VPathVariant
     vpFullPath,
     vpAuth,
     vpHostName,
-    vpEndpoint
+    vpEndpoint,
+    vpCloudy, /* VPath copy with properties for cloud authentication */
 };
 
 enum VHostVariant
@@ -257,6 +259,11 @@ rc_t VPathClose ( const VPath * l, const VPath * r, int * notequal,
                   KTime_t expirationRange );
 
 rc_t VPathGetAccession(const VPath * self, String * acc);
+
+rc_t VPathSetRegion(VPath* self, const char * region);
+rc_t VPathSetCloudInfo(VPath* self, const char* info);
+rc_t VPathSetCeRequired(VPath* self, bool value);
+rc_t VPathSetPayRequired(VPath* self, bool value);
 
 rc_t VPathSetQuality(VPath * self, VQuality quality);
 rc_t VPathLoadQuality(VPath * self);

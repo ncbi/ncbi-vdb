@@ -380,7 +380,7 @@ rc_t KClientHttpProxyConnect ( KClientHttp * self, const String * hostname, uint
         {
             rc = KDataBufferPrintf( & buffer,
                 "CONNECT %S:%u HTTP/1.1\r\n"
-                "Host: %S:%u\r\n\r\n"
+                "host: %S:%u\r\n\r\n"
                 , &hostname_copy
                 , port
                 , &hostname_copy
@@ -397,7 +397,7 @@ rc_t KClientHttpProxyConnect ( KClientHttp * self, const String * hostname, uint
                 size_t size = buffer.elem_count - 1;
 
                 STATUS(_STAT_QA, "%s - created proxy request '%.*s'\n", __func__,
-                                    (uint32_t)size, (char*)buffer.base);
+                                    (int)size, (char*)buffer.base);
 
                 /* send request and receive a response */
                 STATUS(_STAT_PRG, "%s - sending proxy request\n", __func__);
@@ -1188,91 +1188,130 @@ rc_t KClientHttpGetLine ( KClientHttp *self, struct timeout_t *tm )
  */
 static
 rc_t KClientHttpAddHeaderString
-( BSTree *hdrs, bool add, const String *name, const String *value )
+(BSTree* hdrs, bool add, const String* name, const String* value)
 {
     rc_t rc = 0;
 
     /* if there is no name - error */
-    if ( name -> size == 0 )
-        rc = RC ( rcNS, rcNoTarg, rcValidating, rcParam, rcInsufficient );
+    if (name->size == 0)
+        rc = RC(rcNS, rcNoTarg, rcValidating, rcParam, rcInsufficient);
     else
     {
         /* test for previous existence of node by name */
-        KHttpHeader * node = ( KHttpHeader * ) BSTreeFind ( hdrs, name, KHttpHeaderCmp );
-        if ( node == NULL )
-        {
-            /* node doesnt exist - allocate memory for a new one */
-            node = ( KHttpHeader * ) calloc ( 1, sizeof * node );
-            if ( node == NULL )
-                rc = RC ( rcNS, rcNoTarg, rcAllocating, rcMemory, rcNull );
-            else
-            {
-                rc = KDataBufferMakeBytes ( & node -> value_storage, 0 );
-                if ( rc == 0 )
+        const String* nname = NULL; /* header name in lowercase */
+        rc = StringCopyToLower(&nname, name);
+        if (rc == 0) {
+            KHttpHeader* node
+                = (KHttpHeader*)BSTreeFind(hdrs, nname, KHttpHeaderCmp);
+            if (node == NULL) {
+                /* node doesnt exist - allocate memory for a new one */
+                node = (KHttpHeader*)calloc(1, sizeof * node);
+                if (node == NULL)
+                    rc = RC(rcNS, rcNoTarg, rcAllocating, rcMemory, rcNull);
+                else
                 {
-                    /* copy the string data into storage */
-                    rc = KDataBufferPrintf ( & node -> value_storage,
-                                             "%S%S", name, value );
-                    if ( rc == 0 )
+                    rc = KDataBufferMakeBytes(&node->value_storage, 0);
+                    if (rc == 0)
                     {
-                        /* initialize the Strings to point into KHttpHeader node */
-                        StringInit ( & node -> name,
-                            ( const char * ) node -> value_storage . base,
-                            name -> size, name -> len );
-                        StringInit ( & node -> value, node -> name . addr + name -> size, value -> size, value -> len );
+                        /* Remove any leading or trailing whitespace */
+                        String* nvalue = (String*)value;
+                        char* addr = (char*)value->addr;
+                        size_t size = value->size;
+                        int from = 0, to = 0;
+                        size_t diff = 0;
 
-                        /* insert into tree, sorted by alphabetical order */
-                        BSTreeInsert ( hdrs, & node -> dad, KHttpHeaderSort );
+                        /* remove leading whitespace */
+                        while (isspace(addr[from]) && from < size)
+                            ++from;
 
-                        return 0;
+                        /* find trailing whitespace */
+                        for (to = size; to > 0 && isspace(addr[to - 1]); --to);
+
+                        for (size = to, to = 0; from < size; ++to, ++from)
+                            addr[to] = addr[from];
+
+                        diff = value->size - to;
+                        if (diff > 0) {
+                            nvalue->size = value->size - diff;
+                            nvalue->len = value->len - diff;
+                        }
+
+                        /* copy the string data into storage */
+                        if (rc == 0)
+                            rc = KDataBufferPrintf(&node->value_storage,
+                                "%S%S", nname, value);
+                        if (rc == 0)
+                        {
+                     /* initialize the Strings to point into KHttpHeader node */
+                            StringInit(&node->name,
+                                (const char*)node->value_storage.base,
+                                name->size, name->len);
+                            StringInit(&node->value,
+                                node->name.addr + name->size,
+                                value->size, value->len);
+
+                            /* insert into tree, sorted by alphabetical order */
+                            BSTreeInsert(hdrs, &node->dad, KHttpHeaderSort);
+
+                            StringWhack(nname);
+
+                            return 0;
+                        }
+
+                        KDataBufferWhack(&node->value_storage);
                     }
 
-                    KDataBufferWhack ( & node -> value_storage );
+                    free(node);
                 }
+            }
 
-                free ( node );
+            /* node exists; check that value param has data */
+            else if (value->size != 0) {
+                if (add) { /* add value to node -> value
+                                do not add value if node -> value == value */
+                    if (!StringEqual(&node->value, value))
+                    {
+                        rc = KDataBufferPrintf(
+                            &node->value_storage, ",%S", value);
+                        if (rc == 0)
+                        {
+                            /* update size and len of value in the node */
+                            node->value.size += value->size + 1;
+                            node->value.len += value->len + 1;
+
+                            StringWhack(nname);
+
+                            return 0;
+
+                        }
+                    }
+                }
+                else { /* replace value with node -> value */
+                    if (!StringEqual(&node->value, value))
+                        /* values are not equal - need to replace */
+                    {
+                        rc = KDataBufferWhack(&node->value_storage);
+                        if (rc == 0)
+                        {
+                            rc = KDataBufferPrintf(
+                                &node->value_storage, "%S%S", nname, value);
+                            if (rc == 0)
+                            {
+                     /* initialize the Strings to point into KHttpHeader node */
+                                StringInit(&node->name,
+                                    (const char*)node->value_storage.base,
+                                    name->size, name->len);
+                                StringInit(&node->value,
+                                    node->name.addr + name->size,
+                                    value->size, value->len);
+                            }
+                        }
+                    }
+                }
             }
         }
 
-        /* node exists
-           check that value param has data */
-        else if ( value -> size != 0 )
-        {
-          if ( add ) { /* add value to node -> value
-                          do not add value if node -> value == value */
-            if ( ! StringEqual ( & node -> value, value ) )
-            {
-                rc = KDataBufferPrintf( & node -> value_storage, ",%S", value );
-                if ( rc == 0 )
-                {
-                    /* update size and len of value in the node */
-                    node -> value . size += value -> size + 1;
-                    node -> value . len += value -> len + 1;
-                    return 0;
-                }
-            }
-          } else { /* replace value with node -> value */
-            if ( ! StringEqual ( & node -> value, value ) )
-            /* values are not equal - need to replace */
-            {
-                rc = KDataBufferWhack ( & node -> value_storage );
-                if ( rc == 0 )
-                {
-                    rc = KDataBufferPrintf( & node -> value_storage, "%S%S", name, value );
-                    if ( rc == 0 )
-                    {
-                        /* initialize the Strings to point into KHttpHeader node */
-                        StringInit ( & node -> name,
-                            ( const char * ) node -> value_storage . base,
-                            name -> size, name -> len );
-                        StringInit ( & node -> value,
-                            node -> name . addr + name -> size,
-                            value -> size, value -> len );
-                    }
-                }
-            }
-          }
-        }
+        StringWhack(nname);
     }
 
     return rc;
@@ -1394,12 +1433,12 @@ rc_t KClientHttpGetHeaderLine ( KClientHttp *self, timeout_t *tm, BSTree *hdrs,
 
                 switch ( name . size )
                 {
-                case sizeof "Connection" - 1:
+                case sizeof "connection" - 1:
                     if ( value . size == sizeof "close" - 1 )
                     {
                         if ( tolower ( name . addr [ 0 ] ) == 'c' && tolower ( value . addr [ 0 ] ) == 'c' )
                         {
-                            if ( strcase_cmp ( name . addr, name . size, "Connection", name . size, ( uint32_t ) name . size ) == 0 &&
+                            if ( strcase_cmp ( name . addr, name . size, "connection", name . size, ( uint32_t ) name . size ) == 0 &&
                                  strcase_cmp ( value . addr, value . size, "close", value . size, ( uint32_t ) value . size ) == 0 )
                             {
                                 DBGMSG ( DBG_KNS, DBG_FLAG ( DBG_KNS ),
@@ -1409,12 +1448,12 @@ rc_t KClientHttpGetHeaderLine ( KClientHttp *self, timeout_t *tm, BSTree *hdrs,
                         }
                     }
                     break;
-                case sizeof "Content-Length" - 1:
+                case sizeof "content-length" - 1:
                     if ( value . size == sizeof "0" - 1 )
                     {
                         if ( tolower ( name . addr [ 0 ] ) == 'c' && value . addr [ 0 ] == '0' )
                         {
-                            if ( strcase_cmp ( name . addr, name . size, "Content-Length", name . size, ( uint32_t ) name . size ) == 0 )
+                            if ( strcase_cmp ( name . addr, name . size, "content-length", name . size, ( uint32_t ) name . size ) == 0 )
                             {
                                 * len_zero = true;
                             }
@@ -1498,7 +1537,7 @@ rc_t KClientHttpGetStatusLine ( KClientHttp *self, timeout_t *tm, String *msg, u
             if ( strcase_cmp ( "http", 4, buffer, sep - buffer, 4 ) != 0 )
             {
                 rc = RC ( rcNS, rcNoTarg, rcParsing, rcNoObj, rcUnsupported );
-                DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_HTTP), ("%s: protocol given as '%.*s'\n", __func__, ( uint32_t ) ( sep - buffer ), buffer ));
+                DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_HTTP), ("%s: protocol given as '%.*s'\n", __func__, ( int ) ( sep - buffer ), buffer ));
             }
             else
             {
@@ -1938,10 +1977,10 @@ rc_t KClientHttpSendReceiveMsg ( KClientHttp *self, KClientHttpResult **rslt,
     /* TBD - may want to assert that there is an empty line in "buffer" */
 #if _DEBUGGING
     if ( KNSManagerIsVerbose ( self -> mgr ) )
-        KOutMsg ( "KClientHttpSendReceiveMsg: '%.*s'\n", len, buffer );
+        KOutMsg ( "KClientHttpSendReceiveMsg: '%.*s'\n", (int)len, buffer );
 #endif
     DBGMSG(DBG_KNS, DBG_FLAG(DBG_KNS_HTTP),
-        ("HTTP send '%S' '%.*s'\n\n", &self->hostname, len, buffer));
+        ("HTTP send '%S' '%.*s'\n\n", &self->hostname, (int)len, buffer));
 
 #ifndef DEBUG_GCP_KSOCKET_TIMED_WRITE_MBEDTLS_SSL_WRITE_UNKNOWN_ERROR_MESSAGE
     KClientHttpKSocketTimedWriteErrGcpHack(self);
@@ -2213,7 +2252,7 @@ LIB_EXPORT bool CC KClientHttpResultKeepAlive ( const KClientHttpResult *self )
             size_t bsize = sizeof buffer;
 
             /* retreive the node that has the keep-alive property */
-            rc = KClientHttpResultGetHeader ( self, "Connection", buffer, bsize, & num_writ );
+            rc = KClientHttpResultGetHeader ( self, "connection", buffer, bsize, & num_writ );
             if ( rc == 0 )
             {
                 String keep_alive, compare;
@@ -2253,10 +2292,10 @@ rc_t KClientHttpResultHandleContentRange ( const KClientHttpResult *self, uint64
     char buffer [ 1024 ];
     const size_t bsize = sizeof buffer;
 
-    /* get Content-Range
+    /* get content-range
      *  expect: "bytes <first-position>-<last-position>/<total-size>"
      */
-    rc = KClientHttpResultGetHeader ( self, "Content-Range", buffer, bsize, & num_read );
+    rc = KClientHttpResultGetHeader ( self, "content-range", buffer, bsize, & num_read );
     if ( rc == 0 )
     {
         char * sep;
@@ -2268,7 +2307,7 @@ rc_t KClientHttpResultHandleContentRange ( const KClientHttpResult *self, uint64
         if ( sep == NULL )
         {
             rc = RC ( rcNS, rcNoTarg, rcParsing, rcNoObj, rcNotFound );
-            TRACE ( "badly formed Content-Range header: '%.*s': lacks a space separator\n", ( int ) ( end - buffer ), buffer );
+            TRACE ( "badly formed content-range header: '%.*s': lacks a space separator\n", ( int ) ( end - buffer ), buffer );
         }
         else
         {
@@ -2285,7 +2324,7 @@ rc_t KClientHttpResultHandleContentRange ( const KClientHttpResult *self, uint64
             if ( sep == buf || * sep != '-' )
             {
                 rc =  RC ( rcNS, rcNoTarg, rcParsing, rcNoObj, rcNotFound );
-                TRACE ( "badly formed Content-Range header: '%.*s': numeral ends on '%c'\n", ( int ) ( end - buffer ), buffer, ( sep == buffer ) ? 0 : * sep );
+                TRACE ( "badly formed content-range header: '%.*s': numeral ends on '%c'\n", ( int ) ( end - buffer ), buffer, ( sep == buffer ) ? 0 : * sep );
             }
             else
             {
@@ -2296,7 +2335,7 @@ rc_t KClientHttpResultHandleContentRange ( const KClientHttpResult *self, uint64
                 if ( sep == buf || * sep != '/' )
                 {
                     rc =  RC ( rcNS, rcNoTarg, rcParsing, rcNoObj, rcNotFound );
-                    TRACE ( "badly formed Content-Range header: '%.*s': numeral ends on '%c'\n", ( int ) ( end - buffer ), buffer, ( sep == buffer ) ? 0 : * sep );
+                    TRACE ( "badly formed content-range header: '%.*s': numeral ends on '%c'\n", ( int ) ( end - buffer ), buffer, ( sep == buffer ) ? 0 : * sep );
                 }
                 else
                 {
@@ -2307,7 +2346,7 @@ rc_t KClientHttpResultHandleContentRange ( const KClientHttpResult *self, uint64
                     if ( sep == buf || * sep != 0 )
                     {
                         rc =  RC ( rcNS, rcNoTarg, rcParsing, rcNoObj, rcNotFound );
-                        TRACE ( "badly formed Content-Range header: '%.*s': numeral ends on '%c'\n", ( int ) ( end - buffer ), buffer, ( sep == buffer ) ? 0 : * sep );
+                        TRACE ( "badly formed content-range header: '%.*s': numeral ends on '%c'\n", ( int ) ( end - buffer ), buffer, ( sep == buffer ) ? 0 : * sep );
                     }
                     else
                     {
@@ -2318,27 +2357,27 @@ rc_t KClientHttpResultHandleContentRange ( const KClientHttpResult *self, uint64
                              end_pos > total )
                         {
                             rc = RC ( rcNS, rcNoTarg, rcParsing, rcNoObj, rcNotFound );
-                            TRACE ( "badly formed Content-Range header: total=%lu, start_pos=%lu, end_pos=%lu\n", total, start_pos, end_pos );
+                            TRACE ( "badly formed content-range header: total=%lu, start_pos=%lu, end_pos=%lu\n", total, start_pos, end_pos );
                             if ( total == 0 )
-                                TRACE ( "badly formed Content-Range header: total==0 : ERROR%c", '\n' );
+                                TRACE ( "badly formed content-range header: total==0 : ERROR%c", '\n' );
                             if ( start_pos > total )
-                                TRACE ( "badly formed Content-Range header: start_pos=%lu > total=%lu : ERROR\n", start_pos, total );
+                                TRACE ( "badly formed content-range header: start_pos=%lu > total=%lu : ERROR\n", start_pos, total );
                             if ( end_pos < start_pos )
-                                TRACE ( "badly formed Content-Range header: end_pos=%lu < start_pos=%lu : ERROR\n", end_pos, start_pos );
+                                TRACE ( "badly formed content-range header: end_pos=%lu < start_pos=%lu : ERROR\n", end_pos, start_pos );
                             if ( end_pos > total )
-                                TRACE ( "badly formed Content-Range header: end_pos=%lu > total=%lu : ERROR\n", end_pos, total );
+                                TRACE ( "badly formed content-range header: end_pos=%lu > total=%lu : ERROR\n", end_pos, total );
                         }
                         else
                         {
                             uint64_t length;
 
                             /* get content-length to confirm bytes sent */
-                            rc = KClientHttpResultGetHeader ( self, "Content-Length", buffer, bsize, & num_read );
+                            rc = KClientHttpResultGetHeader ( self, "content-length", buffer, bsize, & num_read );
                             if ( rc != 0 )
                             {
 
                                 /* remember that we can have chunked encoding,
-                                   so "Content-Length" may not exist. */
+                                   so "content-length" may not exist. */
                                 * pos = start_pos;
                                 * bytes = end_pos - start_pos + 1;
                                 if ( _total != NULL )
@@ -2357,7 +2396,7 @@ rc_t KClientHttpResultHandleContentRange ( const KClientHttpResult *self, uint64
                             if ( sep == buf || * sep != 0 )
                             {
                                 rc =  RC ( rcNS, rcNoTarg, rcParsing, rcNoObj, rcNotFound );
-                                TRACE ( "badly formed Content-Length header: '%.*s': numeral ends on '%c'\n", ( int ) ( end - buffer ), buffer, ( sep == buffer ) ? 0 : * sep );
+                                TRACE ( "badly formed content-length header: '%.*s': numeral ends on '%c'\n", ( int ) ( end - buffer ), buffer, ( sep == buffer ) ? 0 : * sep );
                             }
                             else
                             {
@@ -2366,13 +2405,13 @@ rc_t KClientHttpResultHandleContentRange ( const KClientHttpResult *self, uint64
                                      ( length > total ) )
                                 {
                                     rc = RC ( rcNS, rcNoTarg, rcParsing, rcNoObj, rcNotFound );
-                                    TRACE ( "badly formed Content-Length header: length=%lu, range_len=%lu, total=%lu\n", length, ( end_pos - start_pos ) + 1, total );
+                                    TRACE ( "badly formed content-length header: length=%lu, range_len=%lu, total=%lu\n", length, ( end_pos - start_pos ) + 1, total );
                                     if ( length != ( end_pos - start_pos ) + 1 )
-                                        TRACE ( "badly formed Content-Length header: length=%lu != 0 : ERROR\n", length );
+                                        TRACE ( "badly formed content-length header: length=%lu != 0 : ERROR\n", length );
                                     if ( start_pos > total )
-                                        TRACE ( "badly formed Content-Length header: start_pos=%lu > range_len=%lu : ERROR\n", length, ( end_pos - start_pos ) + 1 );
+                                        TRACE ( "badly formed content-length header: start_pos=%lu > range_len=%lu : ERROR\n", length, ( end_pos - start_pos ) + 1 );
                                     if ( length > total )
-                                        TRACE ( "badly formed Content-Length header: length=%lu > total=%lu : ERROR\n", length, total );
+                                        TRACE ( "badly formed content-length header: length=%lu > total=%lu : ERROR\n", length, total );
                                 }
                                 else
                                 {
@@ -2465,7 +2504,7 @@ LIB_EXPORT bool CC KClientHttpResultSize ( const KClientHttpResult *self, uint64
         }
 
         /* check for content-length */
-        rc = KClientHttpResultGetHeader ( self, "Content-Length", buffer, bsize, & num_read );
+        rc = KClientHttpResultGetHeader ( self, "content-length", buffer, bsize, & num_read );
         if ( rc == 0 )
         {
             char * sep;
@@ -2475,7 +2514,7 @@ LIB_EXPORT bool CC KClientHttpResultSize ( const KClientHttpResult *self, uint64
             if ( sep == buffer || * sep != 0 )
             {
                 rc =  RC ( rcNS, rcNoTarg, rcParsing, rcNoObj, rcNotFound );
-                TRACE ( "badly formed Content-Length header: '%.*s': numeral ends on '%c'\n", ( int ) num_read, buffer, ( sep == buffer ) ? 0 : * sep );
+                TRACE ( "badly formed content-length header: '%.*s': numeral ends on '%c'\n", ( int ) num_read, buffer, ( sep == buffer ) ? 0 : * sep );
             }
             else
             {

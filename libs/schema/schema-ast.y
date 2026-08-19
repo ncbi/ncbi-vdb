@@ -47,7 +47,7 @@
 
 %}
 
-%define api.prefix {AST_}
+%name-prefix "AST_"
 %parse-param { ctx_t ctx }
 %parse-param { AST*& p_ast }
 %parse-param { ASTBuilder& p_builder }

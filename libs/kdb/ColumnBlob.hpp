@@ -109,7 +109,7 @@ public:
 
     virtual rc_t read ( size_t offset, void *buffer, size_t bsize, size_t *num_read, size_t *remaining ) const
     {
-        rc_t rc;
+        rc_t rc = 0;
         size_t ignore;
         if ( remaining == NULL )
             remaining = & ignore;

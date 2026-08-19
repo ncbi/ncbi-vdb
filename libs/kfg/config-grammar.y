@@ -44,12 +44,12 @@
     static void KFG_error(KFGParseBlock* pb, KFGScanBlock* sb, const char* msg);
 %}
 
-%pure-parser
+%define api.pure
 %parse-param {KFGParseBlock* pb }
 %lex-param {KFGToken* sb}
 %parse-param {KFGScanBlock* sb }
 
-%name-prefix="KFG_"
+%name-prefix "KFG_"
 
  /* tokens without textual representation or internal for the scanner */
 %token kfgEND_INPUT 0

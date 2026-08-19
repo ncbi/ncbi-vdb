@@ -850,6 +850,28 @@ LIB_EXPORT rc_t CC KConfig_Set_Report_Cloud_Instance_Identity ( KConfig *self, b
     return KConfigWriteBool( self, REPORT_CLOUD_INSTANCE_IDENTITY, value );
 }
 
+LIB_EXPORT
+rc_t CC KConfig_Use_Aws_Version2(const KConfig* self, bool* value)
+{
+    rc_t rc = 0;
+    char buffer[99] = "";
+    size_t num_read = 0;
+
+    if (value == NULL)
+        return RC(rcKFG, rcNode, rcReading, rcParam, rcNull);
+    *value = false;
+
+    rc = KConfigRead(self, "/libs/cloud/aws/version", 0, buffer,
+        sizeof buffer, &num_read, NULL);
+    if (rc == 0 && num_read > 0 && buffer[0] == '2')
+        *value = true;
+
+    if (GetRCState(rc) == rcNotFound)
+        rc = 0;
+
+    return rc;
+}
+
 #define TEMP_CACHE "/libs/temp_cache"
 LIB_EXPORT rc_t CC
 KConfig_Get_Temp_Cache( const KConfig *self,

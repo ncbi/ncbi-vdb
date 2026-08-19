@@ -92,6 +92,7 @@ struct VFSManager
     /* ESdlCacheState */ uint32_t trSdlState;
     BSTree trSdl;
     struct KLock * trSdlMutex;
+    bool notCleanCacheIfThreadExhausted;
     /**************************************************************************/
 
     /* path to a global password file */

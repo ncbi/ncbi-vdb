@@ -947,11 +947,10 @@ static rc_t wrap_in_cachetee3( KDirectory * dir,
  */
 static
 rc_t VFSManagerMakeHTTPFile( const VFSManager * self,
-                             const KFile **cfp,
+                             const KFile ** cfp,
                              const VPath * path,
                              const char * cache_location,
                              uint32_t blocksize,
-                             bool high_reliability,
                              bool is_refseq,
                              bool promote )
 {
@@ -981,69 +980,11 @@ rc_t VFSManagerMakeHTTPFile( const VFSManager * self,
     }
 
     if ( rc == 0 ) {
-        bool ceRequired = false;
-        bool payRequired = false;
-
-        {
-            const char * name = path->sraClass == eSCvdbcache ?
-                ENV_MAGIC_CACHE_NEED_CE : ENV_MAGIC_REMOTE_NEED_CE;
-            const char * magic = getenv(name);
-            bool hasMagic = magic != NULL;
-            if (is_refseq) {
-                if (magic != NULL) {
-                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
-                        "'%s' magic ignored for %s\n",
-                        name, is_wgs ? "WGS" : "refseq"));
-                    magic = NULL;
-                }
-            }
-            if (magic != NULL) {
-                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
-                        "'%s' magic found\n", name));
-                    ceRequired = true;
-            }
-            else {
-                    ceRequired = path->ceRequired;
-                    if (!hasMagic)
-                        DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
-                            "'%s' magic not set\n", name));
-            }
-        }
-
-        {
-            const char * name = path->sraClass == eSCvdbcache ?
-                ENV_MAGIC_CACHE_NEED_PMT : ENV_MAGIC_REMOTE_NEED_PMT;
-            const char * magic = getenv(name);
-            bool hasMagic = magic != NULL;
-            if (is_refseq) {
-                if (magic != NULL) {
-                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
-                        "'%s' pmtReq magic ignored for %s\n",
-                        name, is_wgs ? "WGS" : "refseq"));
-                    magic = NULL;
-                }
-            }
-            if (magic != NULL) {
-                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
-                    "'%s' magic found\n", name));
-                payRequired = true;
-            }
-            else {
-                payRequired = path->payRequired;
-                if (!hasMagic)
-                    DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH), (
-                        "'%s' magic not set\n", name));
-            }
-        }
-
-        rc = KNSManagerMakeReliableHttpFile ( self -> kns,
+        rc = KNSManagerMakeReliableHttpFileVPath ( self -> kns,
                                               cfp,
                                               NULL,
                                               0x01010000,
-                                              high_reliability,
-                                              ceRequired,
-                                              payRequired,
-                                              "%s", uri -> addr );
+                                              path );
 
         /* in case we are not able to open the remote-file : return with error-code */
         if ( rc == 0 )
@@ -1053,7 +994,27 @@ rc_t VFSManagerMakeHTTPFile( const VFSManager * self,
             get_caching_params( &cps, blocksize, is_refseq, promote );
             if ( cps . version == cachetee_3 )
             {
-                rc = wrap_in_cachetee3( self -> cwd, cfp, cache_location, &cps, path );
+                int retry = 0;
+                for (retry = 0; retry < 2; ++retry) {
+                    rc = wrap_in_cachetee3( self -> cwd, cfp, cache_location,
+                        &cps, path );
+                    if (rc != SILENT_RC(
+                        rcPS, rcThread, rcCreating, rcThread, rcExhausted))
+                    {
+                        break;
+                    }
+                    else if (!self->notCleanCacheIfThreadExhausted) {
+                        rc_t r2 = 0;
+                        PLOGERR(klogSys, (klogSys, 0,
+                            "$(func) - failed to start background thread: "
+                            "finishing cached threads...", "func=%s", __func__));
+                        STATUS(STAT_PRG, "%s - failed to start background thread: "
+                            "calling VFSManagerSdlCacheClear()...\n", __func__);
+                        r2 = VFSManagerSdlCacheClear((VFSManager*)self);
+                        if (r2 != 0)
+                            break;
+                    }
+                }
             }
             else
             {
@@ -1974,8 +1935,8 @@ static rc_t VFSManagerOpenCurlFile ( const VFSManager *self,
                                      uint32_t blocksize,
                                      bool promote )
 {
-    rc_t rc;
-    bool high_reliability, is_refseq;
+    rc_t rc = 0;
+    bool is_refseq = false;
 
     if ( f == NULL )
         return RC( rcVFS, rcMgr, rcOpening, rcParam, rcNull );
@@ -1985,7 +1946,6 @@ static rc_t VFSManagerOpenCurlFile ( const VFSManager *self,
     if ( path == NULL )
         return RC( rcVFS, rcMgr, rcOpening, rcParam, rcNull );
 
-    high_reliability = VPathIsHighlyReliable ( path );
     is_refseq = VPathHasRefseqContext ( path );
     if ( self->resolver != NULL )
     {
@@ -2001,7 +1961,6 @@ static rc_t VFSManagerOpenCurlFile ( const VFSManager *self,
                                          path,
                                          local_cache -> path.addr,
                                          blocksize,
-                                         high_reliability,
                                          is_refseq,
                                          promote );
             {
@@ -2020,7 +1979,6 @@ static rc_t VFSManagerOpenCurlFile ( const VFSManager *self,
                                          path,
                                          NULL,
                                          blocksize,
-                                         high_reliability,
                                          is_refseq,
                                          promote );
         }
@@ -2033,7 +1991,6 @@ static rc_t VFSManagerOpenCurlFile ( const VFSManager *self,
                                      path,
                                      NULL,
                                      blocksize,
-                                     high_reliability,
                                      is_refseq,
                                      promote );
     }
@@ -2427,7 +2384,6 @@ rc_t VFSManagerOpenDirectoryReadHttpResolved (const VFSManager *self,
     if ( rc == 0 )
     {
         /* check how the path has been marked */
-        bool high_reliability = VPathIsHighlyReliable ( path );
         bool is_refseq = VPathHasRefseqContext ( path );
 
         const KFile * file = NULL;
@@ -2436,16 +2392,13 @@ rc_t VFSManagerOpenDirectoryReadHttpResolved (const VFSManager *self,
                                      path,
                                      cache == NULL ? NULL : cache -> path . addr,
                                      DEFAULT_CACHE_PAGE_SIZE,
-                                     high_reliability,
                                      is_refseq,
                                      promote );
         if ( rc != 0 )
         {
-            if ( high_reliability )
-            {
-                PLOGERR ( klogErr, ( klogErr, rc, "error with https open '$(U)'",
+            if (VPathIsHighlyReliable(path))
+               PLOGERR ( klogErr, ( klogErr, rc, "error with https open '$(U)'",
                                      "U=%S", uri ) );
-            }
         }
         else
         {
@@ -3363,6 +3316,8 @@ static rc_t CC VFSManagerMakeFromKfgImpl ( struct VFSManager ** pmanager,
 
             obj->notCachingSdlResponse
                 = getenv("NCBI_VDB_NO_CACHE_SDL_RESPONSE") != NULL;
+            obj->notCleanCacheIfThreadExhausted
+                = getenv("NOT_CLEAN_SDL_CACHE_IF_NO_MORE_THREADS") != NULL;
             BSTreeInit(&obj->trSdl);
             rc = KLockMake(&obj->trSdlMutex);
 

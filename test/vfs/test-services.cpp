@@ -46,6 +46,9 @@
 #define PATH_MAX 4096
 #endif
 
+#include "../../libs/vfs/path-priv.h" // #define VPathMake LegacyVPathMake
+#include "../../libs/vfs/services-priv.h" // _VPathGetId
+
 using std::string;
 
 TEST_SUITE ( TestServices );
@@ -334,8 +337,68 @@ TEST_CASE(TestKSrvResponseGetLocationCacheInAD) {
 }
 #endif
 
-#ifndef ALL
-TEST_CASE(TestKSrvResponseGetLocationCacheInADLeak) {
+#ifdef ALL
+/* _VPathGetId is a special function
+   used mostly by prefetch to guess local file name to save a URL */
+TEST_CASE(Test_VPathGetId) {
+    VFSManager* mgr(nullptr);
+    VPath* p(nullptr);
+    const String* sn(nullptr);
+
+    String so;
+    memset(&so, 0, sizeof so);
+
+    REQUIRE_RC_FAIL(_VPathGetId(nullptr, &sn, nullptr, nullptr));
+    REQUIRE_RC_FAIL(_VPathGetId(nullptr, nullptr, &so, nullptr));
+
+    REQUIRE_RC(_VPathGetId(nullptr, &sn, &so, nullptr)); // noop
+    REQUIRE_NULL(sn);
+
+    // ID is too short: noop
+    CONST_STRING(&so, "12345678");
+    REQUIRE_RC(_VPathGetId(nullptr, &sn, &so, nullptr)); 
+    REQUIRE_NULL(sn);
+
+    CONST_STRING(&so, "123456789");
+    REQUIRE_RC_FAIL(_VPathGetId(nullptr, &sn, &so, nullptr)); // VPath is NULL
+    REQUIRE_NULL(sn);
+
+    const char* c("http://google.com");
+    REQUIRE_RC(VPathMake(&p, c));
+    REQUIRE_RC_FAIL(_VPathGetId(p, &sn, &so, nullptr)); // mgr is NULL
+    REQUIRE_NULL(sn);
+
+    REQUIRE_RC(VFSManagerMakeLocal(&mgr, nullptr));
+
+    String s;
+
+    REQUIRE_RC(_VPathGetId(p, &sn, &so, mgr));
+    CONST_STRING(&s, "google.com");
+    REQUIRE(StringEqual(&s, &so)); // old string was updated
+    REQUIRE(StringEqual(&s, sn));  // new string was set
+    StringWhack(sn); sn = nullptr;
+    REQUIRE_RC(VPathRelease(p)); p = nullptr;
+
+    // the following URL will be saved by prefetch as index.html
+    c = "https://docs.aws.amazon.com/?1";
+    CONST_STRING(&s, "index.html");
+    REQUIRE_RC(VPathMake(&p, c));
+    REQUIRE_RC(_VPathGetId(p, &sn, &so, mgr));
+    REQUIRE(StringEqual(&s, &so)); // old string was updated
+    REQUIRE(StringEqual(&s, sn));  // new string was set
+    StringWhack(sn); sn = nullptr;
+    REQUIRE_RC(VPathRelease(p)); p = nullptr;
+   
+    c = "https://docs.aws.amazon.com/AmazonS3/latest/API/sig-v4-header-b.html?";
+    CONST_STRING(&s, "sig-v4-header-b.html");
+    REQUIRE_RC(VPathMake(&p, c));
+    REQUIRE_RC(_VPathGetId(p, &sn, &so, mgr));
+    REQUIRE(StringEqual(&s, &so)); // old string was updated
+    REQUIRE(StringEqual(&s, sn));  // new string was set
+    StringWhack(sn); sn = nullptr;
+    REQUIRE_RC(VPathRelease(p)); p = nullptr;
+
+    REQUIRE_RC(VFSManagerRelease(mgr)); mgr = nullptr;
 }
 #endif
 

@@ -161,6 +161,12 @@ KFG_EXTERN rc_t CC KConfig_Set_User_Accept_Gcp_Charges ( KConfig *self, bool acc
 KFG_EXTERN rc_t CC KConfig_Get_Report_Cloud_Instance_Identity ( const KConfig *self, bool * value );
 KFG_EXTERN rc_t CC KConfig_Set_Report_Cloud_Instance_Identity ( KConfig *self, bool value );
 
+/* Use AWS Signature Version 2 if true, Version 4 otherwise.
+   Reads /libs/cloud/aws/version
+   returns false if not found  */
+KFG_EXTERN
+rc_t CC KConfig_Use_Aws_Version2(const KConfig* self, bool* version2);
+
 /* reads /libs/temp_cache */
 KFG_EXTERN rc_t CC KConfig_Get_Temp_Cache ( const KConfig *self, char * buffer, size_t buffer_size, size_t * written );
 KFG_EXTERN rc_t CC KConfig_Set_Temp_Cache ( KConfig *self, const char * value );

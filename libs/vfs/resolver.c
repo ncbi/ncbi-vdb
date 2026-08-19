@@ -50,7 +50,7 @@
 #include <klib/vector.h>
 
 #include <kns/http.h>
-#include <kns/kns-mgr-priv.h> /* KNSManagerMakeReliableHttpFile */
+#include <kns/kns-mgr-priv.h> /* KNSManagerMakeReliableHttpFileVPath */
 #include <kns/manager.h>
 #include <kns/stream.h>
 
@@ -2005,7 +2005,9 @@ rc_t VResolverAlgRemoteResolve ( const VResolverAlg *self,
             }
             else
             {
-                rc = KNSManagerMakeReliableHttpFile ( kns, opt_file_rtn, NULL, 0x01010000, true, false, false, "%S", s );
+                assert(path);
+                rc = KNSManagerMakeReliableHttpFileVPath ( kns, opt_file_rtn,
+                    NULL, 0x01010000, *path );
                 if (rc != 0)
                 {
                     PLOGERR(klogInt, (klogInt, rc,
@@ -3025,6 +3027,28 @@ rc_t KDirectoryMagicResolve(const KDirectory * dir, const VPath ** path,
                 high_reliability = false;
             if (high_reliability)
                 rc = VPathMarkHighReliability((VPath*)*path, true);
+        }
+
+        if (rc == 0) {
+            const char* e = getenv(ENV_MAGIC_REMOTE_CLOUD_INFO);
+            if (e != NULL) {
+                DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
+                    ("'%s' reliable magic '%s' found\n",
+                        ENV_MAGIC_REMOTE_CLOUD_INFO, e));
+                rc = VPathSetCloudInfo((VPath*)*path, e);
+            }
+        }
+
+        if (rc == 0 && getenv(ENV_MAGIC_REMOTE_NEED_PMT) != NULL) {
+            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
+                ("'%s' reliable magic found\n", ENV_MAGIC_REMOTE_NEED_PMT));
+            rc = VPathSetPayRequired((VPath*)*path, true);
+        }
+
+        if (rc == 0 && getenv(ENV_MAGIC_REMOTE_NEED_CE) != NULL) {
+            DBGMSG(DBG_VFS, DBG_FLAG(DBG_VFS_PATH),
+                ("'%s' reliable magic found\n", ENV_MAGIC_REMOTE_NEED_CE));
+            rc = VPathSetCeRequired((VPath*)*path, true);
         }
 
         if (rc != 0) {

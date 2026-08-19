@@ -31,8 +31,9 @@
 #endif
 
 #include <klib/extern.h>
-#include <klib/time.h>
+#include <klib/printf.h> /* string_printf */
 #include <klib/rc.h> /* RC */
+#include <klib/time.h>
 
 #include <unistd.h>
 #include <stdlib.h>
@@ -211,26 +212,67 @@ LIB_EXPORT const KTime* CC KTimeFromIso8601 ( KTime *kt, const char * s,
 
 /* Iso8601
  *  populate "s" from "ks" according to ISO-8601:
- *         YYYY-MM-DDThh:mm:ssTZD
+ * basic = true : basic    format: YYYYMMDDThhmmssTZD
+ * basic = false: extended format: YYYY-MM-DDThh:mm:ssTZD
  */
-KLIB_EXTERN size_t CC KTimeIso8601 ( KTime_t ts, char * s, size_t size ) {
-    const KTime * r = NULL;
-    KTime now;
-
-    time_t unix_time = ( time_t ) ts;
-    struct tm t;
-
+static size_t
+KTimeFormatIso8601 ( KTime_t ts, char * s, size_t size, bool basic )
+{
     if ( ts == 0 || s == NULL || size == 0 )
         return 0;
 
-    r = KTimeGlobal ( & now, ts );
-    if ( r == NULL )
-        return 0;
+    if (basic) {
+        rc_t rc = 0;
+        size_t num_writ = 0;
 
-    gmtime_r ( & unix_time, & t );
-    return strftime ( s, size, "%FT%TZ", & t );
+        KTime now;
+        const KTime * r = KTimeGlobal ( & now, ts );
+        if ( r == NULL )
+            return 0;
+
+        rc = string_printf ( s, size, & num_writ, "%04d%02d%02dT%02d%02d%02dZ",
+            now . year, now . month + 1, now . day + 1,
+            now . hour, now . minute, now . second );
+        if ( rc == 0 )
+            return num_writ;
+        else if ( rc ==
+          SILENT_RC ( rcText, rcString, rcConverting, rcBuffer, rcInsufficient )
+         && num_writ == size )
+        {
+            return num_writ;
+        }
+        else
+            return 0;
+    }
+    else {
+        time_t unix_time = ( time_t ) ts;
+        struct tm t;
+
+        gmtime_r ( & unix_time, & t );
+    /*                          %F Equivalent to %Y-%m-%d (ISO 8601 date format)
+                                   %T The time in 24-hour notation (%H:%M:%S) */
+        return strftime ( s, size, "%FT%TZ", & t );
+    }
 }
 
+/* Iso8601
+ *  populate "s" from "ks" according to ISO-8601:
+ *         YYYY-MM-DDThh:mm:ssTZD
+ */
+KLIB_EXTERN size_t CC KTimeIso8601 (KTime_t ts, char * s, size_t size)
+{
+    return KTimeFormatIso8601(ts, s, size, false);
+}
+
+/* Iso8601
+ *  populate "s" from "ts" according to ISO-8601 basic format:
+ *         YYYYMMDDThhmmssTZD
+ */
+KLIB_EXTERN
+size_t CC KTimeIso8601Basic ( KTime_t ts, char * s, size_t size )
+{
+    return KTimeFormatIso8601(ts, s, size, true);
+}
 
 /* Iso8601
 *  populate "s" from "ks" according to RFC 2616:

@@ -133,7 +133,7 @@ public:
 
     static void set_handlers(void);
 
-    static char lastLocation[];
+    static std::string lastLocation;
     static LogLevel::E verbosity;
     static bool verbositySet;
     static bool useUserConfig;
@@ -466,8 +466,7 @@ class TestInvoker {
 protected:
     TestInvoker(const std::string& name) : _ec(0)
     {
-        strncpy( _name, name.c_str(), sizeof(_name) - 1 );
-        _name[ sizeof(_name) - 1 ] = 0;
+        _name = name;
     }
     virtual ~TestInvoker(void) {}
 public:
@@ -478,7 +477,7 @@ protected:
     void SetErrorCounter(ncbi::NK::counter_t ec)
     { _ec = ec; }
 private:
-    char _name[1024];
+    std::string _name;
     ncbi::NK::counter_t _ec;
 };
 

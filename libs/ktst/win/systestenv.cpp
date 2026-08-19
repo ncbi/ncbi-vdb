@@ -40,7 +40,7 @@ using namespace ncbi::NK;
 /* signal handlers for a single-test case thread */
 void CC SigSubHandler(int sig) noexcept
 {
-    _endthreadex(sig);
+    _endthreadex((unsigned int)sig);
 }
 void CC TermSubHandler() noexcept
 {

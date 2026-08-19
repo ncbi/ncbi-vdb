@@ -75,6 +75,7 @@ rc_t VPathWhack ( VPath * self )
     free ( ( void * ) self -> id   . addr );
     free ( ( void * ) self -> name . addr );
     free ( ( void * ) self -> objectType . addr );
+    free ( ( void * ) self -> region . addr );
     free ( ( void * ) self -> service . addr );
     free ( ( void * ) self -> tick . addr );
     free ( ( void * ) self -> type . addr );
@@ -2365,6 +2366,74 @@ LIB_EXPORT rc_t CC VFSManagerMakePathWithExtension ( struct VFSManager const * s
 }
 
 
+static rc_t VPathSetService(VPath* self, const char* service, size_t size) {
+    if (self == NULL || service == NULL || service[0] == '\0')
+        return 0;
+    else {
+        char* c = string_dup(service, size);
+        if (c == NULL)
+            return RC(rcVFS, rcPath, rcAllocating, rcMemory, rcExhausted);
+
+        free((void*)self->service.addr);
+        StringInit(&self->service, c, size, size);
+        return 0;
+    }
+}
+
+rc_t VPathSetCloudInfo(VPath* self, const char* info) {
+    if (info == NULL)
+        return RC(rcVFS, rcPath, rcUpdating, rcParam, rcNull);
+    else if (self == NULL)
+        return RC(rcVFS, rcPath, rcUpdating, rcSelf, rcNull);
+    else {
+        const char* region = string_chr(info, string_measure(info, NULL), '.');
+        if (region == NULL)
+            return RC(rcVFS, rcPath, rcUpdating, rcParam, rcIncorrect);
+        else {
+            rc_t rc = VPathSetService(self, info, region - info);
+            if (rc == 0)
+                rc = VPathSetRegion(self, region + 1);
+            return rc;
+        }
+    }
+}
+
+LIB_EXPORT rc_t CC VPathCopyForCloudAccess(const VPath* self, VPath** copy) {
+    if (copy == NULL)
+        return RC(rcVFS, rcPath, rcCopying, rcParam, rcNull);
+    *copy = NULL;
+
+    if (self == NULL)
+        return 0; /* copy of VPath=NULL is NULL */
+    else {
+        rc_t rc = 0;
+
+        VPath* p = calloc(1, sizeof * p);
+        if (p == NULL)
+            return RC(rcVFS, rcPath, rcCopying, rcMemory, rcExhausted);
+
+        rc = VPathSetService(p, self->service.addr, self->service.size);
+
+        if (rc == 0)
+            rc = VPathSetRegion(p, self->region.addr);
+
+        if (rc == 0) {
+            p->ceRequired = self->ceRequired;
+            p->payRequired = self->payRequired;
+            p->highly_reliable = self->highly_reliable;
+
+            p->path_type = vpCloudy;
+
+            KRefcountInit(&p->refcount, 1, "VPath", "CopyForCloudAccess", "");
+
+            *copy = p;
+            return 0;
+        }
+
+        return rc;
+    }
+}
+
 /* ExtractAccessionOrOID
  *  given an arbitrary path, possibly with extensions,
  *  extract the portion of the leaf qualifying as an
@@ -3438,6 +3507,24 @@ LIB_EXPORT rc_t CC VPathGetQuery ( const VPath * self, String * str )
     return rc;
 }
 
+LIB_EXPORT rc_t CC VPathGetRegion(const VPath* self, String* str) {
+    rc_t rc = 0;
+
+    if (str == NULL)
+        rc = RC(rcVFS, rcPath, rcAccessing, rcParam, rcNull);
+    else {
+        rc = VPathGetTestSelf(self);
+        if (rc == 0) {
+            *str = self->region;
+            return 0;
+        }
+
+        StringInit(str, "", 0, 0);
+    }
+
+    return rc;
+}
+
 LIB_EXPORT rc_t CC VPathGetParam ( const VPath * self, const char * param, String * str )
 {
     rc_t rc;
@@ -4235,7 +4322,7 @@ rc_t VPathMakeVFmtExt ( EVPathType ext, VPath ** new_path, const String * id,
                 }
 
                 if ( acc != NULL && acc -> size > 0 ) {
-                    free ( ( void * ) path-> acc . addr );
+                    free ( ( void * ) path -> acc . addr );
                     StringInit ( & path -> acc,
                         string_dup ( acc-> addr, acc -> size ),
                         acc -> size, acc -> len );
@@ -4249,7 +4336,7 @@ rc_t VPathMakeVFmtExt ( EVPathType ext, VPath ** new_path, const String * id,
                 }
 
                 if ( tick != NULL && tick -> size > 0 ) {
-                    free ( ( void * ) path -> tick. addr );
+                    free ( ( void * ) path -> tick . addr );
                     StringInit ( & path -> tick,
                         string_dup ( tick -> addr, tick -> size ),
                         tick -> size, tick -> len );
@@ -4349,6 +4436,21 @@ rc_t VPathMakeVFmtExt ( EVPathType ext, VPath ** new_path, const String * id,
     return rc;
 }
 
+rc_t VPathSetRegion(VPath* self, const char* region) {
+    if (self == NULL || region == NULL || region[0] == '\0')
+        return 0;
+    else {
+        size_t size = 0;
+        char* c = string_dup_measure(region, &size);
+        if (c == NULL)
+            return RC(rcVFS, rcPath, rcAllocating, rcMemory, rcExhausted);
+
+        free((void*)self->region.addr);
+        StringInit(&self->region, c, size, size);
+        return 0;
+    }
+}
+
 rc_t VPathSetId(VPath * self, const String * id) {
     assert(self);
 
@@ -4373,6 +4475,22 @@ rc_t VPathSetMagic(VPath * self, bool magic) {
     assert(self);
 
     self->magic = magic;
+
+    return 0;
+}
+
+rc_t VPathSetPayRequired(VPath* self, bool value) {
+    assert(self);
+
+    self->payRequired = value;
+
+    return 0;
+}
+
+rc_t VPathSetCeRequired(VPath* self, bool value) {
+    assert(self);
+
+    self->ceRequired = value;
 
     return 0;
 }

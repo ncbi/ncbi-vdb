@@ -56,6 +56,10 @@ TEST_CASE ( test ) {
     REQUIRE_EQ ( date2 [ sz ], '\0' );
     REQUIRE_EQ ( string ( date2 ), date1 );
 
+    sz = KTimeIso8601Basic(ts, date2, sizeof date2);
+    REQUIRE_EQ(date2[sz], '\0');
+    REQUIRE_EQ(string(date2), string("20150407T215415Z"));
+
 ////////////////////////////////////////////////////////////////////////////////
 
     TEST_MESSAGE ( "Checking roundtrip conversion 'KTime kt1' -> "

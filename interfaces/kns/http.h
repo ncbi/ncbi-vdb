@@ -45,10 +45,11 @@ extern "C" {
 /*--------------------------------------------------------------------------
  * forwards
  */
+struct KDataBuffer;
 struct KFile;
-struct String;
-struct KStream;
 struct KNSManager;
+struct KStream;
+struct String;
 
 
 /*--------------------------------------------------------------------------
@@ -460,6 +461,14 @@ KNS_EXTERN rc_t CC KClientHttpResultGetPhid ( KClientHttpResult *self,
     char ** phid );
 
 KNS_EXTERN bool CC KFileIsKHttpFile ( const struct KFile * self );
+
+
+/* Prepare a signed AWS API request */
+KNS_EXTERN rc_t CC KClientHttpRequestCreateCanonicalRequestString(
+    const KClientHttpRequest* self,
+    const char* http_method, const char* payload,
+    struct KDataBuffer* request, char** signedHeaders);
+
 
     /* compatibility defines */
 #define KHttpResultAddRef KClientHttpResultAddRef

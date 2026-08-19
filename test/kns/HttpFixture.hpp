@@ -67,7 +67,8 @@ public:
 
     static struct KStream * Reconnect () noexcept;
 
-    static std :: string MakeURL(const std :: string & base);
+    static std :: string MakeURL(const std :: string & base,
+        const std :: string & query = "", const std :: string & url = "");
 
     static KStream m_stream;
     struct KFile* m_file;

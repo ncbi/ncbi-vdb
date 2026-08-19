@@ -71,6 +71,7 @@ struct KStableHttpFile
     bool need_env_token;
     bool payRequired;
     char * url;
+    const struct VPath * path;
     KDataBuffer buf;
 
     bool live; /* there was a successfull read on the file */

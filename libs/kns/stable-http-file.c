@@ -38,6 +38,8 @@
 #include <klib/strings.h> /* ENV_VAR_LOG_HTTP_RETRY */
 #include <klib/time.h> /* KSleep */
 
+#include <vfs/path.h> /* VPathRelease */
+
 #include <strtol.h> /* strtou64 */
 
 #include "http-priv.h" /* SUPPORT_CHUNKED_READ */
@@ -49,8 +51,8 @@
 /*********************************** RETRIER **********************************/
 
 /* the last call to the file was successful */
-static
-void RetrierReset(const KStableHttpFile * cself, const char * func)
+static void RetrierReset(
+    const KStableHttpFile * cself, const char * func, bool init)
 {
     KStableHttpFile * self = (KStableHttpFile *)cself;
 
@@ -74,6 +76,9 @@ void RetrierReset(const KStableHttpFile * cself, const char * func)
             logLevel = atoi(e);
 #endif
     }
+
+    if (init)
+        return;
 
     self->live = true;
 
@@ -132,7 +137,8 @@ rc_t RetrierReopenRemote(KStableHttpFile * self, bool neverBefore)
     {
         rc = KNSManagerVMakeHttpFileIntUnstableFromBuffer(self->mgr,
             &self->file, self->conn, self->vers, self->reliable,
-            self->need_env_token, self->payRequired, self->url, &self->buf);
+            self->need_env_token, self->payRequired, self->url, self->path,
+            &self->buf);
         if (rc == 0) {
             if (neverBefore && !first && logLevel > 0)
                 PLOGERR(klogErr, (klogErr, rc,
@@ -371,8 +377,13 @@ rc_t CC KStblHttpFileDestroy(KStableHttpFile *self)
     rc = KNSManagerRelease(self->mgr);
 
     r2 = KStreamRelease(self->conn);
-    if (rc == 0 && r2 != 0)
+    if (r2 != 0 && rc == 0)
         rc = r2;
+
+    r2 = VPathRelease(self->path);
+    if (r2 != 0 && rc == 0)
+        rc = r2;
+    self->path = NULL;
 
     r2 = KDataBufferWhack(&self->buf);
     if (rc == 0 && r2 != 0)
@@ -427,7 +438,7 @@ rc_t CC KStblHttpFileTimedRead(const KStableHttpFile *self, uint64_t pos,
     while (true) {
         rc_t rc = KFileTimedRead(self->file, pos, buffer, bsize, num_read, tm);
         if (rc == 0) {
-            RetrierReset(self, __func__);
+            RetrierReset(self, __func__, false);
             return rc;
         }
         else {
@@ -452,7 +463,7 @@ rc_t CC KStblHttpFileRead(const KStableHttpFile *self, uint64_t pos,
     while (true) {
         rc_t rc = KFileRead(self->file, pos, buffer, bsize, num_read);
         if (rc == 0) {
-            RetrierReset(self, __func__);
+            RetrierReset(self, __func__, false);
             return rc;
         }
         else {
@@ -502,7 +513,7 @@ rc_t CC KStblHttpFileTimedReadChunked(const KStableHttpFile * self,
         rc_t rc =
             KFileTimedReadChunked(self->file, pos, chunks, bytes, num_read, tm);
         if (rc == 0) {
-            RetrierReset(self, __func__);
+            RetrierReset(self, __func__, false);
             return rc;
         }
         else {
@@ -527,7 +538,7 @@ rc_t CC KStblHttpFileReadChunked(const KStableHttpFile * self, uint64_t pos,
     while (true) {
         rc_t rc = KFileReadChunked(self->file, pos, chunks, bytes, num_read);
         if (rc == 0) {
-            RetrierReset(self, __func__);
+            RetrierReset(self, __func__, false);
             return rc;
         }
         else {
@@ -571,8 +582,7 @@ static KFile_vt_v1 vtKHttpFile =
 };
 
 static
-rc_t KHttpFileMake(KStableHttpFile ** self,
-    const char * url, va_list args)
+rc_t KHttpFileMake(KStableHttpFile ** self, const char * url)
 {
     rc_t rc;
     KStableHttpFile * f = calloc(1, sizeof *f);
@@ -588,7 +598,7 @@ rc_t KHttpFileMake(KStableHttpFile ** self,
             rc = KDataBufferMakeBytes(&f->buf, 0);
             if (rc == 0)
             {
-                rc = KDataBufferVPrintf(&f->buf, url, args);
+                rc = KDataBufferPrintf(&f->buf, url);
                 if (rc == 0)
                 {
                     *self = f;
@@ -614,14 +624,24 @@ enum {
 static
 rc_t KNSManagerVMakeHttpFileInt(const KNSManager *self,
     const KFile **file, struct KStream *conn, ver_t vers, bool reliable,
-    bool need_env_token, bool payRequired, const char *url,
+    bool need_env_token, bool payRequired, const VPath* path, const char *aUrl,
     va_list args)
 {
     rc_t rc = 0;
 
+    char url[4096] = "";
+
+    if (path != NULL)
+        rc = VPathReadUri(path, url, sizeof url, NULL);
+    else
+        rc = string_vprintf(url, sizeof url, NULL, aUrl, args);
+    
+    if (rc != 0)
+        return rc;
+
     if (self != NULL && !self->retryFile)
         return KNSManagerVMakeHttpFileIntUnstable(self, file,
-            conn, vers, reliable, need_env_token, payRequired, url, args);
+            conn, vers, reliable, need_env_token, payRequired, url);
 
     if (file == NULL)
         rc = RC(rcNS, rcFile, rcConstructing, rcParam, rcNull);
@@ -630,21 +650,26 @@ rc_t KNSManagerVMakeHttpFileInt(const KNSManager *self,
 
         if (self == NULL)
             rc = RC(rcNS, rcFile, rcConstructing, rcParam, rcNull);
-        else if (url == NULL)
-            rc = RC(rcNS, rcFile, rcConstructing, rcPath, rcNull);
         else if (url[0] == 0)
             rc = RC(rcNS, rcFile, rcConstructing, rcPath, rcInvalid);
         else {
             KStableHttpFile * f = NULL;
-            rc = KHttpFileMake(&f, url, args);
+
+            if (rc == 0)
+                rc = KHttpFileMake(&f, url);
 
             if (rc == 0) {
+                VPath* newPath = NULL;
+
                 rc = KNSManagerAddRef(self);
+
                 if (rc == 0)
                     f->mgr = self;
 
                 if (rc == 0)
                     rc = KStreamAddRef(conn);
+                if (rc == 0)
+                    rc = VPathCopyForCloudAccess(path, &newPath);
                 if (rc == 0) {
                     static int sReliable = eUninitialized;
                     if (sReliable == eUninitialized) {
@@ -678,7 +703,11 @@ rc_t KNSManagerVMakeHttpFileInt(const KNSManager *self,
                     else if (sReliable == eReliable)
                         reliable = true;
 
+                    if (path != NULL && !reliable)
+                        reliable = VPathIsHighlyReliable(path);
+
                     f->conn = conn;
+                    f->path = newPath;
 
                     f->vers = vers;
                     f->reliable = reliable;
@@ -700,8 +729,12 @@ rc_t KNSManagerVMakeHttpFileInt(const KNSManager *self,
 
             if (rc == 0) {
                 rc = RetrierReopenRemote(f, true);
-                if (rc == 0)
+                if (rc == 0) {
                     *file = &f->dad;
+
+                    /* initialize static variable to avoid race condition */
+                    RetrierReset(f, __func__, true);
+                }
             }
 
             if (rc != 0)
@@ -724,7 +757,7 @@ LIB_EXPORT rc_t CC KNSManagerMakeHttpFile(const KNSManager *self,
     va_list args;
     va_start(args, url);
     rc = KNSManagerVMakeHttpFileInt(self, file, conn,
-        vers, false, false, false, url, args);
+        vers, false, false, false, NULL, url, args);
     va_end(args);
     return rc;
 }
@@ -737,8 +770,31 @@ LIB_EXPORT rc_t CC KNSManagerMakeReliableHttpFile(const KNSManager *self,
     va_list args;
     va_start(args, url);
     rc = KNSManagerVMakeHttpFileInt(self, file, conn,
-        vers, reliable, need_env_token, payRequired, url, args);
+        vers, reliable, need_env_token, payRequired, NULL, url, args);
     va_end(args);
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KNSManagerMakeReliableHttpFileVPath(const KNSManager *self,
+    const KFile **file, struct KStream *conn, ver_t vers,
+    const VPath *path) 
+{
+    rc_t rc = 0;
+    va_list args;
+    bool need_env_token = false;
+    bool payRequired = false;
+    bool reliable = false;
+
+    if (path == NULL)
+        return RC(rcNS, rcFile, rcConstructing, rcParam, rcNull);
+
+    reliable = VPathIsHighlyReliable(path);
+    VPathGetCeRequired(path, &need_env_token);
+    VPathGetPayRequired(path, &payRequired);
+
+    rc = KNSManagerVMakeHttpFileInt(self, file, conn,
+        vers, reliable, need_env_token, payRequired, path, NULL, args);
+
     return rc;
 }
 

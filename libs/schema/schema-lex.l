@@ -42,9 +42,6 @@
 %{
 
 #define YYDEBUG 1
-#define YYSTYPE SCHEMA_STYPE
-#define YYLTYPE SCHEMA_LTYPE
-#define yytokentype Schema_tokentype
 
 #include "schema-lex.h"
 
