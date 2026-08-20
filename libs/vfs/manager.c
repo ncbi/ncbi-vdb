@@ -292,7 +292,9 @@ static rc_t VFSManagerCached(const VFSManager * cself,
                     if (self->sdlCacheLimit > 0 
                         && self->sdlCachedCount>= self->sdlCacheLimit)
                     {
-                        BSTreeUnlink(&self->trSdl, BSTreeLast(&self->trSdl));
+                        BSTNode* last = BSTreeLast(&self->trSdl);
+                        BSTreeUnlink(&self->trSdl, last);
+                        bstWhack(last, NULL);
                         --self->sdlCachedCount;
                     }
                     BSTreeInsert(&self->trSdl, (BSTNode*)sn, bstSortByAcc);
