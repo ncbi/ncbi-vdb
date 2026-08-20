@@ -57,6 +57,7 @@ extern "C" {
 #define ENV_VAR_PARAMETER_BITS "VDB_OPT_BITMAP"
 
 #define ENV_VAR_NO_CACHE_SDL_RESPONSE "NCBI_VDB_NO_CACHE_SDL_RESPONSE"
+#define ENV_VAR_SDL_CACHE_LIMIT "NCBI_VDB_SDL_CACHE_LIMIT"
 
 
 #define SDL_CGI "https://locate.ncbi.nlm.nih.gov/sdl/2/retrieve"

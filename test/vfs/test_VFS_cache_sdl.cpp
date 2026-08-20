@@ -38,132 +38,21 @@
 
 #include <ktst/unit_test.hpp>
 
-#include <vfs/path-priv.h> /* VPathGetDirectory */
-#include <vfs/manager.h> /* VFSManager */
+#include <vdb/database.h> /* VDatabaseRelease */
+#include <vdb/manager.h> /* VDBManagerRelease */
+#include <vdb/table.h> /* VTableRelease */
+
 #include <vfs/resolver.h> /* VResolverRelease */
 
-#include <os-native.h> // setenv
-
-#include "../../libs/vfs/manager-priv.h" // VFSManagerSdlCacheEmpty
+#include "CachingFixture.hpp" // CachingFixture
 
 #include <mutex>
-#include <string>
-
-#include <limits.h> /* PATH_MAX */
-#ifndef PATH_MAX
-#define PATH_MAX 4096
-#endif
 
 #define ALL
 
 TEST_SUITE(Test_VFS_cache_sdlSuite)
 
 using std::string;
-
-extern "C" { rc_t LegacyVPathMake(VPath ** new_path, const char * posix_path); }
-
-class CachingFixture {
-    char path[PATH_MAX];
-protected:
-    const VPath * remote;
-
-    CachingFixture(bool caching = true)
-        : remote(0)
-        , mgr(0)
-        , resolver(0)
-        , query(0)
-    {
-        path[0] = '\0';
-        if (caching)
-            unsetenv("NCBI_VDB_NO_CACHE_SDL_RESPONSE");
-        else
-            setenv("NCBI_VDB_NO_CACHE_SDL_RESPONSE", "1", 1);
-
-        rc_t rc(VFSManagerMake(&mgr));
-        if (rc != 0)
-            throw rc;
-
-        rc = VFSManagerGetResolver(mgr, &resolver);
-        if (rc != 0)
-            throw rc;
-    }
-
-    ~CachingFixture() {
-        VPathRelease(remote);
-        VPathRelease(query);
-        VResolverRelease(resolver);
-        VFSManagerRelease(mgr);
-    }
-
-    rc_t ResetQuery(const char * path_str) {
-        if (strcmp(path, path_str) == 0)
-            return 0;
-
-        strcpy(path, path_str);
-        rc_t rc(VPathRelease(query));
-        query = NULL;
-
-        if (rc == 0)
-            rc = VFSManagerMakePath(mgr, &query, path_str);
-
-        return rc;
-    }
-
-    rc_t QueryRemote(const char * path_str) {
-        rc_t rc(ResetQuery(path_str));
-
-        if (rc == 0)
-            rc = VPathRelease(remote);
-        remote = NULL;
-
-        if (rc == 0)
-            rc = VResolverRemote(resolver, 0, query, &remote);
-
-        return rc;
-    }
-
-    rc_t RemoteEquals(const char * path_str) const {
-        char p[4096]("");
-        rc_t rc(VPathReadUri(remote, p, sizeof p, NULL));
-        if (rc == 0)
-            if (strcmp(p, path_str) != 0)
-                rc = 115;
-
-        return rc;
-    }
-
-    static string MkSdlJson
-    (const string & acc, const string & url, int sec = -1)
-    {
-        time_t now(0);
-        time(&now);
-        now += sec;
-        struct tm * ptr(gmtime(&now));
-        char timeString[99]("");
-        strftime(timeString, sizeof timeString, "%Y-%m-%dT%H:%M:%SZ", ptr);
-
-        string json(acc + "="
-            "{ \"result\": [ { \"files\": [ { \"locations\": [ {\n");
-        if (sec >= 0) {
-            json += "              \"expirationDate\": \"";
-            json += timeString;
-            json += "\",\n";
-        }
-        json += "              \"link\": \"" + url + "\" } ] } ] } ] }\n";
-
-        return json;
-    }
-
-public:
-    VFSManager * mgr;
-    VResolver * resolver;
-    VPath * query;
-};
-
-class NotCachingFixture : protected CachingFixture {
-protected:
-    NotCachingFixture() : CachingFixture(false) {}
-};
 
 #ifdef ALL
 // Caching by default
@@ -288,6 +177,7 @@ FIXTURE_TEST_CASE(ExpirationNotCaching, NotCachingFixture) {
 }
 #endif
 
+#ifdef ALL
 // test of expiration; caching
 FIXTURE_TEST_CASE(ExpirationCaching, CachingFixture) {
     const char acc[] = "SRR000001";
@@ -309,7 +199,8 @@ FIXTURE_TEST_CASE(ExpirationCaching, CachingFixture) {
     putenv((char*)json.c_str());
     REQUIRE_RC(QueryRemote(acc));
     // not expired; still use old result
-    REQUIRE_RC(RemoteEquals("https://sra-pub-run-odp.s3.amazonaws.com/sra/SRR053325/SRR053325"));
+    REQUIRE_RC(RemoteEquals(
+        "https://sra-pub-run-odp.s3.amazonaws.com/sra/SRR053325/SRR053325"));
     REQUIRE(VFSManagerSdlCacheCount(mgr, NULL) == 1);
     const KDirectory * dir(0);
     REQUIRE_RC(VPathGetDirectory(query, &dir));
@@ -324,13 +215,15 @@ FIXTURE_TEST_CASE(ExpirationCaching, CachingFixture) {
     KSleep(2);
     REQUIRE_RC(QueryRemote(acc));
     // expired; use new result
-    REQUIRE_RC(RemoteEquals("https://ncbi.nlm.nih.gov/sos5/sra/SRR000/SRR000002"));
+    REQUIRE_RC(RemoteEquals(
+        "https://ncbi.nlm.nih.gov/sos5/sra/SRR000/SRR000002"));
     REQUIRE(VFSManagerSdlCacheCount(mgr, NULL) == 1);
     REQUIRE_RC(VPathGetDirectory(query, &dir));
     REQUIRE_NULL(dir);
 
     REQUIRE_RC(KDBManagerRelease(kdb));
 }
+#endif
 
 #ifdef ALL
 // cannot reuse WGS file when not caching

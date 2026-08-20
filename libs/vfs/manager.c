@@ -289,8 +289,15 @@ static rc_t VFSManagerCached(const VFSManager * cself,
                     ("VFSManagerCached:CACHING-NULL %s\n", id));
                 rc = SdlNodeMake(&sn, id, in, expiration);
                 if (rc == 0) {
+                    if (self->sdlCacheLimit > 0 
+                        && self->sdlCachedCount>= self->sdlCacheLimit)
+                    {
+                        BSTreeUnlink(&self->trSdl, BSTreeLast(&self->trSdl));
+                        --self->sdlCachedCount;
+                    }
                     BSTreeInsert(&self->trSdl, (BSTNode*)sn, bstSortByAcc);
                     self->trSdlState = eSCSCachedWhenNull;
+                    ++self->sdlCachedCount;
                 }
             }
             else if (sn->resp == NULL) {/*if(no resp in found)add in to fn*/
@@ -347,6 +354,42 @@ rc_t VFSManagerSetCachedKSrvResponse
     return VFSManagerCached(self, id, NULL, 0, resp, NULL);
 }
 
+rc_t VFSManagerDisableSdlCaching(VFSManager* self, bool disabled) {
+    if (self == NULL)
+        return RC(rcVFS, rcFile, rcAccessing, rcSelf, rcNull);
+
+    self->notCachingSdlResponse = disabled;
+    return 0;
+}
+
+rc_t VFSManagerSetSdlCacheLimit(VFSManager* self, int32_t limit) {
+    if (self == NULL)
+        return RC(rcVFS, rcFile, rcAccessing, rcSelf, rcNull);
+
+    self->sdlCacheLimit = limit;
+    return 0;
+}
+
+rc_t VFSManagerGetSdlCacheState(const VFSManager* self,
+    bool* disabled, int32_t* limit)
+{
+    bool dummyB = true;
+    int32_t dummyI = 0;
+
+    if (self == NULL)
+        return RC(rcVFS, rcFile, rcAccessing, rcSelf, rcNull);
+
+    if (disabled == NULL)
+        disabled = &dummyB;
+    if (limit == NULL)
+        limit = &dummyI;
+
+    *disabled = self->notCachingSdlResponse;
+    *limit = self->sdlCacheLimit;
+
+    return 0;
+}
+
 rc_t VFSManagerSdlCacheClear(VFSManager * self) {
     rc_t rc = 0, r2 = 0;
 
@@ -361,6 +404,7 @@ rc_t VFSManagerSdlCacheClear(VFSManager * self) {
     if (rc == 0) {
         BSTreeWhack(&self->trSdl, bstWhack, NULL);
         self->trSdlState = eSCSEmpty;
+        self->sdlCachedCount = 0;
     }
 
     r2 = KLockUnlock(self->trSdlMutex);
@@ -3283,6 +3327,34 @@ LIB_EXPORT rc_t CC VFSManagerMake ( VFSManager ** pmanager )
     return VFSManagerMakeFromKfg(pmanager, NULL);
 }
 
+static bool NotCachingSdlResponse(const KConfig* cfg) {
+    if (getenv(ENV_VAR_NO_CACHE_SDL_RESPONSE) != NULL)
+        return true;
+
+    if (cfg != NULL) {
+        bool disabled = false;
+        rc_t rc = KConfig_Is_Sdl_Caching_Disabled(cfg, &disabled);
+        if (rc == 0 && disabled)
+            return true;
+    }
+
+    return false;
+}
+
+static int32_t GetSdlCacheLimit(const KConfig* cfg) {
+    char* envvar = getenv(ENV_VAR_SDL_CACHE_LIMIT);
+    if (envvar != NULL)
+        return atoi(envvar);
+
+    if (cfg != NULL) {
+        int32_t count = 0;
+        KConfig_Get_Sdl_Cache_Limit(cfg, &count);
+        return count;
+    }
+
+    return 0;
+}
+
 /* Make
  */
 static rc_t CC VFSManagerMakeFromKfgImpl ( struct VFSManager ** pmanager,
@@ -3314,8 +3386,8 @@ static rc_t CC VFSManagerMakeFromKfgImpl ( struct VFSManager ** pmanager,
             KRefcountInit (& obj -> refcount, 1,
                 kfsmanager_classname, "init", "singleton" );
 
-            obj->notCachingSdlResponse
-                = getenv("NCBI_VDB_NO_CACHE_SDL_RESPONSE") != NULL;
+            obj->notCachingSdlResponse = NotCachingSdlResponse(cfg);
+            obj->sdlCacheLimit = GetSdlCacheLimit(cfg);
             obj->notCleanCacheIfThreadExhausted
                 = getenv("NOT_CLEAN_SDL_CACHE_IF_NO_MORE_THREADS") != NULL;
             BSTreeInit(&obj->trSdl);

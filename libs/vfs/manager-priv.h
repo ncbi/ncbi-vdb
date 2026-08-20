@@ -89,6 +89,8 @@ struct VFSManager
     /**************************************************************************/
     /* Cache of names resolve results / SDL responses */
     bool notCachingSdlResponse;
+    int32_t sdlCachedCount;
+    int32_t sdlCacheLimit;
     /* ESdlCacheState */ uint32_t trSdlState;
     BSTree trSdl;
     struct KLock * trSdlMutex;

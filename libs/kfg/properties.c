@@ -279,6 +279,83 @@ LIB_EXPORT rc_t CC KConfig_Set_Http_Proxy_Env_Higher_Priority
 }
 
 /* -------------------------------------------------------------------------- */
+/* is caching of SDL responses disabled? */
+#define SDL_CACHING_DISABLED "/libs/sdl-cache/disabled"
+LIB_EXPORT rc_t CC KConfig_Is_Sdl_Caching_Disabled
+(const KConfig* self, bool* disabled)
+{
+    rc_t rc = 0;
+
+    if (self == NULL)
+        rc = RC(rcKFG, rcNode, rcReading, rcSelf, rcNull);
+    else if (disabled == NULL)
+        rc = RC(rcKFG, rcNode, rcReading, rcParam, rcNull);
+    else {
+        *disabled = false;
+        KConfigReadBool(self, SDL_CACHING_DISABLED, disabled);
+        /* errors are ignored - then default value is returned */
+    }
+
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KConfig_Set_Sdl_Caching_Disabled
+(KConfig* self, bool disabled)
+{
+    rc_t rc = 0;
+
+    if (self == NULL)
+        rc = RC(rcKFG, rcNode, rcWriting, rcSelf, rcNull);
+    else
+        rc = KConfigWriteBool(self, SDL_CACHING_DISABLED, disabled);
+
+    return rc;
+}
+
+/* -------------------------------------------------------------------------- */
+
+/* manage SDL cache */
+#define SDL_CACHING_LIMIT "/libs/sdl-cache/limit"
+LIB_EXPORT rc_t CC KConfig_Get_Sdl_Cache_Limit(const KConfig* self,
+    int32_t* value)
+{ 
+    rc_t rc = 0;
+
+    if (self == NULL)
+        rc = RC(rcKFG, rcNode, rcReading, rcSelf, rcNull);
+    else if (value == NULL)
+        rc = RC(rcKFG, rcNode, rcReading, rcParam, rcNull);
+    else {
+        uint64_t long_value = 0;
+        rc = KConfigReadU64(self, SDL_CACHING_LIMIT, &long_value);
+        if (rc == 0 || GetRCState(rc) == rcNotFound) {
+            *value = long_value & 0x7FFFFFFF;
+            rc = 0;
+        }
+    }
+
+    return rc;
+}
+
+LIB_EXPORT rc_t CC KConfig_Set_Sdl_Cache_Limit(KConfig* self,
+    int32_t value)
+{
+    rc_t rc = 0;
+
+    if (self == NULL)
+        rc = RC(rcKFG, rcNode, rcReading, rcSelf, rcNull);
+    else {
+        char buff[128];
+        size_t num_writ;
+        rc = string_printf(buff, sizeof buff, &num_writ, "%d", value);
+        if (rc == 0)
+            rc = KConfigWriteString(self, SDL_CACHING_LIMIT, buff);
+    }
+
+    return rc;
+}
+
+/* -------------------------------------------------------------------------- */
 
 LIB_EXPORT rc_t CC KConfig_Get_Home( const KConfig *self, char * buffer, size_t buffer_size, size_t * written )
 {   return KConfig_Get_Repository_String( self, buffer, buffer_size, written, "HOME" ); }

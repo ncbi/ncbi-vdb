@@ -90,7 +90,10 @@ AddExecutableTest( SlowTest_VDB_wvdb-slow "test-wvdb-slow" "${LIBS_WRITE}" )
 BuildExecutableForTest( rowwritetest "rowwritetest" "${LIBS_WRITE}" )
 add_test( NAME Test_VDB_row_write COMMAND rowwritetest -t ${CMAKE_CURRENT_SOURCE_DIR}/db/Test_VDB_row_write )
 
-AddExecutableTest(Test_VDB_SDL_caching_and_threads "Test_VDB_SDL_caching_and_threads" "${LIBS_READ}" )
+AddExecutableTest(Test_VDB_SDL_caching_and_threads
+                 "Test_VDB_SDL_caching_and_threads" "${LIBS_READ}" )
+AddExecutableTest(Test_VDB_use_after_sdl_cache_clean
+                 "test-use-after-sdl-cache-clean" "${LIBS_READ}" )
 
 # temporaily disabled (see VDB-6355)
     # AddExecutableTest( Test_VDB_omdm "omdm-141-test" "${LIBS_READ}" )
