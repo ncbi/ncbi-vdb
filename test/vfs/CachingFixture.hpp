@@ -26,7 +26,9 @@
 
 #include <kfg/kfg-priv.h> /* KConfigMakeLocal */
 #include <kfg/properties.h> /* KConfig_Set_Sdl_Cache_Limit */
+#include <klib/printf.h> /* string_printf */
 #include <klib/strings.h> /* ENV_VAR_NO_CACHE_SDL_RESPONSE */
+#include <klib/time.h> /* KTimeGlobal */
 #include <vfs/manager.h> /* VFSManagerRelease */
 #include <vfs/manager-priv.h> /* VFSManagerMakeFromKfg */
 #include <vfs/path-priv.h> /* VPathGetDirectory */
@@ -145,12 +147,17 @@ protected:
     static std::string MkSdlJson
     (const std::string & acc, const std::string & url, int sec = -1)
     {
-        time_t now(0);
-        time(&now);
+        time_t now(KTimeStamp()); // time(&now);
         now += sec;
-        struct tm * ptr(gmtime(&now));
+        KTime kt;
+        KTimeGlobal(&kt, now);
+        //struct tm * ptr(gmtime(&now));
         char timeString[99]("");
-        strftime(timeString, sizeof timeString, "%Y-%m-%dT%H:%M:%SZ", ptr);
+        //strftime(timeString, sizeof timeString, "%Y-%m-%dT%H:%M:%SZ", ptr);
+        string_printf(timeString, sizeof timeString, nullptr,
+            "%04d-%02d-%02dT%02d:%02d:%02dZ",
+            kt.year, kt.month + 1, kt.day + 1,
+            kt.hour, kt.minute, kt.second);
 
         std::string json(acc + "="
             "{ \"result\": [ { \"files\": [ { \"locations\": [ {\n");
