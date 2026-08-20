@@ -965,8 +965,7 @@ ASTBuilder :: Include ( ctx_t ctx, const Token * p_token, const Token * p_filena
             if ( parser . ParseFile ( ctx, f, unquoted ) )
             {
                 AST * root = Build ( ctx, * parser . GetParseTree (), unquoted, false );
-                // Build() adds to our AST, so we do need the include's root anymore
-                AST :: Destroy ( root );
+                ret->AddChild( ctx, root ); // the included file's AST becomes child[1]
             }
             KFileRelease ( f );
         }

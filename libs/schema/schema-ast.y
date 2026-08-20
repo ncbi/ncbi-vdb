@@ -44,8 +44,11 @@
     {
         INTERNAL_ERROR ( xcUnexpected, "%s: %s", p_sb . GetSourceFileName (), p_msg );
     }
-
 %}
+
+%code provides {
+    extern const char * AST_symbol_name( enum yytokentype t );
+}
 
 %name-prefix "AST_"
 %parse-param { ctx_t ctx }
@@ -906,3 +909,11 @@ view_parent_parms
     : ident                         { $$ = AST :: Make ( ctx ); $$ -> AddNode ( ctx, $1 ); }
     | view_parent_parms ',' ident   { $$ = $1; $$ -> AddNode ( ctx, $3 ); }
     ;
+
+%%
+
+const char * AST_symbol_name( enum yytokentype t )
+{
+    return yytname[ t - 255 ];
+}
+

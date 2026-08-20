@@ -152,6 +152,11 @@ TEST_CASE ( ErrorReport_Formatting )
     REQUIRE_EQ ( string ( buf ), string ( "dir/file:1:2 msg: error message, num: 42" ) );
 }
 
+TEST_CASE( TokenToString )
+{
+    REQUIRE_EQ( string( "PT_UINT" ), string( AST::TokenTypeToString( PT_UINT ) ) );
+}
+
 // AST subclasses
 
 TEST_CASE ( AST_FQN_NakedIdent )
@@ -1104,6 +1109,7 @@ FIXTURE_TEST_CASE(CondExpr, AST_Fixture)
     REQUIRE_EQ ( ( uint32_t ) eConstExpr, expr -> right -> var );
     REQUIRE_EQ ( 3, (int)reinterpret_cast < const SConstExpr * > ( expr -> right ) -> u . u64 [0] );
 }
+
 //TODO: invalid float
 //TODO: nested vector constants - error
 //TODO: negation applied to non-scalar - error

@@ -54,7 +54,7 @@ namespace ncbi
             const Token :: Location & GetLocation () const { return * m_location; } // location of the leading real token
 
             typedef void (*VisitFn) ( const ParseTree& );
-            void traverse( VisitFn fn ) const;
+            void traverse( VisitFn pre_fn, VisitFn post_fn = nullptr ) const;
 
         protected:
             ParseTree ( const Token& token );

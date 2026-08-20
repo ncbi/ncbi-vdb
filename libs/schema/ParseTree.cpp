@@ -135,13 +135,20 @@ ParseTree :: MoveChildren ( ctx_t ctx, ParseTree& p_source )
 }
 
 void
-ParseTree :: traverse( VisitFn fn ) const
-{   // for now, top-down left-right only
-    fn( *this );
-    auto count = ChildrenCount();
-    for ( uint32_t i = 0; i < count; ++i )
+ParseTree :: traverse( VisitFn pre_fn, VisitFn post_fn ) const
+{
+    if ( pre_fn != nullptr )
     {
-        GetChild( i ) -> traverse( fn );
+        pre_fn( *this );
+    }
+    auto count = ChildrenCount();
+    for ( uint32_t i = 0; i < count; ++i ) //TODO: support reverse children
+    {
+        GetChild( i ) -> traverse( pre_fn, post_fn );
+    }
+    if ( post_fn != nullptr )
+    {
+        post_fn( *this );
     }
 }
 

@@ -37,6 +37,7 @@ AddExecutableTest( Test_SCHEMA_wb-test-schema-table "wb-test-schema-table;AST_Fi
 AddExecutableTest( Test_SCHEMA_wb-test-schema-db "wb-test-schema-db;AST_Fixture" "${LIBS}" )
 AddExecutableTest( Test_SCHEMA_wb-test-schema-view "wb-test-schema-view;AST_Fixture" "${LIBS}" )
 AddExecutableTest( Test_SCHEMA_wb-schema-traverse "wb-test-schema-traverse;AST_Fixture" "${LIBS}" )
+set_property(TEST Test_SCHEMA_wb-schema-traverse PROPERTY ENVIRONMENT "VDB_SCHEMA_INCLUDES=${CMAKE_SOURCE_DIR}/interfaces")
 
 # TODO the following binaries are not unit tests (INT_TOOLS), they should be started not as ctest
 
@@ -55,7 +56,3 @@ if( SINGLE_CONFIG )
 endif()
 
 # Test_SCHEMA_454_db and Test_SCHEMA_IonTorrent_db moved to sra-tools/test/schema because of their dependemcy on the SRA schema. VDB-4792
-
-# a tool to apply static analysis to a schema
-    BuildExecutableForTest( "vdb-inspect-schema" "inspect-schema;AST_Fixture" "${LIBS}" )
-

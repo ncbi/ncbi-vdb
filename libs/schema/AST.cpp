@@ -41,6 +41,12 @@ using namespace std;
 
 // AST
 
+const char *
+AST :: TokenTypeToString( Token :: TokenType t )
+{
+    return AST_symbol_name( (yytokentype) t );
+}
+
 AST *
 AST :: Make ( ctx_t ctx, const Token* token )
 {

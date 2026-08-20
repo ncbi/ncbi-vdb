@@ -43,6 +43,9 @@ namespace ncbi
         class AST : public ParseTree
         {
         public:
+            static const char * TokenTypeToString( Token :: TokenType );
+
+        public:
             static AST * Make ( ctx_t ctx,  const Token* token );
             static AST * Make ( ctx_t ctx, Token :: TokenType tokenType ); // no-value token
             static AST * Make ( ctx_t ctx ); // no token; a synthesized node
