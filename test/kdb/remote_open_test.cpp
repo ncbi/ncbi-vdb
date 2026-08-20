@@ -40,7 +40,10 @@
 #include <vfs/manager-priv.h> /* VFSManagerMakeFromKfg */
 #include <vfs/path.h>
 #include <vfs/resolver.h>
+
+#include <klib/strings.h> /* ENV_VAR_NO_CACHE_SDL_RESPONSE */
 #include <klib/text.h>
+
 #include <kfg/config.h>
 
 #include "../../libs/vfs/path-priv.h" // VPathEqual
@@ -187,7 +190,7 @@ public:
 
     void Resolve(const string& p_accession)
     {
-        putenv((char*)"NCBI_VDB_NO_CACHE_SDL_RESPONSE=1");
+        putenv((char*) ENV_VAR_NO_CACHE_SDL_RESPONSE "= 1");
 
         struct VResolver * resolver;
         if(VFSManagerGetResolver(m_vfsmgr, & resolver))

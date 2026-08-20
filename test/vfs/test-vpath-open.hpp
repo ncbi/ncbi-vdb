@@ -84,7 +84,7 @@ struct Common {
         : vdb(0), vfs(0), kdb(0)
     {
         /* Keep SDL caching - some tests rely on that.
-        putenv((char*)"NCBI_VDB_NO_CACHE_SDL_RESPONSE=1"); */
+        putenv((char*) ENV_VAR_NO_CACHE_SDL_RESPONSE "= 1"); */
 
         KConfigDisableUserSettings();
 

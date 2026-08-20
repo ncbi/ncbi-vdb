@@ -205,7 +205,7 @@ int main( int argc, char * argv [] )
 
     std::cerr << "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<\n\n";
 
-    putenv((char*)"NCBI_VDB_NO_CACHE_SDL_RESPONSE=1");
+    putenv((char*) ENV_VAR_NO_CACHE_SDL_RESPONSE "= 1");
 
     if ( rc == 0 )
         rc = (rc_t)VResolverWithLogTestSuite ( argc, argv );
