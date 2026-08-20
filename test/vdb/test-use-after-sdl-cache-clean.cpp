@@ -55,12 +55,12 @@ TEST_CASE(UseAfterClean) {
     // clear cache of SDL responses
     REQUIRE_RC(VFSManagerSdlCacheClear(vfs));
 
-    // VDatabase remains open after cache clear
+    // VDatabase (and cache-tee-file) remain open after cache clear
     KNamelist* names(nullptr);
     REQUIRE_RC(VDatabaseListTbl(db, &names));
     REQUIRE_RC(KNamelistRelease(names));
 
-    // VTable remains open after cache clear
+    // VTable (and cache-tee-file) remains open after cache clear
     REQUIRE_RC(VTableListReadableColumns(tb, &names));
     REQUIRE_RC(KNamelistRelease(names));
 
