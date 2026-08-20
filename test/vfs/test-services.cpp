@@ -373,19 +373,25 @@ TEST_CASE(Test_VPathGetId) {
     String s;
 
     REQUIRE_RC(_VPathGetId(p, &sn, &so, mgr));
-    CONST_STRING(&s, "google.com");
+#define G "google.com"
+    CONST_STRING(&s, G);
     REQUIRE(StringEqual(&s, &so)); // old string was updated
     REQUIRE(StringEqual(&s, sn));  // new string was set
+    if (so.addr == sn->addr)
+        CONST_STRING(&so, G);
     StringWhack(sn); sn = nullptr;
     REQUIRE_RC(VPathRelease(p)); p = nullptr;
 
     // the following URL will be saved by prefetch as index.html
-    c = "https://docs.aws.amazon.com/?1";
+#define A "https://docs.aws.amazon.com/?1"
+    c = A;
     CONST_STRING(&s, "index.html");
     REQUIRE_RC(VPathMake(&p, c));
     REQUIRE_RC(_VPathGetId(p, &sn, &so, mgr));
     REQUIRE(StringEqual(&s, &so)); // old string was updated
     REQUIRE(StringEqual(&s, sn));  // new string was set
+    if (so.addr == sn->addr)
+        CONST_STRING(&so, A);
     StringWhack(sn); sn = nullptr;
     REQUIRE_RC(VPathRelease(p)); p = nullptr;
    
@@ -395,6 +401,8 @@ TEST_CASE(Test_VPathGetId) {
     REQUIRE_RC(_VPathGetId(p, &sn, &so, mgr));
     REQUIRE(StringEqual(&s, &so)); // old string was updated
     REQUIRE(StringEqual(&s, sn));  // new string was set
+    if (so.addr == sn->addr)
+        memset(&so, 0, sizeof so);
     StringWhack(sn); sn = nullptr;
     REQUIRE_RC(VPathRelease(p)); p = nullptr;
 
