@@ -780,7 +780,6 @@ LIB_EXPORT rc_t CC KNSManagerMakeReliableHttpFileVPath(const KNSManager *self,
     const VPath *path) 
 {
     rc_t rc = 0;
-    va_list args;
     bool need_env_token = false;
     bool payRequired = false;
     bool reliable = false;
@@ -793,7 +792,7 @@ LIB_EXPORT rc_t CC KNSManagerMakeReliableHttpFileVPath(const KNSManager *self,
     VPathGetPayRequired(path, &payRequired);
 
     rc = KNSManagerVMakeHttpFileInt(self, file, conn,
-        vers, reliable, need_env_token, payRequired, path, NULL, args);
+        vers, reliable, need_env_token, payRequired, path, NULL, NULL);
 
     return rc;
 }

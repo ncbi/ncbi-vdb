@@ -1655,6 +1655,8 @@ LIB_EXPORT rc_t CC VFSManagerResolveLocal(const VFSManager * self,
     const char * in, const struct VPath ** out)
 {
     VPath * path = NULL;
+    if (in == NULL)
+        return RC(rcVFS, rcQuery, rcExecuting, rcParam, rcNull);
     rc_t rc = VFSManagerMakePath(self, &path, "%s", in);
     if (rc == 0)
         rc = VFSManagerResolveVPathLocal(self, path, out);
