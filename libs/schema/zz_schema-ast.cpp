@@ -63,15 +63,7 @@
 /* Pull parsers.  */
 #define YYPULL 1
 
-
-/* Substitute the variable and function names.  */
-#define yyparse         AST_parse
-#define yylex           AST_lex
-#define yyerror         AST_error
-#define yydebug         AST_debug
-#define yynerrs         AST_nerrs
-
-/* First part of user prologue.  */
+/* "%code top" blocks.  */
 
     #define YYDEBUG 1
 
@@ -88,6 +80,14 @@
     {
         INTERNAL_ERROR ( xcUnexpected, "%s: %s", p_sb . GetSourceFileName (), p_msg );
     }
+
+
+/* Substitute the variable and function names.  */
+#define yyparse         AST_parse
+#define yylex           AST_lex
+#define yyerror         AST_error
+#define yydebug         AST_debug
+#define yynerrs         AST_nerrs
 
 
 # ifndef YY_CAST

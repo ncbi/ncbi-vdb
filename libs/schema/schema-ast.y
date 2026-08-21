@@ -23,6 +23,10 @@
 * ===========================================================================
 *
 */
+%code provides {
+    extern const char * AST_symbol_name( enum yytokentype t );
+}
+
 %code requires {
 
     #include "ASTBuilder.hpp"
@@ -31,7 +35,7 @@
 
 }
 
-%{
+%code top {
     #define YYDEBUG 1
 
     #include <stdio.h>
@@ -47,10 +51,6 @@
     {
         INTERNAL_ERROR ( xcUnexpected, "%s: %s", p_sb . GetSourceFileName (), p_msg );
     }
-%}
-
-%code provides {
-    extern const char * AST_symbol_name( enum yytokentype t );
 }
 
 %name-prefix "AST_"
