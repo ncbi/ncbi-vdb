@@ -82,7 +82,7 @@ void pre_Json( const ParseTree& node )
 {
     jsonStr << prefix() << "{" << endl;
     ++indent;
-    jsonStr << prefix() << "'type' : '" << AST::TokenTypeToString( node.GetToken().GetType() ) << "'," << endl;
+    jsonStr << prefix() << "'type' : '" << AST::TokenTypeToString( node.GetToken().GetType() ) << "(" << node.GetToken().GetType() << ")'," << endl;
     if ( !string(node.GetToken().GetValue()).empty() )
     {
         jsonStr << prefix() << "'value' : '" << node.GetToken().GetValue() << "'," << endl;
@@ -112,11 +112,24 @@ FIXTURE_TEST_CASE(ToJson, AST_Fixture)
 
     root -> traverse( pre_Json, post_Json );
 
+    //cout << jsonStr.str();
+    REQUIRE_NE( string(), jsonStr.str() );
+}
+
+FIXTURE_TEST_CASE(ToJson_debug, AST_Fixture)
+{
+    AST * root = MakeAst  ( R"(function < type T, U32 dim >
+T [ dim ] vclip #1.0 < T lower, T upper > ( T [ dim ] in )
+    = vdb:clip;
+    )");
+
+    root -> traverse( pre_Json, post_Json );
+
     cout << jsonStr.str();
     //REQUIRE_NE( string(), jsonStr.str() );
 }
 
-#if 0
+
 
 class NameMap : public map<string, set<string> >
 {
@@ -163,7 +176,7 @@ string GetFullName ( const AST* node )
     {
     case PT_IDENT:
         {
-            auto fqn = dynamic_cast< const AST_FQN* >( node );
+            auto fqn = ToFQN( node );
             char buf[1024];
             fqn -> GetFullName( buf, sizeof( buf ) );
             return buf;
@@ -225,12 +238,12 @@ void pre_columnToFunctions( const ParseTree& node )
             break;
         }
 
-    // case PT_IDENT:
-    //     {
-    //         string name = GetFullName( & ast_node );
-    //         cout << "ident " << name << endl;
-    //         break;
-    //     }
+    case PT_IDENT:
+        {
+            string name = GetFullName( & ast_node );
+            cout << "ident " << name << endl;
+            break;
+        }
 
     default:
         break;
@@ -277,10 +290,9 @@ FIXTURE_TEST_CASE(VDB_6444, AST_Fixture)
     REQUIRE_EQ( 157, (int)ColToFn.size() );
 //    REQUIRE_EQ( 157, (int)ColToProd.size() );
 
-    ProdToFn.print( "Productions to Functions" );
-    ColToFn.print( "Columns to Functions" );
+    // ProdToFn.print( "Productions to Functions" );
+    // ColToFn.print( "Columns to Functions" );
 }
-#endif
 
 //////////////////////////////////////////// Main
 int main( int argc, char *argv [] )

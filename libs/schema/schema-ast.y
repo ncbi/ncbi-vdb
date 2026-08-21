@@ -23,15 +23,18 @@
 * ===========================================================================
 *
 */
+%code requires {
+
+    #include "ASTBuilder.hpp"
+    #include "AST_Expr.hpp"
+    using namespace ncbi::SchemaParser;
+
+}
 
 %{
     #define YYDEBUG 1
 
     #include <stdio.h>
-
-    #include "ASTBuilder.hpp"
-    using namespace ncbi::SchemaParser;
-
     #include "schema-ast.hpp"
 
     #define AST_lex NextToken
@@ -240,8 +243,9 @@
 %type <node> vararg param_sig param_signature fact_sig
 %type <node> view view_parms view_parm view_body_opt view_body view_member
 %type <node> view_parents_opt view_parents view_parent view_parent_parms view_spec
+%type <node> ident
 
-%type <fqn> fqn qualnames fqn_opt_vers ident fqn_vers
+%type <fqn> fqn qualnames fqn_opt_vers fqn_vers
 
 %type <expr> expr cond_expr cond_chain uint_expr func_expr float_expr string_expr const_vect_expr
 %type <expr> bool_expr negate_expr cast_expr member_expr join_expr
@@ -846,7 +850,7 @@ qualnames
     ;
 
 ident
-    : PT_IDENT '(' IDENTIFIER_1_0 ')'   { $$ = AST_FQN :: Make ( ctx, $1 ); $$ -> AddNode ( ctx, $3 ); }
+    : PT_IDENT '(' IDENTIFIER_1_0 ')'   { $$ = AST :: Make ( ctx, $1 ); $$ -> AddNode ( ctx, $3 ); }
     ;
 
 fqn_opt_vers

@@ -38,7 +38,7 @@
 
 #include <vdb/schema.h>
 
-#include "AST.hpp"
+#include "AST_Expr.hpp"
 #include "ErrorReport.hpp"
 
 struct KSymbol;
