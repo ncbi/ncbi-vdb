@@ -289,7 +289,7 @@ static rc_t VFSManagerCached(const VFSManager * cself,
                     ("VFSManagerCached:CACHING-NULL %s\n", id));
                 rc = SdlNodeMake(&sn, id, in, expiration);
                 if (rc == 0) {
-                    if (self->sdlCacheLimit > 0 
+                    while (self->sdlCacheLimit > 0 
                         && self->sdlCachedCount>= self->sdlCacheLimit)
                     {
                         BSTNode* last = BSTreeLast(&self->trSdl);
@@ -360,16 +360,30 @@ rc_t VFSManagerDisableSdlCaching(VFSManager* self, bool disabled) {
     if (self == NULL)
         return RC(rcVFS, rcFile, rcAccessing, rcSelf, rcNull);
 
-    self->notCachingSdlResponse = disabled;
-    return 0;
+    else {
+        rc_t rc = _VFSManagerSdlMutexLockAcquire(self);
+
+        if (rc == 0)
+            self->notCachingSdlResponse = disabled;
+
+        KLockUnlock(self->trSdlMutex);
+        return rc;
+    }
 }
 
 rc_t VFSManagerSetSdlCacheLimit(VFSManager* self, int32_t limit) {
     if (self == NULL)
         return RC(rcVFS, rcFile, rcAccessing, rcSelf, rcNull);
 
-    self->sdlCacheLimit = limit;
-    return 0;
+    else {
+        rc_t rc = _VFSManagerSdlMutexLockAcquire(self);
+
+        if (rc == 0)
+            self->sdlCacheLimit = limit;
+
+        KLockUnlock(self->trSdlMutex);
+        return rc;
+    }
 }
 
 rc_t VFSManagerGetSdlCacheState(const VFSManager* self,
@@ -381,15 +395,22 @@ rc_t VFSManagerGetSdlCacheState(const VFSManager* self,
     if (self == NULL)
         return RC(rcVFS, rcFile, rcAccessing, rcSelf, rcNull);
 
-    if (disabled == NULL)
-        disabled = &dummyB;
-    if (limit == NULL)
-        limit = &dummyI;
+    else {
+        rc_t rc = _VFSManagerSdlMutexLockAcquire(self);
 
-    *disabled = self->notCachingSdlResponse;
-    *limit = self->sdlCacheLimit;
+        if (rc == 0) {
+            if (disabled == NULL)
+                disabled = &dummyB;
+            if (limit == NULL)
+                limit = &dummyI;
 
-    return 0;
+            *disabled = self->notCachingSdlResponse;
+            *limit = self->sdlCacheLimit;
+        }
+
+        KLockUnlock(self->trSdlMutex);
+        return rc;
+    }
 }
 
 rc_t VFSManagerSdlCacheClear(VFSManager * self) {
