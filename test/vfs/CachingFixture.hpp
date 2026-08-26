@@ -154,10 +154,13 @@ protected:
         //struct tm * ptr(gmtime(&now));
         char timeString[99]("");
         //strftime(timeString, sizeof timeString, "%Y-%m-%dT%H:%M:%SZ", ptr);
+        /*
         string_printf(timeString, sizeof timeString, nullptr,
             "%04d-%02d-%02dT%02d:%02d:%02dZ",
             kt.year, kt.month + 1, kt.day + 1,
             kt.hour, kt.minute, kt.second);
+            */
+        size_t s(KTimeIso8601(now, timeString, sizeof timeString));
 
         std::string json(acc + "="
             "{ \"result\": [ { \"files\": [ { \"locations\": [ {\n");
