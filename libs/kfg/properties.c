@@ -279,7 +279,8 @@ LIB_EXPORT rc_t CC KConfig_Set_Http_Proxy_Env_Higher_Priority
 }
 
 /* -------------------------------------------------------------------------- */
-/* is caching of SDL responses disabled? */
+/* is caching of SDL responses disabled?
+   value of SDL_CACHING_DISABLED is Bool: "true" or "false" */
 #define SDL_CACHING_DISABLED "/libs/sdl-cache/disabled"
 LIB_EXPORT rc_t CC KConfig_Is_Sdl_Caching_Disabled
 (const KConfig* self, bool* disabled)
@@ -314,7 +315,9 @@ LIB_EXPORT rc_t CC KConfig_Set_Sdl_Caching_Disabled
 
 /* -------------------------------------------------------------------------- */
 
-/* manage SDL cache */
+/* manage SDL cache
+   valid value of SDL_CACHING_LIMIT is numeric; >=0, <(max int32_t)
+   0 is "unnlimited" */
 #define SDL_CACHING_LIMIT "/libs/sdl-cache/limit"
 LIB_EXPORT rc_t CC KConfig_Get_Sdl_Cache_Limit(const KConfig* self,
     int32_t* value)
