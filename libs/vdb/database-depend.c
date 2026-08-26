@@ -49,6 +49,7 @@
 #include <klib/log.h>
 #include <klib/out.h>
 #include <klib/printf.h> /* string_printf */
+#include <klib/strings.h> /* ENV_VAR_NO_CACHE_SDL_RESPONSE */
 #include <klib/rc.h>
 #include <klib/text.h>
 
@@ -685,13 +686,13 @@ static void CC bstProcess(BSTNode* n, void* data) {
 #ifdef WINDOWS
             char buf_env[4096];
             size_t buf_env_count = 0;
-            errno_t err = getenv_s ( & buf_env_count, buf_env, sizeof ( buf_env ), "NCBI_VDB_NO_CACHE_SDL_RESPONSE" );
+            errno_t err = getenv_s ( & buf_env_count, buf_env, sizeof ( buf_env ), ENV_VAR_NO_CACHE_SDL_RESPONSE );
             assert ( err != ERANGE );
             assert ( buf_env_count <= sizeof ( buf_env ) );
             reuseWgsResponse = buf_env_count == 0;
 #else
             reuseWgsResponse
-                = getenv("NCBI_VDB_NO_CACHE_SDL_RESPONSE") == NULL;
+                = getenv(ENV_VAR_NO_CACHE_SDL_RESPONSE) == NULL;
 #endif
             reuseWgsResponseInited = true;
         }

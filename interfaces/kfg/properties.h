@@ -228,6 +228,16 @@ KFG_EXTERN rc_t CC KConfig_Set_PreferNoToFullQuality(
 KFG_EXTERN rc_t CC KConfig_Get_SendTelemetry(const KConfig *self, bool *value);
 KFG_EXTERN rc_t CC KConfig_Set_SendTelemetry(      KConfig *self, bool  value);
 
+/* is caching of SDL responses disabled? */
+KFG_EXTERN rc_t CC KConfig_Is_Sdl_Caching_Disabled(const KConfig* self,
+    bool* value);
+KFG_EXTERN rc_t CC KConfig_Set_Sdl_Caching_Disabled(KConfig* self, bool value);
+
+/* manage SDL cache
+   count = 0 is unlimited */
+KFG_EXTERN rc_t CC KConfig_Get_Sdl_Cache_Limit(const KConfig* self,
+    int32_t* count);
+KFG_EXTERN rc_t CC KConfig_Set_Sdl_Cache_Limit(KConfig* self, int32_t count);
 
 /* Version of the schema parser to use */
 KFG_EXTERN rc_t CC KConfigGetSchemaParserVersion( const KConfig *self, uint8_t * version );

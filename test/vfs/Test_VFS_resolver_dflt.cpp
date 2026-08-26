@@ -507,7 +507,7 @@ FIXTURE_TEST_CASE(noqual_vdbcache, ResolverFixture) {
 
 int main( int argc, char *argv [] )
 {
-    putenv((char*)"NCBI_VDB_NO_CACHE_SDL_RESPONSE=1");
+    putenv((char*) ENV_VAR_NO_CACHE_SDL_RESPONSE "= 1");
 
     return VResolverTestSuite ( argc, argv );
 }
