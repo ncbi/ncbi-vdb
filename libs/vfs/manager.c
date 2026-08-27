@@ -396,7 +396,7 @@ rc_t VFSManagerGetSdlCacheState(const VFSManager* self,
         return RC(rcVFS, rcFile, rcAccessing, rcSelf, rcNull);
 
     else {
-        rc_t rc = _VFSManagerSdlMutexLockAcquire(self);
+        rc_t rc = _VFSManagerSdlMutexLockAcquire((VFSManager*)self);
 
         if (rc == 0) {
             if (disabled == NULL)
