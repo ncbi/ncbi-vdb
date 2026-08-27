@@ -160,7 +160,7 @@ protected:
             kt.year, kt.month + 1, kt.day + 1,
             kt.hour, kt.minute, kt.second);
             */
-        size_t s(KTimeIso8601(now, timeString, sizeof timeString));
+        KTimeIso8601(now, timeString, sizeof timeString);
 
         std::string json(acc + "="
             "{ \"result\": [ { \"files\": [ { \"locations\": [ {\n");
