@@ -2664,7 +2664,7 @@ yyreduce:
     break;
 
   case 101: /* tbl_parents: fqn_opt_vers  */
-                                    { (yyval.node) = AST :: Make ( ctx ); (yyval.node) -> AddNode ( ctx, (yyvsp[0].fqn) ); }
+                                    { (yyval.node) = AST :: Make ( ctx, PT_TABLEPARENTS ); (yyval.node) -> AddNode ( ctx, (yyvsp[0].fqn) ); }
     break;
 
   case 102: /* tbl_parents: tbl_parents ',' fqn_opt_vers  */

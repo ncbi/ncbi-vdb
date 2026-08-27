@@ -529,7 +529,7 @@ parents_opt
     ;
 
 tbl_parents
-    : fqn_opt_vers                  { $$ = AST :: Make ( ctx ); $$ -> AddNode ( ctx, $1 ); }
+    : fqn_opt_vers                  { $$ = AST :: Make ( ctx, PT_TABLEPARENTS ); $$ -> AddNode ( ctx, $1 ); }
     | tbl_parents ',' fqn_opt_vers  { $$ = $1; $$ -> AddNode ( ctx, $3 ); }
     ;
 
