@@ -503,7 +503,41 @@ FIXTURE_TEST_CASE(noqual_vdbcache, ResolverFixture) {
     REQUIRE_RC(VPathRelease(vdbcache));
 }
 
-//////////////////////////////////////////// Main
+FIXTURE_TEST_CASE(noqual_novdbcache, ResolverFixture) {
+#undef ACC
+#define ACC "SRR341579"
+    putenv((char*)ACC "="
+        "{ \"result\": [ { \"status\": 200, \"files\": [ { \"type\": \"sra\", \"name\": \"SRR341578.sralite\", \"locations\": [ { \"link\": \"https://nih.gov/SRR341578.sralite\""
+        "                                                                                                       } ] } ] } ] }");
+
+    REQUIRE_RC(VFSManagerMakePath(vfs, &query, ACC));
+    REQUIRE_NULL(remote);
+    REQUIRE_RC(VResolverRemote(resolver, 0, query, &remote));
+    const VPath* vdbcache(NULL);
+    bool vdbcacheChecked(false);
+    REQUIRE_RC(VPathGetVdbcache(remote, &vdbcache, &vdbcacheChecked));
+    REQUIRE_NULL(vdbcache);
+    REQUIRE(vdbcacheChecked);
+    REQUIRE_RC(VPathRelease(vdbcache));
+}
+
+FIXTURE_TEST_CASE(noqual_novdbcachelite, ResolverFixture) {
+#undef ACC
+#define ACC "SRR341580"
+    putenv((char*)ACC "="
+        "{ \"result\": [ { \"status\": 200, \"files\": [ { \"type\": \"sra\", \"name\": \"SRR341578.lite\", \"locations\": [ { \"link\": \"https://nih.gov/SRR341578.sralite\""
+        "                                                                                                       } ] } ] } ] }");
+
+    REQUIRE_RC(VFSManagerMakePath(vfs, &query, ACC));
+    REQUIRE_NULL(remote);
+    REQUIRE_RC(VResolverRemote(resolver, 0, query, &remote));
+    const VPath* vdbcache(NULL);
+    bool vdbcacheChecked(false);
+    REQUIRE_RC(VPathGetVdbcache(remote, &vdbcache, &vdbcacheChecked));
+    REQUIRE_NULL(vdbcache);
+    REQUIRE(vdbcacheChecked);
+    REQUIRE_RC(VPathRelease(vdbcache));
+}
 
 int main( int argc, char *argv [] )
 {

@@ -1403,6 +1403,13 @@ const String * VFSManagerExtNoqual(const struct VFSManager * self) {
 
     return &xNoqual;
 }
+const String* VFSManagerExtNoqual2(const struct VFSManager* self) {
+    static String xNoqual;
+    if (xNoqual.len == 0)
+        CONST_STRING(&xNoqual, ".lite");
+
+    return &xNoqual;
+}
 const String * VFSManagerExtNoqualOld(const struct VFSManager * self) {
     static String xNoqual;
     if (xNoqual.len == 0)

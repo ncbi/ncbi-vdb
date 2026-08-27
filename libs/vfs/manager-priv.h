@@ -42,7 +42,9 @@ struct KLock;
 
 /* Get ".noqual" extension.
     *   accepts VFSManager* == NULL */
-const String * VFSManagerExtNoqual   (const struct VFSManager *);
+const String * VFSManagerExtNoqual    (const struct VFSManager *);
+/* Another ".noqual" extension. */
+const String * VFSManagerExtNoqual2   (const struct VFSManager *);
 /* Get old ".noqual" extension. */
 const String * VFSManagerExtNoqualOld(const struct VFSManager *);
 /* Get ".sra" extension. */
