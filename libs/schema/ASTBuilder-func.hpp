@@ -67,8 +67,8 @@ namespace ncbi
             bool HandleOverload ( ctx_t ctx, const AST_FQN &  p_fqn, const KSymbol *  p_priorDecl );
             void AddFactoryParams ( ctx_t ctx, Vector& p_sig, const AST & p_params );
             void AddFormalParams ( ctx_t ctx, Vector& p_sig, const AST & p_params );
-            SIndirectType * MakeSchemaParamType ( ctx_t ctx, const AST_FQN & p_name );
-            SIndirectConst * MakeSchemaParamConst ( ctx_t ctx, const AST_FQN & p_name );
+            SIndirectType * MakeSchemaParamType ( ctx_t ctx, const char* p_name );
+            SIndirectConst * MakeSchemaParamConst ( ctx_t ctx, const char* p_name );
             void HandleStatement ( ctx_t ctx, const AST & p_stmt );
 
         private:

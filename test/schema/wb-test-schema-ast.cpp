@@ -201,6 +201,9 @@ TEST_CASE ( AST_FQN_WithVersionMaj )
     AST_FQN* fqn = AST_Fixture :: MakeFqn ( "a" );
     fqn -> SetVersion ( "#1" );
     REQUIRE_EQ ( 1 << 24, ( int ) fqn -> GetVersion () );
+    char buf [ 10 ];
+    fqn -> GetVersionedName ( buf, sizeof buf );
+    REQUIRE_EQ ( string ("a#1"), string ( buf ) );
     AST_FQN :: Destroy ( fqn );
 }
 TEST_CASE ( AST_FQN_WithVersionMajMin )
@@ -208,6 +211,9 @@ TEST_CASE ( AST_FQN_WithVersionMajMin )
     AST_FQN* fqn = AST_Fixture :: MakeFqn ( "a" );
     fqn -> SetVersion ( "#1.22" );
     REQUIRE_EQ ( ( 1 << 24 ) | ( 22 << 16 ), ( int ) fqn -> GetVersion () );
+    char buf [ 10 ];
+    fqn -> GetVersionedName ( buf, sizeof buf );
+    REQUIRE_EQ ( string ("a#1.22"), string ( buf ) );
     AST_FQN :: Destroy ( fqn );
 }
 TEST_CASE ( AST_FQN_WithVersionMajMinRel )
@@ -215,6 +221,9 @@ TEST_CASE ( AST_FQN_WithVersionMajMinRel )
     AST_FQN* fqn = AST_Fixture :: MakeFqn ( "a" );
     fqn -> SetVersion ( "#1.22.33" );
     REQUIRE_EQ ( ( 1 << 24 ) | ( 22 << 16 ) | 33, ( int ) fqn -> GetVersion () );
+    char buf [ 10 ];
+    fqn -> GetVersionedName ( buf, sizeof buf );
+    REQUIRE_EQ ( string ("a#1.22.33"), string ( buf ) );
     AST_FQN :: Destroy ( fqn );
 }
 

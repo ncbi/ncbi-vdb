@@ -162,6 +162,7 @@ ASTBuilder :: MakeTypeExpr ( ctx_t ctx, const AST & p_type )
     {
     case PT_IDENT : // scalar
         {
+assert( dynamic_cast<const AST_FQN*>(&p_type));
             fqn = ToFQN ( & p_type );
             ret -> fd . td . dim = 1;
         }
@@ -193,6 +194,7 @@ ASTBuilder :: MakeTypeExpr ( ctx_t ctx, const AST & p_type )
                         }
                         break;
                     case eIndirectExpr:
+                    case eFwdExpr:
                         {
                             ret -> fd . td . dim = 0;
                             ret -> dim = expr;
@@ -223,6 +225,7 @@ ASTBuilder :: MakeTypeExpr ( ctx_t ctx, const AST & p_type )
                 ret -> fd . fmt = ret -> fmt -> id;
                 ret -> fd . td . dim = 1;
 
+assert( dynamic_cast<const AST_FQN*>(p_type . GetChild ( 1 )));
                 fqn = ToFQN ( p_type . GetChild ( 1 ) ); // has to be a type!
             }
         }

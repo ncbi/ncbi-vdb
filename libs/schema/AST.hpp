@@ -91,6 +91,7 @@ namespace ncbi
             // reconstruct the full name "ns1:ns2:...:ident", 0-terminated. Returns size in bytes
             void GetFullName ( char* buf, size_t bufSize ) const;
             void GetPartialName ( char* buf, size_t bufSize, uint32_t lastMember ) const;
+            void GetVersionedName ( char* buf, size_t bufSize ) const;
 
         protected:
             AST_FQN ( const Token* ); // always PT_IDENT

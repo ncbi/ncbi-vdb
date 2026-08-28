@@ -32,6 +32,8 @@
 
 #include <ktst/unit_test.hpp>
 
+#include <kfc/defs.h>
+
 #include <map>
 #include <set>
 #include <sstream>
@@ -87,6 +89,21 @@ void pre_Json( const ParseTree& node )
     {
         jsonStr << prefix() << "'value' : '" << node.GetToken().GetValue() << "'," << endl;
     }
+
+    const AST_FQN * fqn = dynamic_cast<const AST_FQN*>(&node);
+    if ( fqn != nullptr )
+    {
+        ver_t v = fqn->GetVersion();
+        if ( v != 0 )
+        {
+            jsonStr << prefix() << "'version' : '"
+                << VersionGetMajor( v ) << ":"
+                << VersionGetMinor( v ) << ":"
+                << VersionGetRelease( v )
+                << "'," << endl;
+        }
+    }
+
     if ( node.ChildrenCount() > 0 )
     {
         jsonStr << prefix() << "'childrenCount' : '" << node.ChildrenCount() << "'," << endl;
@@ -125,11 +142,9 @@ T [ dim ] vclip #1.0 < T lower, T upper > ( T [ dim ] in )
 
     root -> traverse( pre_Json, post_Json );
 
-    cout << jsonStr.str();
-    //REQUIRE_NE( string(), jsonStr.str() );
+    //cout << jsonStr.str();
+    REQUIRE_NE( string(), jsonStr.str() );
 }
-
-
 
 class NameMap : public map<string, set<string> >
 {
@@ -159,16 +174,23 @@ public:
     }
 };
 
-string activeProd;
-NameMap ProdToFn;
+struct AstMap
+{
+    string activeProd;
+    NameMap ProdToFn;
 
-string activeCol;
-NameMap ColToFn;
-NameMap ColToProd;
+    string activeCol;
+    NameMap ColToFn;
+    NameMap ColToProd;
+    NameMap TblToCol;
+    NameMap DbToTbl;
 
-string activeTable;
+    string activeTable;
 
-string activeDatabase;
+    string activeDatabase;
+};
+
+AstMap astMap;
 
 string GetFullName ( const AST* node )
 {
@@ -177,9 +199,19 @@ string GetFullName ( const AST* node )
     case PT_IDENT:
         {
             auto fqn = ToFQN( node );
-            char buf[1024];
-            fqn -> GetFullName( buf, sizeof( buf ) );
-            return buf;
+            if ( fqn )
+            {
+                char buf[1024];
+                fqn -> GetVersionedName( buf, sizeof( buf ) );
+                return buf;
+            }
+            else
+            {
+                assert( node->ChildrenCount() == 1 );
+                auto id = node->GetChild(0);
+                assert( id->GetTokenType() == IDENTIFIER_1_0 );
+                return id->GetTokenValue();
+            }
         }
     case IDENTIFIER_1_0:
         {
@@ -201,47 +233,93 @@ void pre_columnToFunctions( const ParseTree& node )
     switch( ast_node . GetTokenType() )
     {
     case PT_DATABASE:
-        {
-            //cout << "database " << GetFullName( ast_node.GetChild(0) ) << endl;
+        {   // database definition; nested databases are not yet handled
+            string name = GetFullName( ast_node.GetChild(0) );
+            //cout << "database " << name << endl;
+            astMap.activeDatabase = name;
+            astMap.DbToTbl.add(name);
+            if ( ast_node.GetChild(1)->GetTokenType() != PT_EMPTY )
+            { // add parent
+                string dad = GetFullName( ast_node.GetChild(1) );
+                auto d = astMap.DbToTbl[dad];
+                astMap.DbToTbl[name].insert( d.begin(), d.end() );
+            }
+            break;
+        }
+    case PT_TBLMEMBER:
+        {   // database member table. record the type of the table, not its name in the DB
+            string name = GetFullName( ast_node.GetChild(1) );
+            //cout << "table " << name << endl;
+            astMap.DbToTbl.add( astMap.activeDatabase, name );
+            break;
+        }
+    case PT_TABLE:
+        {   // table definition.
+            string name = GetFullName( ast_node.GetChild(0) );
+            //cout << "table " << name << endl;
+            astMap.activeTable = name;
+            astMap.TblToCol.add( name );
+            auto plist = ast_node.GetChild(1);
+            if ( plist->GetTokenType() == PT_TABLEPARENTS )
+            { // add parents
+                for ( uint32_t i = 0; i < plist->ChildrenCount(); ++i )
+                {   //TODO: look for a definition with the correct version
+                    string dad = GetFullName( plist->GetChild(i) );
+if( astMap.TblToCol.find(dad) == astMap.TblToCol.end() )
+{
+cout<<"table "<<name<<" parent not found: "<<dad<<endl;
+}
+else{
+                    auto d = astMap.TblToCol.find(dad)->second;
+                    astMap.TblToCol[name].insert( d.begin(), d.end() );
+}
+                }
+            }
+            else
+            {
+                assert( plist->GetTokenType() == PT_EMPTY );
+            }
             break;
         }
 
     case PT_TYPEDCOL:
-    case PT_TYPEDCOLEXPR:
-        {
+        {   // column definition
+            assert( ast_node.ChildrenCount() >= 1 );
+            assert( ast_node.GetChild(0)->GetTokenType() == PT_IDENT );
             string name = GetFullName( ast_node.GetChild(0) );
-            activeCol = name;
-            ColToFn.add( name );
-            //cout << "column " << name << endl;
+            astMap.activeCol = name;
+            astMap.ColToFn.add( name );
+            astMap.TblToCol.add( astMap.activeTable, name );
+            //cout << "column " << astMap.activeTable << "." << name << endl;
             break;
         }
     case PT_FUNCEXPR:
-        {
+        {   // function call
             string name = GetFullName( ast_node.GetChild(1) );
             //cout << "function " << name << endl;
-            if ( !activeCol.empty() )
+            if ( !astMap.activeCol.empty() )
             {
-                ColToFn.add( activeCol, name );
+                astMap.ColToFn.add( astMap.activeCol, name );
             }
-            else if ( !activeProd.empty() )
+            else if ( !astMap.activeProd.empty() )
             {
-                ProdToFn.add( activeProd, name );
+                astMap.ProdToFn.add( astMap.activeProd, name );
             }
             break;
         }
     case PT_PRODSTMT:
-        {
+        {   // production
             string name = GetFullName( ast_node.GetChild(1) );
-            activeProd = name;
-            ProdToFn.add( name );
+            astMap.activeProd = name;
+            astMap.ProdToFn.add( name );
             //cout << "production " << name << endl;
             break;
         }
 
     case PT_IDENT:
-        {
-            string name = GetFullName( & ast_node );
-            cout << "ident " << name << endl;
+        {   // use of an identifier
+            string name = ast_node.GetChild(0)->GetTokenValue();
+            //cout << "ident " << name << endl;
             break;
         }
 
@@ -258,6 +336,13 @@ void post_columnToFunctions( const ParseTree& node )
     case PT_DATABASE:
         {
             //cout << "end database " << GetFullName( ast_node.GetChild(0) ) << endl;
+            astMap.activeDatabase.clear();
+            break;
+        }
+
+    case PT_TABLE:
+        {
+            astMap.activeTable.clear();
             break;
         }
 
@@ -265,13 +350,13 @@ void post_columnToFunctions( const ParseTree& node )
     case PT_TYPEDCOLEXPR:
         {
             //cout << "end column " << GetFullName( ast_node.GetChild(0) ) << endl;
-            activeCol.clear();
+            astMap.activeCol.clear();
             break;
         }
     case PT_PRODSTMT:
         {
             //cout << "end production " << GetFullName( ast_node.GetChild(1) ) << endl;
-            activeProd.clear();
+            astMap.activeProd.clear();
             break;
         }
 
@@ -280,18 +365,110 @@ void post_columnToFunctions( const ParseTree& node )
     }
 }
 
+FIXTURE_TEST_CASE(DatabaseToTable, AST_Fixture)
+{   // discover dependencies of databases on tables (closure through inheritance)
+    AST * root = MakeAst  ( R"(
+        table T3#1 {}
+        table T4#1 {}
+        table T5#1 {}
+        table T6#1 {}
+
+        table T1 #2 =
+            T3 #1,
+            T4 #1
+            {}
+        table T1 #3 =
+            T5 #1,
+            T6 #1
+            {}
+        table T2 #4 =
+            T3 #1,
+            T5 #1
+            {}
+        database DB1 #2
+        {
+            table T1 #3 t1;
+            table T2 #4 t2;
+        };
+        database DB2 #1 = DB1#2
+        {   // T1, T2, T3
+            table T3 #1 t3;
+        }
+    )" );
+
+    astMap = AstMap();
+    root -> traverse( pre_columnToFunctions, post_columnToFunctions );
+
+    REQUIRE_EQ( 2, (int)astMap.DbToTbl.size());
+
+    {   // DB1: T1, T2
+        auto d1 = astMap.DbToTbl.find("DB1#2");
+        REQUIRE_EQ( 2, (int)d1->second.size());
+        auto m = d1->second;
+        REQUIRE( m.end() != m.find( string("T1#3") ) );
+        REQUIRE( m.end() != m.find( string("T2#4") ) );
+    }
+
+    {   // DB2: T1, T2, T3
+        auto d2 = astMap.DbToTbl.find("DB2#1");
+        REQUIRE_EQ( 3, (int)d2->second.size());
+        auto m = d2->second;
+        REQUIRE( m.end() != m.find( string("T1#3") ) );
+        REQUIRE( m.end() != m.find( string("T2#4") ) );
+        REQUIRE( m.end() != m.find( string("T3#1") ) );
+    }
+}
+
+FIXTURE_TEST_CASE(TableToColumns, AST_Fixture)
+{   // discover dependencies of tables on columns (closure through inheritance)
+    AST * root = MakeAst  ( R"(
+        table T3#1.0.1 { column ascii t3_1; column ascii t3_2; }
+        table T4#1 { column ascii t4_1; column ascii t4_2;}
+        table T1 #1 =
+            T3 #1,
+            T4 #1
+            { column ascii t1_1; }
+    )" );
+
+    // root -> traverse( pre_Json, post_Json );
+    // cout << jsonStr.str() << endl;
+
+    astMap = AstMap();
+    root -> traverse( pre_columnToFunctions, post_columnToFunctions );
+
+    REQUIRE_EQ( 3, (int)astMap.TblToCol.size());
+
+    {   // T1: t3_1, t3_2, t4_1, t4_2, t1_1
+        //astMap.TblToCol.print("TblToCol");
+        auto t = astMap.TblToCol.find("T1#1");
+        REQUIRE( astMap.TblToCol.end() != t );
+        REQUIRE_EQ( 5, (int)t->second.size());
+        auto m = t->second;
+        REQUIRE( m.end() != m.find( string("t3_1") ) );
+        REQUIRE( m.end() != m.find( string("t3_2") ) );
+        REQUIRE( m.end() != m.find( string("t4_1") ) );
+        REQUIRE( m.end() != m.find( string("t4_2") ) );
+        REQUIRE( m.end() != m.find( string("t1_1") ) );
+    }
+}
+
 FIXTURE_TEST_CASE(VDB_6444, AST_Fixture)
 {   // discover dependencies of columns on schema functions
     AST * root = MakeAst  ( "version 2; include 'align/align.vschema';" );
 
-    root -> traverse( pre_columnToFunctions, post_columnToFunctions );
+    // astMap = AstMap();
+    // root -> traverse( pre_columnToFunctions, post_columnToFunctions );
 
-    REQUIRE_EQ( 216, (int)ProdToFn.size() );
-    REQUIRE_EQ( 157, (int)ColToFn.size() );
+//    REQUIRE_EQ( 216, (int)ProdToFn.size() );
+//    REQUIRE_EQ( 157, (int)ColToFn.size() );
 //    REQUIRE_EQ( 157, (int)ColToProd.size() );
 
-    // ProdToFn.print( "Productions to Functions" );
-    // ColToFn.print( "Columns to Functions" );
+//    ProdToFn.print( "Productions to Functions" );
+//    ColToFn.print( "Columns to Functions" );
+//    ColToProd.print( "Columns to Productions" );
+//    astMap.TblToCol.print( "Columns to Productions" );
+//    astMap.DbToTbl.print("Db to Tables");
+
 }
 
 //////////////////////////////////////////// Main

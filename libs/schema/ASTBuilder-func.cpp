@@ -351,14 +351,14 @@ FunctionDeclaration :: SetPhysicalParams ( ctx_t ctx )
 }
 
 SIndirectType *
-FunctionDeclaration :: MakeSchemaParamType ( ctx_t ctx, const AST_FQN & p_name )
+FunctionDeclaration :: MakeSchemaParamType ( ctx_t ctx, const char * p_name )
 {
     FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     SIndirectType *ret = m_builder . Alloc < SIndirectType > ( ctx );
     if ( ret != 0 )
     {   /* create symbol */
         String nameStr;
-        p_name . GetIdentifier ( nameStr );
+        StringInitCString( &nameStr, p_name );
         rc_t rc = KSymTableCreateConstSymbol ( & m_builder . GetSymTab (), & ret -> name, & nameStr, eSchemaType, ret );
         if ( rc == 0 )
         {
@@ -380,14 +380,14 @@ FunctionDeclaration :: MakeSchemaParamType ( ctx_t ctx, const AST_FQN & p_name )
 }
 
 SIndirectConst *
-FunctionDeclaration :: MakeSchemaParamConst ( ctx_t ctx, const AST_FQN & p_name )
+FunctionDeclaration :: MakeSchemaParamConst ( ctx_t ctx, const char* p_name )
 {
     FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
     SIndirectConst * ret = m_builder . Alloc < SIndirectConst > ( ctx );
     if ( ret != 0 )
     {   /* create symbol */
         String nameStr;
-        p_name . GetIdentifier ( nameStr );
+        StringInitCString( &nameStr, p_name );
         rc_t rc = KSymTableCreateConstSymbol ( & m_builder . GetSymTab (), & ret -> name, & nameStr, eSchemaParam, ret );
         if ( rc == 0 )
         {
@@ -413,7 +413,10 @@ FunctionDeclaration :: SetSchemaParams ( ctx_t ctx, const AST & p_sig )
         const AST & p = * p_sig . GetChild ( i );
         if ( p . ChildrenCount () == 1 ) // type
         {
-            SIndirectType * formal = MakeSchemaParamType ( ctx, * ToFQN ( p . GetChild ( 0 ) ) );
+            auto id_node = p . GetChild ( 0 );
+            assert( id_node -> GetTokenType() == PT_IDENT );
+            assert( id_node -> ChildrenCount() == 1 );
+            SIndirectType * formal = MakeSchemaParamType ( ctx, id_node -> GetChild(0) -> GetTokenValue() );
             if ( formal != 0 )
             {
                 /* record positional */
@@ -431,7 +434,10 @@ FunctionDeclaration :: SetSchemaParams ( ctx_t ctx, const AST & p_sig )
             STypeExpr * type = m_builder . MakeTypeExpr ( ctx, * p . GetChild ( 0 ) );
             if ( type != 0 )
             {
-                const AST_FQN & ident = * ToFQN ( p . GetChild ( 1 ) );
+                auto id_node = p . GetChild ( 0 );
+                assert( id_node -> GetTokenType() == PT_IDENT );
+                assert( id_node -> ChildrenCount() == 1 );
+                auto ident = id_node -> GetChild(0) -> GetTokenValue();
                 // scalar unsigned int type required
                 if ( type -> dt != 0 &&
                     type -> dt -> domain == ddUint &&
@@ -452,9 +458,7 @@ FunctionDeclaration :: SetSchemaParams ( ctx_t ctx, const AST & p_sig )
                 }
                 else
                 {
-                    String nameStr;
-                    ident . GetIdentifier ( nameStr );
-                    m_builder . ReportError ( ctx, ident . GetLocation (), "Not a scalar unsigned integer", nameStr );
+                    m_builder . ReportError ( ctx, id_node -> GetChild(0) -> GetLocation (), "Not a scalar unsigned integer", ident );
                 }
                 SExpressionWhack ( & type -> dad );
             }

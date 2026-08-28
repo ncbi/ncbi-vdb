@@ -102,7 +102,7 @@ void
 ASTBuilder :: ReportError ( ctx_t ctx, const ErrorReport :: Location & p_loc, const char * p_msg, int64_t p_val )
 {
     FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
-    m_errors . ReportError ( ctx, p_loc, "%s: %l", p_msg, p_val );
+    m_errors . ReportError ( ctx, p_loc, "%s: %li", p_msg, p_val );
 }
 
 void
