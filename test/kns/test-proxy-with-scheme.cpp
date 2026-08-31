@@ -31,6 +31,7 @@
 
 #include <klib/debug.h> /* KDbgSetString */
 #include <klib/out.h>         /* KOutMsg */
+#include <klib/strings.h> /* ENV_VAR_NO_CACHE_SDL_RESPONSE */
 #include <klib/text.h>
 
 #include <kns/manager.h>      /* KNSManagerSetConnectionTimeouts */
@@ -161,7 +162,7 @@ static rc_t argsHandler ( int argc, char * argv [] ) {
 }
 
 int main ( int argc, char * argv [] ) {
-    putenv((char*)"NCBI_VDB_NO_CACHE_SDL_RESPONSE=1");
+    putenv((char*) ENV_VAR_NO_CACHE_SDL_RESPONSE "= 1");
     SetUsageSummary( UsageSummary );
 
     int rc = TestProxySchemeSuite ( argc, argv );

@@ -26,6 +26,7 @@
 
 #include <kapp/args.h> /* ArgsMakeAndHandle */
 #include <klib/debug.h> /* KDbgSetString */
+#include <klib/strings.h> /* ENV_VAR_NO_CACHE_SDL_RESPONSE */
 #include <ktst/unit_test.hpp>
 
 #include <vfs/manager.h> /* VFSManagerRelease */
@@ -503,6 +504,6 @@ FIXTURE_TEST_CASE(ResolveTestLocalAdPath, Fixture) {
 
 int main(int argc, char * argv[])
 {
-    putenv((char*)"NCBI_VDB_NO_CACHE_SDL_RESPONSE=1");
+    putenv((char*) ENV_VAR_NO_CACHE_SDL_RESPONSE "= 1");
     return TestResolveSuite(argc, argv);
 }

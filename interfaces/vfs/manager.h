@@ -425,6 +425,20 @@ VFS_EXTERN rc_t CC VFSManagerResolveVPathAll(const VFSManager * self,
     const struct VPath ** remote, const struct VPath ** cache);
 
 /*****************************************************************************/
+/* cache of SDL responses */
+
+/* is caching disabled?
+   what is the limit of cached objects? (0 is unlimited)
+   disabled and limit are optional */
+rc_t VFSManagerGetSdlCacheState(const VFSManager* self,
+    bool* disabled, int32_t* limit);
+
+/* disable/enable caching of SDL responses */
+rc_t VFSManagerDisableSdlCaching(VFSManager* self, bool disabled);
+
+/* set the maximum numer of cached objects
+   0 is unlimited */
+rc_t VFSManagerSetSdlCacheLimit(VFSManager* self, int32_t limit);
 
 #ifdef __cplusplus
 }
