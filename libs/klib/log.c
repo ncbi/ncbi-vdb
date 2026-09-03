@@ -328,13 +328,28 @@ rc_t logsubstituteparams ( const char* msg, uint32_t argc, const wrt_nvp_t argv[
                            uint32_t envc, const wrt_nvp_t envs[],
                            char* buffer, size_t bsize, size_t* num_writ )
 {
+    int count = 0; /* plain string, no substitute param */
     rc_t rc;
     size_t i, sz;
+    bool wasTruncated = false;
     for ( rc = 0, i = 0, sz = 0; msg [ i ] != 0; ++ sz, ++ i )
     {
         /* copy msg character */
-        if ( sz < bsize )
-            buffer [ sz ] = msg [ i ];
+        if ( sz < bsize ) {
+            if (count < 250 )
+                buffer [ sz ] = msg [ i ];
+            else if (count >= 250 && msg[i] != '$' && msg[i + 1] != '('
+                && !wasTruncated)
+            {
+      /* truncate message (no substitute param) that is longer than 250 chars */
+                int j = 0;
+                char truncated[] = "... [ truncated ]";
+                for (j = 0; j < sizeof truncated; ++j, ++count)
+                    buffer[sz++] = truncated[j];
+                --sz;
+                wasTruncated = true;
+            }
+        }
 
         /* detect substitution param */
         if ( msg [ i ] == '$' && msg [ i + 1 ] == '(' )
@@ -360,7 +375,13 @@ rc_t logsubstituteparams ( const char* msg, uint32_t argc, const wrt_nvp_t argv[
             /* advance past param token */
             i += string_measure(arg->name, &size) + 2;
             assert( msg[i] == ')' );
+            count = 0; /* reset lenght count of plain string */
+            wasTruncated = false;
         }
+        else
+    /* compensate for outer loop's increment when plain message was truncated */
+            if (++count > 250)
+                --sz;
     }
 
     * num_writ = sz;
@@ -405,6 +426,7 @@ static
 rc_t logtokenizeparams ( const char* fmt, char* pdata,
                          uint32_t* argcp, wrt_nvp_t argv[], uint32_t arg_max )
 {
+    int i = 0;
     /* now split into parameters */
     uint32_t argc;
     int len = logmatchname ( fmt, pdata );
@@ -456,6 +478,26 @@ rc_t logtokenizeparams ( const char* fmt, char* pdata,
         fmt += len;
     }
 
+    for (i = 0; i < argc; ++i) {
+        char truncated[] = "... [ truncated ]";
+        char* value = (char*)argv[i].value;
+        int vSize = string_size(value); /* size of value */
+        /* try to truncate value > 250 chars */
+        if (vSize > 250) {
+            int offset = vSize - sizeof truncated + 1;
+            if (offset > 250)
+                offset = 250;
+            /* Just add "truncated" message
+               if the size of truncated message will not be < 250 chars.
+               This logic can be refactored. */
+            if (offset >= 250 ) {
+                string_printf(value + offset,
+                    sizeof truncated - 1, NULL, truncated);
+                value[offset + sizeof truncated - 1] = '\0';
+            }
+        }
+    }
+
     /* if multiple parameters, order by name */
     wrt_nvp_sort(argc, argv);
     * argcp = argc;
@@ -466,17 +508,23 @@ static
 rc_t prep_v_args( uint32_t* argc, wrt_nvp_t argv[], size_t max_argc,
                   char* pbuffer, size_t pbsize, const char* fmt, va_list args )
 {
+    size_t ALLOWED = pbsize - 512;
     size_t num_writ = 0;
     rc_t rc = string_vprintf ( pbuffer, pbsize, & num_writ, fmt, args );
-    if ( rc == SILENT_RC ( rcText, rcString, rcConverting, rcBuffer,
+    if (num_writ > ALLOWED ||
+        rc == SILENT_RC ( rcText, rcString, rcConverting, rcBuffer,
                            rcInsufficient ) )
-    {
+    {   /* it happens when params after substitution cannot fit to buffer */
         size_t pos = num_writ;
+        if (num_writ > ALLOWED)
+            pos = ALLOWED;
         char truncated [] = "... [ truncated ]";
         size_t required = num_writ + sizeof truncated;
         if ( required > pbsize ) {
             assert ( pbsize > sizeof truncated );
             pos = pbsize - sizeof truncated;
+            if (num_writ > ALLOWED)
+                pos = ALLOWED + 1;
         }
         {
             size_t c = string_copy_measure ( pbuffer + pos, pbsize, truncated );
@@ -637,7 +685,8 @@ rc_t log_print( KFmtHandler* formatter, const KLogFmtFlags flags, KWrtHandler* w
     remaining = sizeof(abuffer);
     if( rc == 0 ) {
         if( fmt != NULL ) {
-            rc = prep_v_args(&argc, argv, sizeof(argv)/sizeof(argv[0]) - 1, pbuffer, sizeof(pbuffer), fmt, args);
+            rc = prep_v_args(&argc, argv, sizeof(argv) / sizeof(argv[0]) - 1,
+                pbuffer, sizeof(pbuffer), fmt, args);
         }
         if( rc == 0 && (flags & klogFmtMessage) ) {
             int retries = 0;
