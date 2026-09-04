@@ -241,8 +241,10 @@ TEST_CASE(Test) {
     CHECK_EQ(line, string("</Log>"));
 
     CHECK(!getline(file, line));
-
-    std::remove("tmp.xml");
 }
 
-int main(int argc, char* argv[]) { return TestSuite(argc, argv); }
+int main(int argc, char* argv[]) {
+    int r(TestSuite(argc, argv));
+    std::remove(XML_LOG);
+    return r;
+}
