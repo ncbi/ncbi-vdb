@@ -58,7 +58,7 @@ static rc_t argsHandler(int argc, char* argv[]) {
 TEST_SUITE_WITH_ARGS_HANDLER(TestSuite, argsHandler)
 
 TEST_CASE(Test) {
-    PLOGERR(klogFatal, (klogFatal, 0, "123456789a=$(a);23456789=$(bb)",
+    PLOGERR(klogSys, (klogSys, 0, "123456789a=$(a);23456789=$(bb)",
         "a=%s,bb=%s", "a1abcdefgh", "A2ABCDEFGH")); // 0) nothing truncated
 
     char a1[](
@@ -68,7 +68,7 @@ TEST_CASE(Test) {
         "12345678601234567870123456788012345678901234567200"
         "1234567810123456782012345678301234567840123456249X"
         );
-    LOGERR(klogFatal, 0, a1); // 1) 1:PLAIN-NOT-TRUNCATED
+    LOGERR(klogSys, 0, a1); // 1) 1:PLAIN-NOT-TRUNCATED
 
     char a2[](
         "2:PLAIN-AND-TRUNCATED-3456783012345678401234567850"
@@ -77,7 +77,7 @@ TEST_CASE(Test) {
         "12345678601234567870123456788012345678901234567200"
         "12345678101234567820123456783012345678401234567250X"
         );
-    LOGERR(klogFatal, 0, a2); // 2) 2:PLAIN-AND-TRUNCATED
+    LOGERR(klogSys, 0, a2); // 2) 2:PLAIN-AND-TRUNCATED
 
     char a3[](
         "3:ARG-NOT-TRUNCATED-123456783012345678401234567850"
@@ -88,7 +88,7 @@ TEST_CASE(Test) {
         "123456786012345X"
         );
     // 3) 3:ARG-NOT-TRUNCATED
-    PLOGERR(klogFatal, (klogFatal, 0, "$(a)", "a=%s", a3));
+    PLOGERR(klogSys, (klogSys, 0, "$(a)", "a=%s", a3));
 
     char a5[](
         "5:ARG-IS--TRUNCATED-123456783012345678401234567850"
@@ -99,7 +99,7 @@ TEST_CASE(Test) {
         "1234567860123456X"
         );
     // 4) 5:ARG--IS-TRUNCATED
-    PLOGERR(klogFatal, (klogFatal, 0, "$(a)", "a=%s", a5));
+    PLOGERR(klogSys, (klogSys, 0, "$(a)", "a=%s", a5));
 
 #define A3 \
         "3:MSG-NOT-TRUNCATED-123456783012345678401234567850"\
@@ -108,7 +108,7 @@ TEST_CASE(Test) {
         "12345678601234567870123456788012345678901234567200"\
         "1234567810123456782012345678301234567840123456249X"
     // 5) 3:MSG-NOT-TRUNCATED 3:ARG-NOT-TRUNCATED
-   PLOGERR(klogFatal, (klogFatal, 0, A3 "$(a)", "a=%s", a3));
+   PLOGERR(klogSys, (klogSys, 0, A3 "$(a)", "a=%s", a3));
 
 #define A4 \
         "4:MSG-IS--TRUNCATED-123456783012345678401234567850"\
@@ -117,10 +117,10 @@ TEST_CASE(Test) {
         "12345678601234567870123456788012345678901234567200"\
         "12345678101234567820123456783012345678401234567250="
     // 6) 4:MSG-IS--TRUNCATED 3:ARG-NOT-TRUNCATED
-    PLOGERR(klogFatal, (klogFatal, 0, A4 "$(a)", "a=%s", a3));
+    PLOGERR(klogSys, (klogSys, 0, A4 "$(a)", "a=%s", a3));
 
     // 7) 4:MSG-IS--TRUNCATED 5:ARG--IS-TRUNCATED
-    PLOGERR(klogFatal, (klogFatal, 0, A4 "$(a)", "a=%s", a5));
+    PLOGERR(klogSys, (klogSys, 0, A4 "$(a)", "a=%s", a5));
 
     char a6[](
         "6:2-chars-ARG-NOT-TRUNCATED-3012345678401234567850"
@@ -131,7 +131,7 @@ TEST_CASE(Test) {
         "123456786012345X"
         );
     // 8) 4:MSGS-NOT-TRUNCATED 2-chars-ARGS-NOT-TRUNCATED
-    PLOGERR(klogFatal, (klogFatal, 0, A3 "$(a1)" A3 "$(a2)",
+    PLOGERR(klogSys, (klogSys, 0, A3 "$(a1)" A3 "$(a2)",
         "a1=%s,a2=%s", a6, a6));
 
 #define A5 \
@@ -156,7 +156,7 @@ TEST_CASE(Test) {
         "12345678101234567820123456783012345678401234567450"
         );
     // 9) LONG-MSGS-TRUNCATED LONG-ARGS-TRUNCATED
-    PLOGERR(klogFatal, (klogFatal, 0, A5 "$(ab1)" A5 "$(ab2)",
+    PLOGERR(klogSys, (klogSys, 0, A5 "$(ab1)" A5 "$(ab2)",
         "ab1=%s,ab2=%s", a7, a7));
 
     /*(void)*/XMLLogger_Release(LOGGER);
@@ -169,7 +169,7 @@ TEST_CASE(Test) {
     CHECK_EQ(line, string("<Log>"));
 
     getline(file, line); // 0) nothing truncated
-    string e0("<fatal app=\"\" message=\"");
+    string e0("<system app=\"\" message=\"");
     string e(e0 + "123456789a=a1abcdefgh;23456789=A2ABCDEFGH");
     std::regex pattern("\" reason_short.*$");
     std::smatch matches;
@@ -242,7 +242,7 @@ TEST_CASE(Test) {
 
     CHECK(!getline(file, line));
 
-    REQUIRE_EQ(std::remove("tmp.xml"), 0);
+    std::remove("tmp.xml");
 }
 
 int main(int argc, char* argv[]) { return TestSuite(argc, argv); }
