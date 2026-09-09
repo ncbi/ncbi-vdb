@@ -146,7 +146,7 @@ T [ dim ] vclip #1.0 < T lower, T upper > ( T [ dim ] in )
 
     root -> traverse( pre_Json, post_Json );
 
-    //cout << jsonStr.str();
+    cout << jsonStr.str();
     REQUIRE_NE( string(), jsonStr.str() );
 }
 
@@ -812,10 +812,10 @@ FIXTURE_TEST_CASE(VDB_6444, AST_Fixture)
 //   REQUIRE_EQ( 66, (int)astMap.ColToFn.size() );
 //   REQUIRE_EQ( 157, (int)astMap.ColToProd.size() );
 
-    astMap.ProdToFn.print( "Productions to Functions", true );
+//    astMap.ProdToFn.print( "Productions to Functions", true );
     astMap.ColToProd.print( "Columns to Productions", true );
-    astMap.ColToFn.print( "Columns to Functions", true );
-//    astMap.TblToCol.print( "Tables to Columns" );
+    // astMap.ColToFn.print( "Columns to Functions", true );
+   //astMap.TblToCol.print( "Tables to Columns" );
 //    astMap.DbToTbl.print("Db to Tables");
 //   astMap.ProdToProd.print( "Productions to Productions" );
 
