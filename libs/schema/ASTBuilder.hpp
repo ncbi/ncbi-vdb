@@ -82,6 +82,7 @@ namespace ncbi
             void ReportError ( ctx_t ctx, const Token :: Location & p_loc, const char * p_msg, const char * p_str );
             void ReportError ( ctx_t ctx, const Token :: Location & p_loc, const char * p_msg, int64_t p_val );
             void ReportError ( ctx_t ctx, const char * p_msg, const AST_FQN & p_fqn ); // use location of p_fqn
+            void ReportError ( ctx_t ctx, const char * p_msg, const AST & p_node ); // use location of p_node's token
             void ReportRc ( ctx_t ctx, const char * p_msg, rc_t );
 
             // error list is cleared by a call to Build

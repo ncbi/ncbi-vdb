@@ -434,7 +434,7 @@ FunctionDeclaration :: SetSchemaParams ( ctx_t ctx, const AST & p_sig )
             STypeExpr * type = m_builder . MakeTypeExpr ( ctx, * p . GetChild ( 0 ) );
             if ( type != 0 )
             {
-                auto id_node = p . GetChild ( 0 );
+                auto id_node = p . GetChild ( 1 );
                 assert( id_node -> GetTokenType() == PT_IDENT );
                 assert( id_node -> ChildrenCount() == 1 );
                 auto ident = id_node -> GetChild(0) -> GetTokenValue();
