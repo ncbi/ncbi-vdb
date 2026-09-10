@@ -193,6 +193,11 @@ class VersionedNameMap : public NameMap
             nameToVersions[name].insert(version);
         }
 
+        NameMap::const_iterator find(const string & name) const
+        {   // name#version
+            return NameMap::find( name );
+        }
+
         NameMap::const_iterator find( const string & name, ver_t version ) const
         {
             const auto n = nameToVersions.find( name );
@@ -244,7 +249,7 @@ class VersionedNameMap : public NameMap
 
             char buf[1024];
             string_printf ( buf, sizeof( buf ), nullptr, "%s#%V", name.c_str(), best_fit );
-            return NameMap::find( string( buf ) );
+            return find( string( buf ) );
         }
 
     private:
@@ -842,7 +847,7 @@ FIXTURE_TEST_CASE(ColumnsToProductionsToFunctionCalls, AST_Fixture)
 }
 
 FIXTURE_TEST_CASE(VDB_6444, AST_Fixture)
-{   // discover dependencies of columns on schema functions
+{   // discover dependencies of columns in a given database/table on schema function calls
     AST * root = MakeAst  ( "version 2; include 'align/align.vschema';" );
 
     astMap = AstMap();
@@ -852,13 +857,43 @@ FIXTURE_TEST_CASE(VDB_6444, AST_Fixture)
 //   REQUIRE_EQ( 66, (int)astMap.ColToFn.size() );
 //   REQUIRE_EQ( 157, (int)astMap.ColToProd.size() );
 
-    astMap.ProdToFn.print( "Productions to Functions", true );
+//    astMap.ProdToFn.print( "Productions to Functions", true );
     //astMap.ColToProd.print( "Columns to Productions", true );
     //astMap.ColToFn.print( "Columns to Functions", true );
    //astMap.TblToCol.print( "Tables to Columns" );
-   // astMap.DbToTbl.print("Db to Tables");
+
+   //astMap.DbToTbl.print("Db to Tables");
 //   astMap.ProdToProd.print( "Productions to Productions" );
 
+    const auto DB = "NCBI:align:db:alignment_unsorted#2";
+    const auto Tbl = "NCBI:align:tbl:seq#2";
+    const auto Col = "INSDC:SRA:tbl:spotcoord#1.X";
+
+    cout << "Database " << DB << ":" << endl;
+    const auto d = astMap.DbToTbl.find( DB );
+    if ( d != astMap.DbToTbl.end() )
+    {
+        cout << "   Table " << d->first << ":" << endl;
+        auto t = astMap.TblToCol.find( Tbl );
+
+        if ( t != astMap.TblToCol.end() )
+        {
+            auto c_it = t->second.begin();
+            while ( c_it != t->second.end() )
+            {
+                cout << "      Column " << *c_it << ":" << endl;
+                ++c_it;
+            }
+        }
+        else
+        {
+            cout << Tbl << " is not found in TblToCol" << endl;
+        }
+    }
+    else
+    {
+        cout << DB << " is not found in DbToTbl" << endl;
+    }
 }
 
 //////////////////////////////////////////// Main
