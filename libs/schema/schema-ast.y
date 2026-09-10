@@ -237,7 +237,7 @@
 %type <node> col_modifier col_decl col_ident col_body col_stmt typed_col
 %type <node> factory_parms factory_parms_opt schema_parm schema_parms arrayspec
 %type <node> phys_enc_ref col_body_opt database dbdad_opt dbbody db_members
-%type <node> db_member template_opt include func_parms_opt expr_list schema_parts_opt
+%type <node> db_member template_opt include func_parms_opt expr_list schema_parms_opt
 %type <node> physmbr_decl col_schema_parms_opt col_schema_parms
 %type <node> col_schema_value col_schema_parm phys_coldef factory_parms_list
 %type <node> vararg param_sig param_signature fact_sig
@@ -730,11 +730,11 @@ expr
     ;
 
 func_expr
-    : PT_FUNCEXPR '(' schema_parts_opt fqn_opt_vers factory_parms_opt '(' func_parms_opt ')' ')'
+    : PT_FUNCEXPR '(' schema_parms_opt fqn_opt_vers factory_parms_opt '(' func_parms_opt ')' ')'
         { $$ = AST_Expr :: Make ( ctx, $1 ); $$ -> AddNode ( ctx, $3 ); $$ -> AddNode ( ctx, $4 ); $$ -> AddNode ( ctx, $5 ); $$ -> AddNode ( ctx, $7 ); }
     ;
 
-schema_parts_opt
+schema_parms_opt
     : %empty                                    { $$ = AST :: Make ( ctx, PT_EMPTY ); }
     | '<' PT_ASTLIST '(' schema_parms ')' '>'   { $$ = $4; }
 

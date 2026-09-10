@@ -146,7 +146,7 @@ T [ dim ] vclip #1.0 < T lower, T upper > ( T [ dim ] in )
 
     root -> traverse( pre_Json, post_Json );
 
-    cout << jsonStr.str();
+    //cout << jsonStr.str();
     REQUIRE_NE( string(), jsonStr.str() );
 }
 
@@ -394,6 +394,43 @@ string GetVersionedName ( const AST_FQN& node )
     return buf;
 }
 
+string FunctionCallSignature( const AST& node )
+{
+    assert( node.GetTokenType() == PT_FUNCEXPR );
+    assert( node.ChildrenCount() == 4 );
+    // 0:schema_parms_opt 1:fqn_opt_vers 2:factory_parms_opt 3:func_parms_opt
+    string ret = GetFullName( node.GetChild(1) ) + "(";
+
+    auto func_parms = node.GetChild(3);
+    size_t fp_count = func_parms->ChildrenCount();
+    for ( size_t i = 0; i < fp_count; ++i )
+    {
+        if ( i > 0 )
+        {
+            ret += ",";
+        }
+        // allowed tags: PT_AT, PHYSICAL_IDENTIFIER_1_0, PT_CAST, PT_IDENT, PT_MEMBEREXPR
+        auto param = func_parms->GetChild( i );
+        switch ( param->GetTokenType() )
+        {
+        case PT_IDENT:
+            ret += GetFullName( param->GetChild(0) );
+            break;
+        case '@':
+            ret += "@";
+            break;
+        case PHYSICAL_IDENTIFIER_1_0:
+            ret += param->GetTokenValue();
+            break;
+        case PT_CASTEXPR:
+        case PT_MEMBEREXPR:
+        default:
+            assert(false);
+        }
+    }
+    return ret + ")";
+}
+
 void pre_columnToFunctions( const ParseTree& node )
 {
     auto& ast_node = dynamic_cast< const AST& >( node );
@@ -481,8 +518,8 @@ void pre_columnToFunctions( const ParseTree& node )
             break;
         }
     case PT_FUNCEXPR:
-        {   // function call
-            string name = GetFullName( ast_node.GetChild(1) );
+        {   // function call: combine the name with the source location
+            string name = FunctionCallSignature( ast_node );
             //cout << "function " << name << endl;
             if ( !astMap.activeCol.empty() )
             {
@@ -774,16 +811,18 @@ FIXTURE_TEST_CASE(ColumnsToProductions, AST_Fixture)
     REQUIRE( prods.end() != prods.find( string("T1#1.p3") ) );
 }
 
-FIXTURE_TEST_CASE(ColumnsToProductionsToFunctions, AST_Fixture)
-{   // for a column, a closure of all productions it depends on
+FIXTURE_TEST_CASE(ColumnsToProductionsToFunctionCalls, AST_Fixture)
+{   // for a column, a set of all function calls it can invoke
     AST * root = MakeAst  ( R"(
-        function ascii vclip #1.0() = vdb:clip;
+        function ascii fn1 #1.0( ascii a , ascii b );
+        function ascii fn2 #1.0( ascii a , ascii b );
 
         table T1 #1 {
-            ascii p1 = vclip();
-            ascii p2 = 2;
-            ascii p3 = p1 | p2;
+            ascii p1 = 1;
+            ascii p2 = fn1( p1 );
+            ascii p3 = fn2( p1, p2 );
             column ascii t1_1 = p3;
+            column ascii t1_2 = fn1( .t1_1 );
         }
     )" );
 
@@ -792,13 +831,14 @@ FIXTURE_TEST_CASE(ColumnsToProductionsToFunctions, AST_Fixture)
 
 // root -> traverse( pre_Json, post_Json );
 // cout << jsonStr.str() << endl;
-//  astMap.ProdToFn.print("ProdToFn");
+// astMap.ProdToFn.print("ProdToFn");
 //  astMap.ColToProd.print("ColToProd");
-//  astMap.ColToFn.print("ColToFn");
+// astMap.ColToFn.print("ColToFn");
 
-    REQUIRE_EQ( 1, (int)astMap.ColToFn.size());
+    REQUIRE_EQ( 2, (int)astMap.ColToFn.size());
     auto fns = astMap.ColToFn.begin()->second;
-    REQUIRE( fns.end() != fns.find( string("vclip") ) );
+    REQUIRE( fns.end() != fns.find( string("fn1(p1)") ) );
+    REQUIRE( fns.end() != fns.find( string("fn2(p1,p2)") ) );
 }
 
 FIXTURE_TEST_CASE(VDB_6444, AST_Fixture)
@@ -812,11 +852,11 @@ FIXTURE_TEST_CASE(VDB_6444, AST_Fixture)
 //   REQUIRE_EQ( 66, (int)astMap.ColToFn.size() );
 //   REQUIRE_EQ( 157, (int)astMap.ColToProd.size() );
 
-//    astMap.ProdToFn.print( "Productions to Functions", true );
-    astMap.ColToProd.print( "Columns to Productions", true );
-    // astMap.ColToFn.print( "Columns to Functions", true );
+    astMap.ProdToFn.print( "Productions to Functions", true );
+    //astMap.ColToProd.print( "Columns to Productions", true );
+    //astMap.ColToFn.print( "Columns to Functions", true );
    //astMap.TblToCol.print( "Tables to Columns" );
-//    astMap.DbToTbl.print("Db to Tables");
+   // astMap.DbToTbl.print("Db to Tables");
 //   astMap.ProdToProd.print( "Productions to Productions" );
 
 }
