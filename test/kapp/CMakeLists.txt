@@ -30,7 +30,8 @@ endif()
 
 add_compile_definitions( __mod__="test/kapp" )
 
-AddExecutableTest( Test_VDBAPP "vdbapp-test" "${COMMON_LIBS_READ};${ADDITIONAL_LIBS}" )
+AddExecutableTest( Test_VDBAPP_dflt "vdbapp-test" "${COMMON_LIBS_READ};${ADDITIONAL_LIBS}" )
+AddExecutableTest( Test_VDBAPP_XMLLogger "XMLLogger-test" "${COMMON_LIBS_READ};${ADDITIONAL_LIBS}" )
 
 if ( NOT WIN32 )
 
