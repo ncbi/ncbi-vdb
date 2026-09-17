@@ -384,7 +384,10 @@ unsigned RestoreReadShared_getState(unsigned *refSeqs, unsigned *wgs, unsigned *
         {
             unsigned i;
             for (i = 0; i < *refSeqs; ++i) {
-                if (ptr->refSeqs.entry[i].object->async != NULL)
+                KLockAcquire(ptr->refSeqs.entry[i].object->mutex);
+                RefSeqAsyncLoadInfo* async = ptr->refSeqs.entry[i].object->async;
+                KLockUnlock(ptr->refSeqs.entry[i].object->mutex);
+                if (async != NULL)
                     ++*activeRefSeqs;
             }
         }

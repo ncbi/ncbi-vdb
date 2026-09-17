@@ -353,7 +353,11 @@ static rc_t runLoadThread(Object *self)
                     n = 0;
                 }
                 if (isN) {
-                    if (NULL == extendRangeList(&self->Ns, position)) {
+                    RangeList* l = NULL;
+                    KLockAcquire(async->mutex);
+                    l = extendRangeList(&self->Ns, position);
+                    KLockUnlock(async->mutex);
+                    if (NULL == l) {
                         rc = RC(rcXF, rcFunction, rcReading, rcMemory, rcExhausted);
                         break;
                     }
@@ -400,7 +404,11 @@ static rc_t runLoadThread(Object *self)
         ;
     /* readers are all waiting in the loop at line 445 */
     self->reader = rc == 0 ? readNormal : readZero;
+
+    KLockAcquire(self->mutex);
     self->async = NULL;
+    KLockUnlock(self->mutex);
+
     atomic_dec(&self->rwl); /* state is updated; readers continue to line 448 */
     if (rc == 0 && i == count) {
         KLockAcquire(async->mutex);
@@ -435,8 +443,13 @@ static rc_t cleanUpAsyncThread(Object const *self)
 unsigned RefSeq_getBases(Object const * self, uint8_t *const dst, unsigned const start, unsigned const len)
 {
     atomic_t *const rwl = &((Object *)self)->rwl;
+    RefSeqAsyncLoadInfo* async = NULL;
 
-    if (self->async == NULL) {
+    KLockAcquire(self->mutex);
+    async = self->async;
+    KLockUnlock(self->mutex);
+
+    if (async == NULL) {
         /* this is the fast path and the most common for normal use */
         /* there is no background thread running */
         return self->reader(self, dst, start, len);
@@ -623,6 +636,8 @@ static rc_t init(Object *result, VTable const *const tbl)
             rc = (circular ? loadCircular : load)(result, curs, &rowRange, &cols[1]);
         }
     }
+    if (rc == 0)
+        rc = KLockMake(&result->mutex);
     VCursorRelease(curs);
     return rc;
 }
@@ -632,6 +647,7 @@ void RefSeqFree(Object *self)
     RefSeqAsyncLoadInfoFree(self->async);
     cleanUpAsyncThread(self);
     RangeListFree(&self->Ns);
+    KLockRelease(self->mutex);
     free(self->bases);
     free(self);
 }

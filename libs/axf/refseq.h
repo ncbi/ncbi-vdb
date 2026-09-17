@@ -34,6 +34,7 @@ typedef struct RefSeqAsyncLoadInfo RefSeqAsyncLoadInfo;
 typedef unsigned (*RefSeqReaderFunc)(RefSeq const *, uint8_t *, unsigned, unsigned);
 
 struct RefSeq {
+    KLock* mutex; /* guards access to async */
     RangeList Ns; ///< exclusion list
     uint8_t *bases;
     RefSeqReaderFunc volatile reader;
