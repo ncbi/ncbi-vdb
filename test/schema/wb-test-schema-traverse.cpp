@@ -133,7 +133,7 @@ FIXTURE_TEST_CASE(ToJson, AST_Fixture)
 
     root -> traverse( pre_Json, post_Json );
 
-    //cout << jsonStr.str();
+    cout << jsonStr.str();
     REQUIRE_NE( string(), jsonStr.str() );
 }
 
@@ -342,6 +342,7 @@ struct AstMap
     string activeProd;
     NameMap ProdToFn;
     NameMap ProdToProd;
+    set<string> ProdDefs;
 
     string activeCol;
     NameMap ColToFn;
@@ -353,6 +354,97 @@ struct AstMap
 
     string activeDatabase;
     VersionedNameMap DbToTbl;
+
+    void PrintProdDefs( ostream& out ) const
+    {
+        out << "ProdDefs:" << endl;
+        for ( auto p : ProdDefs )
+        {
+            out << "   " << p << endl;
+        }
+    }
+
+    string
+    FindProdDef( const string& p_table, const string& p_name )
+    {   // given A:B:C:name, find X:Y:Z:name that is both in TblToProd[p_table] and a key in ProdDefs
+        size_t lastPos = p_name.find_last_of('.');
+        if (lastPos != std::string::npos)
+        {
+            auto t_p = TblToProd.find(p_table);
+            if ( t_p != TblToProd.end() )
+            {
+                string name = p_name.substr( lastPos );
+                for ( auto p : t_p->second )
+                {
+                    if (name.size() <= p.size() )
+                    {
+                        if ( std::equal(name.rbegin(), name.rend(), p.rbegin()) )
+                        {
+                            if ( ProdDefs.find( p ) != ProdDefs.end() )
+                            {
+                                return p;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return string();
+    }
+
+    void
+    PrintProductionCallTree( size_t prefix, const string& p_table, const string& prodDef  )
+    {
+        auto p_f = ProdToFn.find( prodDef );
+        if ( p_f != ProdToFn.end() )
+        {
+            for ( auto f : p_f->second )
+            {
+                cout << string( prefix, ' ' ) << f<< endl;
+            }
+        }
+
+        auto p_p = ProdToProd.find( prodDef );
+        if ( p_p != ProdToProd.end() )
+        {
+            for ( auto p : p_p->second )
+            {
+                string prodDef = FindProdDef( p_table, p );
+                if ( ! prodDef.empty() )
+                {
+                    cout << string( prefix, ' ' )  << prodDef << ":" << endl;
+                    PrintProductionCallTree( prefix + 3, p_table, prodDef );
+                }
+            }
+        }
+    }
+
+    void
+    PrintColumnCallTree( size_t prefix, const string& p_table, const string& p_column  )
+    {
+        auto c_f = ColToFn.find( p_column );
+        if ( c_f != ColToFn.end() )
+        {
+            for ( auto f : c_f->second )
+            {
+                cout << string( prefix, ' ' ) << f << endl;
+            }
+        }
+
+        auto c_p = ColToProd.find( p_column );
+        if ( c_p != ColToProd.end() )
+        {
+            for ( auto p : c_p->second )
+            {
+                string prodDef = FindProdDef( p_table, p );
+                if ( ! prodDef.empty() )
+                {
+                    cout << string( prefix, ' ' )  << prodDef << ":" << endl;
+                    PrintProductionCallTree( prefix + 3, p_table, prodDef );
+                }
+            }
+        }
+    }
 };
 
 AstMap astMap;
@@ -528,11 +620,11 @@ void pre_columnToFunctions( const ParseTree& node )
             //cout << "function " << name << endl;
             if ( !astMap.activeCol.empty() )
             {
-                astMap.ColToFn.add( astMap.activeCol, name );
+                astMap.ColToFn.add( astMap.activeCol, astMap.activeTable + "." + name );
             }
             else if ( !astMap.activeProd.empty() )
             {
-                astMap.ProdToFn.add( astMap.activeProd, name );
+                astMap.ProdToFn.add( astMap.activeProd, astMap.activeTable + "." + name );
             }
             break;
         }
@@ -542,6 +634,7 @@ void pre_columnToFunctions( const ParseTree& node )
             {
                 string name = astMap.activeTable + "." + GetFullName( ast_node.GetChild(1) );
                 astMap.activeProd = name;
+                astMap.ProdDefs.insert( name );
                 astMap.ProdToFn.add( name );
                 astMap.ProdToProd.add( name );
                 //cout << "adding production " << name << " to " << astMap.activeTable << endl;
@@ -738,6 +831,28 @@ FIXTURE_TEST_CASE(TableToColumns, AST_Fixture)
     }
 }
 
+FIXTURE_TEST_CASE(ProdDefs, AST_Fixture)
+{   // keep track of production definition points
+    AST * root = MakeAst  ( R"(
+        table T3#1.0.1 { ascii p3_1 = 1; }
+        table T3#2.1.1 { ascii p3_2 = 2; }
+        table T4#1 { ascii p4 = 3; }
+        table T1 #1 =
+            T3 #2,
+            T4 #1
+            { ascii p1 = 4; }
+    )" );
+    astMap = AstMap();
+    root -> traverse( pre_columnToFunctions, post_columnToFunctions );
+
+    REQUIRE_EQ( 4, (int)astMap.ProdDefs.size());
+    const auto & prods = astMap.ProdDefs;
+    REQUIRE( prods.end() != prods.find( string("T3#1.0.1.p3_1") ) );
+    REQUIRE( prods.end() != prods.find( string("T3#2.1.1.p3_2") ) );
+    REQUIRE( prods.end() != prods.find( string("T4#1.p4") ) );
+    REQUIRE( prods.end() != prods.find( string("T1#1.p1") ) );
+}
+
 FIXTURE_TEST_CASE(TablesToProductions, AST_Fixture)
 {   // discover dependencies of tables on productions (closure through inheritance)
     AST * root = MakeAst  ( R"(
@@ -838,12 +953,12 @@ FIXTURE_TEST_CASE(ColumnsToProductionsToFunctionCalls, AST_Fixture)
 // cout << jsonStr.str() << endl;
 // astMap.ProdToFn.print("ProdToFn");
 //  astMap.ColToProd.print("ColToProd");
-// astMap.ColToFn.print("ColToFn");
+ //astMap.ColToFn.print("ColToFn");
 
     REQUIRE_EQ( 2, (int)astMap.ColToFn.size());
     auto fns = astMap.ColToFn.begin()->second;
-    REQUIRE( fns.end() != fns.find( string("fn1(p1)") ) );
-    REQUIRE( fns.end() != fns.find( string("fn2(p1,p2)") ) );
+    REQUIRE( fns.end() != fns.find( string("T1#1.fn1(p1)") ) );
+    REQUIRE( fns.end() != fns.find( string("T1#1.fn2(p1,p2)") ) );
 }
 
 FIXTURE_TEST_CASE(VDB_6444, AST_Fixture)
@@ -857,32 +972,32 @@ FIXTURE_TEST_CASE(VDB_6444, AST_Fixture)
 //   REQUIRE_EQ( 66, (int)astMap.ColToFn.size() );
 //   REQUIRE_EQ( 157, (int)astMap.ColToProd.size() );
 
-//    astMap.ProdToFn.print( "Productions to Functions", true );
-    //astMap.ColToProd.print( "Columns to Productions", true );
-    //astMap.ColToFn.print( "Columns to Functions", true );
-   //astMap.TblToCol.print( "Tables to Columns" );
+//     astMap.PrintProdDefs( cout );
+//     astMap.ProdToFn.print( "Productions to Functions", true );
+//     astMap.ColToProd.print( "Columns to Productions", true );
+//     astMap.ColToFn.print( "Columns to Functions", true );
+//     astMap.TblToCol.print( "Tables to Columns" );
 
-   //astMap.DbToTbl.print("Db to Tables");
-//   astMap.ProdToProd.print( "Productions to Productions" );
+//    astMap.DbToTbl.print("Db to Tables");
+//    astMap.ProdToProd.print( "Productions to Productions" );
 
     const auto DB = "NCBI:align:db:alignment_unsorted#2";
     const auto Tbl = "NCBI:align:tbl:seq#2";
-    const auto Col = "INSDC:SRA:tbl:spotcoord#1.X";
+    const auto Col = "INSDC:tbl:sequence#1.0.1.READ";
 
     cout << "Database " << DB << ":" << endl;
     const auto d = astMap.DbToTbl.find( DB );
     if ( d != astMap.DbToTbl.end() )
     {
-        cout << "   Table " << d->first << ":" << endl;
         auto t = astMap.TblToCol.find( Tbl );
-
         if ( t != astMap.TblToCol.end() )
         {
-            auto c_it = t->second.begin();
-            while ( c_it != t->second.end() )
+            cout << "   Table " << t->first << ":" << endl;
+            auto c = t->second.find( Col );
+            if ( c != t->second.end() )
             {
-                cout << "      Column " << *c_it << ":" << endl;
-                ++c_it;
+                cout << "      Column " << *c << ":" << endl;
+                astMap.PrintColumnCallTree( 9, t->first, *c );
             }
         }
         else
