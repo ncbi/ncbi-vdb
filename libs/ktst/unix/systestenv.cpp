@@ -48,7 +48,7 @@ static void alarmHandler(int)
 {
     cerr << "child process timed out" << endl;
     
-    exit(TestEnv::TEST_CASE_TIMED_OUT);
+    quick_exit(TestEnv::TEST_CASE_TIMED_OUT);
 }
 
 int TestEnv::RunProcessTestCase(TestCase& obj, void(TestCase::*meth)(), int timeout)

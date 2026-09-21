@@ -166,7 +166,7 @@ void CC TestEnv::SigHandler(int sig) noexcept
     LOG(ncbi::NK::LogLevel::e_fatal_error,
         ncbi::NK::TestEnv::lastLocation << ": last checkpoint\n");
     LOG(ncbi::NK::LogLevel::e_fatal_error, "Test is aborted\n");
-    exit(sig);
+    quick_exit(sig);
 }
 
 rc_t TestEnv::process_args(int argc, char* argv[], ArgsHandler* argsHandler)
