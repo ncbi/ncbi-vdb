@@ -48,7 +48,7 @@ static void alarmHandler(int)
 {
     cerr << "child process timed out" << endl;
     
-#if (defined(__APPLE__)
+#if defined(__APPLE__)
     _Exit(TestEnv::TEST_CASE_TIMED_OUT);
 #else
     quick_exit(TestEnv::TEST_CASE_TIMED_OUT);

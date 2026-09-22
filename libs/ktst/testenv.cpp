@@ -167,7 +167,7 @@ void CC TestEnv::SigHandler(int sig) noexcept
         ncbi::NK::TestEnv::lastLocation << ": last checkpoint\n");
     LOG(ncbi::NK::LogLevel::e_fatal_error, "Test is aborted\n");
 
-#if (defined(__APPLE__)
+#if defined(__APPLE__)
     _Exit(sig);
 #else
     quick_exit(sig);
