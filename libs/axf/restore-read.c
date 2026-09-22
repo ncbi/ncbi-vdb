@@ -384,9 +384,8 @@ unsigned RestoreReadShared_getState(unsigned *refSeqs, unsigned *wgs, unsigned *
         {
             unsigned i;
             for (i = 0; i < *refSeqs; ++i) {
-                KLockAcquire(ptr->refSeqs.entry[i].object->mutex);
-                RefSeqAsyncLoadInfo* async = ptr->refSeqs.entry[i].object->async;
-                KLockUnlock(ptr->refSeqs.entry[i].object->mutex);
+                RefSeqAsyncLoadInfo* async = atomic_read_ptr(
+                    (atomic_ptr_t*)&(ptr->refSeqs.entry[i].object->async));
                 if (async != NULL)
                     ++*activeRefSeqs;
             }
