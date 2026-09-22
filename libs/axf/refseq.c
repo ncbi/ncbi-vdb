@@ -353,11 +353,7 @@ static rc_t runLoadThread(Object *self)
                     n = 0;
                 }
                 if (isN) {
-                    RangeList* l = NULL;
-                    KLockAcquire(async->mutex);
-                    l = extendRangeList(&self->Ns, position);
-                    KLockUnlock(async->mutex);
-                    if (NULL == l) {
+                    if (NULL == extendRangeList(&self->Ns, position)) {
                         rc = RC(rcXF, rcFunction, rcReading, rcMemory, rcExhausted);
                         break;
                     }
@@ -403,11 +399,12 @@ static rc_t runLoadThread(Object *self)
     while (atomic_read(&self->rwl) != 1)
         ;
     /* readers are all waiting in the loop at line 445 */
-    self->reader = rc == 0 ? readNormal : readZero;
+ /* self->reader = rc == 0 ? readNormal : readZero; */
+    RefSeqReaderFunc reader = atomic_read_ptr((atomic_ptr_t*)(&self->reader));
+    atomic_test_and_set_ptr((atomic_ptr_t*)(&self->reader),
+        rc == 0 ? readNormal : readZero, reader);
 
-    KLockAcquire(self->mutex);
-    self->async = NULL;
-    KLockUnlock(self->mutex);
+    atomic_test_and_set_ptr((atomic_ptr_t*)(&self->async), NULL, async);
 
     atomic_dec(&self->rwl); /* state is updated; readers continue to line 448 */
     if (rc == 0 && i == count) {
@@ -443,17 +440,15 @@ static rc_t cleanUpAsyncThread(Object const *self)
 unsigned RefSeq_getBases(Object const * self, uint8_t *const dst, unsigned const start, unsigned const len)
 {
     atomic_t *const rwl = &((Object *)self)->rwl;
-    RefSeqAsyncLoadInfo* async = NULL;
 
-    KLockAcquire(self->mutex);
-    async = self->async;
-    KLockUnlock(self->mutex);
-
-    if (async == NULL) {
+    if (atomic_read_ptr((atomic_ptr_t*)(&self->async)) == NULL) {
+        RefSeqReaderFunc reader
+            = atomic_read_ptr((atomic_ptr_t*)(&self->reader));
         /* this is the fast path and the most common for normal use */
         /* there is no background thread running */
-        return self->reader(self, dst, start, len);
+        return reader(self, dst, start, len);
     }
+
     /* there is a background thread running */
     if ((atomic_read_and_add_even(rwl, 2) & 1) == 0) {
         /* but it is not trying to update the state */
@@ -636,8 +631,6 @@ static rc_t init(Object *result, VTable const *const tbl)
             rc = (circular ? loadCircular : load)(result, curs, &rowRange, &cols[1]);
         }
     }
-    if (rc == 0)
-        rc = KLockMake(&result->mutex);
     VCursorRelease(curs);
     return rc;
 }
@@ -647,7 +640,6 @@ void RefSeqFree(Object *self)
     RefSeqAsyncLoadInfoFree(self->async);
     cleanUpAsyncThread(self);
     RangeListFree(&self->Ns);
-    KLockRelease(self->mutex);
     free(self->bases);
     free(self);
 }
