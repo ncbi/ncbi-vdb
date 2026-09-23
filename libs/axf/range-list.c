@@ -174,7 +174,10 @@ static void withIntersectRangeList_1(  RangeList const volatile *const vol
     if (vol->sync) {
         RangeList const *const list = readerStart(vol);
         Range const *ranges = list->ranges; ///< this pointer will not change while the read lock is held
-        unsigned const count = list->count; ///< this can change, but it can only increase
+
+        uint64_t const count = (uint64_t)atomic_read_ptr((atomic_ptr_t*)&list->count);
+        ///< this can change, but it can only increase
+
         unsigned f = 0;
         unsigned e = count;
 
@@ -274,7 +277,7 @@ Range *appendRange(RangeList *list, Range const *newValue)
         if (newValue)
             *nr = *newValue;
         list->last = list->count;
-        ++list->count;
+        atomic_read_and_add_ge((atomic64_t*)&list->count, 1, 0); /* ++list->count; */
 
         return nr;
     }
