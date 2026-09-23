@@ -86,7 +86,7 @@ ErrorReport :: Error :: Destroy ( ErrorReport :: Error * self )
 ErrorReport :: Error :: Error( const char * p_message, const ErrorReport :: Location & p_location )
 :   m_message ( string_dup_measure ( p_message, 0 ) )
 {
-    m_file = string_dup_measure ( p_location . m_file, 0 );
+    m_file = p_location . m_file;
     m_line = p_location . m_line;
     m_column = p_location . m_column;
 }
@@ -94,7 +94,6 @@ ErrorReport :: Error :: Error( const char * p_message, const ErrorReport :: Loca
 ErrorReport :: Error :: ~Error()
 {
     free ( m_message );
-    free ( m_file );
 }
 
 bool

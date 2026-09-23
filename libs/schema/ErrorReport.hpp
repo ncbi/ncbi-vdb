@@ -55,10 +55,10 @@ namespace ncbi
 
             struct Error
             {
-                char *    m_message;
-                char *    m_file;
-                uint32_t  m_line;
-                uint32_t  m_column;
+                char *      m_message;
+                std::string m_file;
+                uint32_t    m_line;
+                uint32_t    m_column;
 
                 static Error * Make( ctx_t ctx, const char * p_message, const ErrorReport :: Location & p_location );
                 static void Destroy( Error * );

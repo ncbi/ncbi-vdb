@@ -58,7 +58,7 @@ Token :: Token ( TokenType p_type, const char * p_value )
 Token :: Token ( TokenType p_type, const char * p_value, const Location & p_loc )
 :   m_type ( p_type ),
     m_value ( string_dup_measure ( p_value, 0 ) ),
-    m_location ( p_loc . m_file, p_loc . m_line, p_loc . m_column ),
+    m_location ( p_loc ),
     m_ws ( 0 )
 {
 }

@@ -51,7 +51,7 @@ namespace ncbi
             const ParseTree* GetChild ( uint32_t idx ) const;
                   ParseTree* GetChild ( uint32_t idx );
 
-            const Token :: Location & GetLocation () const { return * m_location; } // location of the leading real token
+            const Token :: Location & GetLocation () const { return m_location; } // location of the leading real token
 
             typedef void (*VisitFn) ( const ParseTree& );
             void traverse( VisitFn pre_fn, VisitFn post_fn = nullptr ) const;
@@ -64,9 +64,9 @@ namespace ncbi
             void SetToken ( const Token & p_token ) {  m_token = p_token; }
 
         private:
-            Token                       m_token;
-            Vector                      m_children;
-            const Token :: Location *   m_location;
+            Token               m_token;
+            Vector              m_children;
+            Token :: Location   m_location;
         };
 
         class ParseTreeScanner

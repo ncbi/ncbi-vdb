@@ -68,7 +68,7 @@ ParseTree :: Destroy ( ParseTree * self )
 
 ParseTree :: ParseTree ( const Token& p_token )
 :   m_token ( p_token ),
-    m_location ( & m_token . GetLocation () )
+    m_location ( m_token . GetLocation () )
 {
     VectorInit ( & m_children, 0, ChildrenBlockSize );
 }
@@ -86,11 +86,10 @@ ParseTree :: ~ParseTree ()
 void
 ParseTree :: AddChild ( ctx_t ctx, ParseTree * p_node )
 {
-    assert ( m_location != 0 );
     assert ( p_node != 0 );
-    if ( m_location -> m_line == 0 )
+    if ( m_location . m_line == 0 )
     {   // assume p_node's location will not change in the future
-        m_location = & p_node -> GetLocation ();
+        m_location = p_node -> GetLocation ();
     }
     rc_t rc = VectorAppend ( & m_children, 0, p_node );
     if ( rc != 0 )

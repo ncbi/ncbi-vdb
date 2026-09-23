@@ -28,6 +28,7 @@
 #define _hpp_Token_
 
 #include "schema-lex.h"
+#include <string>
 
 namespace ncbi
 {
@@ -41,7 +42,7 @@ namespace ncbi
 
             struct Location
             {
-                const char *    m_file; // empty string if not known
+                std::string     m_file; // empty string if not known
                 uint32_t        m_line; // 1 - based
                 uint32_t        m_column; // 1 - based
 
