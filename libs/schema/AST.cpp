@@ -331,13 +331,18 @@ AST_FQN :: GetPartialName ( char* p_buf, size_t p_bufSize, uint32_t p_lastMember
 }
 
 void
-AST_FQN :: GetVersionedName ( char* p_buf, size_t p_bufSize ) const
+AST_FQN :: GetVersionedName ( char* p_buf, size_t p_bufSize, bool p_explicit ) const
 {
     GetFullName ( p_buf, p_bufSize );
     if ( GetVersion() != 0 )
     {
         size_t offset = string_size( p_buf );
         string_printf ( p_buf + offset, p_bufSize - offset - 1, nullptr, "#%V", GetVersion() );
+    }
+    else if ( p_explicit )
+    {
+        size_t offset = string_size( p_buf );
+        string_printf ( p_buf + offset, p_bufSize - offset - 1, nullptr, "#1" );
     }
 }
 

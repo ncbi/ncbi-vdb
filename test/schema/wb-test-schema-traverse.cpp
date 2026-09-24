@@ -376,6 +376,8 @@ struct AstMap
     string activeDatabase;
     VersionedNameMap DbToTbl;
 
+    map<string, string> FnLocations;
+
     void PrintProdDefs( ostream& out ) const
     {
         out << "ProdDefs:" << endl;
@@ -421,7 +423,10 @@ struct AstMap
         {
             for ( auto f : p_f->second )
             {
-                cout << string( prefix, ' ' ) << f << "(" << ProdToFn.locations.at( p_prodDef ) << "):" << endl;
+                size_t last = f.find('(');
+                size_t first = f.substr( 0, last ) . rfind('.') + 1;
+                string vers_name = f.substr(first, last-first);
+                cout << string( prefix, ' ' ) << f << "(" << FnLocations.at( vers_name ) << "):" << endl;
             }
         }
 
@@ -508,7 +513,7 @@ string GetFullName ( const AST* node )
 string GetVersionedName ( const AST_FQN& node )
 {
     char buf[1024];
-    node . GetVersionedName( buf, sizeof( buf ) );
+    node . GetVersionedName( buf, sizeof( buf ), true ); // #1 if version not specified
     return buf;
 }
 
@@ -517,7 +522,9 @@ string FunctionCallSignature( const AST& node )
     assert( node.GetTokenType() == PT_FUNCEXPR );
     assert( node.ChildrenCount() == 4 );
     // 0:schema_parms_opt 1:fqn_opt_vers 2:factory_parms_opt 3:func_parms_opt
-    string ret = GetFullName( node.GetChild(1) ) + "(";
+    auto fqn = ToFQN( node.GetChild(1) );
+    assert( fqn );
+    string ret = GetVersionedName( *fqn ) + "(";
 
     auto func_parms = node.GetChild(3);
     size_t fp_count = func_parms->ChildrenCount();
@@ -635,6 +642,28 @@ void pre_columnToFunctions( const ParseTree& node )
             astMap.TblToCol.NameMap::add( astMap.activeTable, col_name );
             break;
         }
+
+    case PT_FUNCDECL:
+        {
+            assert( ast_node.ChildrenCount() == 6 );
+            string name = GetFullName( ast_node.GetChild(2) );
+            auto fqn = ToFQN( ast_node.GetChild(2) );
+            if( fqn )
+            {
+                name = GetVersionedName( *fqn );
+            }
+
+            if ( astMap.FnLocations.find(name) == astMap.FnLocations.end() )
+            {
+                astMap.FnLocations[ name ] = LocationToString( ast_node.GetChild(2)->GetLocation() );
+            }
+            else
+            {
+                throw logic_error( name + ": function redefined" );
+            }
+            break;
+        }
+
     case PT_FUNCEXPR:
         {   // function call: combine the name with the source location
             string name = FunctionCallSignature( ast_node );
@@ -795,7 +824,7 @@ FIXTURE_TEST_CASE(DatabaseToTable, AST_Fixture)
     root -> traverse( pre_columnToFunctions, post_columnToFunctions );
 
     REQUIRE_EQ( 2, (int)astMap.DbToTbl.size());
-astMap.DbToTbl.print("DbToTbl");
+//astMap.DbToTbl.print("DbToTbl");
     // {   // DB1: T1, T2
     //     auto d1 = astMap.DbToTbl.find("DB1", VTRANSVERS( 2, 0, 0 ) );
     //     REQUIRE_EQ( 2, (int)d1->second.size());
@@ -977,13 +1006,14 @@ FIXTURE_TEST_CASE(ColumnsToProductionsToFunctionCalls, AST_Fixture)
  //astMap.ColToFn.print("ColToFn");
 
     REQUIRE_EQ( 2, (int)astMap.ColToFn.size());
+    REQUIRE_EQ( string("T1#1.t1_1"), astMap.ColToFn.begin()->first );
     auto fns = astMap.ColToFn.begin()->second;
-    REQUIRE( fns.end() != fns.find( string("T1#1.fn1(p1)") ) );
-    REQUIRE( fns.end() != fns.find( string("T1#1.fn2(p1,p2)") ) );
+    REQUIRE( fns.end() != fns.find( string("T1#1.fn1#1(p1)") ) );
+    REQUIRE( fns.end() != fns.find( string("T1#1.fn2#1(p1,p2)") ) );
 }
 
 FIXTURE_TEST_CASE(ProductionsToColumns, AST_Fixture)
-{   // for a column, a set of all function calls it can invoke
+{   // for a production, a set of all columns it depends on
     AST * root = MakeAst  ( R"(
         table T1 #1 {
             ascii p1 = t1_1;
@@ -996,9 +1026,10 @@ FIXTURE_TEST_CASE(ProductionsToColumns, AST_Fixture)
 
 // root -> traverse( pre_Json, post_Json );
 // cout << jsonStr.str() << endl;
-astMap.ProdToFn.print("ProdToFn");
-astMap.ColToProd.print("ColToProd");
-astMap.ColToFn.print("ColToFn");
+// astMap.ProdToFn.print("ProdToFn");
+// astMap.ColToProd.print("ColToProd");
+// astMap.ColToFn.print("ColToFn");
+    FAIL( "not implemented" );
 }
 
 FIXTURE_TEST_CASE(VDB_6444, AST_Fixture)
@@ -1013,13 +1044,18 @@ FIXTURE_TEST_CASE(VDB_6444, AST_Fixture)
 //   REQUIRE_EQ( 157, (int)astMap.ColToProd.size() );
 
 //     astMap.PrintProdDefs( cout );
-//     astMap.ProdToFn.print( "Productions to Functions", true );
+     //astMap.ProdToFn.print( "Productions to Functions", true );
 //     astMap.ColToProd.print( "Columns to Productions", true );
 //     astMap.ColToFn.print( "Columns to Functions", true );
 //     astMap.TblToCol.print( "Tables to Columns" );
 
 //    astMap.DbToTbl.print("Db to Tables");
 //    astMap.ProdToProd.print( "Productions to Productions" );
+
+// for(auto i:astMap.FnLocations )
+// {
+//     cout<<i.first<<": "<<i.second<<endl;
+// }
 
     const auto DB = "NCBI:align:db:alignment_unsorted#2";
     const auto Tbl = "NCBI:align:tbl:seq#2";
@@ -1037,7 +1073,7 @@ FIXTURE_TEST_CASE(VDB_6444, AST_Fixture)
             if ( c != t->second.end() )
             {
                 cout << "      Column " << *c << "(" << astMap.ColToProd.locations.at( *c ) << "):" << endl;
-                astMap.PrintColumnCallTree( 9, t->first, *c );
+                //astMap.PrintColumnCallTree( 9, t->first, *c );
             }
         }
         else
