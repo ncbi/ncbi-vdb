@@ -293,6 +293,17 @@ static unsigned readNormalIncomplete(Object const *self, uint8_t *const dst, uns
     return actlen;
 }
 
+/* The background thread publishes the loaded bases and the final reader by
+ * setting async to NULL; a reader that sees NULL must also see those. */
+#if defined(__GNUC__)
+#define ASYNC_LOAD(SELF) __atomic_load_n(&(SELF)->async, __ATOMIC_ACQUIRE)
+#define ASYNC_CLEAR(SELF) __atomic_store_n(&(SELF)->async, NULL, __ATOMIC_RELEASE)
+#else
+/* MSVC on x64: volatile loads acquire and volatile stores release (/volatile:ms) */
+#define ASYNC_LOAD(SELF) ((SELF)->async)
+#define ASYNC_CLEAR(SELF) ((void)((SELF)->async = NULL))
+#endif
+
 /* this is called on the background thread */
 static rc_t runLoadThread(Object *self)
 {
@@ -400,7 +411,7 @@ static rc_t runLoadThread(Object *self)
         ;
     /* readers are all waiting in the loop at line 445 */
     self->reader = rc == 0 ? readNormal : readZero;
-    self->async = NULL;
+    ASYNC_CLEAR(self);
     atomic_dec(&self->rwl); /* state is updated; readers continue to line 448 */
     if (rc == 0 && i == count) {
         KLockAcquire(async->mutex);
@@ -436,7 +447,7 @@ unsigned RefSeq_getBases(Object const * self, uint8_t *const dst, unsigned const
 {
     atomic_t *const rwl = &((Object *)self)->rwl;
 
-    if (self->async == NULL) {
+    if (ASYNC_LOAD(self) == NULL) {
         /* this is the fast path and the most common for normal use */
         /* there is no background thread running */
         return self->reader(self, dst, start, len);
@@ -453,7 +464,7 @@ unsigned RefSeq_getBases(Object const * self, uint8_t *const dst, unsigned const
     while ((atomic_read(rwl) & 1) != 0)
         ;
     /* the state has been updated; use the new state */
-    if (self->async == NULL) {
+    if (ASYNC_LOAD(self) == NULL) {
         rc_t const rc = cleanUpAsyncThread(self);
         if (rc) return rc;
     }
