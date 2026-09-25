@@ -586,11 +586,12 @@ static rc_t load(  Object *result
         result->length = (unsigned)baseCount;
         result->async = RefSeqAsyncLoadInfoMake(curs, rowRange, info + 1, &rc);
         if (rc == 0) {
+            /* must be set before the thread starts; the thread sets the final
+             * reader when it finishes, which can happen before KThreadMake returns */
+            result->reader = readNormalIncomplete;
             rc = KThreadMake(&result->th, run_load_thread, result);
-            if (rc == 0) {
-                result->reader = readNormalIncomplete;
+            if (rc == 0)
                 return 0;
-            }
         }
         RefSeqFree(result);
     }
