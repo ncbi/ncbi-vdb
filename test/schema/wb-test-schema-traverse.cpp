@@ -377,6 +377,17 @@ struct AstMap
     VersionedNameMap DbToTbl;
 
     map<string, string> FnLocations;
+    set<string> FnWhiteList; // can be empty (=no filtering)
+
+
+    void PrintFnLocations( ostream& out ) const
+    {
+        out << "FnLocatiouns:" << endl;
+        for(auto i : FnLocations )
+        {
+            cout << "   " << i.first << ": " << i.second << endl;
+        }
+    }
 
     void PrintProdDefs( ostream& out ) const
     {
@@ -388,7 +399,7 @@ struct AstMap
     }
 
     string
-    FindProdDef( const string& p_table, const string& p_name )
+    FindProdDef( const string& p_table, const string& p_name ) const
     {   // given A:B:C:name, find X:Y:Z:name that is both in TblToProd[p_table] and a key in ProdDefs
         size_t lastPos = p_name.find_last_of('.');
         if (lastPos != std::string::npos)
@@ -416,7 +427,7 @@ struct AstMap
     }
 
     void
-    PrintProductionCallTree( size_t prefix, const string& p_table, const string& p_prodDef  )
+    PrintProductionCallTree( size_t prefix, const string& p_table, const string& p_prodDef  ) const
     {
         auto p_f = ProdToFn.find( p_prodDef );
         if ( p_f != ProdToFn.end() )
@@ -426,7 +437,7 @@ struct AstMap
                 size_t last = f.find('(');
                 size_t first = f.substr( 0, last ) . rfind('.') + 1;
                 string vers_name = f.substr(first, last-first);
-                cout << string( prefix, ' ' ) << f << "(" << FnLocations.at( vers_name ) << "):" << endl;
+                cout << string( prefix, ' ' ) << f << "(" << FnLocations.at( vers_name ) << ")" << endl;
             }
         }
 
@@ -446,7 +457,7 @@ struct AstMap
     }
 
     void
-    PrintColumnCallTree( size_t prefix, const string& p_table, const string& p_column  )
+    PrintColumnCallTree( size_t prefix, const string& p_table, const string& p_column  ) const
     {
         auto c_f = ColToFn.find( p_column );
         if ( c_f != ColToFn.end() )
@@ -470,6 +481,71 @@ struct AstMap
                 }
             }
         }
+    }
+
+    set<string> CollectProductionCalls( const string & prod ) const
+    {
+        set<string> ret;
+        auto p = ProdToFn.find( prod );
+        if ( p != ProdToFn.end() )
+        {
+            for ( auto i : p->second )
+            {
+                ret.insert(i);
+            }
+        }
+        else
+        {
+            //cout << "prod not found 1: " << prod << endl;
+        }
+
+        p = ProdToProd.find( prod );
+        if ( p != ProdToProd.end() )
+        {
+            for ( auto i : p->second )
+            {
+                auto r = CollectProductionCalls( i );
+                //cout<< prod << "(prod): collecting " << r.size() << " prods" <<endl;
+                ret.insert( r.begin(), r.end() );
+            }
+        }
+        else
+        {
+            //cout << "prod not found 2: " << prod << endl;
+        }
+        return ret;
+    }
+
+    set<string> CollectColumnCalls( const string & col ) const
+    {
+        set<string> ret;
+        auto c = ColToFn.find( col );
+        if ( c != ColToFn.end() )
+        {
+            for ( auto i : c->second )
+            {
+                ret.insert(i);
+            }
+        }
+        else
+        {
+            //cout << "column not found 1: " << col << endl;
+        }
+        c = ColToProd.find( col );
+        if ( c != ColToProd.end() )
+        {
+            for ( auto p : c->second )
+            {
+                auto r = CollectProductionCalls( p );
+                //cout<< col << "(col): collecting " << r.size() << " prods" <<endl;
+                ret.insert( r.begin(), r.end() );
+            }
+        }
+        else
+        {
+            //cout << "column not found 2: " << col << endl;
+        }
+        return ret;
     }
 };
 
@@ -524,7 +600,20 @@ string FunctionCallSignature( const AST& node )
     // 0:schema_parms_opt 1:fqn_opt_vers 2:factory_parms_opt 3:func_parms_opt
     auto fqn = ToFQN( node.GetChild(1) );
     assert( fqn );
-    string ret = GetVersionedName( *fqn ) + "(";
+    string ret = GetVersionedName( *fqn );
+
+    if ( !astMap.FnWhiteList.empty() &&
+         astMap.FnWhiteList.find( ret ) == astMap.FnWhiteList.end() )
+    {   // ignore
+        //cout << "ignoring " << ret << endl;
+        return string();
+    }
+    else
+    {
+        //cout << "processing " << ret << endl;
+    }
+
+    ret += "(";
 
     auto func_parms = node.GetChild(3);
     size_t fp_count = func_parms->ChildrenCount();
@@ -567,7 +656,7 @@ void pre_columnToFunctions( const ParseTree& node )
             auto fqn = ToFQN( ast_node.GetChild(0) );
             assert( fqn );
             auto vers_name = GetVersionedName( *fqn );
-            cout << "database " << name << endl;
+            //cout << "database " << name << endl;
             astMap.activeDatabase = vers_name;
 
             astMap.DbToTbl.add(name, fqn->GetVersion(), ast_node.GetChild(0)->GetLocation() );
@@ -668,13 +757,16 @@ void pre_columnToFunctions( const ParseTree& node )
         {   // function call: combine the name with the source location
             string name = FunctionCallSignature( ast_node );
             //cout << "function " << name << endl;
-            if ( !astMap.activeCol.empty() )
+            if ( !name.empty() )
             {
-                astMap.ColToFn.add( astMap.activeCol, astMap.activeTable + "." + name );
-            }
-            else if ( !astMap.activeProd.empty() )
-            {
-                astMap.ProdToFn.add( astMap.activeProd, astMap.activeTable + "." + name );
+                if ( !astMap.activeCol.empty() )
+                {
+                    astMap.ColToFn.add( astMap.activeCol, astMap.activeTable + "." + name );
+                }
+                else if ( !astMap.activeProd.empty() )
+                {
+                    astMap.ProdToFn.add( astMap.activeProd, astMap.activeTable + "." + name );
+                }
             }
             break;
         }
@@ -1001,15 +1093,21 @@ FIXTURE_TEST_CASE(ColumnsToProductionsToFunctionCalls, AST_Fixture)
 
 // root -> traverse( pre_Json, post_Json );
 // cout << jsonStr.str() << endl;
-// astMap.ProdToFn.print("ProdToFn");
-//  astMap.ColToProd.print("ColToProd");
- //astMap.ColToFn.print("ColToFn");
+ astMap.ProdToFn.print("ProdToFn");
+ astMap.ColToProd.print("ColToProd");
+ astMap.ColToFn.print("ColToFn");
 
     REQUIRE_EQ( 2, (int)astMap.ColToFn.size());
     REQUIRE_EQ( string("T1#1.t1_1"), astMap.ColToFn.begin()->first );
     auto fns = astMap.ColToFn.begin()->second;
     REQUIRE( fns.end() != fns.find( string("T1#1.fn1#1(p1)") ) );
     REQUIRE( fns.end() != fns.find( string("T1#1.fn2#1(p1,p2)") ) );
+
+    // auto calls = astMap.CollectColumnCalls(string("T1#1.t1_1") );
+    // for ( auto i : calls )
+    // {
+    //     cout << "         " << i << endl;
+    // }
 }
 
 FIXTURE_TEST_CASE(ProductionsToColumns, AST_Fixture)
@@ -1037,29 +1135,57 @@ FIXTURE_TEST_CASE(VDB_6444, AST_Fixture)
     AST * root = MakeAst  ( "version 2; include 'align/align.vschema';" );
 
     astMap = AstMap();
+    astMap.FnWhiteList = {
+        "NCBI:align:get_mate_align_id#1",
+        "NCBI:align:ref_restore_read#1",
+        "NCBI:align:cigar#1",
+        "NCBI:align:cigar#2",
+        "NCBI:align:edit_distance#1",
+        "NCBI:align:edit_distance#2",
+        "NCBI:align:generate_has_mismatch#1",
+        "NCBI:align:generate_mismatch#1",
+        "NCBI:align:get_left_soft_clip#2",
+        "NCBI:align:get_clipped_cigar#2",
+        "NCBI:align:get_ref_len#1",
+        "NCBI:align:clip#2",
+        "NCBI:align:ref_sub_select#1",
+        "NCBI:align:seq_restore_read#1",
+        "NCBI:align:align_restore_read#1",
+        "NCBI:align:project_from_sequence#1",
+        "NCBI:align:seq_construct_read#1",
+        "NCBI:align:ref_name#1",
+        "NCBI:fp_extend#1",
+        "NCBI:SRA:extract_name_fmt#1",
+        "NCBI:dna_from_color#1",
+        "NCBI:SRA:bio_end#1",
+        "outlier_encode#1",
+        "strtonum#1",
+        "sprintf#1",
+        "rldecode#1",
+        "checksum#1",
+        "map#1",
+        "rlencode#1",
+    };
+
     root -> traverse( pre_columnToFunctions, post_columnToFunctions );
 
    // REQUIRE_EQ( 216, (int)astMap.ProdToFn.size() );
 //   REQUIRE_EQ( 66, (int)astMap.ColToFn.size() );
 //   REQUIRE_EQ( 157, (int)astMap.ColToProd.size() );
 
-//     astMap.PrintProdDefs( cout );
-     //astMap.ProdToFn.print( "Productions to Functions", true );
-//     astMap.ColToProd.print( "Columns to Productions", true );
-//     astMap.ColToFn.print( "Columns to Functions", true );
-//     astMap.TblToCol.print( "Tables to Columns" );
+    astMap.DbToTbl.print("Db to Tables");
+    astMap.TblToCol.print( "Tables to Columns" );
 
-//    astMap.DbToTbl.print("Db to Tables");
-//    astMap.ProdToProd.print( "Productions to Productions" );
+    astMap.PrintProdDefs( cout );
 
-// for(auto i:astMap.FnLocations )
-// {
-//     cout<<i.first<<": "<<i.second<<endl;
-// }
+    astMap.ProdToFn.print( "Productions to Functions", true );
+    astMap.ProdToProd.print( "Productions to Production", true );
+    astMap.ColToProd.print( "Columns to Productions", true );
+    astMap.ColToFn.print( "Columns to Functions", true );
 
     const auto DB = "NCBI:align:db:alignment_unsorted#2";
     const auto Tbl = "NCBI:align:tbl:seq#2";
-    const auto Col = "INSDC:tbl:sequence#1.0.1.READ";
+    //const auto Col = "INSDC:tbl:sequence#1.0.1.READ";
 
     const auto d = astMap.DbToTbl.find( DB );
     if ( d != astMap.DbToTbl.end() )
@@ -1069,11 +1195,20 @@ FIXTURE_TEST_CASE(VDB_6444, AST_Fixture)
         if ( t != astMap.TblToCol.end() )
         {
             cout << "   Table " << t->first << "(" << astMap.TblToCol.locations.at( t->first ) << "):" << endl;
-            auto c = t->second.find( Col );
-            if ( c != t->second.end() )
+            for ( auto c : t->second )
+            //auto c = t->second.find( Col );
+            //if ( c != t->second.end() )
             {
-                cout << "      Column " << *c << "(" << astMap.ColToProd.locations.at( *c ) << "):" << endl;
-                //astMap.PrintColumnCallTree( 9, t->first, *c );
+                cout << "      Column " << c << "(" << astMap.ColToProd.locations.at( c ) << "):" << endl;
+
+                auto calls = astMap.CollectColumnCalls( c );
+                for ( auto i : calls )
+                {
+                    cout << "         " << i << endl;
+                }
+                cout << endl;
+                if ( c == "READ" )
+                    astMap.PrintColumnCallTree( 9, t->first, c );
             }
         }
         else
