@@ -32,6 +32,13 @@ using namespace ncbi :: SchemaParser;
 
 const Token :: TokenType Token :: EndSource;
 
+Token :: Location :: Location ()
+:   m_file ( "" ),
+    m_line ( 0 ),
+    m_column ( 0 )
+{
+}
+
 Token :: Location :: Location ( const char * p_file, uint32_t p_line, uint32_t p_column )
 :   m_file ( p_file ), // no copy made
     m_line ( p_line ),

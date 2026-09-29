@@ -46,6 +46,7 @@ namespace ncbi
                 uint32_t        m_line; // 1 - based
                 uint32_t        m_column; // 1 - based
 
+                Location ();
                 Location ( const char * p_file, uint32_t p_line, uint32_t p_column );
             };
 

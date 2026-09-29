@@ -105,7 +105,7 @@ ErrorReport :: Error :: Format ( ctx_t ctx, char * p_buf, size_t p_bufSize ) con
     }
     rc_t rc = string_printf ( p_buf, p_bufSize, 0,
                            "%s:%u:%u %s",
-                           m_file, m_line, m_column, m_message );
+                           m_file.c_str(), m_line, m_column, m_message );
     if ( rc != 0 )
     {
         FUNC_ENTRY ( ctx, rcSRA, rcSchema, rcParsing );
