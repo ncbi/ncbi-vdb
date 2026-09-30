@@ -48,6 +48,8 @@ template <typename T>
 class NameMap : public std::map<std::string, T >
 {
     public:
+        void addUnique( const std::string& key, const T& value ); // throw if exists
+
         void print( std::ostream& out ) const
         {
             for ( auto i : *this )
@@ -89,14 +91,11 @@ struct SchemaInfo
         std::set<std::string> calls; // function calls in the right hand part of declaration
     };
 
-    class Column : public SchemaObject
-    {
+    class Expression
+    {   // right hand side of a column or production definition
     public:
-        Column();
-        Column( const ncbi::SchemaParser::Token::Location& p_loc );
-
-        std::set<std::string> id; // columns and productions in the right hand part of declaration
-        std::set<std::string> calls; // function calls in the right hand part of declaration
+        std::set<std::string> ids;   // columns and/or productions directly mentioned in the expression
+        std::set<std::string> calls; // function calls directly made in the expression
     };
 
     class Table : public SchemaObject
@@ -106,8 +105,8 @@ struct SchemaInfo
         Table( const ncbi::SchemaParser::Token::Location& p_loc );
 
         std::set<std::string> parents;
-        std::set<std::string> columns;
-        std::set<std::string> prods;
+        std::map<std::string, Expression> columns;  // defined in this table
+        std::map<std::string, Expression> productions;  // defined in this table
     };
 
     class Database : public SchemaObject
@@ -120,11 +119,16 @@ struct SchemaInfo
         std::set<std::string> tables;
     };
 
-    VersionedNameMap<Function> functions;
+    //TODO: support views
+
     VersionedNameMap<Database> databases;
-    NameMap<Column> columns;
+    std::string active_database;
+
     VersionedNameMap<Table> tables;
-    NameMap<Production> productions;
+    std::string active_table;
+
+    VersionedNameMap<Function> functions;
+    Expression * active_expression = nullptr;
 
     void populate( const ncbi::SchemaParser::AST & root );
 

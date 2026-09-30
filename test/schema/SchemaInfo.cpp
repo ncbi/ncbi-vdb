@@ -66,6 +66,15 @@ SchemaInfo::Database::Database( const ncbi::SchemaParser::Token::Location& p_loc
 {
 }
 
+SchemaInfo::Table::Table()
+{
+}
+
+SchemaInfo::Table::Table( const ncbi::SchemaParser::Token::Location& p_loc )
+: SchemaObject( p_loc )
+{
+}
+
 string GetFullName ( const AST* node )
 {
     switch( node -> GetTokenType() )
@@ -101,11 +110,13 @@ string GetFullName ( const AST* node )
     return string();
 }
 
-string GetVersionedName ( const AST_FQN& node )
+string GetVersionedName ( const AST& node )
 {
+    auto fqn = ToFQN( &node );
+    assert( fqn );
     char buf[1024];
-    node . GetVersionedName( buf, sizeof( buf ), true ); // #1 if version not specified
-    return buf;
+    fqn -> GetVersionedName( buf, sizeof( buf ), true ); // #1 if version not specified
+    return string( buf );
 }
 
 void pre_collectObjects( const ParseTree& node )
@@ -115,191 +126,108 @@ void pre_collectObjects( const ParseTree& node )
     {
     case PT_DATABASE:
         {   // database definition; TODO: support nested databases
-            auto fqn = ToFQN( ast_node.GetChild(0) );
-            assert( fqn );
-            auto vers_name = GetVersionedName( *fqn );
+            const auto& name_node = *ast_node.GetChild(0);
+            const auto& dad_node  = *ast_node.GetChild(1);
 
-            if ( g_si -> databases.find(vers_name) == g_si -> databases.end() )
-            {
-                g_si -> databases[ vers_name ] = SchemaInfo::Database( ast_node.GetChild(0)->GetLocation() );
-            }
-            else
-            {
-                throw logic_error( vers_name + ": database redefined" );
-            }
+            auto vers_name = GetVersionedName( name_node );
+            g_si -> databases.addUnique( vers_name, SchemaInfo::Database( name_node . GetLocation() ) );
 
-            auto dad_node = ast_node.GetChild(1);
-            if ( dad_node->GetTokenType() != PT_EMPTY )
+            if ( dad_node . GetTokenType() != PT_EMPTY )
             {   // add parent
-                auto dad_fqn = ToFQN( dad_node );
-                assert( fqn );
-                auto dad_vers_name = GetVersionedName( *dad_fqn );
-                g_si -> databases[ vers_name ].parent = dad_vers_name;
+                auto dad_vers_name = GetVersionedName( dad_node );
+                g_si -> databases[ vers_name ] . parent = dad_vers_name;
             }
+
+            g_si -> active_database = vers_name;
+
             break;
         }
     case PT_TBLMEMBER:
         {   // database member table. record the type of the table, not its name in the DB
-            // auto fqn = ToFQN( ast_node.GetChild(1) ); // type
-            // assert( fqn );
-            // g_si -> DbToTbl.NameMap::add( g_si -> activeDatabase, GetVersionedName( *fqn ) );
-            // break;
+            assert( ! g_si -> active_database.empty() );
+            g_si -> databases[ g_si -> active_database ] .tables.insert( GetVersionedName( *ast_node.GetChild(1) ) );
+            break;
         }
     case PT_TABLE:
-        {   // table definition; TODO: support views
-            // string name = GetFullName( ast_node.GetChild(0) );
-            // auto fqn = ToFQN( ast_node.GetChild(0) );
-            // assert( fqn );
-            // auto vers_name = GetVersionedName( *fqn );
-            // //cout << "table " << vers_name << endl;
-            // g_si -> activeTable = vers_name;
+        {   // table definition
+            const auto& name_node = *ast_node.GetChild(0);
+            const auto& parents_node = *ast_node.GetChild(1);
 
-            // assert( fqn );
-            // g_si -> TblToCol.add( name, fqn->GetVersion(), ast_node.GetChild(0)->GetLocation() );
-            // g_si -> TblToProd.add( name, fqn->GetVersion(), ast_node.GetChild(0)->GetLocation() );
-            // auto plist = ast_node.GetChild(1);
-            // if ( plist->GetTokenType() == PT_TABLEPARENTS )
-            // { // add parents
-            //     for ( uint32_t i = 0; i < plist->ChildrenCount(); ++i )
-            //     {   //TODO: look for a definition with the correct version
-            //         string dad = GetFullName( plist->GetChild(i) );
-            //         auto dad_ver = ToFQN( plist->GetChild(i) )->GetVersion();
-            //         if( g_si -> TblToCol.find(dad, dad_ver ) == g_si -> TblToCol.end() )
-            //         {
-            //             throw logic_error( string("table ") + name + " parent not found: " + dad );
-            //         }
-            //         const auto& d = g_si -> TblToCol.find( dad, dad_ver )->second;
-            //         g_si -> TblToCol[vers_name].insert( d.begin(), d.end() );
-            //         const auto& p = g_si -> TblToProd.find( dad, dad_ver )->second;
-            //         g_si -> TblToProd[vers_name].insert( p.begin(), p.end() );
-            //     }
-            // }
-            // else
-            // {
-            //     assert( plist->GetTokenType() == PT_EMPTY );
-            // }
+            auto vers_name = GetVersionedName( name_node );
+            g_si->tables.addUnique( vers_name, SchemaInfo::Table( name_node . GetLocation() ) );
+
+            g_si -> active_table = vers_name;
+
+            if ( parents_node . GetTokenType() == PT_TABLEPARENTS )
+            { // add parents
+                for ( uint32_t i = 0; i < parents_node . ChildrenCount(); ++i )
+                {   //TODO: look for a definition with the correct version
+                    auto dad_vers_name = GetVersionedName( *parents_node . GetChild(i) );
+                    if ( g_si -> tables.find( dad_vers_name ) == g_si -> tables.end() )
+                    {
+                        throw logic_error( string("table ") + vers_name + " parent not found: " + dad_vers_name );
+                    }
+                    g_si -> tables[ vers_name ] . parents . insert( dad_vers_name );
+                }
+            }
+            else
+            {
+                assert( parents_node . GetTokenType() == PT_EMPTY );
+            }
             break;
         }
 
     case PT_TYPEDCOL:
     case PT_TYPEDCOLEXPR:
         {   // column definition
-            // assert( ast_node.ChildrenCount() >= 1 );
-            // assert( ast_node.GetChild(0)->GetTokenType() == PT_IDENT );
-            // string col_name = g_si -> activeTable + "." + GetFullName( ast_node.GetChild(0) );
-            // // cout << "column " << col_name << endl;
-            // g_si -> activeCol = col_name;
-            // g_si -> ColToFn.add( col_name, ast_node.GetChild(0)->GetLocation() );
-            // g_si -> ColToProd.add( col_name, ast_node.GetChild(0)->GetLocation() );
-            // g_si -> TblToCol.NameMap::add( g_si -> activeTable, col_name );
+            assert( ast_node.ChildrenCount() >= 1 );
+            assert( ast_node.GetChild(0)->GetTokenType() == PT_IDENT );
+            assert( ! g_si -> active_table.empty() );
+
+            string col_name = GetFullName( ast_node.GetChild(0) );
+            g_si -> tables[ g_si -> active_table ] . columns[ col_name ] = SchemaInfo::Expression();
+            g_si -> active_expression = & g_si -> tables[ g_si -> active_table ] . columns[ col_name ];
             break;
         }
 
     case PT_FUNCDECL:
         {
             assert( ast_node.ChildrenCount() == 6 );
-            string name = GetFullName( ast_node.GetChild(2) );
-            auto fqn = ToFQN( ast_node.GetChild(2) );
-            if( fqn )
-            {
-                name = GetVersionedName( *fqn );
-            }
-            else
-            {
-                assert(false);
-            }
+            const auto& name_node = *ast_node.GetChild(2);
 
-            if ( g_si -> functions.find(name) == g_si -> functions.end() )
-            {
-                g_si -> functions[ name ] = SchemaInfo::Function( ast_node.GetChild(2)->GetLocation() );
-            }
-            else
-            {
-                throw logic_error( name + ": function redefined" );
-            }
+            string vers_name = GetVersionedName( name_node );
+            g_si -> functions . addUnique( vers_name, SchemaInfo::Function( name_node . GetLocation() ) );
             break;
         }
 
     case PT_FUNCEXPR:
         {   // function call: combine the name with the source location
-            // string name = FunctionCallSignature( ast_node );
-            // //cout << "function " << name << endl;
-            // if ( !name.empty() )
-            // {
-            //     if ( !g_si -> activeCol.empty() )
-            //     {
-            //         g_si -> ColToFn.add( g_si -> activeCol, g_si -> activeTable + "." + name );
-            //     }
-            //     else if ( !g_si -> activeProd.empty() )
-            //     {
-            //         g_si -> ProdToFn.add( g_si -> activeProd, g_si -> activeTable + "." + name );
-            //     }
-            // }
+            assert( g_si -> active_expression );
+            assert( ast_node.ChildrenCount() == 4 );
+            // 0:schema_parms_opt 1:fqn_opt_vers 2:factory_parms_opt 3:func_parms_opt
+            auto fn_name = GetVersionedName( *ast_node.GetChild(1) );
+            g_si -> active_expression -> calls . insert( fn_name );
             break;
         }
     case PT_PRODSTMT:
         {   // production
-            // if ( ! g_si -> activeTable.empty() )
-            // {
-            //     string name = g_si -> activeTable + "." + GetFullName( ast_node.GetChild(1) );
-            //     g_si -> activeProd = name;
-            //     g_si -> ProdDefs.insert( name );
-            //     g_si -> ProdToFn.add( name, ast_node.GetChild(1)->GetLocation() );
-            //     g_si -> ProdToProd.add( name, ast_node.GetChild(1)->GetLocation() );
-            //     //cout << "adding production " << name << " to " << g_si -> activeTable << endl;
-            //     g_si -> TblToProd.NameMap::add( g_si -> activeTable, name );
-            // }
+            assert ( ! g_si -> active_table.empty() );
+            const auto& name_node = *ast_node.GetChild(1);
+
+            string prod_name = GetFullName( &name_node );
+            g_si -> tables[ g_si -> active_table ] . productions[ prod_name ] = SchemaInfo::Expression();
+            g_si -> active_expression = & g_si -> tables[ g_si -> active_table ] . productions[ prod_name ];
             break;
         }
 
     case PT_IDENT:
         {   // use of an identifier
-            //string name = ast_node.GetChild(0)->GetTokenValue();
-            // string name = g_si -> activeTable + "." + GetFullName( ast_node.GetChild(0) );
-
-            // if ( ! g_si -> activeProd.empty() )
-            // {   // in a production
-            //     //cout << g_si -> activeProd << " " << name << endl;
-            //     if ( name != g_si -> activeProd )
-            //     {
-            //         g_si -> ProdToProd.add( g_si -> activeProd, name );
-
-            //         auto p = g_si -> ProdToProd.find( name );
-            //         if ( p != g_si -> ProdToProd.end() )
-            //         {
-            //             g_si -> ProdToProd[g_si -> activeProd].insert( p->second.begin(), p->second.end() );
-            //         }
-            //         p = g_si -> ProdToFn.find( name );
-            //         if ( p != g_si -> ProdToFn.end() )
-            //         {
-            //             g_si -> ProdToFn[g_si -> activeProd].insert( p->second.begin(), p->second.end() );
-            //         }
-            //     }
-            // }
-            // else if ( ! g_si -> activeCol.empty() )
-            // {   // in a column definition
-            //     //cout << g_si -> activeProd << " " << name << endl;
-            //     if ( name != g_si -> activeCol )
-            //     {
-            //         g_si -> ColToProd.add( g_si -> activeCol, name );
-
-            //         auto p = g_si -> ProdToProd.find( name );
-            //         if ( p != g_si -> ProdToProd.end() )
-            //         {
-            //             g_si -> ColToProd[g_si -> activeCol].insert( p->second.begin(), p->second.end() );
-            //         }
-            //         p = g_si -> ProdToFn.find( name );
-            //         if ( p != g_si -> ProdToFn.end() )
-            //         {
-            //             g_si -> ColToFn[g_si -> activeCol].insert( p->second.begin(), p->second.end() );
-            //         }
-            //     }
-            // }
-            // else
-            // {
-            //     //cout << "ident " << name << endl;
-            // }
-
+            if( g_si -> active_expression )
+            {
+                string name = ast_node.GetChild(0)->GetTokenValue();
+                g_si -> active_expression -> ids . insert( name );
+                cout<< "PT_IDENT(" << name << ")" << endl;
+            }
             break;
         }
 
@@ -315,34 +243,42 @@ void post_collectObjects( const ParseTree& node )
     {
     case PT_DATABASE:
         {
-            //cout << "end database " << GetFullName( ast_node.GetChild(0) ) << endl;
-            // g_si -> activeDatabase.clear();
+            g_si -> active_database.clear();
             break;
         }
 
     case PT_TABLE:
         {
-            // g_si -> activeTable.clear();
+            g_si -> active_table.clear();
             break;
         }
 
     case PT_TYPEDCOL:
     case PT_TYPEDCOLEXPR:
         {
-            //cout << "end column " << GetFullName( ast_node.GetChild(0) ) << endl;
-            // g_si -> activeCol.clear();
+            g_si -> active_expression = nullptr;
             break;
         }
     case PT_PRODSTMT:
         {
-            // cout << "end production " << GetFullName( ast_node.GetChild(1) ) << endl;
-            // g_si -> activeProd.clear();
+            g_si -> active_expression = nullptr;
             break;
         }
 
     default:
         break;
     }
+}
+
+template <typename T>
+void
+NameMap<T>::addUnique( const std::string& key, const T& value )
+{
+    if ( this->find( key ) != this->end() )
+    {
+        throw logic_error( key + "is alread defined" );
+    }
+    this->insert( make_pair( key, value ) );
 }
 
 void

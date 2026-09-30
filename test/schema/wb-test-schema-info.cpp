@@ -53,8 +53,6 @@ FIXTURE_TEST_CASE(ConstructDestruct, AST_Fixture)
 {
     SchemaInfo si;
     REQUIRE_EQ( 0, (int)si.functions.size() );
-    REQUIRE_EQ( 0, (int)si.productions.size() );
-    REQUIRE_EQ( 0, (int)si.columns.size() );
     REQUIRE_EQ( 0, (int)si.tables.size() );
     REQUIRE_EQ( 0, (int)si.databases.size() );
 }
@@ -89,6 +87,16 @@ FIXTURE_TEST_CASE(Functions, AST_Fixture)
     }
 }
 
+FIXTURE_TEST_CASE(Functions_Redefinition, AST_Fixture)
+{
+    AST * root = MakeAst  ( R"(
+        function ascii fn1 #1.0( ascii a , ascii b );
+        function ascii fn1 #1.0( ascii a , ascii b );
+    )" );
+    REQUIRE_NOT_NULL( root );
+    REQUIRE_THROW( SchemaInfo().populate( *root ) );
+}
+
 FIXTURE_TEST_CASE(Database, AST_Fixture)
 {
     AST * root = MakeAst  ( R"(
@@ -109,7 +117,7 @@ FIXTURE_TEST_CASE(Database, AST_Fixture)
     SchemaInfo si;
     si.populate( *root );
 
-    si.databases.print(cout);
+    //si.databases.print(cout);
 
     REQUIRE_EQ( 2, (int)si.databases.size() );
     REQUIRE( si.databases.end() != si.databases.find("DB1#1") );
@@ -131,6 +139,87 @@ FIXTURE_TEST_CASE(Database, AST_Fixture)
         REQUIRE_EQ( string("DB1#1"), d.parent );
         REQUIRE_EQ( 1, (int)d.tables.size() );
     }
+}
+
+FIXTURE_TEST_CASE(Database_Redefinition, AST_Fixture)
+{
+    AST * root = MakeAst  ( R"(
+        table T1 #1{}
+        database DB1 #1
+        {
+            table T1 #1 t1_1;
+        };
+        database DB1 #1
+        {
+            table T1 #1 t1_1;
+        };
+    )" );
+    REQUIRE_NOT_NULL( root );
+    REQUIRE_THROW( SchemaInfo().populate( *root ) );
+}
+
+FIXTURE_TEST_CASE(Table, AST_Fixture)
+{
+    AST * root = MakeAst  ( R"(
+        table T1#1 {}
+        table T2#2 {}
+        table T3 #3 = T1#1, T2#2{
+            U8 p = 1;
+            column U8 c = p;
+        }
+    )" );
+    REQUIRE_NOT_NULL( root );
+
+    SchemaInfo si;
+    si.populate( *root );
+
+    REQUIRE_EQ( 3, (int)si.tables.size() );
+    REQUIRE( si.tables.end() != si.tables.find("T1#1") );
+    REQUIRE( si.tables.end() != si.tables.find("T2#2") );
+    REQUIRE( si.tables.end() != si.tables.find("T3#3") );
+    {
+        auto & t = si.tables.find("T3#3")->second;
+        REQUIRE_EQ( 2, (int)t.parents.size() );
+        REQUIRE( t.parents.end() != t.parents.find("T1#1") );
+        REQUIRE( t.parents.end() != t.parents.find("T2#2") );
+        REQUIRE_EQ( 1, (int)t.columns.size() );
+        REQUIRE_EQ( 1, (int)t.productions.size() );
+    }
+}
+
+FIXTURE_TEST_CASE(Table_Redefinition, AST_Fixture)
+{
+    AST * root = MakeAst  ( R"(
+        table T1#1 {}
+        table T1#1 {}
+    )" );
+    REQUIRE_NOT_NULL( root );
+    REQUIRE_THROW( SchemaInfo().populate( *root ) );
+}
+
+FIXTURE_TEST_CASE(Table_ReferencesFromColumn, AST_Fixture)
+{
+    AST * root = MakeAst  ( R"(
+        function U8 fn1 #1.0( U8 a );
+        table T1#1{
+            U8 p = 1;
+            column U8 c = p | fn1( p );
+        }
+    )" );
+    REQUIRE_NOT_NULL( root );
+
+    SchemaInfo si;
+    si.populate( *root );
+
+    REQUIRE( si.tables.end() != si.tables.find("T1#1") );
+    {
+        auto & t = si.tables.find("T1#1")->second;
+        REQUIRE_EQ( 1, (int)t.columns.size() );
+        auto & c = t.columns.at( "c" );
+        REQUIRE_EQ( 1, (int)c.calls.size() );
+        REQUIRE_EQ( 1, (int)c.ids.size() );
+    }
+
 }
 
 #if 0
