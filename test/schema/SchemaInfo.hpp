@@ -36,7 +36,7 @@
 
 // #include <kfc/defs.h>
 
-// #include <klib/printf.h>
+#include <klib/printf.h>
 
 // #include <vdb/xform.h>
 
@@ -44,28 +44,67 @@
 #include <set>
 #include <iostream>
 
-template <typename T>
-class NameMap : public std::map<std::string, T >
+namespace ncbi
 {
-    public:
-        void addUnique( const std::string& key, const T& value ); // throw if exists
-
-        void print( std::ostream& out ) const
-        {
-            for ( auto i : *this )
-            {
-                out << i.first << ": " << std::endl;
-            }
-        }
-};
-
-template <typename T>
-class VersionedNameMap : public NameMap<T>
-{
-};
 
 struct SchemaInfo
 {
+    template <typename T>
+    class NameMap : public std::map<std::string, T >
+    {
+    public:
+        void addUnique( const std::string& key, const T& value ) // throw if exists
+        {
+            if ( this->find( key ) != this->end() )
+            {
+                throw std::logic_error( key + "is already defined" );
+            }
+            this->insert( make_pair( key, value ) );
+        }
+    };
+
+    template <typename T>
+    class VersionedNameMap : public NameMap<T>
+    {
+    public:
+        void addUnique( const std::string & name, ver_t version, const T& value )
+        {
+            char buf[1024];
+            string_printf ( buf, sizeof( buf ), nullptr, "%s#%V", name.c_str(), version );
+            NameMap<T>::addUnique( buf, value ); // throws if already defined
+            nameToVersions[name].insert(version);
+        }
+
+        typename NameMap<T>::const_iterator find(const std::string & name_vers) const
+        {   // "name#version"
+            return NameMap<T>::find( name_vers );
+        }
+
+        typename NameMap<T>::const_iterator find( const std::string & name, ver_t version ) const
+        {   // find the version that fits the best
+            const auto n = nameToVersions.find( name );
+            if( n == nameToVersions.end() )
+            {
+                return this->end();
+            }
+
+            ver_t best_fit = findBestFit( n->second, version );
+            if( best_fit == 0 )
+            {
+                return this->end();
+            }
+
+            char buf[1024];
+            string_printf ( buf, sizeof( buf ), nullptr, "%s#%V", name.c_str(), best_fit );
+            return NameMap<T>::find( std::string( buf ) );
+        }
+
+    private:
+        ver_t findBestFit( const std::set<ver_t>& ver_set, ver_t version ) const;
+
+        std::map< std::string, std::set<ver_t> > nameToVersions;
+    };
+
     class SchemaObject
     {
     public:
@@ -85,15 +124,15 @@ struct SchemaInfo
         Function( const ncbi::SchemaParser::Token::Location& p_loc );
     };
 
-    class Production : public SchemaObject
+    struct Production : public SchemaObject
     {
         std::set<std::string> id; // columns and productions in the right hand part of declaration
         std::set<std::string> calls; // function calls in the right hand part of declaration
     };
 
-    class Expression
+    struct Expression
     {   // right hand side of a column or production definition
-    public:
+        ncbi::SchemaParser::Token::Location location; // the column/production's location
         std::set<std::string> ids;   // columns and/or productions directly mentioned in the expression
         std::set<std::string> calls; // function calls directly made in the expression
     };
@@ -119,6 +158,23 @@ struct SchemaInfo
         std::set<std::string> tables;
     };
 
+    struct Definition
+    {
+        std::string owner; // table key
+        bool is_column; // false = production
+
+        Definition();
+        Definition( const std::string& p_owner, bool p_is_column );
+
+        bool empty() const { return owner.empty(); }
+    };
+
+    // tarverse the AST and populate the data structures
+    SchemaInfo( const ncbi::SchemaParser::AST & root );
+
+    // look for the definition of id (column or production) in the table or any of its ancestor
+    Definition resolve( const std::string& t, const std::string& id ) const;
+
     //TODO: support views
 
     VersionedNameMap<Database> databases;
@@ -130,6 +186,49 @@ struct SchemaInfo
     VersionedNameMap<Function> functions;
     Expression * active_expression = nullptr;
 
-    void populate( const ncbi::SchemaParser::AST & root );
-
 };
+
+template<typename T>
+ver_t
+SchemaInfo::VersionedNameMap<T>::findBestFit( const std::set<ver_t>& ver_set, ver_t version ) const
+{
+    ver_t best_fit = 0;
+    auto major = VersionGetMajor( version );
+    auto minor = VersionGetMinor( version );
+    auto release = VersionGetRelease( version );
+    for ( auto i : ver_set )
+    {
+        if ( major == VersionGetMajor( i ) )
+        {   // check minor & release
+            auto i_minor = VersionGetMinor( i );
+            auto i_release = VersionGetRelease( i );
+            if ( minor == 0 && release == 0 ) // minor is unspecified
+            {
+                best_fit = i;
+                break;
+            }
+            else if ( minor == i_minor )
+            {   // check release
+                if ( release == i_release )
+                {   // exact match
+                    best_fit = i;
+                    break;
+                }
+                if ( release == 0 )
+                {   // select the highest release
+                    if ( best_fit == 0 )
+                    {
+                        best_fit = i;
+                    }
+                    else if ( i_release > VersionGetRelease( best_fit ) )
+                    {
+                        best_fit = i;
+                    }
+                }
+            }
+        }
+    }
+    return best_fit;
+}
+
+}

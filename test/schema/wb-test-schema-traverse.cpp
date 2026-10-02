@@ -75,14 +75,6 @@ string prefix()
     return string( IndentUnit * indent, ' ' );
 }
 
-string
-LocationToString( const Token::Location & loc )
-{
-    ostringstream out;
-    out << loc.m_file << ":" << loc.m_line;
-    return out.str();
-}
-
 void pre_Json( const ParseTree& node )
 {
     jsonStr << prefix() << "{" << endl;
@@ -140,15 +132,22 @@ FIXTURE_TEST_CASE(ToJson, AST_Fixture)
 
 FIXTURE_TEST_CASE(ToJson_debug, AST_Fixture)
 {
-    AST * root = MakeAst  ( R"(function < type T, U32 dim >
-T [ dim ] vclip #1.0 < T lower, T upper > ( T [ dim ] in )
-    = vdb:clip;
-    )");
+    // drop your schema here:
+    AST * root = MakeAst  ( R"(
+        table T1#1 {}
+        table T2#2 {}
+        table T3 #3 = T1#1, T2#2{
+            U8 p = 1;
+            column U8 c = p;
+        }
+    )" );
 
     root -> traverse( pre_Json, post_Json );
 
-    //cout << jsonStr.str();
     REQUIRE_NE( string(), jsonStr.str() );
+
+    // uncomment the following line to see the Json
+    // cout << jsonStr.str();
 }
 
 //////////////////////////////////////////// Main

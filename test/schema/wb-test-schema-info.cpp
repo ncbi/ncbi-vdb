@@ -45,17 +45,100 @@
 // #include <sstream>
 
 using namespace std;
+using namespace ncbi;
 using namespace ncbi::NK;
+
+static
+ver_t
+MakeVer( uint8_t maj, uint8_t min = 0, uint8_t rel = 0 )
+{
+    return VTRANSVERS( maj, min, rel );
+}
 
 TEST_SUITE ( SchemaInfoTestSuite );
 
-FIXTURE_TEST_CASE(ConstructDestruct, AST_Fixture)
+// version resolution
+TEST_CASE( VersionedNameMap_NotFound )
 {
-    SchemaInfo si;
-    REQUIRE_EQ( 0, (int)si.functions.size() );
-    REQUIRE_EQ( 0, (int)si.tables.size() );
-    REQUIRE_EQ( 0, (int)si.databases.size() );
+    SchemaInfo::VersionedNameMap<int> vr;
+    vr.addUnique("name", MakeVer( 1, 2, 3 ), 1);
+    auto it = vr.find( "bad_name", MakeVer( 1, 2, 3 ) );
+    REQUIRE( vr.cend() == it );
 }
+
+TEST_CASE( VersionedNameMap_DefFull_RefFull )
+{
+    SchemaInfo::VersionedNameMap<int> vr;
+    vr.addUnique("name", MakeVer( 1, 2, 3 ), 1);
+    auto it = vr.find( "name", MakeVer( 1, 2, 3 ) );
+    REQUIRE( vr.cend() != it );
+    REQUIRE_EQ( string("name#1.2.3"), it->first );
+}
+TEST_CASE( VersionedNameMap_DefNoRev_RefNoRel )
+{
+    SchemaInfo::VersionedNameMap<int> vr;
+    vr.addUnique("name", MakeVer( 1, 2, 0 ), 1);
+    auto it = vr.find( "name", MakeVer( 1, 2, 0 ) );
+    REQUIRE( vr.cend() != it );
+    REQUIRE_EQ( string("name#1.2"), it->first );
+}
+TEST_CASE( VersionedNameMap_DefNoMin_RefNoMin )
+{
+    SchemaInfo::VersionedNameMap<int> vr;
+    vr.addUnique("name", MakeVer( 1, 0, 0 ), 1);
+    auto it = vr.find( "name", MakeVer( 1, 0, 0 ) );
+    REQUIRE( vr.cend() != it );
+    REQUIRE_EQ( string("name#1"), it->first );
+}
+
+TEST_CASE( VersionedNameMap_DefFull_RefNoRel )
+{
+    SchemaInfo::VersionedNameMap<int> vr;
+    vr.addUnique("name", MakeVer( 1, 2, 3 ), 1);
+    auto it = vr.find( "name", MakeVer( 1, 2, 0 ) );
+    REQUIRE( vr.cend() != it );
+    REQUIRE_EQ( string("name#1.2.3"), it->first );
+}
+
+TEST_CASE( VersionedNameMap_DefFull_RefRelHi )
+{
+    SchemaInfo::VersionedNameMap<int> vr;
+    vr.addUnique("name", MakeVer( 1, 2, 3 ), 1);
+    auto it = vr.find( "name", MakeVer( 1, 2, 4 ) );
+    REQUIRE( vr.cend() == it );
+}
+
+TEST_CASE( VersionedNameMap_DefFull_RefRelMultiple_Exact )
+{
+    SchemaInfo::VersionedNameMap<int> vr;
+    vr.addUnique("name", MakeVer( 1, 2, 1 ), 1);
+    vr.addUnique("name", MakeVer( 1, 2, 2 ), 1);
+    vr.addUnique("name", MakeVer( 1, 2, 3 ), 1);
+    auto it = vr.find( "name", MakeVer( 1, 2, 2 ) );
+    REQUIRE( vr.cend() != it );
+    REQUIRE_EQ( string("name#1.2.2"), it->first );
+}
+
+TEST_CASE( VersionedNameMap_DefFull_RefRelMultiple_Latest )
+{   // no release specified, the highest release selected
+    SchemaInfo::VersionedNameMap<int> vr;
+    vr.addUnique("name", MakeVer( 1, 2, 1 ), 1);
+    vr.addUnique("name", MakeVer( 1, 2, 2 ), 1);
+    auto it = vr.find( "name", MakeVer( 1, 2, 0 ) );
+    REQUIRE( vr.cend() != it );
+    REQUIRE_EQ( string("name#1.2.2"), it->first );
+}
+
+TEST_CASE( VersionedNameMap_DefFull_RefNoMinor )
+{   // no release specified, the highest release selected
+    SchemaInfo::VersionedNameMap<int> vr;
+    vr.addUnique("name", MakeVer( 2, 1, 1 ), 1);
+    auto it = vr.find( "name", MakeVer( 2, 0, 0 ) );
+    REQUIRE( vr.cend() != it );
+    REQUIRE_EQ( string("name#2.1.1"), it->first );
+}
+
+// SchemaInfo
 
 FIXTURE_TEST_CASE(Functions, AST_Fixture)
 {
@@ -65,22 +148,23 @@ FIXTURE_TEST_CASE(Functions, AST_Fixture)
     )" );
     REQUIRE_NOT_NULL( root );
 
-    SchemaInfo si;
-    si.populate( *root );
+    SchemaInfo si( *root );
 
     //si.functions.print(cout);
 
     REQUIRE_EQ( 2, (int)si.functions.size() );
-    REQUIRE( si.functions.end() != si.functions.find("fn1#1") );
+    auto it = si.functions.find("fn1", MakeVer( 1 ) );
+    REQUIRE( si.functions.end() != it );
     {
-        auto& l = si.functions.find("fn1#1")->second.getLocation();
+        auto& l = it->second.getLocation();
         REQUIRE_EQ( string("<unknown>"), l.m_file );
         REQUIRE_EQ( 2, (int)l.m_line );
         REQUIRE_EQ( 24, (int)l.m_column );
     }
-    REQUIRE( si.functions.end() != si.functions.find("fn2#1") );
+    it = si.functions.find("fn2", MakeVer( 1 ) );
+    REQUIRE( si.functions.end() != it );
     {
-        auto& l = si.functions.find("fn2#1")->second.getLocation();
+        auto& l = it->second.getLocation();
         REQUIRE_EQ( string("<unknown>"), l.m_file );
         REQUIRE_EQ( 3, (int)l.m_line );
         REQUIRE_EQ( 24, (int)l.m_column );
@@ -94,7 +178,7 @@ FIXTURE_TEST_CASE(Functions_Redefinition, AST_Fixture)
         function ascii fn1 #1.0( ascii a , ascii b );
     )" );
     REQUIRE_NOT_NULL( root );
-    REQUIRE_THROW( SchemaInfo().populate( *root ) );
+    REQUIRE_THROW( SchemaInfo si( *root ); );
 }
 
 FIXTURE_TEST_CASE(Database, AST_Fixture)
@@ -102,7 +186,7 @@ FIXTURE_TEST_CASE(Database, AST_Fixture)
     AST * root = MakeAst  ( R"(
         table T1 #1{}
         table T2 #1{}
-        database DB1 #1
+        database DB1 #1.0.1
         {
             table T1 #1 t1_1;
             table T2 #1 t1_2;
@@ -114,15 +198,16 @@ FIXTURE_TEST_CASE(Database, AST_Fixture)
     )" );
     REQUIRE_NOT_NULL( root );
 
-    SchemaInfo si;
-    si.populate( *root );
+    SchemaInfo si( *root );
 
     //si.databases.print(cout);
 
     REQUIRE_EQ( 2, (int)si.databases.size() );
-    REQUIRE( si.databases.end() != si.databases.find("DB1#1") );
+    auto it = si.databases.find( "DB1", MakeVer( 1 ) );
+    REQUIRE( si.databases.end() != it );
     {
-        auto & d = si.databases.find("DB1#1")->second;
+        REQUIRE_EQ( string("DB1#1.0.1"), it->first );
+        auto & d = it->second;
 
         auto& l = d.getLocation();
         REQUIRE_EQ( string("<unknown>"), l.m_file );
@@ -133,10 +218,11 @@ FIXTURE_TEST_CASE(Database, AST_Fixture)
         REQUIRE_EQ( 2, (int)d.tables.size() );
     }
 
-    REQUIRE( si.databases.end() != si.databases.find("DB2#1") );
+    it = si.databases.find( "DB2", MakeVer( 1 ) );
+    REQUIRE( si.databases.end() != it );
     {
-        auto & d = si.databases.find("DB2#1")->second;
-        REQUIRE_EQ( string("DB1#1"), d.parent );
+        auto & d = it->second;
+        REQUIRE_EQ( string("DB1#1.0.1"), d.parent );    // best fit version
         REQUIRE_EQ( 1, (int)d.tables.size() );
     }
 }
@@ -155,13 +241,12 @@ FIXTURE_TEST_CASE(Database_Redefinition, AST_Fixture)
         };
     )" );
     REQUIRE_NOT_NULL( root );
-    REQUIRE_THROW( SchemaInfo().populate( *root ) );
-}
+    REQUIRE_THROW( SchemaInfo si( *root ); );}
 
 FIXTURE_TEST_CASE(Table, AST_Fixture)
 {
     AST * root = MakeAst  ( R"(
-        table T1#1 {}
+        table T1#1.0.1 {}
         table T2#2 {}
         table T3 #3 = T1#1, T2#2{
             U8 p = 1;
@@ -170,19 +255,25 @@ FIXTURE_TEST_CASE(Table, AST_Fixture)
     )" );
     REQUIRE_NOT_NULL( root );
 
-    SchemaInfo si;
-    si.populate( *root );
+    SchemaInfo si( *root );
 
     REQUIRE_EQ( 3, (int)si.tables.size() );
-    REQUIRE( si.tables.end() != si.tables.find("T1#1") );
-    REQUIRE( si.tables.end() != si.tables.find("T2#2") );
-    REQUIRE( si.tables.end() != si.tables.find("T3#3") );
+    REQUIRE( si.tables.end() != si.tables.find("T1", MakeVer(1)) );
+    REQUIRE( si.tables.end() != si.tables.find("T2", MakeVer(2)) );
+    auto it = si.tables.find("T3", MakeVer(3) );
+    REQUIRE( si.tables.end() != it );
     {
-        auto & t = si.tables.find("T3#3")->second;
+        auto & t = it->second;
         REQUIRE_EQ( 2, (int)t.parents.size() );
-        REQUIRE( t.parents.end() != t.parents.find("T1#1") );
+        REQUIRE( t.parents.end() != t.parents.find("T1#1.0.1") ); // best fit version
         REQUIRE( t.parents.end() != t.parents.find("T2#2") );
+
         REQUIRE_EQ( 1, (int)t.columns.size() );
+        auto & c = t.columns.begin()->second;
+        REQUIRE_EQ( string("<unknown>"), c.location.m_file );
+        REQUIRE_EQ( 6, (int)c.location.m_line );
+        REQUIRE_EQ( 23, (int)c.location.m_column );
+
         REQUIRE_EQ( 1, (int)t.productions.size() );
     }
 }
@@ -194,7 +285,7 @@ FIXTURE_TEST_CASE(Table_Redefinition, AST_Fixture)
         table T1#1 {}
     )" );
     REQUIRE_NOT_NULL( root );
-    REQUIRE_THROW( SchemaInfo().populate( *root ) );
+    REQUIRE_THROW( SchemaInfo si( *root ); );
 }
 
 FIXTURE_TEST_CASE(Table_ReferencesFromColumn, AST_Fixture)
@@ -203,37 +294,202 @@ FIXTURE_TEST_CASE(Table_ReferencesFromColumn, AST_Fixture)
         function U8 fn1 #1.0( U8 a );
         table T1#1{
             U8 p = 1;
-            column U8 c = p | fn1( p );
+            column U8 c = forward | fn1( p );
         }
     )" );
     REQUIRE_NOT_NULL( root );
 
-    SchemaInfo si;
-    si.populate( *root );
+    SchemaInfo si( *root );
 
-    REQUIRE( si.tables.end() != si.tables.find("T1#1") );
+    auto it = si.tables.find("T1", MakeVer(1));
+    REQUIRE( si.tables.end() != it );
     {
-        auto & t = si.tables.find("T1#1")->second;
+        auto & t = it->second;
         REQUIRE_EQ( 1, (int)t.columns.size() );
         auto & c = t.columns.at( "c" );
+
+        // ids of called functions go into c.calls with a version, c.ids without
         REQUIRE_EQ( 1, (int)c.calls.size() );
-        REQUIRE_EQ( 1, (int)c.ids.size() );
+        REQUIRE( c.calls.end() != c.calls.find("fn1#1(p)") );
+
+        REQUIRE_EQ( 3, (int)c.ids.size() );
+        REQUIRE( c.ids.end() != c.ids.find("fn1") );
+        REQUIRE( c.ids.end() != c.ids.find("p") );
+        REQUIRE( c.ids.end() != c.ids.find("forward") );
+    }
+}
+
+FIXTURE_TEST_CASE(Table_ReferencesFromProduction, AST_Fixture)
+{
+    AST * root = MakeAst  ( R"(
+        function U8 fn1 #1.0( U8 a );
+        table T1#1{
+            U8 p1 = 1;
+            U8 p2 = forward | fn1( p1 );
+        }
+    )" );
+    REQUIRE_NOT_NULL( root );
+
+    SchemaInfo si( *root );
+
+    auto it = si.tables.find("T1", MakeVer(1));
+    REQUIRE( si.tables.end() != it );
+    {
+        auto & t = it->second;
+        REQUIRE_EQ( 2, (int)t.productions.size() );
+
+        {
+            auto & p = t.productions.at( "p1" );
+            REQUIRE_EQ( 0, (int)p.calls.size() );
+            REQUIRE_EQ( 0, (int)p.ids.size() );
+        }
+
+        {
+            auto & p = t.productions.at( "p2" );
+
+            // ids of called functions go into p.calls with a version, p.ids without
+            REQUIRE_EQ( 1, (int)p.calls.size() );
+            REQUIRE( p.calls.end() != p.calls.find("fn1#1(p1)") );
+
+            REQUIRE_EQ( 3, (int)p.ids.size() );
+            REQUIRE( p.ids.end() != p.ids.find("fn1") );
+            REQUIRE( p.ids.end() != p.ids.find("p1") );
+            REQUIRE( p.ids.end() != p.ids.find("forward") );
+        }
+    }
+}
+
+FIXTURE_TEST_CASE(Table_FunctionCalls, AST_Fixture)
+{   // parameters recorded at the call site
+    AST * root = MakeAst  ( R"(
+        function U8 fn1 #1.0( U8 a, U16 b );
+        table T1#1{
+            column U8 c1;
+            column U16 c2;
+            column U8 c3 = fn1( c1, c2 );
+        }
+    )" );
+    REQUIRE_NOT_NULL( root );
+
+    SchemaInfo si( *root );
+
+    auto it = si.tables.find("T1", MakeVer(1));
+    REQUIRE( si.tables.end() != it );
+    {
+        auto & t = it->second;
+        REQUIRE_EQ( 3, (int)t.columns.size() );
+        const auto & c = t.columns.find( "c3" );
+        REQUIRE( t.columns.end() != c );
+        REQUIRE_EQ( 1, (int)c->second.calls.size() );
+        REQUIRE_EQ( string( "fn1#1(c1,c2)" ), *c->second.calls.begin() );
     }
 
 }
+
+FIXTURE_TEST_CASE(Id_Resolution_same_table, AST_Fixture)
+{
+    AST * root = MakeAst  ( R"(
+        table T1#1{
+            U8 p = 1;
+            column U8 c;
+        }
+    )" );
+    REQUIRE_NOT_NULL( root );
+
+    SchemaInfo si( *root );
+
+    const string T1 = "T1#1";
+    SchemaInfo::Definition def = si.resolve( T1, "p" );
+    REQUIRE_EQ( T1, def.owner );
+    REQUIRE( ! def.is_column );
+
+    def = si.resolve( T1, "c" );
+    REQUIRE_EQ( T1, def.owner );
+    REQUIRE( def.is_column );
+}
+
+FIXTURE_TEST_CASE(Id_Resolution_ancestor, AST_Fixture)
+{
+    AST * root = MakeAst  ( R"(
+        table T1#1{
+            U8 p = 1;
+            column U8 c;
+        }
+        table T2#1 = T1#1{
+        }
+    )" );
+    REQUIRE_NOT_NULL( root );
+
+    SchemaInfo si( *root );
+    const string T1 = "T1#1";
+    const string T2 = "T2#1";
+
+    auto it = si.tables.find(T1);
+    REQUIRE( si.tables.end() != it );
+    {
+        SchemaInfo::Definition def = si.resolve( T1, "p" );
+        REQUIRE( ! def.empty() );
+        REQUIRE_EQ( T1, def.owner );
+        REQUIRE( ! def.is_column );
+
+        def = si.resolve( T1, "c" );
+        REQUIRE( ! def.empty() );
+        REQUIRE_EQ( T1, def.owner );
+        REQUIRE( def.is_column );
+    }
+}
+
+FIXTURE_TEST_CASE(Id_Resolution_undefined, AST_Fixture)
+{   // undefined or defined lower in the hiararchy
+    AST * root = MakeAst  ( R"(
+        table T1#1{
+            U8 p = 1;
+            column U8 c = p2;
+        }
+        table T2#1 = T1#1{
+            column U8 c2;
+        }
+    )" );
+    REQUIRE_NOT_NULL( root );
+
+    SchemaInfo si( *root );
+
+    const string T1 = "T1#1";
+    REQUIRE( si.resolve( T1, "p2" ).empty() ); // never defined
+    REQUIRE( si.resolve( T1, "c2" ).empty() ); // defined lower in the hierarchy than T1
+}
+
+// FIXTURE_TEST_CASE(Id_Resolution_undefined, AST_Fixture)
+// {   // parameters recorded at the call site
+//     AST * root = MakeAst  ( R"(
+//         table T1#1{
+//             U8 p = 1;
+//             column U8 c;
+//         }
+//     )" );
+//     REQUIRE_NOT_NULL( root );
+
+//    SchemaInfo si( *root );
+
+//     auto it = si.tables.find("T1#1");
+//     REQUIRE( si.tables.end() != it );
+//     {
+//         SchemaInfo::Definition def = it->second.resolve( "p" );
+//         REQUIRE_NOT_NULL( def.owner );
+//         REQUIRE( ! def.is_column );
+
+//         def = it->second.resolve( "c" );
+//         REQUIRE_NOT_NULL( def.owner );
+//         REQUIRE( def.is_column );
+//     }
+// }
+
+//TODO: productions inside extern type convertors
 
 #if 0
 class NameMap : public map<string, set<string> >
 {
 public:
-    void add( const string& key, const Token::Location& loc = {"", 0, 0} )
-    {
-        this->insert( make_pair( key, set<string>() ) );
-        if ( loc.m_line != 0 )
-        {
-            locations[ key ] = LocationToString( loc );
-        }
-    }
     void add( const string& key, const string& value  )
     {
         at( key ) . insert( value );
@@ -340,86 +596,8 @@ class VersionedNameMap : public NameMap
         map< string, set<ver_t> > nameToVersions;
 };
 
-// version resolution
-TEST_CASE( VersionedNameMap_NotFound )
-{
-    VersionedNameMap vr;
-    vr.add("name", VTRANSVERS( 1, 2, 3 ));
-    auto it = vr.find( "bad_name", VTRANSVERS( 1, 2, 3 ) );
-    REQUIRE( vr.cend() == it );
-}
 
-TEST_CASE( VersionedNameMap_DefFull_RefFull )
-{
-    VersionedNameMap vr;
-    vr.add("name", VTRANSVERS( 1, 2, 3 ));
-    auto it = vr.find( "name", VTRANSVERS( 1, 2, 3 ) );
-    REQUIRE( vr.cend() != it );
-    REQUIRE_EQ( string("name#1.2.3"), it->first );
-}
-TEST_CASE( VersionedNameMap_DefNoRev_RefNoRel )
-{
-    VersionedNameMap vr;
-    vr.add("name", VTRANSVERS( 1, 2, 0 ));
-    auto it = vr.find( "name", VTRANSVERS( 1, 2, 0 ) );
-    REQUIRE( vr.cend() != it );
-    REQUIRE_EQ( string("name#1.2"), it->first );
-}
-TEST_CASE( VersionedNameMap_DefNoMin_RefNoMin )
-{
-    VersionedNameMap vr;
-    vr.add("name", VTRANSVERS( 1, 0, 0 ));
-    auto it = vr.find( "name", VTRANSVERS( 1, 0, 0 ) );
-    REQUIRE( vr.cend() != it );
-    REQUIRE_EQ( string("name#1"), it->first );
-}
 
-TEST_CASE( VersionedNameMap_DefFull_RefNoRel )
-{
-    VersionedNameMap vr;
-    vr.add("name", VTRANSVERS( 1, 2, 3 ));
-    auto it = vr.find( "name", VTRANSVERS( 1, 2, 0 ) );
-    REQUIRE( vr.cend() != it );
-    REQUIRE_EQ( string("name#1.2.3"), it->first );
-}
-
-TEST_CASE( VersionedNameMap_DefFull_RefRelHi )
-{
-    VersionedNameMap vr;
-    vr.add("name", VTRANSVERS( 1, 2, 3 ));
-    auto it = vr.find( "name", VTRANSVERS( 1, 2, 4 ) );
-    REQUIRE( vr.cend() == it );
-}
-
-TEST_CASE( VersionedNameMap_DefFull_RefRelMultiple_Exact )
-{
-    VersionedNameMap vr;
-    vr.add("name", VTRANSVERS( 1, 2, 1 ));
-    vr.add("name", VTRANSVERS( 1, 2, 2 ));
-    vr.add("name", VTRANSVERS( 1, 2, 3 ));
-    auto it = vr.find( "name", VTRANSVERS( 1, 2, 2 ) );
-    REQUIRE( vr.cend() != it );
-    REQUIRE_EQ( string("name#1.2.2"), it->first );
-}
-
-TEST_CASE( VersionedNameMap_DefFull_RefRelMultiple_Latest )
-{   // no release specified, the highest release selected
-    VersionedNameMap vr;
-    vr.add("name", VTRANSVERS( 1, 2, 1 ));
-    vr.add("name", VTRANSVERS( 1, 2, 2 ));
-    auto it = vr.find( "name", VTRANSVERS( 1, 2, 0 ) );
-    REQUIRE( vr.cend() != it );
-    REQUIRE_EQ( string("name#1.2.2"), it->first );
-}
-
-TEST_CASE( VersionedNameMap_DefFull_RefNoMinor )
-{   // no release specified, the highest release selected
-    VersionedNameMap vr;
-    vr.add("name", VTRANSVERS( 2, 1, 1 ));
-    auto it = vr.find( "name", VTRANSVERS( 2, 0, 0 ) );
-    REQUIRE( vr.cend() != it );
-    REQUIRE_EQ( string("name#2.1.1"), it->first );
-}
 
 struct AstMap
 {
@@ -624,57 +802,6 @@ AstMap astMap;
 
 
 
-string FunctionCallSignature( const AST& node )
-{
-    assert( node.GetTokenType() == PT_FUNCEXPR );
-    assert( node.ChildrenCount() == 4 );
-    // 0:schema_parms_opt 1:fqn_opt_vers 2:factory_parms_opt 3:func_parms_opt
-    auto fqn = ToFQN( node.GetChild(1) );
-    assert( fqn );
-    string ret = GetVersionedName( *fqn );
-
-    if ( !astMap.FnWhiteList.empty() &&
-         astMap.FnWhiteList.find( ret ) == astMap.FnWhiteList.end() )
-    {   // ignore
-        //cout << "ignoring " << ret << endl;
-        return string();
-    }
-    else
-    {
-        //cout << "processing " << ret << endl;
-    }
-
-    ret += "(";
-
-    auto func_parms = node.GetChild(3);
-    size_t fp_count = func_parms->ChildrenCount();
-    for ( size_t i = 0; i < fp_count; ++i )
-    {
-        if ( i > 0 )
-        {
-            ret += ",";
-        }
-        // allowed tags: PT_AT, PHYSICAL_IDENTIFIER_1_0, PT_CAST, PT_IDENT, PT_MEMBEREXPR
-        auto param = func_parms->GetChild( i );
-        switch ( param->GetTokenType() )
-        {
-        case PT_IDENT:
-            ret += GetFullName( param->GetChild(0) );
-            break;
-        case '@':
-            ret += "@";
-            break;
-        case PHYSICAL_IDENTIFIER_1_0:
-            ret += param->GetTokenValue();
-            break;
-        case PT_CASTEXPR:
-        case PT_MEMBEREXPR:
-        default:
-            assert(false);
-        }
-    }
-    return ret + ")";
-}
 
 
 FIXTURE_TEST_CASE(DatabaseToTable, AST_Fixture)
@@ -717,7 +844,7 @@ FIXTURE_TEST_CASE(DatabaseToTable, AST_Fixture)
     REQUIRE_EQ( 2, (int)astMap.DbToTbl.size());
 //astMap.DbToTbl.print("DbToTbl");
     // {   // DB1: T1, T2
-    //     auto d1 = astMap.DbToTbl.find("DB1", VTRANSVERS( 2, 0, 0 ) );
+    //     auto d1 = astMap.DbToTbl.find("DB1", MakeVer( 2, 0, 0 ) );
     //     REQUIRE_EQ( 2, (int)d1->second.size());
     //     auto m = d1->second;
     //     REQUIRE( m.end() != m.find( string("T1#3") ) );
@@ -725,7 +852,7 @@ FIXTURE_TEST_CASE(DatabaseToTable, AST_Fixture)
     // }
 
     // {   // DB2: T1, T2, T3
-    //     auto d2 = astMap.DbToTbl.find("DB2", VTRANSVERS( 1, 0, 0 ) );
+    //     auto d2 = astMap.DbToTbl.find("DB2", MakeVer( 1, 0, 0 ) );
     //     REQUIRE_EQ( 3, (int)d2->second.size());
     //     auto m = d2->second;
     //     REQUIRE( m.end() != m.find( string("T1#3") ) );
@@ -756,7 +883,7 @@ FIXTURE_TEST_CASE(TableToColumns, AST_Fixture)
 
     {   // T1: t3_1, t3_2, t4_1, t4_2, t1_1
         //astMap.TblToCol.print("TblToCol");
-        auto t = astMap.TblToCol.find("T1", VTRANSVERS(1, 0, 0) );
+        auto t = astMap.TblToCol.find("T1", MakeVer(1, 0, 0) );
         REQUIRE( astMap.TblToCol.end() != t );
         REQUIRE_EQ( 5, (int)t->second.size());
         auto m = t->second;
@@ -810,7 +937,7 @@ FIXTURE_TEST_CASE(TablesToProductions, AST_Fixture)
     root -> traverse( pre_columnToFunctions, post_columnToFunctions );
 
     REQUIRE_EQ( 4, (int)astMap.TblToProd.size());
-    auto prods = astMap.TblToProd.find( "T1", VTRANSVERS(1, 0, 0) )->second;
+    auto prods = astMap.TblToProd.find( "T1", MakeVer(1, 0, 0) )->second;
     REQUIRE_EQ( 3, (int)prods.size());
     REQUIRE( prods.end() != prods.find( string("T3#2.1.1.p3_2") ) );
     REQUIRE( prods.end() != prods.find( string("T4#1.p4") ) );

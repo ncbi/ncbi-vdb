@@ -33,6 +33,7 @@ using namespace ncbi::SchemaParser;
 #include <sstream>
 
 using namespace std;
+using namespace ncbi;
 using namespace ncbi::SchemaParser;
 
 //TODO: make thread safe
@@ -65,6 +66,17 @@ SchemaInfo::Database::Database( const ncbi::SchemaParser::Token::Location& p_loc
 : SchemaObject( p_loc )
 {
 }
+
+SchemaInfo::Definition::Definition()
+: owner(nullptr), is_column(false)
+{
+}
+
+SchemaInfo::Definition::Definition( const string & p_owner, bool p_is_column )
+: owner(p_owner), is_column(p_is_column)
+{
+}
+
 
 SchemaInfo::Table::Table()
 {
@@ -119,6 +131,109 @@ string GetVersionedName ( const AST& node )
     return string( buf );
 }
 
+string FunctionCallSignature( const AST& node )
+{
+    assert( node.GetTokenType() == PT_FUNCEXPR );
+    assert( node.ChildrenCount() == 4 );
+    // 0:schema_parms_opt 1:fqn_opt_vers 2:factory_parms_opt 3:func_parms_opt
+    auto fqn = ToFQN( node.GetChild(1) );
+    assert( fqn );
+    string ret = GetVersionedName( *fqn );
+
+    // if ( !astMap.FnWhiteList.empty() &&
+    //      astMap.FnWhiteList.find( ret ) == astMap.FnWhiteList.end() )
+    // {   // ignore
+    //     //cout << "ignoring " << ret << endl;
+    //     return string();
+    // }
+    // else
+    // {
+    //     //cout << "processing " << ret << endl;
+    // }
+
+    ret += "(";
+
+    auto func_parms = node.GetChild(3);
+    size_t fp_count = func_parms->ChildrenCount();
+    for ( size_t i = 0; i < fp_count; ++i )
+    {
+        if ( i > 0 )
+        {
+            ret += ",";
+        }
+        // allowed tags: PT_AT, PHYSICAL_IDENTIFIER_1_0, PT_CAST, PT_IDENT, PT_MEMBEREXPR
+        auto param = func_parms->GetChild( i );
+        switch ( param->GetTokenType() )
+        {
+        case PT_IDENT:
+            ret += GetFullName( param->GetChild(0) );
+            break;
+        case '@':
+            ret += "@";
+            break;
+        case PHYSICAL_IDENTIFIER_1_0:
+            ret += param->GetTokenValue();
+            break;
+        case PT_CASTEXPR:
+        case PT_MEMBEREXPR:
+        default:
+            assert(false);
+        }
+    }
+    return ret + ")";
+}
+
+
+// traverse an expression and collect all identifiers and function calls
+SchemaInfo::Expression * g_expression = nullptr;
+void pre_collectIds( const ParseTree& node )
+{
+    assert( g_expression );
+
+    auto& ast_node = dynamic_cast< const AST& >( node );
+    switch( ast_node . GetTokenType() )
+    {
+    case PT_IDENT:
+        {
+            auto fqn = ToFQN( &ast_node );
+            if ( fqn )
+            {
+                char buf[1024];
+                fqn -> GetFullName( buf, sizeof( buf ) );
+                g_expression -> ids . insert( buf );
+            }
+            else
+            {
+                assert( ast_node.ChildrenCount() == 1 );
+                auto id = ast_node.GetChild(0);
+                if( id->GetTokenType() == IDENTIFIER_1_0 )
+                {
+                    g_expression -> ids . insert( id->GetTokenValue() );
+                }
+            }
+            break;
+        }
+
+    case IDENTIFIER_1_0:
+        {
+            g_expression -> ids . insert( ast_node . GetTokenValue() );
+            break;
+        }
+
+    case PT_FUNCEXPR:
+        {   // function call
+            assert( g_expression );
+            assert( ast_node.ChildrenCount() == 4 );
+            // 0:schema_parms_opt 1:fqn_opt_vers 2:factory_parms_opt 3:func_parms_opt
+            g_expression -> calls . insert( FunctionCallSignature( ast_node ) );
+            break;
+        }
+
+    default:
+        break;
+    }
+}
+
 void pre_collectObjects( const ParseTree& node )
 {
     auto& ast_node = dynamic_cast< const AST& >( node );
@@ -126,16 +241,24 @@ void pre_collectObjects( const ParseTree& node )
     {
     case PT_DATABASE:
         {   // database definition; TODO: support nested databases
-            const auto& name_node = *ast_node.GetChild(0);
+            const auto& name_node = *ToFQN( ast_node.GetChild(0) );
             const auto& dad_node  = *ast_node.GetChild(1);
 
-            auto vers_name = GetVersionedName( name_node );
-            g_si -> databases.addUnique( vers_name, SchemaInfo::Database( name_node . GetLocation() ) );
+            g_si -> databases.addUnique(
+                GetFullName( &name_node ),
+                name_node.GetVersion(),
+                SchemaInfo::Database( name_node . GetLocation() ) );
 
+            auto vers_name = GetVersionedName( name_node );
             if ( dad_node . GetTokenType() != PT_EMPTY )
             {   // add parent
-                auto dad_vers_name = GetVersionedName( dad_node );
-                g_si -> databases[ vers_name ] . parent = dad_vers_name;
+                const auto& dad_fqn = *ToFQN( & dad_node );
+                auto best_dad = g_si->databases.find( GetFullName( &dad_fqn ), dad_fqn.GetVersion() );
+                if ( best_dad == g_si -> databases.end() )
+                {
+                    throw logic_error( string("database ") + vers_name + " parent not found: " + GetVersionedName( dad_node ) );
+                }
+                g_si -> databases[ vers_name ] . parent = best_dad->first;
             }
 
             g_si -> active_database = vers_name;
@@ -150,24 +273,28 @@ void pre_collectObjects( const ParseTree& node )
         }
     case PT_TABLE:
         {   // table definition
-            const auto& name_node = *ast_node.GetChild(0);
+            const auto& name_node = *ToFQN( ast_node.GetChild(0) );
             const auto& parents_node = *ast_node.GetChild(1);
 
-            auto vers_name = GetVersionedName( name_node );
-            g_si->tables.addUnique( vers_name, SchemaInfo::Table( name_node . GetLocation() ) );
+            g_si->tables.addUnique(
+                GetFullName( &name_node ),
+                name_node.GetVersion(),
+                SchemaInfo::Table( name_node . GetLocation() ) );
 
+            auto vers_name = GetVersionedName( name_node );
             g_si -> active_table = vers_name;
 
             if ( parents_node . GetTokenType() == PT_TABLEPARENTS )
             { // add parents
                 for ( uint32_t i = 0; i < parents_node . ChildrenCount(); ++i )
-                {   //TODO: look for a definition with the correct version
-                    auto dad_vers_name = GetVersionedName( *parents_node . GetChild(i) );
-                    if ( g_si -> tables.find( dad_vers_name ) == g_si -> tables.end() )
+                {   // look for a definition with the correct version
+                    const auto& dad_node = *ToFQN( parents_node . GetChild(i) );
+                    auto best_dad = g_si->tables.find( GetFullName( &dad_node ), dad_node.GetVersion() );
+                    if ( best_dad == g_si -> tables.end() )
                     {
-                        throw logic_error( string("table ") + vers_name + " parent not found: " + dad_vers_name );
+                        throw logic_error( string("table ") + vers_name + " parent not found: " + GetVersionedName( dad_node ) );
                     }
-                    g_si -> tables[ vers_name ] . parents . insert( dad_vers_name );
+                    g_si -> tables[ vers_name ] . parents . insert( best_dad->first );
                 }
             }
             else
@@ -181,42 +308,56 @@ void pre_collectObjects( const ParseTree& node )
     case PT_TYPEDCOLEXPR:
         {   // column definition
             assert( ast_node.ChildrenCount() >= 1 );
-            assert( ast_node.GetChild(0)->GetTokenType() == PT_IDENT );
+            const auto& name_node = *ast_node.GetChild(0);
+            assert( name_node.GetTokenType() == PT_IDENT );
             assert( ! g_si -> active_table.empty() );
 
-            string col_name = GetFullName( ast_node.GetChild(0) );
-            g_si -> tables[ g_si -> active_table ] . columns[ col_name ] = SchemaInfo::Expression();
-            g_si -> active_expression = & g_si -> tables[ g_si -> active_table ] . columns[ col_name ];
+            // sweep identifers from the initialization expression, if given
+            SchemaInfo::Expression expr;
+            expr.location = name_node.GetLocation();
+            if ( ast_node.ChildrenCount() == 2 )
+            {
+                g_expression = & expr;
+                ast_node . GetChild( 1 ) -> traverse( pre_collectIds, nullptr );
+                g_expression = nullptr;
+            }
+
+            g_si -> tables[ g_si -> active_table ] . columns[ GetFullName( &name_node ) ] = expr;
+
             break;
         }
 
     case PT_FUNCDECL:
         {
             assert( ast_node.ChildrenCount() == 6 );
-            const auto& name_node = *ast_node.GetChild(2);
+            const auto& name_node = *ToFQN(ast_node.GetChild(2));
 
-            string vers_name = GetVersionedName( name_node );
-            g_si -> functions . addUnique( vers_name, SchemaInfo::Function( name_node . GetLocation() ) );
+            g_si -> functions . addUnique(
+                GetFullName( &name_node ),
+                name_node.GetVersion(),
+                SchemaInfo::Function( name_node . GetLocation() ) );
             break;
         }
 
-    case PT_FUNCEXPR:
-        {   // function call: combine the name with the source location
-            assert( g_si -> active_expression );
-            assert( ast_node.ChildrenCount() == 4 );
-            // 0:schema_parms_opt 1:fqn_opt_vers 2:factory_parms_opt 3:func_parms_opt
-            auto fn_name = GetVersionedName( *ast_node.GetChild(1) );
-            g_si -> active_expression -> calls . insert( fn_name );
-            break;
-        }
     case PT_PRODSTMT:
         {   // production
-            assert ( ! g_si -> active_table.empty() );
-            const auto& name_node = *ast_node.GetChild(1);
+            if ( ! g_si -> active_table.empty() )
+            {
+                const auto& name_node = *ast_node.GetChild( 1 );
 
-            string prod_name = GetFullName( &name_node );
-            g_si -> tables[ g_si -> active_table ] . productions[ prod_name ] = SchemaInfo::Expression();
-            g_si -> active_expression = & g_si -> tables[ g_si -> active_table ] . productions[ prod_name ];
+                // sweep identifers from the right hand side
+                SchemaInfo::Expression expr;
+                if ( ast_node.ChildrenCount() >= 3 )
+                {
+                    const auto& rhs_node = *ast_node.GetChild( 2 );
+                    g_expression = & expr;
+                    rhs_node . traverse( pre_collectIds, nullptr );
+                    g_expression = nullptr;
+                }
+
+                string prod_name = GetFullName( &name_node );
+                g_si -> tables[ g_si -> active_table ] . productions[ prod_name ] = expr;
+            }
             break;
         }
 
@@ -270,20 +411,41 @@ void post_collectObjects( const ParseTree& node )
     }
 }
 
-template <typename T>
-void
-NameMap<T>::addUnique( const std::string& key, const T& value )
-{
-    if ( this->find( key ) != this->end() )
-    {
-        throw logic_error( key + "is alread defined" );
-    }
-    this->insert( make_pair( key, value ) );
-}
-
-void
-SchemaInfo::populate( const ncbi::SchemaParser::AST & root )
+SchemaInfo::SchemaInfo( const ncbi::SchemaParser::AST & root )
 {
     g_si = this;
     root . traverse( pre_collectObjects, post_collectObjects );
 }
+
+SchemaInfo::Definition
+SchemaInfo::resolve( const string& p_tbl, const string& p_id ) const
+{
+    auto tbl_it = tables.find( p_tbl );
+    if ( tbl_it != tables.end() )
+    {
+        const auto& t = tbl_it->second;
+        auto it = t.columns.find( p_id );
+        if ( it != t.columns.end() )
+        {
+            return Definition( tbl_it->first, true );
+        }
+        it = t.productions.find( p_id );
+        if ( it != t.productions.end() )
+        {
+            return Definition( tbl_it->first, false );
+        }
+
+        // look up the name in the ancestors
+        for ( auto p : t.parents )
+        {
+            auto def = resolve( p, p_id );
+            if ( !def.empty() )
+            {
+                return def;
+            }
+        }
+    }
+
+    return Definition();
+}
+

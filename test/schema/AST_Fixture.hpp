@@ -135,4 +135,6 @@ public:
     const Vector & m_v;
 };
 
+std :: string LocationToString( const Token::Location & loc );
+
 #endif
