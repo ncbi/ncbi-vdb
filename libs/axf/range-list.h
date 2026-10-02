@@ -24,6 +24,8 @@
  *
  */
 
+#include <klib/defs.h> /* uint64_t */
+
 /* ********* NOTE!!! ********* */
 /*                             */
 /* CONCURRENT USE IS ONLY SAFE */
@@ -59,7 +61,7 @@ struct Range {
 struct RangeList {
     Range *ranges;
     Sync *sync;
-    unsigned count;
+    uint64_t count;
     unsigned allocated; ///< used only by the writer
     unsigned last;      ///< used only by the writer
 };
