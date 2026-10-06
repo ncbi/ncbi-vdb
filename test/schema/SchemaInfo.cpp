@@ -68,7 +68,7 @@ SchemaInfo::Database::Database( const ncbi::SchemaParser::Token::Location& p_loc
 }
 
 SchemaInfo::Definition::Definition()
-: owner(nullptr), is_column(false)
+: owner(""), is_column(false)
 {
 }
 
@@ -449,3 +449,72 @@ SchemaInfo::resolve( const string& p_tbl, const string& p_id ) const
     return Definition();
 }
 
+set<string>
+ncbi::TablesClosure( const SchemaInfo& si, const string& tbl )
+{
+    auto tbl_it = si.tables.find( tbl );
+    assert ( tbl_it != si.tables.end() );
+
+    set<string> ret;
+
+    const auto& t = tbl_it->second;
+    if ( t.parents.size() > 0 )
+    {
+        for (auto c : t.parents)
+        {
+            ret.insert( c );
+            auto inherited = TablesClosure( si, c );
+            ret.insert( inherited.begin(), inherited.end() );
+        }
+    }
+
+    return ret;
+}
+
+set<string>
+ncbi::FunctionCallClosure( const SchemaInfo& si, const string& top_table, const string& tbl, const string& id )
+{
+//cout << "FunctionCallClosure(" << top_table << ", " << tbl << ", " << id << ")" << endl;
+
+    set<string> ret;
+
+    auto def = si.resolve( top_table, id );
+    if ( ! def.empty() )
+    {
+        auto tbl_it = si.tables.find( def.owner );
+        assert ( tbl_it != si.tables.end() );
+
+        SchemaInfo::Expression expr;
+
+        if (def.is_column)
+        {
+            auto it = tbl_it->second.columns.find( id );
+            assert ( it != tbl_it->second.columns.end() );
+            expr = it->second;
+        }
+        else // production
+        {
+            auto it = tbl_it->second.productions.find( id );
+            assert( it != tbl_it->second.productions.end() );
+            expr = it->second;
+        }
+
+        // direct calls from columns' right hand side expressions
+        for ( auto c : expr.calls )
+        {
+            ret.insert( c );
+        }
+        // resolve ids and dive into productions
+        for ( auto i : expr.ids )
+        {
+            auto def = si.resolve( top_table, i );
+            if ( !def.empty() && ! def.is_column ) // a production defined sowehere in top_table's inheritance hierarchy
+            {
+                auto c = FunctionCallClosure( si, top_table, def.owner, i );
+                ret.insert( c.begin(), c.end() );
+            }
+        }
+    }
+
+    return ret;
+}

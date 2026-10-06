@@ -37,13 +37,6 @@
 using namespace std;
 using namespace ncbi;
 
-static
-ver_t
-MakeVer( uint8_t maj, uint8_t min = 0, uint8_t rel = 0 )
-{
-    return VTRANSVERS( maj, min, rel );
-}
-
 set<string>
 FnWhiteList = {
     "NCBI:align:get_mate_align_id#1",
@@ -79,63 +72,13 @@ FnWhiteList = {
 
 //////////////////////////////////////////// Main
 
-// collect a table's direct and indirect ancestors
-void
-TablesClosure( SchemaInfo si, string tbl, set<string>& closure )
-{
-    auto tbl_it = si.tables.find( tbl );
-    assert ( tbl_it != si.tables.end() );
-
-    const auto& t = tbl_it->second;
-    if ( t.parents.size() > 0 )
-    {
-        for (auto c : t.parents)
-        {
-            closure.insert( c );
-            TablesClosure( si, c, closure );
-        }
-    }
-}
-
-// collect all function calls made directly or indirectly from the given column or production
-void
-FunctionCallClosure( const SchemaInfo& si, const string& top_table, const string& tbl, string id, set<string>& closure )
-{
-    auto tbl_it = si.tables.find( top_table );
-    assert ( tbl_it != si.tables.end() );
-
-    auto col_it = tbl_it->second.columns.find( id );
-    if ( col_it != tbl_it->second.columns.end() )
-    {
-        col_it = tbl_it->second.productions.find( id );
-        assert( col_it != tbl_it->second.productions.end() );
-    }
-
-    const SchemaInfo::Expression& expr = col_it->second;
-    // direct calls from columns' right hand side expressions
-    for ( auto c : expr.calls )
-    {
-        closure.insert( c );
-    }
-    // resolve ids and dive into productions
-    for ( auto i : expr.ids )
-    {
-        auto def = si.resolve( tbl_it->first, i );
-        if ( !def.empty() && ! def.is_column ) // a production defined sowehere in top_table's inheritance hierarchy
-        {
-            FunctionCallClosure( si, top_table, def.owner, i, closure );
-            closure.insert( i );
-        }
-    }
-}
-
 int main( int argc, char *argv [] )
 {
     VDB::Application app( argc, argv, "" );
 
     //const string DB = "NCBI:align:db:alignment_unsorted#2";
     const string Tbl = "NCBI:align:tbl:seq#2";
-    const string Col = "READ";
+    const string Col;// = "READ";
     AST_Fixture f;
     AST * root = f.MakeAst( "version 2; include 'align/align.vschema';" );
 
@@ -149,22 +92,21 @@ int main( int argc, char *argv [] )
     }
 
     const auto& tbl = tbl_it->second;
-    cout << "Table " << Tbl << "(" << LocationToString( tbl.getLocation() ) << "):" << endl; //TODO: location
-    set<string> t_closure;
+    cout << "Table " << Tbl << "(" << LocationToString( tbl.getLocation() ) << "):" << endl;
 
-    TablesClosure( si, Tbl, t_closure );
-    cout << "   Parent(s):" << endl;
-    for ( auto t : t_closure )
-    {
-        if ( t != Tbl )
-        {
-            cout << "      " << t << "(" << LocationToString( si.tables.at(t).getLocation() ) << ")" << endl;
-        }
-    }
+    auto t_closure = TablesClosure( si, Tbl );
+    //cout << "   Parent(s):" << endl;
+    // for ( auto t : t_closure )
+    // {
+    //     if ( t != Tbl )
+    //     {
+    //         cout << "      " << t << "(" << LocationToString( si.tables.at(t).getLocation() ) << ")" << endl;
+    //     }
+    // }
     // add the table itself
     t_closure.insert( Tbl );
 
-    cout << "   Column(s):" << endl;
+    cout << "   Columns:" << endl;
     for ( auto t : t_closure )
     {
         const auto& tbl = si.tables.find( t );
@@ -172,12 +114,28 @@ int main( int argc, char *argv [] )
         {
             if ( Col.empty() || c.first == Col )
             {
-                cout << "      " << t << "." << c.first << "(" << LocationToString( c.second.location ) << ")"<< endl;
-                set<string> calls;
-                FunctionCallClosure( si, Tbl, Tbl, c.first, calls );
+                set<string> calls = FunctionCallClosure( si, Tbl, Tbl, c.first );
+                set<string> filtered;
                 for ( auto call : calls )
                 {
-                    cout << "         " << call << endl;
+                    string fn_name = call;
+                    auto lp = call.find('(');
+                    if ( lp != string::npos )
+                    {
+                        fn_name = call.substr(0, lp);
+                    }
+                    if ( FnWhiteList.find(fn_name) != FnWhiteList.end() )
+                    {
+                        filtered.insert( call );
+                    }
+                }
+                if ( !filtered.empty() )
+                {
+                    cout << "      " << t << "." << c.first << "(" << LocationToString( c.second.location ) << ")"<< endl;
+                    for ( auto call : filtered )
+                    {
+                        cout << "         " << call << endl;
+                    }
                 }
             }
         }

@@ -231,4 +231,12 @@ SchemaInfo::VersionedNameMap<T>::findBestFit( const std::set<ver_t>& ver_set, ve
     return best_fit;
 }
 
+// collect a table's direct and indirect ancestors
+std::set<std::string> TablesClosure( const SchemaInfo& si, const std::string& tbl );
+
+// collect all function calls made directly or indirectly from the given column or production (id) referred to from tbl,
+// using top_table as the context (i.e. root of inheritance hierarchy) for name resolution
+std::set<std::string>
+FunctionCallClosure( const SchemaInfo& si, const std::string& top_table, const std::string& tbl, const std::string& id );
+
 }
