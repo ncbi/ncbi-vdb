@@ -27,4 +27,12 @@ add_compile_definitions( __mod__="test/cc" )
 set( LIBS "${COMMON_LIBS_READ}")
 
 AddExecutableTest( Test_CC_Asm "asm-test" "${LIBS}" )
+
+AddExecutableTest( Test_CC_Atomic-dflt "test-atomic" "${LIBS}" )
+AddExecutableTest( Test_CC_Atomic32 "test-atomic32" "${LIBS}" )
+AddExecutableTest( Test_CC_Atomic-32 "test-atomic-32" "${LIBS}" )
+AddExecutableTest( Test_CC_Atomic-i32 "test-atomic-i32" "${LIBS}" )
+AddExecutableTest( Test_CC_Atomic-64 "test-atomic-64" "${LIBS}" )
+AddExecutableTest( Test_CC_Atomic-i64 "test-atomic-i64" "${LIBS}" )
+
 AddExecutableTest( Test_CC_Int128 "test-int128" "${LIBS}" )
