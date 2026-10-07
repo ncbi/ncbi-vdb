@@ -63,6 +63,7 @@ if( RUN_SANITIZER_TESTS )
     set_tests_properties(Test_VDB_sparse_col_rd_tsan PROPERTIES FIXTURES_REQUIRED SPARSE_COL)
 endif()
 
+AddExecutableTest( Test_VDB_cache_PRIMER "run-cache-primer" "${LIBS_READ}" )
 AddExecutableTest( Test_VDB_blob_val "test-blob-val" "${LIBS_READ}" )
 AddExecutableTest( Test_VDB_VDB-3060 "test-VDB-3060" "${LIBS_READ}" )
 AddExecutableTest( Test_VDB_VDB-3061 "test-VDB-3061" "${LIBS_READ}" )

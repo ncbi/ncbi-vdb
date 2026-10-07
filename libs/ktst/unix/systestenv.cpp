@@ -48,7 +48,11 @@ static void alarmHandler(int)
 {
     cerr << "child process timed out" << endl;
     
-    exit(TestEnv::TEST_CASE_TIMED_OUT);
+#if defined(__APPLE__)
+    _Exit(TestEnv::TEST_CASE_TIMED_OUT);
+#else
+    quick_exit(TestEnv::TEST_CASE_TIMED_OUT);
+#endif
 }
 
 int TestEnv::RunProcessTestCase(TestCase& obj, void(TestCase::*meth)(), int timeout)
