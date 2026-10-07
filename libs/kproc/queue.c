@@ -278,6 +278,15 @@ LIB_EXPORT rc_t CC KQueuePush ( KQueue *self, const void *item, timeout_t *tm )
     return rc;
 }
 
+#if defined(__has_feature)
+#if __has_feature(thread_sanitizer)
+#define USING_TSAN 1
+#endif
+#elif defined(__SANITIZE_THREAD__)
+// Fallback for some specific versions of GCC
+#define USING_TSAN 1
+#endif
+
 /* Pop
  *  pop an object from queue
  *
@@ -323,11 +332,13 @@ LIB_EXPORT rc_t CC KQueuePop ( KQueue *self, void **item, timeout_t *tm )
                 {
                     uint32_t r, idx;
 
+#ifndef USING_TSAN
                     /* got an element */
                     QMSG ( "%s[%p]: asserting  self -> read ( %u ) != self -> write ( %u )\n",
                            __func__, self -> read, self -> write
                         );
                     assert ( self -> read != self -> write );
+#endif
 
                     /* read element */
                     r = self -> read & self -> imask;
