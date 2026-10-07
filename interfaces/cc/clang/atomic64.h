@@ -241,7 +241,7 @@ long int atomic64_read_and_add_even ( atomic64_t *v, long int i )
     do { \
         assert(sizeof *(dest)==8); assert(sizeof *(src)==8); \
         uint64_t bits = __atomic_load_n((uint64_t*)(src), __ATOMIC_SEQ_CST); \
-        memcpy((dest), &bits, sizeof(*dest)); \
+        memmove((dest), &bits, sizeof(*dest)); \
     } while(false)
 
 /* void atomic32_set_var ( void *dest, void src ); */
