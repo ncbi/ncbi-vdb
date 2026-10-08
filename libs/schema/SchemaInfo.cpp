@@ -24,11 +24,13 @@
 *
 */
 
-#include "SchemaInfo.hpp"
+#include <schema/SchemaInfo.hpp>
+
+#include <schema/AST.hpp>
 
 using namespace ncbi::SchemaParser;
-#include <ErrorReport.hpp>
-#include <schema-grammar.hpp>
+#include "ErrorReport.hpp"
+#include "schema-grammar.hpp"
 
 #include <sstream>
 

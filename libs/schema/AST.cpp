@@ -24,7 +24,7 @@
  *
  */
 
-#include "AST.hpp"
+#include <schema/AST.hpp>
 
 #include <strtol.h>
 #include <new>

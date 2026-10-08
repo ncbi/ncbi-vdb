@@ -24,7 +24,7 @@
  *
  */
 
-#include "ParseTree.hpp"
+#include <schema/ParseTree.hpp>
 
 #include <new>
 

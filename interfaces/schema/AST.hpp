@@ -24,10 +24,9 @@
  *
  */
 
-#ifndef _hpp_AST_
-#define _hpp_AST_
+#pragma once
 
-#include "ParseTree.hpp"
+#include <schema/ParseTree.hpp>
 
 #include <klib/text.h>
 
@@ -108,5 +107,3 @@ namespace ncbi
 
     }
 }
-
-#endif

@@ -30,7 +30,7 @@
 
 #include "AST_Fixture.hpp"
 
-#include "SchemaInfo.hpp"
+#include <schema/SchemaInfo.hpp>
 
 #include <ktst/unit_test.hpp>
 

@@ -36,7 +36,7 @@
 
 #include <klib/text.h>
 
-#include "../../libs/schema/ParseTree.hpp"
+#include <schema/ParseTree.hpp>
 #include "../../libs/schema/SchemaParser.hpp"
 #include "../../libs/schema/ASTBuilder.hpp"
 

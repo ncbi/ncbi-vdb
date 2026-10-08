@@ -24,10 +24,9 @@
  *
  */
 
-#ifndef _hpp_AST_Expr_
-#define _hpp_AST_Expr_
+#pragma once
 
-#include "AST.hpp"
+#include <schema/AST.hpp>
 
 namespace ncbi
 {
@@ -71,4 +70,3 @@ namespace ncbi
     }
 }
 
-#endif

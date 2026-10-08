@@ -24,7 +24,9 @@
  *
  */
 
-#include "Token.hpp"
+#include <schema/Token.hpp>
+
+#include "schema-lex.h"
 
 #include <klib/text.h>
 

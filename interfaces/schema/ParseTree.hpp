@@ -24,13 +24,12 @@
  *
  */
 
-#ifndef _hpp_ParseTree_
-#define _hpp_ParseTree_
+#pragma once
 
 #include <kfc/ctx.h>
 #include <klib/vector.h>
 
-#include "Token.hpp"
+#include <schema/Token.hpp>
 
 namespace ncbi
 {
@@ -94,4 +93,3 @@ namespace ncbi
     }
 }
 
-#endif

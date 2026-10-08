@@ -69,6 +69,7 @@ set( SRC
     SchemaParser.cpp
     SchemaScanner.cpp
     Token.cpp
+    SchemaInfo.cpp
 )
 
 GenerateStaticLibs( schema "${SRC}" )
@@ -76,7 +77,9 @@ GenerateStaticLibs( schema "${SRC}" )
 if ( WIN32 )
     target_compile_options( schema PRIVATE /EHsc )
 else()
-    target_compile_options( schema PRIVATE -fno-exceptions -Wno-unused-variable)
+    target_compile_options( schema PRIVATE -fno-exceptions -Wno-unused-variable )
+    set_source_files_properties(SchemaInfo.cpp
+                                PROPERTIES COMPILE_FLAGS -fexceptions )
 endif()
 
 add_compile_definitions (__mod__="libs/schema")

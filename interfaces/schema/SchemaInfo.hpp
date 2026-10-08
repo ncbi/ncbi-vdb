@@ -24,21 +24,15 @@
 *
 */
 
+#pragma once
+
 /**
 * Schema objects and interdependencies
 */
 
-#include <AST.hpp>
-
-// #include "AST_Fixture.hpp"
-
-// #include <ktst/unit_test.hpp>
-
-// #include <kfc/defs.h>
+#include <schema/AST.hpp>
 
 #include <klib/printf.h>
-
-// #include <vdb/xform.h>
 
 #include <map>
 #include <set>

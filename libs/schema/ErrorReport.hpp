@@ -24,13 +24,12 @@
  *
  */
 
-#ifndef _hpp_ErrorReport_
-#define _hpp_ErrorReport_
+#pragma once
 
 #include <kfc/ctx.h>
 #include <klib/vector.h>
 
-#include "Token.hpp"
+#include <schema/Token.hpp>
 
 namespace ncbi
 {
@@ -88,5 +87,3 @@ namespace ncbi
         };
     }
 }
-
-#endif

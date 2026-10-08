@@ -24,10 +24,11 @@
  *
  */
 
-#ifndef _hpp_SchemaScanner_
-#define _hpp_SchemaScanner_
+#pragma once
 
-#include "Token.hpp"
+#include <schema/Token.hpp>
+
+#include "schema-lex.h"
 
 namespace ncbi
 {
@@ -53,4 +54,3 @@ namespace ncbi
     }
 }
 
-#endif

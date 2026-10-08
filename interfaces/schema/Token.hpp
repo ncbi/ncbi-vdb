@@ -24,11 +24,12 @@
  *
  */
 
-#ifndef _hpp_Token_
-#define _hpp_Token_
+#pragma once
 
-#include "schema-lex.h"
 #include <string>
+#include <cstdint>
+
+struct SchemaToken;
 
 namespace ncbi
 {
@@ -51,7 +52,7 @@ namespace ncbi
             };
 
         public:
-            Token ( const SchemaToken & st ); // takes ownership of st.leading_ws
+            Token ( const struct SchemaToken & st ); // takes ownership of st.leading_ws
             Token ( TokenType, const char * value = 0 );
             Token ( TokenType, const char * value, const Location & loc );
             Token ( const Token & );
@@ -72,5 +73,3 @@ namespace ncbi
         };
     }
 }
-
-#endif

@@ -29,8 +29,9 @@
 * Parses input files with 2 schema parsers (old/new), matches the dumps of resulting VSchema objects, reports discrepancies
 */
 
+#include <schema/ParseTree.hpp>
+
 #include "../../libs/schema/SchemaParser.hpp"
-#include "../../libs/schema/ParseTree.hpp"
 #include "../../libs/vdb/schema-priv.h"
 
 using namespace std;
