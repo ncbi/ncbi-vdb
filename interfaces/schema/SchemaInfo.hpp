@@ -51,7 +51,7 @@ struct SchemaInfo
         {
             if ( this->find( key ) != this->end() )
             {
-                throw std::logic_error( key + "is already defined" );
+                throw std::logic_error( key + " is already defined" );
             }
             this->insert( make_pair( key, value ) );
         }
