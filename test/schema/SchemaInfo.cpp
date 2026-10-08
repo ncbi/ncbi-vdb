@@ -140,17 +140,6 @@ string FunctionCallSignature( const AST& node )
     assert( fqn );
     string ret = GetVersionedName( *fqn );
 
-    // if ( !astMap.FnWhiteList.empty() &&
-    //      astMap.FnWhiteList.find( ret ) == astMap.FnWhiteList.end() )
-    // {   // ignore
-    //     //cout << "ignoring " << ret << endl;
-    //     return string();
-    // }
-    // else
-    // {
-    //     //cout << "processing " << ret << endl;
-    // }
-
     ret += "(";
 
     auto func_parms = node.GetChild(3);
@@ -411,6 +400,10 @@ void post_collectObjects( const ParseTree& node )
     }
 }
 
+SchemaInfo::SchemaInfo()
+{
+}
+
 SchemaInfo::SchemaInfo( const ncbi::SchemaParser::AST & root )
 {
     g_si = this;
@@ -449,6 +442,26 @@ SchemaInfo::resolve( const string& p_tbl, const string& p_id ) const
     return Definition();
 }
 
+std::set<std::string>
+ncbi::DatabaseClosure( const SchemaInfo& si, const std::string& db )
+{
+    auto db_it = si.databases.find( db );
+    assert ( db_it != si.databases.end() );
+
+    set<string> ret;
+    ret.insert( db );
+
+    const auto& p = db_it->second.parent;
+
+    if ( ! p.empty() )
+    {
+        auto inherited = DatabaseClosure( si, p );
+        ret.insert( inherited.begin(), inherited.end() );
+    }
+
+    return ret;
+}
+
 set<string>
 ncbi::TablesClosure( const SchemaInfo& si, const string& tbl )
 {
@@ -456,13 +469,13 @@ ncbi::TablesClosure( const SchemaInfo& si, const string& tbl )
     assert ( tbl_it != si.tables.end() );
 
     set<string> ret;
+    ret.insert( tbl );
 
     const auto& t = tbl_it->second;
     if ( t.parents.size() > 0 )
     {
         for (auto c : t.parents)
         {
-            ret.insert( c );
             auto inherited = TablesClosure( si, c );
             ret.insert( inherited.begin(), inherited.end() );
         }

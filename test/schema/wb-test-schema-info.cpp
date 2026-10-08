@@ -34,16 +34,6 @@
 
 #include <ktst/unit_test.hpp>
 
-// #include <kfc/defs.h>
-
-// #include <klib/printf.h>
-
-// #include <vdb/xform.h>
-
-// #include <map>
-// #include <set>
-// #include <sstream>
-
 using namespace std;
 using namespace ncbi;
 using namespace ncbi::NK;
@@ -140,17 +130,28 @@ TEST_CASE( VersionedNameMap_DefFull_RefNoMinor )
 
 // SchemaInfo
 
-FIXTURE_TEST_CASE(Functions, AST_Fixture)
+class SchemaInfoFixture : public AST_Fixture
 {
-    AST * root = MakeAst  ( R"(
+public:
+    SchemaInfoFixture(){}
+    ~SchemaInfoFixture(){}
+
+    void Setup(const char* schema )
+    {
+        AST * root = MakeAst  ( schema );
+        THROW_ON_FALSE( root );
+        si = SchemaInfo( *root );
+    }
+
+    SchemaInfo si;
+};
+
+FIXTURE_TEST_CASE(Functions, SchemaInfoFixture)
+{
+    Setup( R"(
         function ascii fn1 #1.0( ascii a , ascii b );
         function ascii fn2 #1.0( ascii a , ascii b );
     )" );
-    REQUIRE_NOT_NULL( root );
-
-    SchemaInfo si( *root );
-
-    //si.functions.print(cout);
 
     REQUIRE_EQ( 2, (int)si.functions.size() );
     auto it = si.functions.find("fn1", MakeVer( 1 ) );
@@ -171,7 +172,7 @@ FIXTURE_TEST_CASE(Functions, AST_Fixture)
     }
 }
 
-FIXTURE_TEST_CASE(Functions_Redefinition, AST_Fixture)
+FIXTURE_TEST_CASE(Functions_Redefinition, SchemaInfoFixture)
 {
     AST * root = MakeAst  ( R"(
         function ascii fn1 #1.0( ascii a , ascii b );
@@ -181,9 +182,9 @@ FIXTURE_TEST_CASE(Functions_Redefinition, AST_Fixture)
     REQUIRE_THROW( SchemaInfo si( *root ); );
 }
 
-FIXTURE_TEST_CASE(Database, AST_Fixture)
+FIXTURE_TEST_CASE(Database, SchemaInfoFixture)
 {
-    AST * root = MakeAst  ( R"(
+    Setup( R"(
         table T1 #1{}
         table T2 #1{}
         database DB1 #1.0.1
@@ -196,9 +197,6 @@ FIXTURE_TEST_CASE(Database, AST_Fixture)
             table T2 #1 t2;
         }
     )" );
-    REQUIRE_NOT_NULL( root );
-
-    SchemaInfo si( *root );
 
     //si.databases.print(cout);
 
@@ -227,7 +225,7 @@ FIXTURE_TEST_CASE(Database, AST_Fixture)
     }
 }
 
-FIXTURE_TEST_CASE(Database_Redefinition, AST_Fixture)
+FIXTURE_TEST_CASE(Database_Redefinition, SchemaInfoFixture)
 {
     AST * root = MakeAst  ( R"(
         table T1 #1{}
@@ -243,9 +241,9 @@ FIXTURE_TEST_CASE(Database_Redefinition, AST_Fixture)
     REQUIRE_NOT_NULL( root );
     REQUIRE_THROW( SchemaInfo si( *root ); );}
 
-FIXTURE_TEST_CASE(Table, AST_Fixture)
+FIXTURE_TEST_CASE(Table, SchemaInfoFixture)
 {
-    AST * root = MakeAst  ( R"(
+    Setup( R"(
         table T1#1.0.1 {}
         table T2#2 {}
         table T3 #3 = T1#1, T2#2{
@@ -253,9 +251,6 @@ FIXTURE_TEST_CASE(Table, AST_Fixture)
             column U8 c = p;
         }
     )" );
-    REQUIRE_NOT_NULL( root );
-
-    SchemaInfo si( *root );
 
     REQUIRE_EQ( 3, (int)si.tables.size() );
     REQUIRE( si.tables.end() != si.tables.find("T1", MakeVer(1)) );
@@ -278,7 +273,7 @@ FIXTURE_TEST_CASE(Table, AST_Fixture)
     }
 }
 
-FIXTURE_TEST_CASE(Table_Redefinition, AST_Fixture)
+FIXTURE_TEST_CASE(Table_Redefinition, SchemaInfoFixture)
 {
     AST * root = MakeAst  ( R"(
         table T1#1 {}
@@ -288,18 +283,15 @@ FIXTURE_TEST_CASE(Table_Redefinition, AST_Fixture)
     REQUIRE_THROW( SchemaInfo si( *root ); );
 }
 
-FIXTURE_TEST_CASE(Table_ReferencesFromColumn, AST_Fixture)
+FIXTURE_TEST_CASE(Table_ReferencesFromColumn, SchemaInfoFixture)
 {
-    AST * root = MakeAst  ( R"(
+    Setup( R"(
         function U8 fn1 #1.0( U8 a );
         table T1#1{
             U8 p = 1;
             column U8 c = forward | fn1( p );
         }
     )" );
-    REQUIRE_NOT_NULL( root );
-
-    SchemaInfo si( *root );
 
     auto it = si.tables.find("T1", MakeVer(1));
     REQUIRE( si.tables.end() != it );
@@ -319,18 +311,15 @@ FIXTURE_TEST_CASE(Table_ReferencesFromColumn, AST_Fixture)
     }
 }
 
-FIXTURE_TEST_CASE(Table_ReferencesFromProduction, AST_Fixture)
+FIXTURE_TEST_CASE(Table_ReferencesFromProduction, SchemaInfoFixture)
 {
-    AST * root = MakeAst  ( R"(
+    Setup( R"(
         function U8 fn1 #1.0( U8 a );
         table T1#1{
             U8 p1 = 1;
             U8 p2 = forward | fn1( p1 );
         }
     )" );
-    REQUIRE_NOT_NULL( root );
-
-    SchemaInfo si( *root );
 
     auto it = si.tables.find("T1", MakeVer(1));
     REQUIRE( si.tables.end() != it );
@@ -359,9 +348,9 @@ FIXTURE_TEST_CASE(Table_ReferencesFromProduction, AST_Fixture)
     }
 }
 
-FIXTURE_TEST_CASE(Table_FunctionCalls, AST_Fixture)
+FIXTURE_TEST_CASE(Table_FunctionCalls, SchemaInfoFixture)
 {   // parameters recorded at the call site
-    AST * root = MakeAst  ( R"(
+    Setup( R"(
         function U8 fn1 #1.0( U8 a, U16 b );
         table T1#1{
             column U8 c1;
@@ -369,9 +358,6 @@ FIXTURE_TEST_CASE(Table_FunctionCalls, AST_Fixture)
             column U8 c3 = fn1( c1, c2 );
         }
     )" );
-    REQUIRE_NOT_NULL( root );
-
-    SchemaInfo si( *root );
 
     auto it = si.tables.find("T1", MakeVer(1));
     REQUIRE( si.tables.end() != it );
@@ -386,17 +372,14 @@ FIXTURE_TEST_CASE(Table_FunctionCalls, AST_Fixture)
 
 }
 
-FIXTURE_TEST_CASE(Id_Resolution_same_table, AST_Fixture)
+FIXTURE_TEST_CASE(Id_Resolution_same_table, SchemaInfoFixture)
 {
-    AST * root = MakeAst  ( R"(
+    Setup( R"(
         table T1#1{
             U8 p = 1;
             column U8 c;
         }
     )" );
-    REQUIRE_NOT_NULL( root );
-
-    SchemaInfo si( *root );
 
     const string T1 = "T1#1";
     SchemaInfo::Definition def = si.resolve( T1, "p" );
@@ -408,9 +391,9 @@ FIXTURE_TEST_CASE(Id_Resolution_same_table, AST_Fixture)
     REQUIRE( def.is_column );
 }
 
-FIXTURE_TEST_CASE(Id_Resolution_ancestor, AST_Fixture)
+FIXTURE_TEST_CASE(Id_Resolution_ancestor, SchemaInfoFixture)
 {
-    AST * root = MakeAst  ( R"(
+    Setup( R"(
         table T1#1{
             U8 p = 1;
             column U8 c;
@@ -418,9 +401,7 @@ FIXTURE_TEST_CASE(Id_Resolution_ancestor, AST_Fixture)
         table T2#1 = T1#1{
         }
     )" );
-    REQUIRE_NOT_NULL( root );
 
-    SchemaInfo si( *root );
     const string T1 = "T1#1";
     const string T2 = "T2#1";
 
@@ -439,9 +420,9 @@ FIXTURE_TEST_CASE(Id_Resolution_ancestor, AST_Fixture)
     }
 }
 
-FIXTURE_TEST_CASE(Id_Resolution_undefined, AST_Fixture)
+FIXTURE_TEST_CASE(Id_Resolution_undefined, SchemaInfoFixture)
 {   // undefined or defined lower in the hiararchy
-    AST * root = MakeAst  ( R"(
+    Setup( R"(
         table T1#1{
             U8 p = 1;
             column U8 c = p2;
@@ -450,18 +431,31 @@ FIXTURE_TEST_CASE(Id_Resolution_undefined, AST_Fixture)
             column U8 c2;
         }
     )" );
-    REQUIRE_NOT_NULL( root );
-
-    SchemaInfo si( *root );
 
     const string T1 = "T1#1";
     REQUIRE( si.resolve( T1, "p2" ).empty() ); // never defined
     REQUIRE( si.resolve( T1, "c2" ).empty() ); // defined lower in the hierarchy than T1
 }
 
-FIXTURE_TEST_CASE(Tables_closure, AST_Fixture)
+FIXTURE_TEST_CASE(Database_Closure, SchemaInfoFixture)
+{   // all databases in an inheritance hierarchy
+    Setup( R"(
+        database D1#1{}
+        database D2#1 = D1#1{}
+        database D3#1 = D2#1{}
+        database D4#1 = D3#1{}
+    )" );
+
+    auto c = DatabaseClosure( si, "D3#1" );
+    REQUIRE_EQ( 3, (int)c.size() );
+    REQUIRE( c.end() != c.find("D1#1") );
+    REQUIRE( c.end() != c.find("D2#1") );
+    REQUIRE( c.end() != c.find("D3#1") );
+}
+
+FIXTURE_TEST_CASE(Tables_closure, SchemaInfoFixture)
 {   // all tables in an inheritance hierarchy
-    AST * root = MakeAst  ( R"(
+    Setup( R"(
         table T1#1{
         }
         table T2#1 = T1#1{
@@ -471,32 +465,31 @@ FIXTURE_TEST_CASE(Tables_closure, AST_Fixture)
         table T4#1 = T1#1{
         }
     )" );
-    REQUIRE_NOT_NULL( root );
-
-    SchemaInfo si( *root );
 
     auto c = TablesClosure( si, "T3#1" );
+    REQUIRE_EQ( 3, (int)c.size() );
+    REQUIRE( c.end() != c.find("T1#1") );
+    REQUIRE( c.end() != c.find("T2#1") );
+    REQUIRE( c.end() != c.find("T3#1") );
 }
 
-FIXTURE_TEST_CASE(FunctionCallClosure_empty, AST_Fixture)
+FIXTURE_TEST_CASE(FunctionCallClosure_empty, SchemaInfoFixture)
 {
-    AST * root = MakeAst  ( R"(
+    Setup( R"(
         table T1#1{
             ascii j = i;
         }
         table T2#1 = T1#1{
         }
     )" );
-    REQUIRE_NOT_NULL( root );
 
-    SchemaInfo si( *root );
     auto c = FunctionCallClosure( si, "T2#1", "T1#1", "j" );
     REQUIRE_EQ( 0, (int)c.size() );
 }
 
-FIXTURE_TEST_CASE(FunctionCallClosure_forward_reference, AST_Fixture)
+FIXTURE_TEST_CASE(FunctionCallClosure_forward_reference, SchemaInfoFixture)
 {   // forward references may only be defined as productions
-    AST * root = MakeAst  ( R"(
+    Setup( R"(
         function U8 fn1 #1.0( U8 a, U16 b );
         table T1#1{
             ascii j = i;
@@ -506,17 +499,15 @@ FIXTURE_TEST_CASE(FunctionCallClosure_forward_reference, AST_Fixture)
             U8 i = fn1( c );
         }
     )" );
-    REQUIRE_NOT_NULL( root );
 
-    SchemaInfo si( *root );
     auto c = FunctionCallClosure( si, "T2#1", "T1#1", "j" );
     REQUIRE_EQ( 1, (int)c.size() );
     REQUIRE_EQ( string("fn1#1(c)"), *c.begin() );
 }
 
-FIXTURE_TEST_CASE(FunctionCallClosure_search, AST_Fixture)
+FIXTURE_TEST_CASE(FunctionCallClosure_search, SchemaInfoFixture)
 {
-    AST * root = MakeAst  ( R"(
+    Setup( R"(
         function U8 fn1 #1.0( U8 a, U16 b );
         table T1#1{
             ascii j = i;
@@ -528,17 +519,15 @@ FIXTURE_TEST_CASE(FunctionCallClosure_search, AST_Fixture)
         table T3#1 = T2#1{
         }
     )" );
-    REQUIRE_NOT_NULL( root );
 
-    SchemaInfo si( *root );
     auto c = FunctionCallClosure( si, "T3#1", "T1#1", "j" );
     REQUIRE_EQ( 1, (int)c.size() );
     REQUIRE_EQ( string("fn1#1(c)"), *c.begin() );
 }
 
-FIXTURE_TEST_CASE(FunctionCallClosure_column, AST_Fixture)
+FIXTURE_TEST_CASE(FunctionCallClosure_column, SchemaInfoFixture)
 {
-    AST * root = MakeAst  ( R"(
+    Setup( R"(
         function U8 fn1 #1.0( U8 a, U16 b );
         table T1#1{
             U8 p1 = 1;
@@ -548,9 +537,7 @@ FIXTURE_TEST_CASE(FunctionCallClosure_column, AST_Fixture)
             column U8 c = p2 | fn1( p2 );
         }
     )" );
-    REQUIRE_NOT_NULL( root );
 
-    SchemaInfo si( *root );
     auto c = FunctionCallClosure( si, "T2#1", "T1#1", "c" );
     REQUIRE_EQ( 2, (int)c.size() );
     REQUIRE( c.end() != c.find("fn1#1(p1)") );

@@ -76,70 +76,100 @@ int main( int argc, char *argv [] )
 {
     VDB::Application app( argc, argv, "" );
 
-    //const string DB = "NCBI:align:db:alignment_unsorted#2";
-    const string Tbl = "NCBI:align:tbl:seq#2";
-    const string Col;// = "READ";
     AST_Fixture f;
     AST * root = f.MakeAst( "version 2; include 'align/align.vschema';" );
 
+    const string DB;// = "NCBI:align:db:alignment_unsorted#2";
+    const string Tbl = "NCBI:align:tbl:seq#2";
+    const string Col;// = "READ";
+
     SchemaInfo si( *root );
 
-    auto tbl_it = si.tables.find( Tbl );
-    if ( tbl_it == si.tables.end() )
+    set<string> tables;
+
+    if ( !DB.empty() )
+    {   // collect tables from the DB and all its ancestors
+        auto db_it = si.databases.find( DB );
+        if ( db_it == si.databases.end() )
+        {
+            cout << "Database " << DB << " is not found " << endl;
+            return 1;
+        }
+
+        set<string> databases = DatabaseClosure( si, db_it->first );
+        for ( const auto& d : databases )
+        {
+            const auto& t = si.databases.find( d )->second.tables;
+            tables.insert( t.begin(), t.end() );
+        }
+    }
+    else if ( !Tbl.empty() )
     {
-        cout << "Table " << Tbl << " is not found " << endl;
+        auto tbl_it = si.tables.find( Tbl );
+        if ( tbl_it == si.tables.end() )
+        {
+            cout << "Table " << Tbl << " is not found " << endl;
+            return 1;
+        }
+        tables.insert( Tbl );
+    }
+    else
+    {
+        cout << "Have to specify a database or a table" << endl;
         return 1;
     }
 
-    const auto& tbl = tbl_it->second;
-    cout << "Table " << Tbl << "(" << LocationToString( tbl.getLocation() ) << "):" << endl;
-
-    auto t_closure = TablesClosure( si, Tbl );
-    //cout << "   Parent(s):" << endl;
-    // for ( auto t : t_closure )
-    // {
-    //     if ( t != Tbl )
-    //     {
-    //         cout << "      " << t << "(" << LocationToString( si.tables.at(t).getLocation() ) << ")" << endl;
-    //     }
-    // }
-    // add the table itself
-    t_closure.insert( Tbl );
-
-    cout << "   Columns:" << endl;
-    for ( auto t : t_closure )
+    for( auto tbl : tables )
     {
-        const auto& tbl = si.tables.find( t );
-        for (auto c : tbl->second.columns)
+        cout << "Table " << tbl << "(" << LocationToString( si.tables.at(tbl).getLocation() ) << "):" << endl;
+
+        auto t_closure = TablesClosure( si, tbl );
+        cout << "   Parent(s):" << endl;
+        for ( const auto& p : t_closure )
         {
-            if ( Col.empty() || c.first == Col )
+            if ( p != tbl )
             {
-                set<string> calls = FunctionCallClosure( si, Tbl, Tbl, c.first );
-                set<string> filtered;
-                for ( auto call : calls )
+                cout << "      " << p << "(" << LocationToString( si.tables.at(p).getLocation() ) << ")" << endl;
+            }
+        }
+
+        cout << "   Columns:" << endl;
+        for ( const auto& t : t_closure )
+        {
+            const auto& tbl = si.tables.find( t );
+            for ( const auto& c : tbl->second.columns)
+            {
+                if ( Col.empty() || c.first == Col )
                 {
-                    string fn_name = call;
-                    auto lp = call.find('(');
-                    if ( lp != string::npos )
+                    set<string> calls = FunctionCallClosure( si, Tbl, Tbl, c.first );
+                    set<string> filtered;
+                    for ( const auto& call : calls )
                     {
-                        fn_name = call.substr(0, lp);
+                        string fn_name = call;
+                        auto lp = call.find('(');
+                        if ( lp != string::npos )
+                        {
+                            fn_name = call.substr(0, lp);
+                        }
+                        if ( FnWhiteList.find(fn_name) != FnWhiteList.end() )
+                        {
+                            filtered.insert( call );
+                        }
                     }
-                    if ( FnWhiteList.find(fn_name) != FnWhiteList.end() )
+                    if ( !filtered.empty() )
                     {
-                        filtered.insert( call );
-                    }
-                }
-                if ( !filtered.empty() )
-                {
-                    cout << "      " << t << "." << c.first << "(" << LocationToString( c.second.location ) << ")"<< endl;
-                    for ( auto call : filtered )
-                    {
-                        cout << "         " << call << endl;
+                        cout << "      " << t << "." << c.first << "(" << LocationToString( c.second.location ) << ")"<< endl;
+                        for ( const auto& call : filtered )
+                        {
+                            cout << "         " << call << endl;
+                        }
                     }
                 }
             }
         }
     }
 
+
+    return app.getExitCode();
 }
 
