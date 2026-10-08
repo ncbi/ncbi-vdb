@@ -56,6 +56,13 @@ TEST_CASE( VersionedNameMap_NotFound )
     REQUIRE( vr.cend() == it );
 }
 
+TEST_CASE( VersionedNameMap_Duplicate )
+{
+    SchemaInfo::VersionedNameMap<int> vr;
+    vr.addUnique("name", MakeVer( 1, 2, 3 ), 1);
+    REQUIRE_THROW( vr.addUnique("name", MakeVer( 1, 2, 3 ), 1) );
+}
+
 TEST_CASE( VersionedNameMap_DefFull_RefFull )
 {
     SchemaInfo::VersionedNameMap<int> vr;
