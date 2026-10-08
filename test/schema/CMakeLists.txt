@@ -62,6 +62,6 @@ AddExecutableTest( Test_SCHEMA_wb-schema-info "wb-test-schema-info;AST_Fixture" 
 set_property(TEST Test_SCHEMA_wb-schema-info PROPERTY ENVIRONMENT "VDB_SCHEMA_INCLUDES=${CMAKE_SOURCE_DIR}/interfaces")
 
 BuildExecutableForTest( col2fns "col2fns;AST_Fixture" "${LIBS}" )
-add_test( NAME Test_SCHEMA_col2fns COMMAND ${CMAKE_TEST_OUTPUT_DIRECTORY}/col2fns )
+add_test( NAME Test_SCHEMA_col2fns COMMAND ${CMAKE_TEST_OUTPUT_DIRECTORY}/col2fns${EXE} )
 set_property(TEST Test_SCHEMA_col2fns PROPERTY ENVIRONMENT "VDB_SCHEMA_INCLUDES=${CMAKE_SOURCE_DIR}/interfaces" )
 
