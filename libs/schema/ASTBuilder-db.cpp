@@ -425,11 +425,14 @@ DatabaseDeclaration :: HandleMemberViewAlias ( ctx_t ctx, const AST & p_member )
                     {
                         for ( uint32_t i = 0; i < count; ++i )
                         {
-                            const AST_FQN & param = * ToFQN ( params . GetChild ( i ) );
-                            assert ( param . GetTokenType () == PT_IDENT );
+                            auto id_node = params . GetChild ( i );
+                            assert( id_node -> GetTokenType() == PT_IDENT );
+                            assert( id_node -> ChildrenCount() == 1 );
+                            auto& ident = *id_node -> GetChild(0);
+
                             const KSymbol * formal = static_cast< const KSymbol * > ( VectorGet( & formalParams, i ) );
 
-                            const KSymbol * paramDecl = m_builder . Resolve ( ctx, param ); // will report unknown name
+                            const KSymbol * paramDecl = m_builder . Resolve ( ctx, ident.GetLocation(), ident.GetTokenValue() ); // will report unknown name
                             if ( paramDecl != 0 )
                             {
                                 switch ( paramDecl -> type )
@@ -446,7 +449,7 @@ DatabaseDeclaration :: HandleMemberViewAlias ( ctx_t ctx, const AST & p_member )
                                             break;
                                         }
                                     }
-                                    m_builder . ReportError ( ctx, "View parameter type mismatch", param );
+                                    m_builder . ReportError ( ctx, "View parameter type mismatch", ident );
                                     break;
                                 }
                                 case eViewAliasMember:
@@ -461,11 +464,11 @@ DatabaseDeclaration :: HandleMemberViewAlias ( ctx_t ctx, const AST & p_member )
                                             break;
                                         }
                                     }
-                                    m_builder . ReportError ( ctx, "View parameter type mismatch", param );
+                                    m_builder . ReportError ( ctx, "View parameter type mismatch", ident );
                                     break;
                                 }
                                 default:
-                                    m_builder . ReportError ( ctx, "Not a table/view member", param );
+                                    m_builder . ReportError ( ctx, "Not a table/view member", ident );
                                     break;
                                 }
                             }

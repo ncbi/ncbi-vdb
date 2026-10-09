@@ -24,13 +24,22 @@
  *
  */
 
-#include "Token.hpp"
+#include <schema/Token.hpp>
+
+#include "schema-lex.h"
 
 #include <klib/text.h>
 
 using namespace ncbi :: SchemaParser;
 
 const Token :: TokenType Token :: EndSource;
+
+Token :: Location :: Location ()
+:   m_file ( "" ),
+    m_line ( 0 ),
+    m_column ( 0 )
+{
+}
 
 Token :: Location :: Location ( const char * p_file, uint32_t p_line, uint32_t p_column )
 :   m_file ( p_file ), // no copy made
@@ -58,7 +67,7 @@ Token :: Token ( TokenType p_type, const char * p_value )
 Token :: Token ( TokenType p_type, const char * p_value, const Location & p_loc )
 :   m_type ( p_type ),
     m_value ( string_dup_measure ( p_value, 0 ) ),
-    m_location ( p_loc . m_file, p_loc . m_line, p_loc . m_column ),
+    m_location ( p_loc ),
     m_ws ( 0 )
 {
 }

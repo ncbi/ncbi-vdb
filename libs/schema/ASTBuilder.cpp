@@ -85,6 +85,13 @@ ASTBuilder :: ReportError ( ctx_t ctx, const char * p_msg, const AST_FQN& p_fqn 
 }
 
 void
+ASTBuilder :: ReportError ( ctx_t ctx, const char * p_msg, const AST& p_node )
+{
+    FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
+    m_errors . ReportError ( ctx, p_node.GetLocation(), "%s: '%s'", p_msg, p_node.GetTokenValue() );
+}
+
+void
 ASTBuilder :: ReportError ( ctx_t ctx, const ErrorReport :: Location & p_loc, const char * p_msg, const String & p_str )
 {
     FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
@@ -102,7 +109,7 @@ void
 ASTBuilder :: ReportError ( ctx_t ctx, const ErrorReport :: Location & p_loc, const char * p_msg, int64_t p_val )
 {
     FUNC_ENTRY( ctx, rcSRA, rcSchema, rcParsing );
-    m_errors . ReportError ( ctx, p_loc, "%s: %l", p_msg, p_val );
+    m_errors . ReportError ( ctx, p_loc, "%s: %li", p_msg, p_val );
 }
 
 void

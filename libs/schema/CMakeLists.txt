@@ -69,6 +69,7 @@ set( SRC
     SchemaParser.cpp
     SchemaScanner.cpp
     Token.cpp
+    SchemaInfo.cpp
 )
 
 GenerateStaticLibs( schema "${SRC}" )
@@ -76,7 +77,14 @@ GenerateStaticLibs( schema "${SRC}" )
 if ( WIN32 )
     target_compile_options( schema PRIVATE /EHsc )
 else()
-    target_compile_options( schema PRIVATE -fno-exceptions -Wno-unused-variable)
+    target_compile_options( schema PRIVATE -Wno-unused-variable )
+
+    # Allow throwing exceptions in SchemaInfo.cpp only. Does not work properly on MacOS.
+    if ( NOT ${CMAKE_HOST_SYSTEM_NAME} STREQUAL  "Darwin" )
+        target_compile_options( schema PRIVATE -fno-exceptions -Wno-unused-variable )
+        set_source_files_properties(SchemaInfo.cpp PROPERTIES COMPILE_FLAGS -fexceptions )
+    endif()
+
 endif()
 
 add_compile_definitions (__mod__="libs/schema")

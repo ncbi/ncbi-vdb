@@ -77,7 +77,7 @@
 
     #include <stdio.h>
 
-    #include "ParseTree.hpp"
+    #include <schema/ParseTree.hpp>
     #include "ErrorReport.hpp"
     #include "SchemaScanner.hpp"
 
