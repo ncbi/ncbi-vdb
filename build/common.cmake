@@ -247,24 +247,24 @@ function( AddExecutableTest test_name sources libraries )
     endif()
 endfunction()
 
-include(CheckIncludeFileCXX)
-#check_include_file_cxx(mbedtls/md.h HAVE_MBEDTLS_H)
-set(HAVE_MBEDTLS_H 0) # TODO: disabling system mbedtls since it may be outdated
-set( MBEDTLS_LIBS mbedx509 mbedtls mbedcrypto ) # need to link against mbedtls in any case: system or local mbedtls
-set(CMAKE_REQUIRED_LIBRARIES ${MBEDTLS_LIBS})
-if ( HAVE_MBEDTLS_H )
-	include(CheckCXXSourceRuns)
-	check_cxx_source_runs("
-#include <stdio.h>
-#include \"mbedtls/md.h\"
-#include \"mbedtls/sha256.h\"
-int main(int argc, char *argv[]) {
-	mbedtls_md_context_t ctx;
-	mbedtls_md_type_t md_type = MBEDTLS_MD_SHA256;
-	mbedtls_md_init(&ctx);
-	printf(\"test p: %p\", ctx.md_ctx);
-}
-" HAVE_MBEDTLS_F)
-else()
-    set(MBEDTLS_LIBS "")
-endif()
+# include(CheckIncludeFileCXX)
+# #check_include_file_cxx(mbedtls/md.h HAVE_MBEDTLS_H)
+# set(HAVE_MBEDTLS_H 0) # TODO: disabling system mbedtls since it may be outdated
+# set( MBEDTLS_LIBS mbedx509 mbedtls mbedcrypto ) # need to link against mbedtls in any case: system or local mbedtls
+# set(CMAKE_REQUIRED_LIBRARIES ${MBEDTLS_LIBS})
+# if ( HAVE_MBEDTLS_H )
+# 	include(CheckCXXSourceRuns)
+# 	check_cxx_source_runs("
+# #include <stdio.h>
+# #include \"mbedtls/md.h\"
+# #include \"mbedtls/sha256.h\"
+# int main(int argc, char *argv[]) {
+# 	mbedtls_md_context_t ctx;
+# 	mbedtls_md_type_t md_type = MBEDTLS_MD_SHA256;
+# 	mbedtls_md_init(&ctx);
+# 	printf(\"test p: %p\", ctx.md_ctx);
+# }
+# " HAVE_MBEDTLS_F)
+# else()
+#     set(MBEDTLS_LIBS "")
+# endif()
