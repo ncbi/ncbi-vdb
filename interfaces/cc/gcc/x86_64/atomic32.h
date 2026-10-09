@@ -39,151 +39,78 @@ extern "C" {
 typedef struct atomic32_t atomic32_t;
 struct atomic32_t
 {
-    volatile int counter;
+    int volatile counter;
 };
 
 /* int atomic32_read ( const atomic32_t *v ); */
 #define atomic32_read( v ) \
-    ( ( v ) -> counter )
+    __atomic_load_n(&((v)->counter), __ATOMIC_SEQ_CST)
 
 /* void atomic32_set ( atomic32_t *v, int i ); */
 #define atomic32_set( v, i ) \
-    ( ( void ) ( ( ( v ) -> counter ) = ( i ) ) )
+    __atomic_store_n(&((v)->counter), i, __ATOMIC_SEQ_CST)
 
 /* add to v -> counter and return the prior value */
-static __inline__ int atomic32_read_and_add ( atomic32_t *v, int i )
-{
-    int rtn, sum;
-    __asm__ __volatile__
-    (
-        "mov (%2), %0;"
-    "1:"
-        "mov %3, %1;"
-        "add %0, %1;"
-    "lock;"
-        "cmpxchg %1, (%2);"
-        "jne 1b"
-        : "=&a" ( rtn ), "=&r" ( sum )
-        : "r" ( & v -> counter ), "r" ( i )
-    );
-    return rtn;
-}
+#define atomic32_read_and_add( v, i ) \
+    __atomic_fetch_add(&((v)->counter), i, __ATOMIC_SEQ_CST)
 
 /* if no read is needed, define the least expensive atomic add */
 #define atomic32_add( v, i ) \
-    atomic32_read_and_add ( v, i )
+    ((void)atomic32_read_and_add(v, i))
 
 /* add to v -> counter and return the result */
-static __inline__ int atomic32_add_and_read ( atomic32_t *v, int i )
+static __inline__ int atomic32_add_and_read ( atomic32_t *const v, int const i )
 {
-    int rtn, cmp;
-    __asm__ __volatile__
-    (
-        "mov (%2), %0;"
-    "1:"
-        "mov %3, %1;"
-        "add %0, %1;"
-    "lock;"
-        "cmpxchg %1,(%2);"
-        "jne 1b;"
-        : "=&a" ( cmp ), "=&r" ( rtn )
-        : "r" ( & v -> counter ), "r" ( i )
-    );
-    return rtn;
+    return __atomic_add_fetch(&((v)->counter), i, __ATOMIC_SEQ_CST);
 }
 
 /* just don't try to find out what the result was */
-static __inline__ void atomic32_inc ( atomic32_t *v )
+static __inline__ void atomic32_inc ( atomic32_t *const v )
 {
-    __asm__ __volatile__
-    (
-    "lock;"
-        "incl %0"
-        : "=m" ( v -> counter )
-        : "m" ( v -> counter )
-    );
+    atomic32_add( v, 1 );
 }
 
-static __inline__ void atomic32_dec ( atomic32_t *v )
+static __inline__ void atomic32_dec ( atomic32_t *const v )
 {
-    __asm__ __volatile__
-    (
-    "lock;"
-        "decl %0"
-        : "=m" ( v -> counter )
-        : "m" ( v -> counter )
-    );
+    __atomic_fetch_sub(&((v)->counter), 1, __ATOMIC_SEQ_CST);
 }
 
 /* decrement by one and test result for 0 */
-static __inline__ int atomic32_dec_and_test ( atomic32_t *v )
+static __inline__ int atomic32_dec_and_test ( atomic32_t *const v )
 {
-    unsigned char c;
-    __asm__ __volatile__
-    (
-    "lock;"
-        "decl %1;"
-        "sete %0"
-        : "=r" ( c ), "=m" ( v -> counter )
-        : "m" ( v -> counter )
-    );
-    return c;
+    return __atomic_sub_fetch(&((v)->counter), 1, __ATOMIC_SEQ_CST) == 0;
 }
 
 /* when atomic32_dec_and_test uses predecrement, you want
    postincrement to this function. so it isn't very useful */
-static __inline__ int atomic32_inc_and_test ( atomic32_t *v )
+static __inline__ int atomic32_inc_and_test ( atomic32_t *const v )
 {
-    unsigned char c;
-    __asm__ __volatile__
-    (
-    "lock;"
-        "incl %1;"
-        "sete %0"
-        : "=r" ( c ), "=m" ( v -> counter )
-        : "m" ( v -> counter )
-    );
-    return c;
+    return atomic32_add_and_read(v, 1) == 0;
 }
 
 /* HERE's useful */
 #define atomic32_test_and_inc( v ) \
     ( atomic32_read_and_add ( v, 1 ) == 0 )
 
-static __inline__ int atomic32_test_and_set ( atomic32_t *v, int s, int t )
+static __inline__ int atomic32_test_and_set ( atomic32_t *const v, int const newval, int const oldval )
 {
-    int rtn;
-    __asm__ __volatile__
-    (
-    "lock;"
-        "cmpxchg %2, (%1)"
-        : "=a" ( rtn )
-        : "r" ( & v -> counter ), "r" ( s ), "a" ( t )
-    );
-    return rtn;
+    int expected = oldval;
+    __atomic_compare_exchange_n(&((v)->counter), &expected, newval, 1, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+    return expected;
 }
 
 /* conditional modifications */
 static __inline__
 int atomic32_read_and_add_lt ( atomic32_t *v, int i, int t )
 {
-    int rtn, sum;
-    __asm__ __volatile__
-    (
-        "mov (%2), %0;"
-    "1:"
-        "cmp %4, %0;"
-        "mov %3, %1;"
-        "jge 2f;"
-        "add %0, %1;"
-    "lock;"
-        "cmpxchg %1, (%2);"
-        "jne 1b;"
-    "2:"
-        : "=&a" ( rtn ), "=&r" ( sum )
-        : "r" ( & v -> counter ), "r" ( i ), "r" ( t )
-    );
-    return rtn;
+	int val, val_intern;
+	for ( val = atomic32_read ( v ); val < t; val = val_intern )
+	{
+		val_intern = atomic32_test_and_set ( v, val + i, val );
+		if ( val_intern == val )
+			break;
+	}
+	return val;
 }
 
 #define atomic32_add_if_lt( v, i, t ) \
@@ -192,23 +119,14 @@ int atomic32_read_and_add_lt ( atomic32_t *v, int i, int t )
 static __inline__
 int atomic32_read_and_add_le ( atomic32_t *v, int i, int t )
 {
-    int rtn, sum;
-    __asm__ __volatile__
-    (
-        "mov (%2), %0;"
-    "1:"
-        "cmp %4, %0;"
-        "mov %3, %1;"
-        "jg 2f;"
-        "add %0, %1;"
-    "lock;"
-        "cmpxchg %1, (%2);"
-        "jne 1b;"
-    "2:"
-        : "=&a" ( rtn ), "=&r" ( sum )
-        : "r" ( & v -> counter ), "r" ( i ), "r" ( t )
-    );
-    return rtn;
+	int val, val_intern;
+	for ( val = atomic32_read ( v ); val <= t; val = val_intern )
+	{
+		val_intern = atomic32_test_and_set ( v, val + i, val );
+		if ( val_intern == val )
+			break;
+	}
+	return val;
 }
 
 #define atomic32_add_if_le( v, i, t ) \
@@ -217,23 +135,14 @@ int atomic32_read_and_add_le ( atomic32_t *v, int i, int t )
 static __inline__
 int atomic32_read_and_add_eq ( atomic32_t *v, int i, int t )
 {
-    int rtn, sum;
-    __asm__ __volatile__
-    (
-        "mov (%2), %0;"
-    "1:"
-        "cmp %4, %0;"
-        "mov %3, %1;"
-        "jne 2f;"
-        "add %0, %1;"
-    "lock;"
-        "cmpxchg %1, (%2);"
-        "jne 1b;"
-    "2:"
-        : "=&a" ( rtn ), "=&r" ( sum )
-        : "r" ( & v -> counter ), "r" ( i ), "r" ( t )
-    );
-    return rtn;
+	int val, val_intern;
+	for ( val = atomic32_read ( v ); val == t; val = val_intern )
+	{
+		val_intern = atomic32_test_and_set ( v, val + i, val );
+		if ( val_intern == val )
+			break;
+	}
+	return val;
 }
 
 #define atomic32_add_if_eq( v, i, t ) \
@@ -242,23 +151,14 @@ int atomic32_read_and_add_eq ( atomic32_t *v, int i, int t )
 static __inline__
 int atomic32_read_and_add_ne ( atomic32_t *v, int i, int t )
 {
-    int rtn, sum;
-    __asm__ __volatile__
-    (
-        "mov (%2), %0;"
-    "1:"
-        "cmp %4, %0;"
-        "mov %3, %1;"
-        "je 2f;"
-        "add %0, %1;"
-    "lock;"
-        "cmpxchg %1, (%2);"
-        "jne 1b;"
-    "2:"
-        : "=&a" ( rtn ), "=&r" ( sum )
-        : "r" ( & v -> counter ), "r" ( i ), "r" ( t )
-    );
-    return rtn;
+	int val, val_intern;
+	for ( val = atomic32_read ( v ); val != t; val = val_intern )
+	{
+		val_intern = atomic32_test_and_set ( v, val + i, val );
+		if ( val_intern == val )
+			break;
+	}
+	return val;
 }
 
 #define atomic32_add_if_ne( v, i, t ) \
@@ -267,23 +167,14 @@ int atomic32_read_and_add_ne ( atomic32_t *v, int i, int t )
 static __inline__
 int atomic32_read_and_add_ge ( atomic32_t *v, int i, int t )
 {
-    int rtn, sum;
-    __asm__ __volatile__
-    (
-        "mov (%2), %0;"
-    "1:"
-        "cmp %4, %0;"
-        "mov %3, %1;"
-        "jl 2f;"
-        "add %0, %1;"
-    "lock;"
-        "cmpxchg %1, (%2);"
-        "jne 1b;"
-    "2:"
-        : "=&a" ( rtn ), "=&r" ( sum )
-        : "r" ( & v -> counter ), "r" ( i ), "r" ( t )
-    );
-    return rtn;
+	int val, val_intern;
+	for ( val = atomic32_read ( v ); val >= t; val = val_intern )
+	{
+		val_intern = atomic32_test_and_set ( v, val + i, val );
+		if ( val_intern == val )
+			break;
+	}
+	return val;
 }
 
 #define atomic32_add_if_ge( v, i, t ) \
@@ -292,23 +183,14 @@ int atomic32_read_and_add_ge ( atomic32_t *v, int i, int t )
 static __inline__
 int atomic32_read_and_add_gt ( atomic32_t *v, int i, int t )
 {
-    int rtn, sum;
-    __asm__ __volatile__
-    (
-        "mov (%2), %0;"
-    "1:"
-        "cmp %4, %0;"
-        "mov %3, %1;"
-        "jle 2f;"
-        "add %0, %1;"
-    "lock;"
-        "cmpxchg %1, (%2);"
-        "jne 1b;"
-    "2:"
-        : "=&a" ( rtn ), "=&r" ( sum )
-        : "r" ( & v -> counter ), "r" ( i ), "r" ( t )
-    );
-    return rtn;
+	int val, val_intern;
+	for ( val = atomic32_read ( v ); val > t; val = val_intern )
+	{
+		val_intern = atomic32_test_and_set ( v, val + i, val );
+		if ( val_intern == val )
+			break;
+	}
+	return val;
 }
 
 #define atomic32_add_if_gt( v, i, t ) \
@@ -317,46 +199,42 @@ int atomic32_read_and_add_gt ( atomic32_t *v, int i, int t )
 static __inline__
 int atomic32_read_and_add_odd ( atomic32_t *v, int i )
 {
-    int rtn, sum;
-    __asm__ __volatile__
-    (
-        "mov (%2), %0;"
-    "1:"
-        "bt $0, %0;"
-        "mov %3, %1;"
-        "jnc 2f;"
-        "add %0, %1;"
-    "lock;"
-        "cmpxchg %1, (%2);"
-        "jne 1b;"
-    "2:"
-        : "=&a" ( rtn ), "=&r" ( sum )
-        : "r" ( & v -> counter ), "r" ( i )
-    );
-    return rtn;
+	int val, val_intern;
+	for ( val = atomic32_read ( v ); val & 1; val = val_intern )
+	{
+		val_intern = atomic32_test_and_set ( v, val + i, val );
+		if ( val_intern == val )
+			break;
+	}
+	return val;
 }
 
 static __inline__
 int atomic32_read_and_add_even ( atomic32_t *v, int i )
 {
-    int rtn, sum;
-    __asm__ __volatile__
-    (
-        "mov (%2), %0;"
-    "1:"
-        "bt $0, %0;"
-        "mov %3, %1;"
-        "jc 2f;"
-        "add %0, %1;"
-    "lock;"
-        "cmpxchg %1, (%2);"
-        "jne 1b;"
-    "2:"
-        : "=&a" ( rtn ), "=&r" ( sum )
-        : "r" ( & v -> counter ), "r" ( i )
-    );
-    return rtn;
+	int val, val_intern;
+	for ( val = atomic32_read ( v ); ! (val & 1); val = val_intern )
+	{
+		val_intern = atomic32_test_and_set ( v, val + i, val );
+		if ( val_intern == val )
+			break;
+	}
+	return val;
 }
+
+/* void atomic32_set_var ( void *v, void i ); */
+#define atomic32_set_var( v, i ) \
+    do { \
+        assert(sizeof *(v)==4); assert(sizeof (i)==4); \
+        __atomic_store_n((uint32_t*)(v), (i), __ATOMIC_SEQ_CST); \
+	} while (false)
+
+#define atomic32_get_var( dest, src ) \
+    do { \
+        assert(sizeof *(dest)==4); assert(sizeof *(src)==4); \
+        *(dest) = __atomic_load_n((uint32_t*)src, __ATOMIC_SEQ_CST); \
+    } while(false)
+
 
 #ifdef __cplusplus
 }

@@ -222,6 +222,20 @@ int atomic32_read_and_add_even ( atomic32_t *v, int i )
 	return val;
 }
 
+/* void atomic32_set_var ( void *v, void i ); */
+#define atomic32_set_var( v, i ) \
+    do { \
+        assert(sizeof *(v)==4); assert(sizeof (i)==4); \
+        __atomic_store_n((uint32_t*)(v), (i), __ATOMIC_SEQ_CST); \
+	} while (false)
+
+#define atomic32_get_var( dest, src ) \
+    do { \
+        assert(sizeof *(dest)==4); assert(sizeof *(src)==4); \
+        *(dest) = __atomic_load_n((uint32_t*)src, __ATOMIC_SEQ_CST); \
+    } while(false)
+
+
 #ifdef __cplusplus
 }
 #endif

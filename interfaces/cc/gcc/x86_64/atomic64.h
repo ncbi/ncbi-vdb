@@ -39,151 +39,78 @@ extern "C" {
 typedef struct atomic64_t atomic64_t;
 struct atomic64_t
 {
-    volatile long int counter;
+    long volatile counter;
 };
 
 /* int atomic64_read ( const atomic64_t *v ); */
 #define atomic64_read( v ) \
-    ( ( v ) -> counter )
+    __atomic_load_n(&((v)->counter), __ATOMIC_SEQ_CST)
 
 /* void atomic64_set ( atomic64_t *v, long int i ); */
 #define atomic64_set( v, i ) \
-    ( ( void ) ( ( ( v ) -> counter ) = ( i ) ) )
+    __atomic_store_n(&((v)->counter), i, __ATOMIC_SEQ_CST)
 
 /* add to v -> counter and return the prior value */
-static __inline__ long int atomic64_read_and_add ( atomic64_t *v, long int i )
-{
-    long int rtn, sum;
-    __asm__ __volatile__
-    (
-        "mov (%2), %0;"
-    "1:"
-        "mov %3, %1;"
-        "add %0, %1;"
-    "lock;"
-        "cmpxchg %1, (%2);"
-        "jne 1b"
-        : "=&a" ( rtn ), "=&r" ( sum )
-        : "r" ( & v -> counter ), "r" ( i )
-    );
-    return rtn;
-}
+#define atomic64_read_and_add( v, i ) \
+    __atomic_fetch_add(&((v)->counter), i, __ATOMIC_SEQ_CST)
 
 /* if no read is needed, define the least expensive atomic add */
 #define atomic64_add( v, i ) \
-    atomic64_read_and_add ( v, i )
+    ((void)atomic64_read_and_add(v, i))
 
 /* add to v -> counter and return the result */
-static __inline__ long int atomic64_add_and_read ( atomic64_t *v, long int i )
+static __inline__ long atomic64_add_and_read ( atomic64_t *const v, long const i )
 {
-    long int rtn, cmp;
-    __asm__ __volatile__
-    (
-        "mov (%2), %0;"
-    "1:"
-        "mov %3, %1;"
-        "add %0, %1;"
-    "lock;"
-        "cmpxchg %1,(%2);"
-        "jne 1b;"
-        : "=&a" ( cmp ), "=&r" ( rtn )
-        : "r" ( & v -> counter ), "r" ( i )
-    );
-    return rtn;
+    return __atomic_add_fetch(&((v)->counter), i, __ATOMIC_SEQ_CST);
 }
 
 /* just don't try to find out what the result was */
-static __inline__ void atomic64_inc ( atomic64_t *v )
+static __inline__ void atomic64_inc ( atomic64_t *const v )
 {
-    __asm__ __volatile__
-    (
-    "lock;"
-        "incq %0"
-        : "=m" ( v -> counter )
-        : "m" ( v -> counter )
-    );
+    atomic64_add( v, 1 );
 }
 
-static __inline__ void atomic64_dec ( atomic64_t *v )
+static __inline__ void atomic64_dec ( atomic64_t *const v )
 {
-    __asm__ __volatile__
-    (
-    "lock;"
-        "decq %0"
-        : "=m" ( v -> counter )
-        : "m" ( v -> counter )
-    );
+    __atomic_fetch_sub(&((v)->counter), 1, __ATOMIC_SEQ_CST);
 }
 
 /* decrement by one and test result for 0 */
-static __inline__ int atomic64_dec_and_test ( atomic64_t *v )
+static __inline__ int atomic64_dec_and_test ( atomic64_t *const v )
 {
-    unsigned char c;
-    __asm__ __volatile__
-    (
-    "lock;"
-        "decq %1;"
-        "sete %0"
-        : "=r" ( c ), "=m" ( v -> counter )
-        : "m" ( v -> counter )
-    );
-    return c;
+    return __atomic_sub_fetch(&((v)->counter), 1, __ATOMIC_SEQ_CST) == 0;
 }
 
 /* when atomic64_dec_and_test uses predecrement, you want
    postincrement to this function. so it isn't very useful */
-static __inline__ int atomic64_inc_and_test ( atomic64_t *v )
+static __inline__ int atomic64_inc_and_test ( atomic64_t *const v )
 {
-    unsigned char c;
-    __asm__ __volatile__
-    (
-    "lock;"
-        "incq %1;"
-        "sete %0"
-        : "=r" ( c ), "=m" ( v -> counter )
-        : "m" ( v -> counter )
-    );
-    return c;
+    return atomic64_add_and_read(v, 1) == 0;
 }
 
 /* HERE's useful */
 #define atomic64_test_and_inc( v ) \
     ( atomic64_read_and_add ( v, 1L ) == 0 )
 
-static __inline__ long int atomic64_test_and_set ( atomic64_t *v, long int s, long int t )
+static __inline__ long int atomic64_test_and_set ( atomic64_t *const v, long int const newval, long int const oldval )
 {
-    long int rtn;
-    __asm__ __volatile__
-    (
-    "lock;"
-        "cmpxchg %2, (%1)"
-        : "=a" ( rtn )
-        : "r" ( & v -> counter ), "r" ( s ), "a" ( t )
-    );
-    return rtn;
+    long expected = oldval;
+    __atomic_compare_exchange_n(&((v)->counter), &expected, newval, 1, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+    return expected;
 }
 
 /* conditional modifications */
 static __inline__
 long int atomic64_read_and_add_lt ( atomic64_t *v, long int i, long int t )
 {
-    long int rtn, sum;
-    __asm__ __volatile__
-    (
-        "mov (%2), %0;"
-    "1:"
-        "cmp %4, %0;"
-        "mov %3, %1;"
-        "jge 2f;"
-        "add %0, %1;"
-    "lock;"
-        "cmpxchg %1, (%2);"
-        "jne 1b;"
-    "2:"
-        : "=&a" ( rtn ), "=&r" ( sum )
-        : "r" ( & v -> counter ), "r" ( i ), "r" ( t )
-    );
-    return rtn;
+	long val, val_intern;
+	for ( val = atomic64_read ( v ); val < t; val = val_intern )
+	{
+		val_intern = atomic64_test_and_set ( v, val + i, val );
+		if ( val_intern == val )
+			break;
+	}
+	return val;
 }
 
 #define atomic64_add_if_lt( v, i, t ) \
@@ -192,23 +119,14 @@ long int atomic64_read_and_add_lt ( atomic64_t *v, long int i, long int t )
 static __inline__
 long int atomic64_read_and_add_le ( atomic64_t *v, long int i, long int t )
 {
-    long int rtn, sum;
-    __asm__ __volatile__
-    (
-        "mov (%2), %0;"
-    "1:"
-        "cmp %4, %0;"
-        "mov %3, %1;"
-        "jg 2f;"
-        "add %0, %1;"
-    "lock;"
-        "cmpxchg %1, (%2);"
-        "jne 1b;"
-    "2:"
-        : "=&a" ( rtn ), "=&r" ( sum )
-        : "r" ( & v -> counter ), "r" ( i ), "r" ( t )
-    );
-    return rtn;
+	long int val, val_intern;
+	for ( val = atomic64_read ( v ); val <= t; val = val_intern )
+	{
+		val_intern = atomic64_test_and_set ( v, val + i, val );
+		if ( val_intern == val )
+			break;
+	}
+	return val;
 }
 
 #define atomic64_add_if_le( v, i, t ) \
@@ -217,23 +135,14 @@ long int atomic64_read_and_add_le ( atomic64_t *v, long int i, long int t )
 static __inline__
 long int atomic64_read_and_add_eq ( atomic64_t *v, long int i, long int t )
 {
-    long int rtn, sum;
-    __asm__ __volatile__
-    (
-        "mov (%2), %0;"
-    "1:"
-        "cmp %4, %0;"
-        "mov %3, %1;"
-        "jne 2f;"
-        "add %0, %1;"
-    "lock;"
-        "cmpxchg %1, (%2);"
-        "jne 1b;"
-    "2:"
-        : "=&a" ( rtn ), "=&r" ( sum )
-        : "r" ( & v -> counter ), "r" ( i ), "r" ( t )
-    );
-    return rtn;
+	long int val, val_intern;
+	for ( val = atomic64_read ( v ); val == t; val = val_intern )
+	{
+		val_intern = atomic64_test_and_set ( v, val + i, val );
+		if ( val_intern == val )
+			break;
+	}
+	return val;
 }
 
 #define atomic64_add_if_eq( v, i, t ) \
@@ -242,23 +151,14 @@ long int atomic64_read_and_add_eq ( atomic64_t *v, long int i, long int t )
 static __inline__
 long int atomic64_read_and_add_ne ( atomic64_t *v, long int i, long int t )
 {
-    long int rtn, sum;
-    __asm__ __volatile__
-    (
-        "mov (%2), %0;"
-    "1:"
-        "cmp %4, %0;"
-        "mov %3, %1;"
-        "je 2f;"
-        "add %0, %1;"
-    "lock;"
-        "cmpxchg %1, (%2);"
-        "jne 1b;"
-    "2:"
-        : "=&a" ( rtn ), "=&r" ( sum )
-        : "r" ( & v -> counter ), "r" ( i ), "r" ( t )
-    );
-    return rtn;
+	long int val, val_intern;
+	for ( val = atomic64_read ( v ); val != t; val = val_intern )
+	{
+		val_intern = atomic64_test_and_set ( v, val + i, val );
+		if ( val_intern == val )
+			break;
+	}
+	return val;
 }
 
 #define atomic64_add_if_ne( v, i, t ) \
@@ -267,23 +167,14 @@ long int atomic64_read_and_add_ne ( atomic64_t *v, long int i, long int t )
 static __inline__
 long int atomic64_read_and_add_ge ( atomic64_t *v, long int i, long int t )
 {
-    long int rtn, sum;
-    __asm__ __volatile__
-    (
-        "mov (%2), %0;"
-    "1:"
-        "cmp %4, %0;"
-        "mov %3, %1;"
-        "jl 2f;"
-        "add %0, %1;"
-    "lock;"
-        "cmpxchg %1, (%2);"
-        "jne 1b;"
-    "2:"
-        : "=&a" ( rtn ), "=&r" ( sum )
-        : "r" ( & v -> counter ), "r" ( i ), "r" ( t )
-    );
-    return rtn;
+	long int val, val_intern;
+	for ( val = atomic64_read ( v ); val >= t; val = val_intern )
+	{
+		val_intern = atomic64_test_and_set ( v, val + i, val );
+		if ( val_intern == val )
+			break;
+	}
+	return val;
 }
 
 #define atomic64_add_if_ge( v, i, t ) \
@@ -292,23 +183,14 @@ long int atomic64_read_and_add_ge ( atomic64_t *v, long int i, long int t )
 static __inline__
 long int atomic64_read_and_add_gt ( atomic64_t *v, long int i, long int t )
 {
-    long int rtn, sum;
-    __asm__ __volatile__
-    (
-        "mov (%2), %0;"
-    "1:"
-        "cmp %4, %0;"
-        "mov %3, %1;"
-        "jle 2f;"
-        "add %0, %1;"
-    "lock;"
-        "cmpxchg %1, (%2);"
-        "jne 1b;"
-    "2:"
-        : "=&a" ( rtn ), "=&r" ( sum )
-        : "r" ( & v -> counter ), "r" ( i ), "r" ( t )
-    );
-    return rtn;
+	long int val, val_intern;
+	for ( val = atomic64_read ( v ); val > t; val = val_intern )
+	{
+		val_intern = atomic64_test_and_set ( v, val + i, val );
+		if ( val_intern == val )
+			break;
+	}
+	return val;
 }
 
 #define atomic64_add_if_gt( v, i, t ) \
@@ -317,46 +199,69 @@ long int atomic64_read_and_add_gt ( atomic64_t *v, long int i, long int t )
 static __inline__
 long int atomic64_read_and_add_odd ( atomic64_t *v, long int i )
 {
-    long int rtn, sum;
-    __asm__ __volatile__
-    (
-        "mov (%2), %0;"
-    "1:"
-        "bt $0, %0;"
-        "mov %3, %1;"
-        "jnc 2f;"
-        "add %0, %1;"
-    "lock;"
-        "cmpxchg %1, (%2);"
-        "jne 1b;"
-    "2:"
-        : "=&a" ( rtn ), "=&r" ( sum )
-        : "r" ( & v -> counter ), "r" ( i )
-    );
-    return rtn;
+	long int val, val_intern;
+	for ( val = atomic64_read ( v ); val & 1; val = val_intern )
+	{
+		val_intern = atomic64_test_and_set ( v, val + i, val );
+		if ( val_intern == val )
+			break;
+	}
+	return val;
 }
 
 static __inline__
 long int atomic64_read_and_add_even ( atomic64_t *v, long int i )
 {
-    long int rtn, sum;
-    __asm__ __volatile__
-    (
-        "mov (%2), %0;"
-    "1:"
-        "bt $0, %0;"
-        "mov %3, %1;"
-        "jc 2f;"
-        "add %0, %1;"
-    "lock;"
-        "cmpxchg %1, (%2);"
-        "jne 1b;"
-    "2:"
-        : "=&a" ( rtn ), "=&r" ( sum )
-        : "r" ( & v -> counter ), "r" ( i )
-    );
-    return rtn;
+	long int val, val_intern;
+	for ( val = atomic64_read ( v ); ! ( val & 1 ); val = val_intern )
+	{
+		val_intern = atomic64_test_and_set ( v, val + i, val );
+		if ( val_intern == val )
+			break;
+	}
+	return val;
 }
+
+
+/* ========================================================================
+ * These functions are intended for directly updating "ordinary" variables.
+ * It is better to design the code so that atomic structures are used
+ * instead of "ordinary" variables for data read or written
+ * across different threads. */
+
+ /* void atomic64_set_var (void *dest, void *src ); */
+#define atomic64_set_var( dest, src ) \
+    do { \
+        assert(sizeof *(dest)==8); assert(sizeof *(src)==8); \
+        __atomic_store_n((uint64_t*)(dest), *(uint64_t*)(src), __ATOMIC_SEQ_CST); \
+	} while (false)
+
+/* ( * dest ) = ( * src ) */
+#define atomic64_get_var( dest, src ) \
+    do { \
+        assert(sizeof *(dest)==8); assert(sizeof *(src)==8); \
+        uint64_t bits = __atomic_load_n((uint64_t*)(src), __ATOMIC_SEQ_CST); \
+        memmove((dest), &bits, sizeof(*dest)); \
+    } while(false)
+
+/* void atomic32_set_var ( void *dest, void src ); */
+#ifndef atomic32_set_var
+  #define atomic32_set_var( dest, src ) \
+    do { \
+        assert(sizeof *(dest)==4); assert(sizeof (src)==4); \
+        __atomic_store_n((dest), (src), __ATOMIC_SEQ_CST); \
+	} while (false)
+#endif
+
+/* ( * dest ) = ( * src ) */
+#ifndef atomic32_get_var
+  #define atomic32_get_var( dest, src ) \
+    do { \
+        assert(sizeof *(dest)==4); assert(sizeof *(src)==4); \
+        *(dest) = __atomic_load_n(src, __ATOMIC_SEQ_CST); \
+    } while(false)
+#endif
+
 
 #ifdef __cplusplus
 }
