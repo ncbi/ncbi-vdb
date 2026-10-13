@@ -400,11 +400,8 @@ static rc_t runLoadThread(Object *self)
         ;
     /* readers are all waiting in the loop at line 445 */
  /* self->reader = rc == 0 ? readNormal : readZero; */
-    RefSeqReaderFunc reader = atomic_read_ptr((atomic_ptr_t*)(&self->reader));
-    atomic_test_and_set_ptr((atomic_ptr_t*)(&self->reader),
-        rc == 0 ? readNormal : readZero, reader);
-
-    atomic_test_and_set_ptr((atomic_ptr_t*)(&self->async), NULL, async);
+    atomic_set_var_p(&self->reader, rc == 0 ? readNormal : readZero);
+    atomic_set_var_p(&self->async, NULL);
 
     atomic_dec(&self->rwl); /* state is updated; readers continue to line 448 */
     if (rc == 0 && i == count) {
@@ -442,8 +439,8 @@ unsigned RefSeq_getBases(Object const * self, uint8_t *const dst, unsigned const
     atomic_t *const rwl = &((Object *)self)->rwl;
 
     if (atomic_read_ptr((atomic_ptr_t*)(&self->async)) == NULL) {
-        RefSeqReaderFunc reader
-            = atomic_read_ptr((atomic_ptr_t*)(&self->reader));
+        RefSeqReaderFunc reader = NULL;
+        atomic_get_var(&reader, &self->reader);
         /* this is the fast path and the most common for normal use */
         /* there is no background thread running */
         return reader(self, dst, start, len);
