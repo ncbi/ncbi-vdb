@@ -236,6 +236,13 @@ long int atomic64_read_and_add_even ( atomic64_t *v, long int i )
         __atomic_store_n((uint64_t*)(dest), *(uint64_t*)(src), __ATOMIC_SEQ_CST); \
 	} while (false)
 
+ /* void atomic64_set_var (void *dest, void src ); */
+#define atomic64_set_var( dest, src ) \
+    do { \
+        assert(sizeof *(dest)==8); assert(sizeof (src)==8); \
+        __atomic_store_n((uint64_t*)(dest), (uint64_t*)(src), __ATOMIC_SEQ_CST); \
+	} while (false)
+
 /* ( * dest ) = ( * src ) */
 #define atomic64_get_var( dest, src ) \
     do { \
@@ -243,6 +250,9 @@ long int atomic64_read_and_add_even ( atomic64_t *v, long int i )
         uint64_t bits = __atomic_load_n((uint64_t*)(src), __ATOMIC_SEQ_CST); \
         memmove((dest), &bits, sizeof(*dest)); \
     } while(false)
+
+#define atomic64_set_func( dest, src ) \
+        __atomic_store_n((dest), (src), __ATOMIC_SEQ_CST)
 
 /* void atomic32_set_var ( void *dest, void src ); */
 #ifndef atomic32_set_var
