@@ -248,12 +248,16 @@ FIXTURE_TEST_CASE(Test, Fixture) {
     REQUIRE(nl == 0);
 
     nl = 42;
-    atomic64_set_var(&_l, &nl);
+    atomic64_set_var_p(&_l, &nl);
     REQUIRE(_l == 42);
+
+    nl = 4;
+    atomic64_set_var(&_l, nl);
+    REQUIRE(_l == 4);
 
     nl = 0;
     atomic64_get_var(&nl, &_l);
-    REQUIRE(nl == 42);
+    REQUIRE(nl == 4);
 
     REQUIRE(_d == 0);
     double nd(9);
@@ -261,7 +265,7 @@ FIXTURE_TEST_CASE(Test, Fixture) {
     REQUIRE(nd == 0);
 
     nd = 3.14159;
-    atomic64_set_var(&_d, &nd);
+    atomic64_set_var_p(&_d, &nd);
     REQUIRE(_d == 3.14159);
     REQUIRE(nd == 3.14159);
 
