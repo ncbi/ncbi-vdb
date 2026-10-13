@@ -400,12 +400,8 @@ static rc_t runLoadThread(Object *self)
         ;
     /* readers are all waiting in the loop at line 445 */
  /* self->reader = rc == 0 ? readNormal : readZero; */
-    if (rc == 0)
-        atomic_set_var_p(&self->reader, readNormal);
-    else
-        atomic_set_var_p(&self->reader, readZero);
-
-    atomic_set_var_p(&self->async, NULL);
+    atomic_set_func(&self->reader, rc == 0 ? readNormal : readZero);
+    atomic_set_var(&self->async, NULL);
 
     atomic_dec(&self->rwl); /* state is updated; readers continue to line 448 */
     if (rc == 0 && i == count) {
