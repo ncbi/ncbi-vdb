@@ -109,11 +109,11 @@ class Fixture {
 
             l = f->_l;
             ++l;
-            atomic64_set_var(&f->_l, &l);
+            atomic64_set_var_p(&f->_l, &l);
 
             double d(f->_d);
             d += .1;
-            atomic64_set_var(&f->_d, &d);
+            atomic64_set_var_p(&f->_d, &d);
             atomic32_set_var(&f->_i, i);
 
             TestEnv::SleepMs(1);
