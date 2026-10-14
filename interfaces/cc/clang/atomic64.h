@@ -229,8 +229,8 @@ long int atomic64_read_and_add_even ( atomic64_t *v, long int i )
  * instead of "ordinary" variables for data read or written
  * across different threads. */
 
- /* void atomic64_set_var (void *dest, void *src ); */
-#define atomic64_set_var( dest, src ) \
+ /* void atomic64_set_var_p (void *dest, void *src ); */
+#define atomic64_set_var_p( dest, src ) \
     do { \
         assert(sizeof *(dest)==8); assert(sizeof *(src)==8); \
         __atomic_store_n((uint64_t*)(dest), *(uint64_t*)(src), __ATOMIC_SEQ_CST); \
