@@ -245,7 +245,7 @@ long int atomic64_read_and_add_even ( atomic64_t *v, long int i )
 #define atomic64_set_var( dest, src ) \
     do { \
         assert(sizeof *(dest)==8); assert(sizeof (src)==8); \
-        __atomic_store_n((uint64_t*)(dest), (uint64_t*)(src), __ATOMIC_SEQ_CST); \
+        __atomic_store_n((uint64_t*)(dest), (uint64_t)(src), __ATOMIC_SEQ_CST); \
 	} while (false)
 
 /* ( * dest ) = ( * src ) */
