@@ -188,6 +188,12 @@ void *atomic_test_and_set_ptr ( atomic_ptr_t *const v, void *const s, void *cons
 #define atomic_set_var_p( v, i ) \
     ATOMIC_NAME ( set_var_p ) ( v, i )
 
+/* direct assignment, no conversions
+   ( * v ) = ( i ) */
+#define atomic_set_var_direct( v, i ) \
+    ATOMIC_NAME ( set_var_direct ) ( v, i )
+
+
 /* ( * v ) = ( i ) */
 #define atomic_set_var( v, i ) \
     ATOMIC_NAME ( set_var ) ( v, i )

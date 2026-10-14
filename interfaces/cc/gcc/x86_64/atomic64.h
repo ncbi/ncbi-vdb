@@ -236,6 +236,11 @@ long int atomic64_read_and_add_even ( atomic64_t *v, long int i )
         __atomic_store_n((uint64_t*)(dest), *(uint64_t*)(src), __ATOMIC_SEQ_CST); \
 	} while (false)
 
+/* direct assignment, no conversions
+   ( * v ) = ( i ) */
+#define atomic64_set_var_direct( dest, src ) \
+        __atomic_store_n((dest), (src), __ATOMIC_SEQ_CST)
+
  /* void atomic64_set_var (void *dest, void src ); */
 #define atomic64_set_var( dest, src ) \
     do { \
