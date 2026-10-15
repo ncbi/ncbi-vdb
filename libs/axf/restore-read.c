@@ -384,7 +384,9 @@ unsigned RestoreReadShared_getState(unsigned *refSeqs, unsigned *wgs, unsigned *
         {
             unsigned i;
             for (i = 0; i < *refSeqs; ++i) {
-                if (ptr->refSeqs.entry[i].object->async != NULL)
+                RefSeqAsyncLoadInfo* async = NULL;
+                atomic_get_var(&async, &(ptr->refSeqs.entry[i].object->async));
+                if (async != NULL)
                     ++*activeRefSeqs;
             }
         }

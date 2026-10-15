@@ -399,8 +399,10 @@ static rc_t runLoadThread(Object *self)
     while (atomic_read(&self->rwl) != 1)
         ;
     /* readers are all waiting in the loop at line 445 */
-    self->reader = rc == 0 ? readNormal : readZero;
-    self->async = NULL;
+ /* self->reader = rc == 0 ? readNormal : readZero; */
+    atomic_set_func(&self->reader, rc == 0 ? readNormal : readZero);
+    atomic_set_var_direct((uint64_t**)&self->async, NULL);
+
     atomic_dec(&self->rwl); /* state is updated; readers continue to line 448 */
     if (rc == 0 && i == count) {
         KLockAcquire(async->mutex);
@@ -436,11 +438,14 @@ unsigned RefSeq_getBases(Object const * self, uint8_t *const dst, unsigned const
 {
     atomic_t *const rwl = &((Object *)self)->rwl;
 
-    if (self->async == NULL) {
+    if (atomic_read_ptr((atomic_ptr_t*)(&self->async)) == NULL) {
+        RefSeqReaderFunc reader = NULL;
+        atomic_get_var(&reader, &self->reader);
         /* this is the fast path and the most common for normal use */
         /* there is no background thread running */
-        return self->reader(self, dst, start, len);
+        return reader(self, dst, start, len);
     }
+
     /* there is a background thread running */
     if ((atomic_read_and_add_even(rwl, 2) & 1) == 0) {
         /* but it is not trying to update the state */
