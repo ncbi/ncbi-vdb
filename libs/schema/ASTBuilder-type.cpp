@@ -162,6 +162,7 @@ ASTBuilder :: MakeTypeExpr ( ctx_t ctx, const AST & p_type )
     {
     case PT_IDENT : // scalar
         {
+assert( dynamic_cast<const AST_FQN*>(&p_type));
             fqn = ToFQN ( & p_type );
             ret -> fd . td . dim = 1;
         }
@@ -193,6 +194,7 @@ ASTBuilder :: MakeTypeExpr ( ctx_t ctx, const AST & p_type )
                         }
                         break;
                     case eIndirectExpr:
+                    case eFwdExpr:
                         {
                             ret -> fd . td . dim = 0;
                             ret -> dim = expr;
@@ -223,6 +225,7 @@ ASTBuilder :: MakeTypeExpr ( ctx_t ctx, const AST & p_type )
                 ret -> fd . fmt = ret -> fmt -> id;
                 ret -> fd . td . dim = 1;
 
+assert( dynamic_cast<const AST_FQN*>(p_type . GetChild ( 1 )));
                 fqn = ToFQN ( p_type . GetChild ( 1 ) ); // has to be a type!
             }
         }
@@ -965,8 +968,7 @@ ASTBuilder :: Include ( ctx_t ctx, const Token * p_token, const Token * p_filena
             if ( parser . ParseFile ( ctx, f, unquoted ) )
             {
                 AST * root = Build ( ctx, * parser . GetParseTree (), unquoted, false );
-                // Build() adds to our AST, so we do need the include's root anymore
-                AST :: Destroy ( root );
+                ret->AddChild( ctx, root ); // the included file's AST becomes child[1]
             }
             KFileRelease ( f );
         }

@@ -26,6 +26,8 @@
 
 #include "SchemaParser.hpp"
 
+#include <schema/ParseTree.hpp>
+
 #include <kfc/except.h>
 
 #include <klib/text.h>
@@ -36,7 +38,6 @@
 #include "../vdb/schema-priv.h"
 
 #include "SchemaScanner.hpp"
-#include "ParseTree.hpp"
 #include "ASTBuilder.hpp"
 
 using namespace ncbi::SchemaParser;

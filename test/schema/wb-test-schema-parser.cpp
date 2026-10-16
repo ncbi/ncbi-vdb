@@ -37,8 +37,11 @@
 #include <kfs/directory.h>
 #include <kfs/file.h>
 
+#include <schema/ParseTree.hpp>
+#include <schema/Token.hpp>
+
 #include "../../libs/schema/SchemaParser.hpp"
-#include "../../libs/schema/ParseTree.hpp"
+#include "../../libs/schema/schema-lex.h"
 
 using namespace ncbi::SchemaParser;
 #include "../../libs/schema/schema-grammar.hpp"
