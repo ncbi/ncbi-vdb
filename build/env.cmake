@@ -37,13 +37,6 @@ option( RUN_SANITIZER_TESTS "Run ASAN and TSAN tests" OFF )
 # ===========================================================================
 # include Conan setup
 if(_NCBIVDB_CFG_PACKAGING)
-    foreach(_sub IN LISTS CMAKE_BINARY_DIR CMAKE_MODULE_PATH)
-        if (EXISTS "${_sub}/conanbuildinfo.cmake")
-            include(${_sub}/conanbuildinfo.cmake)
-            conan_basic_setup()
-            break()
-        endif()
-    endforeach()
     if(NOT DEFINED CONAN_LIBS)
         find_package(BZip2 REQUIRED)
         find_package(ZLIB REQUIRED)
@@ -347,8 +340,8 @@ function(SetAndCreate var path )
 endfunction()
 
 #message(CMAKE_GENERATOR=${CMAKE_GENERATOR})
-if ( ${CMAKE_GENERATOR} MATCHES "Visual Studio.*" OR
-     ${CMAKE_GENERATOR} STREQUAL "Xcode" )
+get_cmake_property(MULTI_CONFIG GENERATOR_IS_MULTI_CONFIG)
+if ( MULTI_CONFIG )
     # a multi-config generator
     SetAndCreate( CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG   ${CMAKE_BINARY_DIR}/Debug/ilib )
     SetAndCreate( CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR}/Release/ilib )
