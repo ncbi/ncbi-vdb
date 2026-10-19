@@ -112,6 +112,9 @@ typedef struct ATOMIC_NAME ( t ) atomic_t;
 #define atomic_read_ptr( v ) \
     ( ( v ) -> ptr )
 
+#define atomic_set_ptr( v, s ) \
+    ( ( v ) -> ptr ) = s
+
 #define atomic_test_and_set_ptr( v, s, t ) \
     InterlockedCompareExchangePointer( & ( v ) -> ptr, ( s ), ( t ) )
 
@@ -146,6 +149,28 @@ typedef struct ATOMIC_NAME ( t ) atomic_t;
 /* val = ( * v ), ( ( * v ) = ( ( val & 1 ) == 0 ) ? val + i : val ), val */
 #define atomic_read_and_add_even( v, i ) \
     ATOMIC_NAME ( read_and_add_even ) ( v, i )
+
+
+/* ( * dest ) = ( * src ) */
+#define atomic_get_var( dest, src ) \
+    ATOMIC_NAME ( get_var ) ( dest, src )
+
+/* ( v ) = ( i ) */
+#define atomic_set_func( v, i ) \
+    ATOMIC_NAME ( set_func ) ( v, i )
+
+/* ( * dest ) = ( src ) */
+#define atomic_set_var( dest, src ) \
+    ATOMIC_NAME ( set_var ) ( dest, src )
+
+/* ( * v ) = ( * i ) */
+#define atomic_set_var_p( v, i ) \
+    ATOMIC_NAME ( set_var_p ) ( v, i )
+
+/* direct assignment, no conversions
+   ( * v ) = ( i ) */
+#define atomic_set_var_direct( v, i ) \
+    ATOMIC_NAME ( set_var_direct ) ( v, i )
 
 #ifdef __cplusplus
 }
