@@ -187,6 +187,11 @@ static __inline int atomic32_read_and_add_even ( atomic32_t *v, int i )
 	return val;
 }
 
+
+/* ( * dest ) = ( * src ) */
+#define atomic32_get_var( dest, src ) \
+    *(dest) = *(src)
+
 #ifdef __cplusplus
 }
 #endif
