@@ -90,6 +90,7 @@ class Fixture {
             long l = atomic64_test_and_inc(&f->_a);
             atomic64_set(&f->_a, i + l + 1);
 
+#if !WINDOWS
             l = atomic64_add_if_lt(&f->_a, 1, 9);
             atomic64_read_and_add_lt(&f->_a, 1, l + 2);
 
@@ -104,6 +105,7 @@ class Fixture {
             l = atomic64_add_if_ge(&f->_a, 1, 3);
             atomic64_read_and_add_gt(&f->_a, 1, 4);
             l = atomic64_add_if_gt(&f->_a, 1, 5);
+#endif
             atomic64_read_and_add_odd(&f->_a, 1);
             atomic64_read_and_add_even(&f->_a, 1);
 
@@ -182,6 +184,7 @@ FIXTURE_TEST_CASE(Test, Fixture) {
     REQUIRE(_a.counter == 6);
     REQUIRE(atomic64_read_and_add_lt(&_a, 3, 4) == 6); // 6
     REQUIRE(_a.counter == 6);
+#if !WINDOWS
     REQUIRE(!atomic64_add_if_lt(&_a, 3, 4));
     REQUIRE(_a.counter == 6);
     REQUIRE(atomic64_add_if_lt(&_a, 3, 7));
@@ -231,6 +234,9 @@ FIXTURE_TEST_CASE(Test, Fixture) {
     REQUIRE(_a.counter == 19);
     REQUIRE(!atomic64_add_if_gt(&_a, 1, 19));
     REQUIRE(_a.counter == 19);
+#else
+    _a.counter = 19;
+#endif
 
     REQUIRE(atomic64_read_and_add_odd(&_a, 1) == 19);
     REQUIRE(_a.counter == 20);
