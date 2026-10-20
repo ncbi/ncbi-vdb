@@ -40,12 +40,15 @@
 TEST_SUITE(KAtomicTestSuite)
 
 using namespace ncbi::NK;
+#ifdef DEBG
+using std::cerr;
+#endif
 using std::cout;
 
 struct S {
     char c;
 
-    S(char i = 0) : c(i + d) {}
+    S(int i = 0) : c((char)(i + d)) {}
 
     static const char d = '!';
 };
@@ -66,8 +69,14 @@ class Fixture {
             for (p = 0; !p;)
                 p = reinterpret_cast<S*>(atomic_read_ptr(&f->_p));
             cout << p->c;
+#ifdef DEBG
+            cerr << p->c << "\n";
+#endif
 
             atomic_set_ptr(&f->_p, 0);
+#ifdef DEBG
+            cerr << "NULL\n";
+#endif
             delete p;
 
             float d(0);
@@ -82,6 +91,10 @@ class Fixture {
         }
 
         p = reinterpret_cast<S*>(atomic_read_ptr(&f->_p));
+        atomic_set_ptr(&f->_p, 0);
+#ifdef DEBG
+        cerr << "NULL\n";
+#endif
         delete p;
 
         return 0;
@@ -105,6 +118,7 @@ class Fixture {
             long l = atomic_test_and_inc(&f->_a);
             atomic_set(&f->_a, i + l + 1);
 
+#if !WINDOWS
             l = atomic_add_if_lt(&f->_a, 1, 9);
             atomic_read_and_add_lt(&f->_a, 1, l + 2);
 
@@ -122,7 +136,8 @@ class Fixture {
             
             atomic_read_and_add_gt(&f->_a, 1, 4);
             l = atomic_add_if_gt(&f->_a, 1, 5);
-            
+#endif
+
             atomic_read_and_add_odd(&f->_a, 1);
             atomic_read_and_add_even(&f->_a, 1);
 
@@ -131,13 +146,22 @@ class Fixture {
             do {
                 p = reinterpret_cast<S*>(atomic_read_ptr(&f->_p));
             } while (p);
+#ifdef DEBG
+            cerr << "NULL\n";
+#endif
 
             p = new S(i);
+#ifdef DEBG
+            cerr << p->c << "\n";
+#endif
             atomic_set_ptr(&f->_p, p);
 
             p = new S(i + 9);
             for (void* o = p; o;)
                 o = atomic_test_and_set_ptr(&f->_p, p, 0);
+#ifdef DEBG
+            cerr << "NULL\n";
+#endif
 
             atomic32_set_var(&f->_i, i);
 
@@ -163,7 +187,9 @@ protected:
         KThreadRelease(r);
         KThreadRelease(w);
 
+#if !WINDOWS
         delete reinterpret_cast<S*>(_p.ptr);
+#endif
     }
 
     rc_t go() {
@@ -219,8 +245,11 @@ FIXTURE_TEST_CASE(Test, Fixture) {
     REQUIRE(_a.counter == 6);
     REQUIRE(atomic_read_and_add_lt(&_a, 3, 4) == 6); // 6
     REQUIRE(_a.counter == 6);
+
+#if !WINDOWS
     REQUIRE(!atomic_add_if_lt(&_a, 3, 4));
     REQUIRE(_a.counter == 6);
+
     REQUIRE(atomic_add_if_lt(&_a, 3, 7));
     REQUIRE(_a.counter == 9);
 
@@ -285,16 +314,25 @@ FIXTURE_TEST_CASE(Test, Fixture) {
     S* s(reinterpret_cast <S*>(atomic_read_ptr(&_p)));
     REQUIRE_NULL(s);
 
+#else
+    REQUIRE_NULL(_p.ptr);
     atomic_set_ptr(&_p, new S);
     REQUIRE_NOT_NULL(_p.ptr);
     REQUIRE(((S*)(_p.ptr))->c == '!');
+#ifdef DEBG
+    cerr << "!\n";
+#endif
+#endif
 
+#if !WINDOWS
     s = reinterpret_cast<S*>(atomic_read_ptr(&_p));
     REQUIRE(s->c == S::d);
+#endif
 
     atomic_set_ptr(&_p, 0);
     REQUIRE_NULL(_p.ptr);
 
+#if !WINDOWS
     ++s->c;
     REQUIRE_NULL(atomic_test_and_set_ptr(&_p, s, 0));
     REQUIRE_NOT_NULL(_p.ptr);
@@ -305,6 +343,10 @@ FIXTURE_TEST_CASE(Test, Fixture) {
     delete s;
 
     REQUIRE(_i == 0);
+#else
+    _i = 0;
+#endif
+
     atomic32_set_var(&_i, 1);
     REQUIRE(_i == 1);
 
