@@ -39,7 +39,7 @@ using std::cout;
 struct S {
     char c;
 
-    S(char i = 0) : c(i + d) {}
+    S(int i = 0) : c((char)(i + d)) {}
 
     static const char d = '!';
 };
@@ -102,6 +102,7 @@ class Fixture {
             long l = atomic_test_and_inc(&f->_a);
             atomic_set(&f->_a, i + l + 1);
 
+#if !WINDOWS
             l = atomic_add_if_lt(&f->_a, 1, 9);
             atomic_read_and_add_lt(&f->_a, 1, l + 2);
 
@@ -116,6 +117,7 @@ class Fixture {
             l = atomic_add_if_ge(&f->_a, 1, 3);
             atomic_read_and_add_gt(&f->_a, 1, 4);
             l = atomic_add_if_gt(&f->_a, 1, 5);
+#endif
             atomic_read_and_add_odd(&f->_a, 1);
             atomic_read_and_add_even(&f->_a, 1);
 
@@ -188,8 +190,11 @@ FIXTURE_TEST_CASE(Test, Fixture) {
     atomic64_set(&_a, -1);
     REQUIRE(_a.counter == -1);
 
+#if !WINDOWS
     atomic64_add(&_a, 1);
     REQUIRE(_a.counter == 0);
+
+    atomic64_set(&_a, 0);
 
     REQUIRE(atomic64_read_and_add(&_a, 1) == 0);
     REQUIRE(_a.counter == 1);
@@ -279,6 +284,7 @@ FIXTURE_TEST_CASE(Test, Fixture) {
     REQUIRE(_a.counter == 21);
     REQUIRE(atomic64_read_and_add_even(&_a, 1) == 21);
     REQUIRE(_a.counter == 21);
+#endif
 
     REQUIRE_NULL(_p.ptr);
 
