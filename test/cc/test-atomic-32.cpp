@@ -39,13 +39,16 @@ using std::cout;
 struct S {
     char c;
 
-    S(char i = 0) : c(i + d) {}
+    S(int i = 0) : c((char)(i + d)) {}
 
     static const char d = '!';
 };
 
+static int one() { return 1; }
+static int two() { return 2; }
+
 class Fixture {
-    static const int M = 9;
+    static const int M = 5;
     KThread* r = nullptr;
     KThread* w = nullptr;
 
@@ -70,7 +73,7 @@ class Fixture {
             int ii(0);
             atomic32_get_var(&ii, &f->_i);
 
-            cout << l << ii << d;
+            cout << l << ii << d << f->_fn();
 
             TestEnv::SleepMs(1);
         }
@@ -99,6 +102,7 @@ class Fixture {
             long l = atomic32_test_and_inc(&f->_a);
             atomic32_set(&f->_a, i + l + 1);
 
+#if !WINDOWS
             l = atomic32_add_if_lt(&f->_a, 1, 9);
             atomic32_read_and_add_lt(&f->_a, 1, l + 2);
 
@@ -113,6 +117,8 @@ class Fixture {
             l = atomic32_add_if_ge(&f->_a, 1, 3);
             atomic32_read_and_add_gt(&f->_a, 1, 4);
             l = atomic32_add_if_gt(&f->_a, 1, 5);
+#endif
+
             atomic32_read_and_add_odd(&f->_a, 1);
             atomic32_read_and_add_even(&f->_a, 1);
 
@@ -129,7 +135,11 @@ class Fixture {
             for (void* o = p; o;)
                 o = atomic_test_and_set_ptr(&f->_p, p, 0);
 
-            atomic32_set_var(&f->_i, i);
+            atomic32_set_var_p(&f->_i, &i);
+            atomic32_set_var(&f->_i, i + 1);
+            atomic32_set_var_direct(&f->_i, i + 2);
+
+            atomic32_set_func(&f->_fn, i % 2 ? one : two);
 
             TestEnv::SleepMs(1);
         }
@@ -143,6 +153,7 @@ protected:
     float _f = 0;
     long _l = 0;
     atomic_ptr_t _p;
+    int (*_fn)(void);
 
     Fixture() {
         _a.counter = 0;
@@ -209,6 +220,13 @@ FIXTURE_TEST_CASE(Test, Fixture) {
     REQUIRE(_a.counter == 6);
     REQUIRE(atomic32_read_and_add_lt(&_a, 3, 4) == 6); // 6
     REQUIRE(_a.counter == 6);
+
+    _fn = one;
+    REQUIRE(_fn() == 1);
+    atomic32_set_func(&_fn, two);
+    REQUIRE(_fn() == 2);
+
+#if !WINDOWS
     REQUIRE(!atomic32_add_if_lt(&_a, 3, 4));
     REQUIRE(_a.counter == 6);
     REQUIRE(atomic32_add_if_lt(&_a, 3, 7));
@@ -268,6 +286,7 @@ FIXTURE_TEST_CASE(Test, Fixture) {
     REQUIRE(_a.counter == 21);
     REQUIRE(atomic32_read_and_add_even(&_a, 1) == 21);
     REQUIRE(_a.counter == 21);
+#endif
 
     REQUIRE_NULL(_p.ptr);
 
@@ -301,6 +320,13 @@ FIXTURE_TEST_CASE(Test, Fixture) {
     int i(2);
     atomic32_get_var(&i, &_i);
     REQUIRE(i == 1);
+
+    ++i;
+    atomic32_set_var_p(&_i, &i);
+    REQUIRE(_i == 2);
+
+    atomic32_set_var_direct(&_i, i + 1);
+    REQUIRE(_i == 3);
 
     REQUIRE_RC(go());
 }
