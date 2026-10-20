@@ -844,7 +844,7 @@ rc_t ContainerAdd ( Container * self, const char * acc, int64_t id,
     }
 
     for ( i = 0; i < self -> nFiles; ++ i ) {
-        Item * item = & self -> files [ i ];
+        item = & self -> files [ i ];
         assert ( item );
         if ( acc != NULL ) {
             if ( item -> acc != NULL )
@@ -1047,7 +1047,7 @@ rc_t Response4AddAccOrId ( Response4 * self, const char * acc,
         return RC ( rcVFS, rcQuery, rcExecuting, rcId, rcNotFound );
 
     for ( i = 0; i < self -> nItems; ++ i ) {
-        Container * item = & self -> items [ i ];
+        item = & self -> items [ i ];
         assert ( item );
         if ( acc != NULL ) {
             if ( item -> acc != NULL )
@@ -1158,9 +1158,7 @@ static char * getType(const String * path, const char * acc) {
     if (StringEqual(&s, &sPath))
         return "sra";
     else {
-        char c[PATH_MAX] = "";
-        size_t num_writ = 0;
-        rc_t rc = string_printf(c, sizeof c, &num_writ, "%s.sralite", acc);
+        rc = string_printf(c, sizeof c, &num_writ, "%s.sralite", acc);
         if (rc != 0)
             return "";
         if (path->size < num_writ)
@@ -2171,7 +2169,7 @@ static rc_t Response4Init4 ( Response4 * self, const char * input ) {
             else {
                 uint32_t i = 0;
                 for ( i = 0; i < n; ++ i ) {
-                    rc_t r2 = 0;
+                    r2 = 0;
 
                     value = KJsonArrayGetElement ( array, i );
                     object = KJsonValueToObject ( value );
