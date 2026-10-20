@@ -44,8 +44,11 @@ struct S {
     static const char d = '!';
 };
 
+static int one() { return 1; }
+static int two() { return 2; }
+
 class Fixture {
-    static const int M = 9;
+    static const int M = 5;
     KThread* r = nullptr;
     KThread* w = nullptr;
 
@@ -73,7 +76,7 @@ class Fixture {
             int ii(0);
             atomic32_get_var(&ii, &f->_i);
 
-            cout << l << ll << ii << d;
+            cout << l << ll << ii << d << f->_f();
 
             TestEnv::SleepMs(1);
         }
@@ -111,13 +114,17 @@ class Fixture {
 
             atomic_read_and_add_eq(&f->_a, 1, 5);
             l = atomic_add_if_eq(&f->_a, 1, 6);
+            
             atomic_read_and_add_ne(&f->_a, 1, 0);
             l = atomic_add_if_ne(&f->_a, 1, 1);
+            
             atomic_read_and_add_ge(&f->_a, 1, 2);
             l = atomic_add_if_ge(&f->_a, 1, 3);
+            
             atomic_read_and_add_gt(&f->_a, 1, 4);
             l = atomic_add_if_gt(&f->_a, 1, 5);
 #endif
+
             atomic_read_and_add_odd(&f->_a, 1);
             atomic_read_and_add_even(&f->_a, 1);
 
@@ -138,11 +145,17 @@ class Fixture {
             ++l;
             atomic_set_var_p(&f->_l, &l);
 
+            atomic_set_var(&f->_l, ++l);
+
+            atomic_set_var_direct(&f->_l, ++l);
+
             double d(f->_d);
             d += .1;
             atomic_set_var_p(&f->_d, &d);
 
             atomic32_set_var(&f->_i, i);
+
+            atomic_set_func(&f->_f, i%2 ? one : two);
 
             TestEnv::SleepMs(1);
         }
@@ -156,6 +169,7 @@ protected:
     double _d = 0;
     long _l = 0;
     atomic_ptr_t _p;
+    int (*_f)(void);
 
     Fixture() {
         _a.counter = 0;
