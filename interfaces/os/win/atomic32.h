@@ -188,6 +188,10 @@ static __inline int atomic32_read_and_add_even ( atomic32_t *v, int i )
 }
 
 
+/* ( * dest ) = ( src ) */
+#define atomic32_set_var( dest, src ) \
+    *(dest) = (src)
+
 /* ( * dest ) = ( * src ) */
 #define atomic32_get_var( dest, src ) \
     *(dest) = *(src)
