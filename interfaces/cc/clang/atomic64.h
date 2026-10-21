@@ -222,6 +222,47 @@ long int atomic64_read_and_add_even ( atomic64_t *v, long int i )
 	return val;
 }
 
+
+/* ========================================================================
+ * These functions are intended for directly updating "ordinary" variables.
+ * It is better to design the code so that atomic structures are used
+ * instead of "ordinary" variables for data read or written
+ * across different threads. */
+
+ /* void atomic64_set_var (void *dest, void *src ); */
+#define atomic64_set_var( dest, src ) \
+    do { \
+        assert(sizeof *(dest)==8); assert(sizeof *(src)==8); \
+        __atomic_store_n((uint64_t*)(dest), *(uint64_t*)(src), __ATOMIC_SEQ_CST); \
+	} while (false)
+
+/* ( * dest ) = ( * src ) */
+#define atomic64_get_var( dest, src ) \
+    do { \
+        assert(sizeof *(dest)==8); assert(sizeof *(src)==8); \
+        uint64_t bits = __atomic_load_n((uint64_t*)(src), __ATOMIC_SEQ_CST); \
+        memmove((dest), &bits, sizeof(*dest)); \
+    } while(false)
+
+/* void atomic32_set_var ( void *dest, void src ); */
+#ifndef atomic32_set_var
+  #define atomic32_set_var( dest, src ) \
+    do { \
+        assert(sizeof *(dest)==4); assert(sizeof (src)==4); \
+        __atomic_store_n((dest), (src), __ATOMIC_SEQ_CST); \
+	} while (false)
+#endif
+
+/* ( * dest ) = ( * src ) */
+#ifndef atomic32_get_var
+  #define atomic32_get_var( dest, src ) \
+    do { \
+        assert(sizeof *(dest)==4); assert(sizeof *(src)==4); \
+        *(dest) = __atomic_load_n(src, __ATOMIC_SEQ_CST); \
+    } while(false)
+#endif
+
+
 #ifdef __cplusplus
 }
 #endif

@@ -165,6 +165,10 @@ void *atomic_test_and_set_ptr ( atomic_ptr_t *const v, void *const s, void *cons
 #define atomic_add_if_eq( v, i, t ) \
     ATOMIC_NAME ( add_if_eq ) ( v, i, t )
 
+/* val = ( * v ), ( * v ) = ( val != t ? val + i : val ), ( val != t ? 1 : 0 ) */
+#define atomic_add_if_ne( v, i, t ) \
+    ATOMIC_NAME ( add_if_ne ) ( v, i, t )
+
 /* val = ( * v ), ( * v ) = ( val >= t ? val + i : val ), ( val >= t ? 1 : 0 ) */
 #define atomic_add_if_ge( v, i, t ) \
     ATOMIC_NAME ( add_if_ge ) ( v, i, t )
@@ -173,12 +177,26 @@ void *atomic_test_and_set_ptr ( atomic_ptr_t *const v, void *const s, void *cons
 #define atomic_add_if_gt( v, i, t ) \
     ATOMIC_NAME ( add_if_gt ) ( v, i, t )
 
-#undef LOCK
 
+/* ========================================================================
+ * These functions are intended for directly updating "ordinary" variables.
+ * It is better to design the code so that atomic structures are used
+ * instead of "ordinary" variables for data read or written
+ * across different threads. */
+
+/* ( * v ) = ( * i ) */
+#define atomic_set_var_p( v, i ) \
+    ATOMIC_NAME ( set_var ) ( v, i )
+
+/* ( * dest ) = ( * src ) */
+#define atomic_get_var( dest, src ) \
+    ATOMIC_NAME ( get_var ) ( dest, src )
+
+
+#undef LOCK
 
 #ifdef __cplusplus
 }
-
 #endif
 
 #endif /* _h_atomic_ */

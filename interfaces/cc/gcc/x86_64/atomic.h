@@ -108,19 +108,16 @@ struct atomic_ptr_t
     
 /* int atomic_read_ptr ( const atomic_ptr_t *v ); */
 #define atomic_read_ptr( v ) \
-    ( ( v ) -> ptr )
+    __atomic_load_n( & ( ( v ) -> ptr ), __ATOMIC_SEQ_CST )
+
+#define atomic_set_ptr( v, s ) \
+    __atomic_store_n( & ( ( v ) -> ptr ), s, __ATOMIC_SEQ_CST )
 
 static __inline__
-void *atomic_test_and_set_ptr ( atomic_ptr_t *v, void *s, void *t )
+void *atomic_test_and_set_ptr ( atomic_ptr_t *const v, void *const s, void *const t )
 {
-    void *rtn;
-    __asm__ __volatile__
-    (
-        "lock;"
-        "cmpxchg %%rsi,(%%rdi)"
-        : "=a" ( rtn )
-        : "D" ( v ), "S" ( s ), "a" ( t )
-    );
+    void *rtn = t;
+    __atomic_compare_exchange_n(&v->ptr, &rtn, s, 0, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
     return rtn;
 }
 
@@ -170,6 +167,10 @@ void *atomic_test_and_set_ptr ( atomic_ptr_t *v, void *s, void *t )
 #define atomic_add_if_eq( v, i, t ) \
     ATOMIC_NAME ( add_if_eq ) ( v, i, t )
 
+/* val = ( * v ), ( * v ) = ( val != t ? val + i : val ), ( val != t ? 1 : 0 ) */
+#define atomic_add_if_ne( v, i, t ) \
+    ATOMIC_NAME ( add_if_ne ) ( v, i, t )
+
 /* val = ( * v ), ( * v ) = ( val >= t ? val + i : val ), ( val >= t ? 1 : 0 ) */
 #define atomic_add_if_ge( v, i, t ) \
     ATOMIC_NAME ( add_if_ge ) ( v, i, t )
@@ -178,8 +179,23 @@ void *atomic_test_and_set_ptr ( atomic_ptr_t *v, void *s, void *t )
 #define atomic_add_if_gt( v, i, t ) \
     ATOMIC_NAME ( add_if_gt ) ( v, i, t )
 
-#undef LOCK
 
+/* ========================================================================
+ * These functions are intended for directly updating "ordinary" variables.
+ * It is better to design the code so that atomic structures are used
+ * instead of "ordinary" variables for data read or written
+ * across different threads. */
+
+/* ( * v ) = ( * i ) */
+#define atomic_set_var_p( v, i ) \
+    ATOMIC_NAME ( set_var ) ( v, i )
+
+/* ( * dest ) = ( * src ) */
+#define atomic_get_var( dest, src ) \
+    ATOMIC_NAME ( get_var ) ( dest, src )
+
+
+#undef LOCK
 
 #ifdef __cplusplus
 }
