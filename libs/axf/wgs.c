@@ -252,3 +252,69 @@ void WGS_limitOpen(List *self)
     }
     assert(self->openCount < self->openCountLimit);
 }
+
+void WGS_ReaderClose(WGS_Reader *self)
+{
+    VCursorRelease(self->curs);
+    self->curs = NULL;
+    self->source = NULL;
+    self->colID = 0;
+}
+
+static rc_t WGS_ReaderOpen(WGS_Reader *self, WGS const *source,
+    VDBManager const *mgr, unsigned seq_id_len, char const *seq_id)
+{
+    VDatabase const *db = NULL;
+    VTable const *tbl = NULL;
+    rc_t rc;
+
+    WGS_ReaderClose(self);
+    if (source->url)
+        rc = VDBManagerOpenDBReadVPath(mgr, &db, NULL, source->url);
+    else
+        rc = VDBManagerOpenDBRead(mgr, &db, NULL, "%.*s", (int)seq_id_len, seq_id);
+
+    if (rc == 0)
+        rc = VDatabaseOpenTableRead(db, &tbl, "SEQUENCE");
+    VDatabaseRelease(db);
+    if (rc == 0)
+        rc = VTableCreateCachedCursorRead(tbl, &self->curs, 0);
+    VTableRelease(tbl);
+    if (rc == 0)
+        rc = VCursorAddColumn(self->curs, &self->colID, "(INSDC:4na:bin)READ");
+    if (rc == 0)
+        rc = VCursorOpen(self->curs);
+    if (rc != 0)
+        WGS_ReaderClose(self);
+    else
+        self->source = source;
+    return rc;
+}
+
+rc_t WGS_ReaderGetBases(WGS_Reader *self, WGS const *source,
+    VDBManager const *mgr, unsigned seq_id_len, char const *seq_id,
+    uint8_t *dst, unsigned start, unsigned len, int64_t row, unsigned *actual)
+{
+    void const *value = NULL;
+    uint32_t length = 0;
+    rc_t rc = 0;
+
+    *actual = 0;
+    if (self->source != source || self->curs == NULL)
+        rc = WGS_ReaderOpen(self, source, mgr, seq_id_len, seq_id);
+    if (rc != 0)
+        return rc;
+
+    /* RestoreRead already requires one consumer per instance. Its private
+     * cursor keeps this worker's contigs out of other workers' production
+     * caches, without removing the lock on the legacy shared cursor.
+     */
+    rc = VCursorCellDataDirect(self->curs, row, self->colID, NULL, &value, NULL, &length);
+    if (rc == 0 && start < length) {
+        unsigned const remain = length - start;
+        unsigned const n = remain < len ? remain : len;
+        memmove(dst, ((uint8_t const *)value) + start, n);
+        *actual = n;
+    }
+    return rc;
+}
