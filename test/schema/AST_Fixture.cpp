@@ -401,3 +401,12 @@ AST_Fixture :: DumpScope ( const BSTree & scope, const char * title )
     KSymTablePopScope ( & tbl );
     KSymTableWhack ( & tbl );
 }
+
+string
+LocationToString( const Token::Location & loc )
+{
+    ostringstream out;
+    out << loc.m_file << ":" << loc.m_line;
+    return out.str();
+}
+

@@ -24,10 +24,12 @@
  *
  */
 
-#ifndef _hpp_Token_
-#define _hpp_Token_
+#pragma once
 
-#include "schema-lex.h"
+#include <string>
+#include <cstdint>
+
+struct SchemaToken;
 
 namespace ncbi
 {
@@ -41,15 +43,16 @@ namespace ncbi
 
             struct Location
             {
-                const char *    m_file; // empty string if not known
+                std::string     m_file; // empty string if not known
                 uint32_t        m_line; // 1 - based
                 uint32_t        m_column; // 1 - based
 
+                Location ();
                 Location ( const char * p_file, uint32_t p_line, uint32_t p_column );
             };
 
         public:
-            Token ( const SchemaToken & st ); // takes ownership of st.leading_ws
+            Token ( const struct SchemaToken & st ); // takes ownership of st.leading_ws
             Token ( TokenType, const char * value = 0 );
             Token ( TokenType, const char * value, const Location & loc );
             Token ( const Token & );
@@ -70,5 +73,3 @@ namespace ncbi
         };
     }
 }
-
-#endif

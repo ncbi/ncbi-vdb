@@ -24,13 +24,12 @@
  *
  */
 
-#ifndef _hpp_ParseTree_
-#define _hpp_ParseTree_
+#pragma once
 
 #include <kfc/ctx.h>
 #include <klib/vector.h>
 
-#include "Token.hpp"
+#include <schema/Token.hpp>
 
 namespace ncbi
 {
@@ -51,19 +50,22 @@ namespace ncbi
             const ParseTree* GetChild ( uint32_t idx ) const;
                   ParseTree* GetChild ( uint32_t idx );
 
-            const Token :: Location & GetLocation () const { return * m_location; } // location of the leading real token
+            const Token :: Location & GetLocation () const { return m_location; } // location of the leading real token
+
+            typedef void (*VisitFn) ( const ParseTree& );
+            void traverse( VisitFn pre_fn, VisitFn post_fn = nullptr ) const;
 
         protected:
             ParseTree ( const Token& token );
-            ~ParseTree ();
+            virtual ~ParseTree ();
 
             void MoveChildren ( ctx_t ctx, ParseTree& );
             void SetToken ( const Token & p_token ) {  m_token = p_token; }
 
         private:
-            Token                       m_token;
-            Vector                      m_children;
-            const Token :: Location *   m_location;
+            Token               m_token;
+            Vector              m_children;
+            Token :: Location   m_location;
         };
 
         class ParseTreeScanner
@@ -91,4 +93,3 @@ namespace ncbi
     }
 }
 
-#endif
