@@ -222,6 +222,19 @@ int atomic32_read_and_add_even ( atomic32_t *v, int i )
 	return val;
 }
 
+/* direct assignment, no conversions
+   ( * v ) = ( i ) */
+#define atomic32_set_var_direct( dest, src ) \
+        __atomic_store_n((dest), (src), __ATOMIC_SEQ_CST)
+
+/* void atomic32_set_var_p (void *dest, void *src ); */
+#define atomic32_set_var_p( dest, src ) \
+    do { \
+        assert(sizeof *(dest)==4); assert(sizeof *(src)==4); \
+        __atomic_store_n((uint32_t*)(dest), *(uint32_t*)(src), \
+                         __ATOMIC_SEQ_CST); \
+	} while (false)
+
 /* void atomic32_set_var ( void *v, void i ); */
 #define atomic32_set_var( v, i ) \
     do { \
@@ -234,6 +247,12 @@ int atomic32_read_and_add_even ( atomic32_t *v, int i )
         assert(sizeof *(dest)==4); assert(sizeof *(src)==4); \
         *(dest) = __atomic_load_n((uint32_t*)src, __ATOMIC_SEQ_CST); \
     } while(false)
+
+#define atomic32_set_func( dest, src ) \
+        __atomic_store_n((dest), (src), __ATOMIC_SEQ_CST)
+
+#define atomic32_get_func( src ) \
+        __atomic_load_n((src), __ATOMIC_SEQ_CST)
 
 
 #ifdef __cplusplus
