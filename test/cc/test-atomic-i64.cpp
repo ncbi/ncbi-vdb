@@ -39,13 +39,16 @@ using std::cout;
 struct S {
     char c;
 
-    S(char i = 0) : c(i + d) {}
+    S(int i = 0) : c((char)(i + d)) {}
 
     static const char d = '!';
 };
 
+static int one() { return 1; }
+static int two() { return 2; }
+
 class Fixture {
-    static const int M = 7;
+    static const int M = 6;
     KThread* r = nullptr;
     KThread* w = nullptr;
 
@@ -64,7 +67,8 @@ class Fixture {
             int ii(0);
             atomic32_get_var(&ii, &f->_i);
 
-            cout << l << ll << ii << d;
+            int (*fn)(void) = atomic64_get_func(&f->_f);
+            cout << l << ll << ii << d << fn();
 
             TestEnv::SleepMs(1);
         }
@@ -123,10 +127,16 @@ class Fixture {
             ++l;
             atomic64_set_var_p(&f->_l, &l);
 
+            atomic64_set_var(&f->_l, ++l);
+
+            atomic64_set_var_direct(&f->_l, ++l);
+
             double d(f->_d);
             d += .1;
             atomic64_set_var_p(&f->_d, &d);
             atomic32_set_var(&f->_i, i);
+
+            atomic64_set_func(&f->_f, i%2 ? &one : &two);
 
             TestEnv::SleepMs(1);
         }
@@ -139,6 +149,7 @@ protected:
     int _i = 0;
     double _d = 0;
     long _l = 0;
+    int (*_f)(void) = one;
 
     Fixture() {
         _a.counter = 0;
@@ -194,9 +205,12 @@ FIXTURE_TEST_CASE(Test, Fixture) {
     REQUIRE(_a.counter == 6);
     REQUIRE(atomic64_read_and_add_lt(&_a, 3, 4) == 6); // 6
     REQUIRE(_a.counter == 6);
-#if !WINDOWS
+
     REQUIRE(!atomic64_add_if_lt(&_a, 3, 4));
-#endif
+    _f = one;
+    REQUIRE(_f() == 1);
+    atomic64_set_func(&_f, &two);
+    REQUIRE(_f() == 2);
     REQUIRE(_a.counter == 6);
 #if !WINDOWS
     REQUIRE(atomic64_add_if_lt(&_a, 3, 7));
@@ -296,6 +310,9 @@ FIXTURE_TEST_CASE(Test, Fixture) {
     nl = 0;
     atomic64_get_var(&nl, &_l);
     REQUIRE(nl == 4);
+    
+    atomic64_set_var_direct(&_l, 44);
+    REQUIRE(_l == 44);
 
     REQUIRE(_d == 0);
     double nd(9);

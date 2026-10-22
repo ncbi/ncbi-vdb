@@ -41,13 +41,16 @@ using std::cout;
 struct S {
     char c;
 
-    S(char i = 0) : c(i + d) {}
+    S(int i = 0) : c((char)(i + d)) {}
 
     static const char d = '!';
 };
 
+static int one() { return 1; }
+static int two() { return 2; }
+
 class Fixture {
-    static const int M = 7;
+    static const int M = 6;
     KThread* r = nullptr;
     KThread* w = nullptr;
 
@@ -64,7 +67,8 @@ class Fixture {
             int ii(0);
             atomic32_get_var(&ii, &f->_i);
 
-            cout << l << ii << d;
+            int (*fn)(void) = atomic32_get_func(&f->_fn);
+            cout << l << ii << d << fn();
             TestEnv::SleepMs(1);
         }
 
@@ -106,6 +110,11 @@ class Fixture {
             atomic32_read_and_add_odd(&f->_a, 1);
             atomic32_read_and_add_even(&f->_a, 1);
 
+            atomic32_set_var_p(&f->_i, &i);
+            atomic32_set_var(&f->_i, i + 1);
+            atomic32_set_var_direct(&f->_i, i + 2);
+
+            atomic32_set_func(&f->_fn, i % 2 ? &one : &two);
             TestEnv::SleepMs(1);
         }
 
@@ -117,6 +126,7 @@ protected:
     int _i = 0;
     float _f = 0;
     long _l = 0;
+    int (*_fn)(void) = one;
 
     Fixture() {
         _a.counter = 0;
@@ -180,6 +190,10 @@ FIXTURE_TEST_CASE(Test, Fixture) {
     REQUIRE(_a.counter == 6);
     REQUIRE(atomic32_read_and_add_lt(&_a, 3, 4) == 6); // 6
     REQUIRE(_a.counter == 6);
+    _fn = one;
+    REQUIRE(_fn() == 1);
+    atomic32_set_func(&_fn, &two);
+    REQUIRE(_fn() == 2);
     REQUIRE(!atomic32_add_if_lt(&_a, 3, 4));
     REQUIRE(_a.counter == 6);
     REQUIRE(atomic32_add_if_lt(&_a, 3, 7));

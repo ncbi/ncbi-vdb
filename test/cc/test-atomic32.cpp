@@ -53,8 +53,11 @@ struct S {
     static const char d = '!';
 };
 
+static int one() { return 1; }
+static int two() { return 2; }
+
 class Fixture {
-    static const int M = 7;
+    static const int M = 6;
     KThread* r = nullptr;
     KThread* w = nullptr;
 
@@ -85,7 +88,8 @@ class Fixture {
             int ii(0);
             atomic32_get_var(&ii, &f->_i);
 
-            cout << l << ii << d;
+            int (*fn)(void) = atomic_get_func(&f->_fn);
+            cout << l << ii << d << fn();
 
             TestEnv::SleepMs(1);
         }
@@ -173,7 +177,11 @@ class Fixture {
             cerr << "NULL\n";
 #endif
 
-            atomic32_set_var(&f->_i, i);
+            atomic32_set_var_p(&f->_i, &i);
+            atomic32_set_var(&f->_i, i + 1);
+            atomic32_set_var_direct(&f->_i, i + 2);
+
+            atomic32_set_func(&f->_fn, i % 2 ? &one : &two);
 
             TestEnv::SleepMs(1);
         }
@@ -187,6 +195,7 @@ protected:
     float _f = 0;
     long _l = 0;
     atomic_ptr_t _p;
+    int (*_fn)(void) = one;
 
     Fixture() {
         _a.counter = 0;
@@ -378,6 +387,12 @@ FIXTURE_TEST_CASE(Test, Fixture) {
     int i(2);
     atomic32_get_var(&i, &_i);
     REQUIRE(i == 1);
+    ++i;
+    atomic32_set_var_p(&_i, &i);
+    REQUIRE(_i == 2);
+
+    atomic32_set_var_direct(&_i, i + 1);
+    REQUIRE(_i == 3);
 
     REQUIRE_RC(go());
 }
