@@ -259,6 +259,9 @@ long int atomic64_read_and_add_even ( atomic64_t *v, long int i )
 #define atomic64_set_func( dest, src ) \
         __atomic_store_n((dest), (src), __ATOMIC_SEQ_CST)
 
+#define atomic64_get_func( src ) \
+        __atomic_load_n((src), __ATOMIC_SEQ_CST)
+
 /* void atomic32_set_var ( void *dest, void src ); */
 #ifndef atomic32_set_var
   #define atomic32_set_var( dest, src ) \
