@@ -48,7 +48,7 @@ static int one() { return 1; }
 static int two() { return 2; }
 
 class Fixture {
-    static const int M = 5;
+    static const int M = 7;
     KThread* r = nullptr;
     KThread* w = nullptr;
 
@@ -107,21 +107,31 @@ class Fixture {
 
 #if !WINDOWS
             l = atomic_add_if_lt(&f->_a, 1, 9);
+#endif
             atomic_read_and_add_lt(&f->_a, 1, l + 2);
 
+#if !WINDOWS
             l = atomic_add_if_le(&f->_a, 1, 9);
+#endif
             atomic_read_and_add_le(&f->_a, 1, l + 3);
 
             atomic_read_and_add_eq(&f->_a, 1, 5);
+#if !WINDOWS
             l = atomic_add_if_eq(&f->_a, 1, 6);
-            
+#endif
+
             atomic_read_and_add_ne(&f->_a, 1, 0);
+#if !WINDOWS
             l = atomic_add_if_ne(&f->_a, 1, 1);
-            
+#endif
+
             atomic_read_and_add_ge(&f->_a, 1, 2);
+#if !WINDOWS
             l = atomic_add_if_ge(&f->_a, 1, 3);
-            
+#endif
+
             atomic_read_and_add_gt(&f->_a, 1, 4);
+#if !WINDOWS
             l = atomic_add_if_gt(&f->_a, 1, 5);
 #endif
 
@@ -241,52 +251,73 @@ FIXTURE_TEST_CASE(Test, Fixture) {
     REQUIRE(_f() == 1);
     atomic_set_func(&_f, two);
     REQUIRE(_f() == 2);
+
 #if !WINDOWS
     REQUIRE(!atomic_add_if_lt(&_a, 3, 4));
     REQUIRE(_a.counter == 6);
     REQUIRE(atomic_add_if_lt(&_a, 3, 7));
     REQUIRE(_a.counter == 9);
+#else
+    _a.counter = 9;
+#endif
 
     REQUIRE(atomic_read_and_add_le(&_a, 1, 8) == 9); // 9
     REQUIRE(_a.counter == 9);
     REQUIRE(atomic_read_and_add_le(&_a, 1, 9) == 9); // 10
     REQUIRE(_a.counter == 10);
+#if !WINDOWS
     REQUIRE(!atomic_add_if_le(&_a, 1, 9));
     REQUIRE(_a.counter == 10);
     REQUIRE(atomic_add_if_le(&_a, 1, 10));
     REQUIRE(_a.counter == 11);
+#else
+    _a.counter = 11;
+#endif
 
     REQUIRE(atomic_read_and_add_eq(&_a, 1, 10) == 11);
     REQUIRE(_a.counter == 11);
     REQUIRE(atomic_read_and_add_eq(&_a, 1, 11) == 11);
     REQUIRE(_a.counter == 12);
+#if !WINDOWS
     REQUIRE(!atomic_add_if_eq(&_a, 1, 10));
     REQUIRE(_a.counter == 12);
     REQUIRE(atomic_add_if_eq(&_a, 1, 12));
     REQUIRE(_a.counter == 13);
+#else
+    _a.counter = 13;
+#endif
 
     REQUIRE(atomic_read_and_add_ne(&_a, 1, 11) == 13);
     REQUIRE(_a.counter == 14);
     REQUIRE(atomic_read_and_add_ne(&_a, 1, 14) == 14);
     REQUIRE(_a.counter == 14);
+#if !WINDOWS
     REQUIRE(atomic_add_if_ne(&_a, 1, 10));
     REQUIRE(_a.counter == 15);
     REQUIRE(!atomic_add_if_ne(&_a, 1, 15));
     REQUIRE(_a.counter == 15);
+#else
+    _a.counter = 15;
+#endif
 
     REQUIRE(atomic_read_and_add_ge(&_a, 1, 16) == 15);
     REQUIRE(_a.counter == 15);
     REQUIRE(atomic_read_and_add_ge(&_a, 1, 15) == 15);
     REQUIRE(_a.counter == 16);
+#if !WINDOWS
     REQUIRE(atomic_add_if_ge(&_a, 1, 16));
     REQUIRE(_a.counter == 17);
     REQUIRE(!atomic_add_if_ge(&_a, 1, 19));
     REQUIRE(_a.counter == 17);
+#else
+    _a.counter = 17;
+#endif
 
     REQUIRE(atomic_read_and_add_gt(&_a, 1, 17) == 17);
     REQUIRE(_a.counter == 17);
     REQUIRE(atomic_read_and_add_gt(&_a, 1, 16) == 17);
     REQUIRE(_a.counter == 18);
+#if !WINDOWS
     REQUIRE(atomic_add_if_gt(&_a, 1, 16));
     REQUIRE(_a.counter == 19);
     REQUIRE(!atomic_add_if_gt(&_a, 1, 19));

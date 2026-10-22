@@ -47,7 +47,7 @@ struct S {
 };
 
 class Fixture {
-    static const int M = 9;
+    static const int M = 7;
     KThread* r = nullptr;
     KThread* w = nullptr;
 
