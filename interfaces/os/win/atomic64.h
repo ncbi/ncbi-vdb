@@ -191,6 +191,9 @@ static __inline LONG64 atomic64_read_and_add_even ( atomic64_t *v, int i )
 #define atomic64_get_func( src ) \
         *(src)
 
+#define atomic64_set_func( dest, src ) \
+        *(dest) = (src)
+
 /* ( * dest ) = ( * src ) */
 #define atomic32_get_var( dest, src ) \
     *(dest) = *(src)

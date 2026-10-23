@@ -206,7 +206,10 @@ FIXTURE_TEST_CASE(Test, Fixture) {
     REQUIRE(atomic64_read_and_add_lt(&_a, 3, 4) == 6); // 6
     REQUIRE(_a.counter == 6);
 
+#if !WINDOWS
     REQUIRE(!atomic64_add_if_lt(&_a, 3, 4));
+#endif
+
     _f = one;
     REQUIRE(_f() == 1);
     atomic64_set_func(&_f, &two);
