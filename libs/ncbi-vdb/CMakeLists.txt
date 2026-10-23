@@ -42,12 +42,6 @@ set( VDB_LIB_CMN_TARGETS
     kdb
     vdbapp
 )
-if ( HAVE_MBEDTLS_F )
-    message("Using mbedtls installed in the system")
-else()
-    message("No mbedtls libs found installed in the system, using local copy...")
-    list( APPEND VDB_LIB_CMN_TARGETS mbedx509 mbedtls mbedcrypto )
-endif()
 
 if(NOT _NCBIVDB_CFG_PACKAGING)
     list( APPEND VDB_LIB_CMN_TARGETS bz2 z zstd )

@@ -43,7 +43,7 @@ if( WIN32 )
     target_link_libraries( test-wlink-mt ktst ncbi-wvdb-shared Ws2_32 ${MBEDTLS_LIBS} )
     target_link_options( test-wlink-mt PRIVATE "/ENTRY:mainCRTStartup" )
 
-elseif( NOT HAVE_MBEDTLS_F )
+else()
     if ( CMAKE_CXX_COMPILER_ID MATCHES "^(Apple)?Clang$" OR CMAKE_C_COMPILER_ID MATCHES "^(Apple)?Clang$")
         message("ncbi-vdb: ignoring so_check check test for clang")
     else()

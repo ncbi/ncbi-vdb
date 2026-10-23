@@ -447,7 +447,7 @@ message( "RUN_SANITIZER_TESTS: ${RUN_SANITIZER_TESTS}" )
 
 endif(NOT _NCBIVDB_CFG_PACKAGING)
 
-if( NOT HAVE_MBEDTLS_F )
-	message( "Using local mbedtls headers from interfaces/ext/mbedtls" )
-	include_directories( interfaces/ext/mbedtls )
-endif()
+# mbedtls
+include_directories( ${CMAKE_BINARY_DIR}/include )  # this is where we install mbedtls headers
+link_directories( ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY} ) # mbedtls libraries are in ilib/
+set( MBEDTLS_LIBS mbedx509 mbedtls mbedcrypto )
