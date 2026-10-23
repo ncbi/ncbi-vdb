@@ -188,12 +188,12 @@ static __inline LONG64 atomic64_read_and_add_even ( atomic64_t *v, int i )
 }
 
 
+#define atomic64_get_func( src ) \
+        *(src)
+
 /* ( * dest ) = ( * src ) */
 #define atomic32_get_var( dest, src ) \
     *(dest) = *(src)
-
-#define atomic32_set_func( dest, src ) \
-        *(dest) = *(src)
 
 /* ( * dest ) = ( * src ) */
 #define atomic64_get_var( dest, src ) \
@@ -207,6 +207,11 @@ static __inline LONG64 atomic64_read_and_add_even ( atomic64_t *v, int i )
 #define atomic64_set_var_p( dest, src ) \
     *(dest) = *(src)
 
+/* direct assignment, no conversions
+   ( * v ) = ( i ) */
+#define atomic64_set_var_direct( v, i ) \
+    *(v) = (i)
+
 /* ( * dest ) = ( src ) */
 #define atomic32_set_var( dest, src ) \
     *(dest) = (src)
@@ -214,11 +219,6 @@ static __inline LONG64 atomic64_read_and_add_even ( atomic64_t *v, int i )
 /* void atomic32_set_var_p (void *dest, void *src ); */
 #define atomic32_set_var_p( dest, src ) \
     *(dest) = *(src)
-
-/* direct assignment, no conversions
-   ( * v ) = ( i ) */
-#define atomic32_set_var_direct( v, i ) \
-    *(v) = (i)
 
 #ifdef __cplusplus
 }

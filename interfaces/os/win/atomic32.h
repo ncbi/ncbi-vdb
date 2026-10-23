@@ -188,6 +188,12 @@ static __inline int atomic32_read_and_add_even ( atomic32_t *v, int i )
 }
 
 
+#define atomic32_get_func( src ) \
+        *(src)
+
+#define atomic32_set_func( dest, src ) \
+        *(dest) = (src)
+
 /* ( * dest ) = ( src ) */
 #define atomic32_set_var( dest, src ) \
     *(dest) = (src)
@@ -195,6 +201,16 @@ static __inline int atomic32_read_and_add_even ( atomic32_t *v, int i )
 /* ( * dest ) = ( * src ) */
 #define atomic32_get_var( dest, src ) \
     *(dest) = *(src)
+
+/* ( * dest ) = ( * src ) */
+#define atomic32_set_var_p( dest, src ) \
+    *(dest) = *(src)
+
+/* ( * dest ) = ( src ) */
+#define atomic32_set_var_direct( dest, src ) \
+    *(dest) = (src)
+
+
 
 #ifdef __cplusplus
 }

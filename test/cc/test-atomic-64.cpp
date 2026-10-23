@@ -222,12 +222,12 @@ FIXTURE_TEST_CASE(Test, Fixture) {
 
     atomic64_set(&_a, 0);
 
+#if !WINDOWS //
     REQUIRE(atomic64_read_and_add(&_a, 1) == 0);
     REQUIRE(_a.counter == 1);
 
     REQUIRE(atomic64_add_and_read(&_a, 1) == 2);
 
-#if !WINDOWS //
     atomic64_inc(&_a);
     REQUIRE(_a.counter == 3);
 

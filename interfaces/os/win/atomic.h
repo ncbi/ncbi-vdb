@@ -159,6 +159,10 @@ typedef struct ATOMIC_NAME ( t ) atomic_t;
 #define atomic_set_func( v, i ) \
     ATOMIC_NAME ( set_func ) ( v, i )
 
+/* return ( src ) */
+#define atomic_get_func( src ) \
+    ATOMIC_NAME ( get_func ) ( src )
+
 /* ( * dest ) = ( src ) */
 #define atomic_set_var( dest, src ) \
     ATOMIC_NAME ( set_var ) ( dest, src )
