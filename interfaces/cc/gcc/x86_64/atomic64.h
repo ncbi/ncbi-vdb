@@ -229,11 +229,23 @@ long int atomic64_read_and_add_even ( atomic64_t *v, long int i )
  * instead of "ordinary" variables for data read or written
  * across different threads. */
 
- /* void atomic64_set_var (void *dest, void *src ); */
-#define atomic64_set_var( dest, src ) \
+ /* void atomic64_set_var_p (void *dest, void *src ); */
+#define atomic64_set_var_p( dest, src ) \
     do { \
         assert(sizeof *(dest)==8); assert(sizeof *(src)==8); \
         __atomic_store_n((uint64_t*)(dest), *(uint64_t*)(src), __ATOMIC_SEQ_CST); \
+	} while (false)
+
+/* direct assignment, no conversions
+   ( * v ) = ( i ) */
+#define atomic64_set_var_direct( dest, src ) \
+        __atomic_store_n((dest), (src), __ATOMIC_SEQ_CST)
+
+ /* void atomic64_set_var (void *dest, void src ); */
+#define atomic64_set_var( dest, src ) \
+    do { \
+        assert(sizeof *(dest)==8); assert(sizeof (src)==8); \
+        __atomic_store_n((uint64_t*)(dest), (uint64_t)(src), __ATOMIC_SEQ_CST); \
 	} while (false)
 
 /* ( * dest ) = ( * src ) */
@@ -243,6 +255,12 @@ long int atomic64_read_and_add_even ( atomic64_t *v, long int i )
         uint64_t bits = __atomic_load_n((uint64_t*)(src), __ATOMIC_SEQ_CST); \
         memmove((dest), &bits, sizeof(*dest)); \
     } while(false)
+
+#define atomic64_set_func( dest, src ) \
+        __atomic_store_n((dest), (src), __ATOMIC_SEQ_CST)
+
+#define atomic64_get_func( src ) \
+        __atomic_load_n((src), __ATOMIC_SEQ_CST)
 
 /* void atomic32_set_var ( void *dest, void src ); */
 #ifndef atomic32_set_var

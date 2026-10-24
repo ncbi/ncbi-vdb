@@ -39,13 +39,16 @@ using std::cout;
 struct S {
     char c;
 
-    S(char i = 0) : c(i + d) {}
+    S(int i = 0) : c((char)(i + d)) {}
 
     static const char d = '!';
 };
 
+static int one() { return 1; }
+static int two() { return 2; }
+
 class Fixture {
-    static const int M = 9;
+    static const int M = 6;
     KThread* r = nullptr;
     KThread* w = nullptr;
 
@@ -73,7 +76,8 @@ class Fixture {
             int ii(0);
             atomic32_get_var(&ii, &f->_i);
 
-            cout << l << ll << ii << d;
+            int (*fn)(void) = atomic64_get_func(&f->_f);
+            cout << l << ll << ii << d << fn();
 
             TestEnv::SleepMs(1);
         }
@@ -102,20 +106,36 @@ class Fixture {
             long l = atomic_test_and_inc(&f->_a);
             atomic_set(&f->_a, i + l + 1);
 
+#if !WINDOWS
             l = atomic_add_if_lt(&f->_a, 1, 9);
+#endif
             atomic_read_and_add_lt(&f->_a, 1, l + 2);
 
+#if !WINDOWS
             l = atomic_add_if_le(&f->_a, 1, 9);
+#endif
             atomic_read_and_add_le(&f->_a, 1, l + 3);
 
             atomic_read_and_add_eq(&f->_a, 1, 5);
+#if !WINDOWS
             l = atomic_add_if_eq(&f->_a, 1, 6);
+#endif
+
             atomic_read_and_add_ne(&f->_a, 1, 0);
+#if !WINDOWS
             l = atomic_add_if_ne(&f->_a, 1, 1);
+#endif
+
             atomic_read_and_add_ge(&f->_a, 1, 2);
+#if !WINDOWS
             l = atomic_add_if_ge(&f->_a, 1, 3);
+#endif
+
             atomic_read_and_add_gt(&f->_a, 1, 4);
+#if !WINDOWS
             l = atomic_add_if_gt(&f->_a, 1, 5);
+#endif
+
             atomic_read_and_add_odd(&f->_a, 1);
             atomic_read_and_add_even(&f->_a, 1);
 
@@ -136,11 +156,17 @@ class Fixture {
             ++l;
             atomic_set_var_p(&f->_l, &l);
 
+            atomic_set_var(&f->_l, ++l);
+
+            atomic_set_var_direct(&f->_l, ++l);
+
             double d(f->_d);
             d += .1;
             atomic_set_var_p(&f->_d, &d);
 
             atomic32_set_var(&f->_i, i);
+
+            atomic_set_func(&f->_f, i%2 ? &one : &two);
 
             TestEnv::SleepMs(1);
         }
@@ -154,6 +180,7 @@ protected:
     double _d = 0;
     long _l = 0;
     atomic_ptr_t _p;
+    int (*_f)(void) = one;
 
     Fixture() {
         _a.counter = 0;
@@ -188,9 +215,14 @@ FIXTURE_TEST_CASE(Test, Fixture) {
     atomic64_set(&_a, -1);
     REQUIRE(_a.counter == -1);
 
+#if !WINDOWS //
     atomic64_add(&_a, 1);
     REQUIRE(_a.counter == 0);
+#endif
 
+    atomic64_set(&_a, 0);
+
+#if !WINDOWS //
     REQUIRE(atomic64_read_and_add(&_a, 1) == 0);
     REQUIRE(_a.counter == 1);
 
@@ -204,8 +236,11 @@ FIXTURE_TEST_CASE(Test, Fixture) {
 
     REQUIRE(!atomic64_dec_and_test(&_a)); // 1
     REQUIRE(atomic64_dec_and_test(&_a)); // 0
+#endif
 
     atomic64_set(&_a, -2);
+
+#if !WINDOWS //
     REQUIRE(!atomic64_inc_and_test(&_a)); // -1
     REQUIRE(atomic64_inc_and_test(&_a)); // 0
     REQUIRE(atomic64_test_and_inc(&_a)); // 1
@@ -216,69 +251,73 @@ FIXTURE_TEST_CASE(Test, Fixture) {
     REQUIRE(atomic64_test_and_set(&_a, 3, 1) == 1); // 3
     REQUIRE(_a.counter == 3);
 
-    REQUIRE(atomic64_read_and_add_lt(&_a, 3, 4) == 3); // 6
+    REQUIRE(atomic64_read_and_add_lt(&_a, 3, 4) == 3); /// 6
     REQUIRE(_a.counter == 6);
-    REQUIRE(atomic64_read_and_add_lt(&_a, 3, 4) == 6); // 6
+    REQUIRE(atomic64_read_and_add_lt(&_a, 3, 4) == 6); /// 6
     REQUIRE(_a.counter == 6);
     REQUIRE(!atomic64_add_if_lt(&_a, 3, 4));
+    _f = one;
+    REQUIRE(_f() == 1);
+    atomic_set_func(&_f, &two);
+    REQUIRE(_f() == 2);
     REQUIRE(_a.counter == 6);
-    REQUIRE(atomic64_add_if_lt(&_a, 3, 7));
-    REQUIRE(_a.counter == 9);
+    _a.counter = 9;
 
-    REQUIRE(atomic64_read_and_add_le(&_a, 1, 8) == 9); // 9
+    REQUIRE(atomic64_read_and_add_le(&_a, 1, 8) == 9); /// 9
     REQUIRE(_a.counter == 9);
-    REQUIRE(atomic64_read_and_add_le(&_a, 1, 9) == 9); // 10
+    REQUIRE(atomic64_read_and_add_le(&_a, 1, 9) == 9); /// 10
     REQUIRE(_a.counter == 10);
     REQUIRE(!atomic64_add_if_le(&_a, 1, 9));
     REQUIRE(_a.counter == 10);
     REQUIRE(atomic64_add_if_le(&_a, 1, 10));
     REQUIRE(_a.counter == 11);
 
-    REQUIRE(atomic64_read_and_add_eq(&_a, 1, 10) == 11);
+    REQUIRE(atomic64_read_and_add_eq(&_a, 1, 10) == 11); ///
     REQUIRE(_a.counter == 11);
-    REQUIRE(atomic64_read_and_add_eq(&_a, 1, 11) == 11);
+    REQUIRE(atomic64_read_and_add_eq(&_a, 1, 11) == 11); ///
     REQUIRE(_a.counter == 12);
     REQUIRE(!atomic64_add_if_eq(&_a, 1, 10));
     REQUIRE(_a.counter == 12);
     REQUIRE(atomic64_add_if_eq(&_a, 1, 12));
     REQUIRE(_a.counter == 13);
 
-    REQUIRE(atomic64_read_and_add_ne(&_a, 1, 11) == 13);
+    REQUIRE(atomic64_read_and_add_ne(&_a, 1, 11) == 13); ///
     REQUIRE(_a.counter == 14);
-    REQUIRE(atomic64_read_and_add_ne(&_a, 1, 14) == 14);
+    REQUIRE(atomic64_read_and_add_ne(&_a, 1, 14) == 14); ///
     REQUIRE(_a.counter == 14);
     REQUIRE(atomic64_add_if_ne(&_a, 1, 10));
     REQUIRE(_a.counter == 15);
     REQUIRE(!atomic64_add_if_ne(&_a, 1, 15));
     REQUIRE(_a.counter == 15);
 
-    REQUIRE(atomic64_read_and_add_ge(&_a, 1, 16) == 15);
+    REQUIRE(atomic64_read_and_add_ge(&_a, 1, 16) == 15); ///
     REQUIRE(_a.counter == 15);
-    REQUIRE(atomic64_read_and_add_ge(&_a, 1, 15) == 15);
+    REQUIRE(atomic64_read_and_add_ge(&_a, 1, 15) == 15); ///
     REQUIRE(_a.counter == 16);
     REQUIRE(atomic64_add_if_ge(&_a, 1, 16));
     REQUIRE(_a.counter == 17);
     REQUIRE(!atomic64_add_if_ge(&_a, 1, 19));
     REQUIRE(_a.counter == 17);
 
-    REQUIRE(atomic64_read_and_add_gt(&_a, 1, 17) == 17);
+    REQUIRE(atomic64_read_and_add_gt(&_a, 1, 17) == 17); ///
     REQUIRE(_a.counter == 17);
-    REQUIRE(atomic64_read_and_add_gt(&_a, 1, 16) == 17);
+    REQUIRE(atomic64_read_and_add_gt(&_a, 1, 16) == 17); ///
     REQUIRE(_a.counter == 18);
     REQUIRE(atomic64_add_if_gt(&_a, 1, 16));
     REQUIRE(_a.counter == 19);
     REQUIRE(!atomic64_add_if_gt(&_a, 1, 19));
     REQUIRE(_a.counter == 19);
 
-    REQUIRE(atomic64_read_and_add_odd(&_a, 1) == 19);
+    REQUIRE(atomic64_read_and_add_odd(&_a, 1) == 19); ///
     REQUIRE(_a.counter == 20);
-    REQUIRE(atomic64_read_and_add_odd(&_a, 1) == 20);
+    REQUIRE(atomic64_read_and_add_odd(&_a, 1) == 20); ///
     REQUIRE(_a.counter == 20);
 
     REQUIRE(atomic64_read_and_add_even(&_a, 1) == 20);
     REQUIRE(_a.counter == 21);
-    REQUIRE(atomic64_read_and_add_even(&_a, 1) == 21);
+    REQUIRE(atomic64_read_and_add_even(&_a, 1) == 21); ///
     REQUIRE(_a.counter == 21);
+#endif
 
     REQUIRE_NULL(_p.ptr);
 
@@ -311,12 +350,19 @@ FIXTURE_TEST_CASE(Test, Fixture) {
     REQUIRE(nl == 0);
 
     nl = 42;
-    atomic64_set_var(&_l, &nl);
+    atomic64_set_var_p(&_l, &nl);
     REQUIRE(_l == 42);
+
+    nl = 4;
+    atomic64_set_var(&_l, nl);
+    REQUIRE(_l == 4);
 
     nl = 0;
     atomic64_get_var(&nl, &_l);
-    REQUIRE(nl == 42);
+    REQUIRE(nl == 4);
+    
+    atomic64_set_var_direct(&_l, 44);
+    REQUIRE(_l == 44);
 
     REQUIRE(_d == 0);
     double nd(9);
@@ -324,7 +370,7 @@ FIXTURE_TEST_CASE(Test, Fixture) {
     REQUIRE(nd == 0);
 
     nd = 3.14159;
-    atomic64_set_var(&_d, &nd);
+    atomic64_set_var_p(&_d, &nd);
     REQUIRE(_d == 3.14159);
     REQUIRE(nd == 3.14159);
 

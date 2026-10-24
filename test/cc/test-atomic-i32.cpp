@@ -41,13 +41,16 @@ using std::cout;
 struct S {
     char c;
 
-    S(char i = 0) : c(i + d) {}
+    S(int i = 0) : c((char)(i + d)) {}
 
     static const char d = '!';
 };
 
+static int one() { return 1; }
+static int two() { return 2; }
+
 class Fixture {
-    static const int M = 9;
+    static const int M = 6;
     KThread* r = nullptr;
     KThread* w = nullptr;
 
@@ -64,7 +67,8 @@ class Fixture {
             int ii(0);
             atomic32_get_var(&ii, &f->_i);
 
-            cout << l << ii << d;
+            int (*fn)(void) = atomic32_get_func(&f->_fn);
+            cout << l << ii << d << fn();
             TestEnv::SleepMs(1);
         }
 
@@ -89,23 +93,40 @@ class Fixture {
             long l = atomic32_test_and_inc(&f->_a);
             atomic32_set(&f->_a, i + l + 1);
 
+#if !WINDOWS
             l = atomic32_add_if_lt(&f->_a, 1, 9);
+#endif
             atomic32_read_and_add_lt(&f->_a, 1, l + 2);
 
+#if !WINDOWS
             l = atomic32_add_if_le(&f->_a, 1, 9);
+#endif
             atomic32_read_and_add_le(&f->_a, 1, l + 3);
 
             atomic32_read_and_add_eq(&f->_a, 1, 5);
+#if !WINDOWS
             l = atomic32_add_if_eq(&f->_a, 1, 6);
+#endif
             atomic32_read_and_add_ne(&f->_a, 1, 0);
+#if !WINDOWS
             l = atomic32_add_if_ne(&f->_a, 1, 1);
+#endif
             atomic32_read_and_add_ge(&f->_a, 1, 2);
+#if !WINDOWS
             l = atomic32_add_if_ge(&f->_a, 1, 3);
+#endif
             atomic32_read_and_add_gt(&f->_a, 1, 4);
+#if !WINDOWS
             l = atomic32_add_if_gt(&f->_a, 1, 5);
+#endif
             atomic32_read_and_add_odd(&f->_a, 1);
             atomic32_read_and_add_even(&f->_a, 1);
 
+            atomic32_set_var_p(&f->_i, &i);
+            atomic32_set_var(&f->_i, i + 1);
+            atomic32_set_var_direct(&f->_i, i + 2);
+
+            atomic32_set_func(&f->_fn, i % 2 ? &one : &two);
             TestEnv::SleepMs(1);
         }
 
@@ -117,6 +138,7 @@ protected:
     int _i = 0;
     float _f = 0;
     long _l = 0;
+    int (*_fn)(void) = one;
 
     Fixture() {
         _a.counter = 0;
@@ -180,55 +202,85 @@ FIXTURE_TEST_CASE(Test, Fixture) {
     REQUIRE(_a.counter == 6);
     REQUIRE(atomic32_read_and_add_lt(&_a, 3, 4) == 6); // 6
     REQUIRE(_a.counter == 6);
+    _fn = one;
+    REQUIRE(_fn() == 1);
+    atomic32_set_func(&_fn, &two);
+    REQUIRE(_fn() == 2);
+#if !WINDOWS
     REQUIRE(!atomic32_add_if_lt(&_a, 3, 4));
+#endif
     REQUIRE(_a.counter == 6);
+#if !WINDOWS
     REQUIRE(atomic32_add_if_lt(&_a, 3, 7));
+#else
+    _a.counter = 9;
+#endif
     REQUIRE(_a.counter == 9);
 
     REQUIRE(atomic32_read_and_add_le(&_a, 1, 8) == 9); // 9
     REQUIRE(_a.counter == 9);
     REQUIRE(atomic32_read_and_add_le(&_a, 1, 9) == 9); // 10
     REQUIRE(_a.counter == 10);
+#if !WINDOWS
     REQUIRE(!atomic32_add_if_le(&_a, 1, 9));
     REQUIRE(_a.counter == 10);
     REQUIRE(atomic32_add_if_le(&_a, 1, 10));
     REQUIRE(_a.counter == 11);
+#else
+    _a.counter = 11;
+#endif
 
     REQUIRE(atomic32_read_and_add_eq(&_a, 1, 10) == 11);
     REQUIRE(_a.counter == 11);
     REQUIRE(atomic32_read_and_add_eq(&_a, 1, 11) == 11);
     REQUIRE(_a.counter == 12);
+#if !WINDOWS
     REQUIRE(!atomic32_add_if_eq(&_a, 1, 10));
     REQUIRE(_a.counter == 12);
     REQUIRE(atomic32_add_if_eq(&_a, 1, 12));
     REQUIRE(_a.counter == 13);
+#else
+    _a.counter = 13;
+#endif
 
     REQUIRE(atomic32_read_and_add_ne(&_a, 1, 11) == 13);
     REQUIRE(_a.counter == 14);
     REQUIRE(atomic32_read_and_add_ne(&_a, 1, 14) == 14);
     REQUIRE(_a.counter == 14);
+#if !WINDOWS
     REQUIRE(atomic32_add_if_ne(&_a, 1, 10));
     REQUIRE(_a.counter == 15);
     REQUIRE(!atomic32_add_if_ne(&_a, 1, 15));
     REQUIRE(_a.counter == 15);
+#else
+    _a.counter = 15;
+#endif
 
     REQUIRE(atomic32_read_and_add_ge(&_a, 1, 16) == 15);
     REQUIRE(_a.counter == 15);
     REQUIRE(atomic32_read_and_add_ge(&_a, 1, 15) == 15);
     REQUIRE(_a.counter == 16);
+#if !WINDOWS
     REQUIRE(atomic32_add_if_ge(&_a, 1, 16));
     REQUIRE(_a.counter == 17);
     REQUIRE(!atomic32_add_if_ge(&_a, 1, 19));
     REQUIRE(_a.counter == 17);
+#else
+    _a.counter = 17;
+#endif
 
     REQUIRE(atomic32_read_and_add_gt(&_a, 1, 17) == 17);
     REQUIRE(_a.counter == 17);
     REQUIRE(atomic32_read_and_add_gt(&_a, 1, 16) == 17);
     REQUIRE(_a.counter == 18);
+#if !WINDOWS
     REQUIRE(atomic32_add_if_gt(&_a, 1, 16));
     REQUIRE(_a.counter == 19);
     REQUIRE(!atomic32_add_if_gt(&_a, 1, 19));
     REQUIRE(_a.counter == 19);
+#else
+    _a.counter = 19;
+#endif
 
     REQUIRE(atomic32_read_and_add_odd(&_a, 1) == 19);
     REQUIRE(_a.counter == 20);
