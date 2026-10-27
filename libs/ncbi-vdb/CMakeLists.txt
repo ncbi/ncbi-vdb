@@ -41,6 +41,7 @@ set( VDB_LIB_CMN_TARGETS
     schema
     kdb
     vdbapp
+    vdbmbedtls
 )
 
 if(NOT _NCBIVDB_CFG_PACKAGING)

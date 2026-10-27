@@ -449,5 +449,3 @@ endif(NOT _NCBIVDB_CFG_PACKAGING)
 
 # mbedtls
 include_directories( ${CMAKE_BINARY_DIR}/include )  # this is where we install mbedtls headers
-link_directories( ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY} ) # mbedtls libraries are in ilib/
-set( MBEDTLS_LIBS mbedx509 mbedtls mbedcrypto )
