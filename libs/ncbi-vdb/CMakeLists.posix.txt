@@ -48,8 +48,6 @@ if(_NCBIVDB_CFG_PACKAGING)
     install(TARGETS ncbi-vdb ncbi-wvdb)
 else()
 
-message(VDB_LIB_RD=${VDB_LIB_RD})
-
 add_library( ncbi-vdb STATIC "${VDB_LIB_RD}" )
 
 ExportStatic( ncbi-vdb true )

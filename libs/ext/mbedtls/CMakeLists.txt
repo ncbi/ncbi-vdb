@@ -72,5 +72,6 @@ add_library( vdbmbedtls OBJECT IMPORTED GLOBAL )
 set_target_properties( vdbmbedtls PROPERTIES
 	IMPORTED_OBJECTS "${LIB_FILES}"
 )
+add_dependencies( vdbmbedtls MBEDTLS )
 
 #TODO: Windows
