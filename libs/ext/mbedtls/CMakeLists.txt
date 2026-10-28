@@ -63,5 +63,6 @@ set_target_properties( vdbmbedtls PROPERTIES
 	IMPORTED_OBJECTS "${LIB_FILES}"
 )
 add_dependencies( vdbmbedtls MBEDTLS )
-
+get_target_property(FILES vdbmbedtls IMPORTED_OBJECTS)
+message( STATUS FILES=${FILES})
 #TODO: Windows
