@@ -277,13 +277,6 @@ elseif( "windows" STREQUAL ${OS} )
 endif()
 
 if(NOT _NCBIVDB_CFG_PACKAGING)
-if( NGS_INCDIR )
-    include_directories( ${NGS_INCDIR} )
-else ()
-    include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/../ngs/ngs-sdk )
-    #TODO: if not found, checkout and build
-endif ()
-
 # ===========================================================================
 # 3d party packages
 

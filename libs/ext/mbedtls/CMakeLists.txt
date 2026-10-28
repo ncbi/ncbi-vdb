@@ -33,16 +33,6 @@ set( MBEDTLS_URL "https://github.com/Mbed-TLS/mbedtls.git")
 #set( MBEDTLS_TAG "v4.2.0")
 set( MBEDTLS_TAG "v3.2.1")
 
-if ( SINGLE_CONFIG )
-    set( INSTALL_DIR ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY} )
-else()
-    if(CMAKE_BUILD_TYPE STREQUAL "" OR CMAKE_BUILD_TYPE STREQUAL "Debug")
-        set( INSTALL_DIR ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG} )
-    else()
-        set( INSTALL_DIR ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE} )
-    endif()
-endif()
-
 include (ExternalProject)
 ExternalProject_Add( MBEDTLS
 	PREFIX ${CMAKE_BINARY_DIR}/libs/ext/mbedtls # this is where the sources go
@@ -65,7 +55,7 @@ ExternalProject_Add( MBEDTLS
 	#-DCMAKE_CXX_FLAGS="-Wno-documentation"
 )
 
-# collect all object files under ${CMAKE_BINARY_DIR}/libs/ext/mbedtls/src/MBEDTLS-build/library
+# collect all object files under one library target
 file(GLOB_RECURSE LIB_FILES "${CMAKE_BINARY_DIR}/libs/ext/mbedtls/*/*.o")
 
 add_library( vdbmbedtls OBJECT IMPORTED GLOBAL )
