@@ -56,7 +56,7 @@ ExternalProject_Add( MBEDTLS
 )
 
 # collect all object files under one library target
-file(GLOB_RECURSE LIB_FILES "${CMAKE_BINARY_DIR}/libs/ext/mbedtls/*/*.o")
+file(GLOB_RECURSE LIB_FILES "${CMAKE_BINARY_DIR}/libs/ext/mbedtls/*/*${OBJ}")
 
 add_library( vdbmbedtls OBJECT IMPORTED GLOBAL )
 set_target_properties( vdbmbedtls PROPERTIES
