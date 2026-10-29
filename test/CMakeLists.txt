@@ -39,8 +39,8 @@ set( ADDITIONAL_LIBS "" )
 # for the tests that link against libncbi-[w]vdb
 if( WIN32 )
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /ENTRY:wmainCRTStartup")
-    set( COMMON_LIBS_READ  ${COMMON_LINK_LIBRARIES} ncbi-vdb Ws2_32 Crypt32 ${MBEDTLS_LIBS} )
-    set( COMMON_LIBS_WRITE ${COMMON_LINK_LIBRARIES} ncbi-wvdb Ws2_32 Crypt32 ${MBEDTLS_LIBS} )
+    set( COMMON_LIBS_READ  ${COMMON_LINK_LIBRARIES} ncbi-vdb Ws2_32 Crypt32 )
+    set( COMMON_LIBS_WRITE ${COMMON_LINK_LIBRARIES} ncbi-wvdb Ws2_32 Crypt32 )
 
 else()
 
@@ -50,11 +50,10 @@ else()
         set( LIBX ${STLX} )
     endif()
     link_libraries( ${COMMON_LINK_LIBRARIES} )
-    set( COMMON_LIBS_READ  "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/${LIBPFX}ncbi-vdb.${LIBX}"  dl pthread ${MBEDTLS_LIBS} )
-    set( COMMON_LIBS_WRITE "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/${LIBPFX}ncbi-wvdb.${LIBX}" dl pthread ${MBEDTLS_LIBS} )
+    set( COMMON_LIBS_READ  "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/${LIBPFX}ncbi-vdb.${LIBX}"  dl pthread )
+    set( COMMON_LIBS_WRITE "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/${LIBPFX}ncbi-wvdb.${LIBX}" dl pthread )
 
 endif()
-
 
 add_subdirectory(ktst)
 add_subdirectory(cc)

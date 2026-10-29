@@ -446,3 +446,4 @@ endif(NOT _NCBIVDB_CFG_PACKAGING)
 
 # mbedtls
 include_directories( ${CMAKE_BINARY_DIR}/include )  # this is where we install mbedtls headers
+set( MBEDTLS_LIBDIR ${CMAKE_BINARY_DIR}/lib) # this is where we install mbedtls object files to be included in ncbi-vdb libraries

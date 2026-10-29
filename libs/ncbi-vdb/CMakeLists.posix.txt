@@ -49,14 +49,20 @@ if(_NCBIVDB_CFG_PACKAGING)
 else()
 
 add_library( ncbi-vdb STATIC "${VDB_LIB_RD}" )
-
+# include object files from mbedtls
+add_custom_command(TARGET ncbi-vdb POST_BUILD
+    COMMAND ar r $<TARGET_FILE:ncbi-vdb> ${MBEDTLS_LIBDIR}/*.o
+)
 ExportStatic( ncbi-vdb true )
 ExportShared( ncbi-vdb true "m;dl;pthread")
 
 ################################
 
 add_library( ncbi-wvdb STATIC "${VDB_LIB_RDWR}" )
-
+# include object files from mbedtls
+add_custom_command(TARGET ncbi-wvdb POST_BUILD
+    COMMAND ar r $<TARGET_FILE:ncbi-wvdb> ${MBEDTLS_LIBDIR}/*.o
+)
 ExportStatic( ncbi-wvdb true )
 ExportShared( ncbi-wvdb true "m;dl;pthread")
 
@@ -69,6 +75,9 @@ if( RUN_SANITIZER_TESTS )
     add_library( ncbi-vdb-asan STATIC "${VDB_LIB_RD_ASAN}" )
     target_compile_options( ncbi-vdb-asan PRIVATE ${asan_defs} )
     target_link_options( ncbi-vdb-asan PRIVATE ${asan_defs} )
+    add_custom_command(TARGET ncbi-vdb-asan POST_BUILD
+        COMMAND ar r $<TARGET_FILE:ncbi-vdb-asan> ${MBEDTLS_LIBDIR}/*.o
+    )
 
     set( tsan_defs "-fsanitize=thread" )
     set( VDB_LIB_RD_TSAN "" )
@@ -78,6 +87,9 @@ if( RUN_SANITIZER_TESTS )
     add_library( ncbi-vdb-tsan STATIC "${VDB_LIB_RD_TSAN}" )
     target_compile_options( ncbi-vdb-tsan PRIVATE ${tsan_defs} )
     target_link_options( ncbi-vdb-tsan PRIVATE ${tsan_defs} )
+    add_custom_command(TARGET ncbi-vdb-tsan POST_BUILD
+        COMMAND ar r $<TARGET_FILE:ncbi-vdb-tsan> ${MBEDTLS_LIBDIR}/*.o
+    )
 
     ################################
     set( VDB_LIB_RDWR_ASAN "" )
@@ -87,6 +99,9 @@ if( RUN_SANITIZER_TESTS )
     add_library( ncbi-wvdb-asan STATIC "${VDB_LIB_RDWR_ASAN}" )
     target_compile_options( ncbi-wvdb-asan PRIVATE ${asan_defs} )
     target_link_options( ncbi-wvdb-asan PRIVATE ${asan_defs} )
+    add_custom_command(TARGET ncbi-wvdb-asan POST_BUILD
+        COMMAND ar r $<TARGET_FILE:ncbi-wvdb-asan> ${MBEDTLS_LIBDIR}/*.o
+    )
 
     set( VDB_LIB_RDWR_TSAN "" )
     foreach( target ${VDB_LIB_RDWR_TARGETS})
@@ -95,5 +110,9 @@ if( RUN_SANITIZER_TESTS )
     add_library( ncbi-wvdb-tsan STATIC "${VDB_LIB_RDWR_TSAN}" )
     target_compile_options( ncbi-wvdb-tsan PRIVATE ${tsan_defs} )
     target_link_options( ncbi-wvdb-tsan PRIVATE ${tsan_defs} )
+    add_custom_command(TARGET ncbi-wvdb-tsan POST_BUILD
+        COMMAND ar r $<TARGET_FILE:ncbi-wvdb-tsan> ${MBEDTLS_LIBDIR}/*.o
+    )
+
 endif()
 endif()

@@ -46,8 +46,8 @@ ExternalProject_Add( MBEDTLS
 	-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
 	-DENABLE_TESTING=OFF
 	-DENABLE_PROGRAMS=OFF
+	-DCMAKE_INSTALL_LIBDIR:PATH=${MBEDTLS_LIBDIR}
 
-	#-DCMAKE_INSTALL_LIBDIR:PATH=../lib
 	# -DCMAKE_BUILD_TYPE:STRING=Release
 	# -DCMAKE_VERBOSE_MAKEFILE:BOOL=OFF
 	# -DCMAKE_INSTALL_MESSAGE:STRING=LAZY
@@ -55,14 +55,20 @@ ExternalProject_Add( MBEDTLS
 	#-DCMAKE_CXX_FLAGS="-Wno-documentation"
 )
 
-# collect all object files under one library target
-file(GLOB_RECURSE LIB_FILES "${CMAKE_BINARY_DIR}/libs/ext/mbedtls/*/*${OBJ}")
+# collect all object files in one place
+add_custom_target(combine_mbedtls ALL
 
-add_library( vdbmbedtls OBJECT IMPORTED GLOBAL )
-set_target_properties( vdbmbedtls PROPERTIES
-	IMPORTED_OBJECTS "${LIB_FILES}"
+	# extract object files
+	COMMAND ar -x ${MBEDTLS_LIBDIR}/libmbedcrypto.a
+	COMMAND ar -x ${MBEDTLS_LIBDIR}/libmbedx509.a
+	COMMAND ar -x ${MBEDTLS_LIBDIR}/libmbedtls.a
+
+	# avoid name conflicts with our object files
+	COMMAND rm -f mbedtls_*.c.o # remove old object files first
+	COMMAND ls -1 *.c.o | xargs -I{} mv {} mbedtls_{}
+
+	WORKING_DIRECTORY ${MBEDTLS_LIBDIR}
+	DEPENDS MBEDTLS
 )
-add_dependencies( vdbmbedtls MBEDTLS )
-get_target_property(FILES vdbmbedtls IMPORTED_OBJECTS)
-message( STATUS FILES=${FILES})
+
 #TODO: Windows
