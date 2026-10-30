@@ -58,6 +58,7 @@ add_custom_command(TARGET ncbi-vdb POST_BUILD
 )
 ExportStatic( ncbi-vdb true )
 ExportShared( ncbi-vdb true "ncbi-vdb-static;m;dl;pthread")
+add_dependencies( ncbi-vdb-shared ncbi-vdb )
 
 ################################
 
@@ -68,6 +69,7 @@ add_custom_command(TARGET ncbi-wvdb POST_BUILD
 )
 ExportStatic( ncbi-wvdb true )
 ExportShared( ncbi-wvdb true "ncbi-wvdb-static;m;dl;pthread")
+add_dependencies( ncbi-wvdb-shared ncbi-wvdb )
 
 if( RUN_SANITIZER_TESTS )
     set( asan_defs "-fsanitize=address" )
