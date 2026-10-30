@@ -48,6 +48,9 @@ if(_NCBIVDB_CFG_PACKAGING)
     install(TARGETS ncbi-vdb ncbi-wvdb)
 else()
 
+# to find the static libs while building .so
+link_directories( ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY} )
+
 add_library( ncbi-vdb STATIC "${VDB_LIB_RD}" )
 # include object files from mbedtls
 add_custom_command(TARGET ncbi-vdb POST_BUILD
