@@ -81,12 +81,13 @@ else()
 add_custom_target(combine_mbedtls ALL
 
 	# extract object files
-	COMMAND cmd /C del *.obj
-	COMMAND cmd /C ${CMAKE_CURRENT_SOURCE_DIR}/combine_mbedtls.bat ${MBEDTLS_LIBDIR}/mbedcrypto.lib mbedcrypto.dir\\${CMAKE_BUILD_TYPE}
-	COMMAND cmd /C ${CMAKE_CURRENT_SOURCE_DIR}/combine_mbedtls.bat ${MBEDTLS_LIBDIR}/mbedx509.lib   mbedx509.dir\\${CMAKE_BUILD_TYPE}
-	COMMAND cmd /C ${CMAKE_CURRENT_SOURCE_DIR}/combine_mbedtls.bat ${MBEDTLS_LIBDIR}/mbedtls.lib    mbedtls.dir\\${CMAKE_BUILD_TYPE}
+	COMMAND cmd /C if exist obj\\${CMAKE_BUILD_TYPE} rmdir /S /Q obj\\${CMAKE_BUILD_TYPE}
+	COMMAND cmd /C mkdir obj\\${CMAKE_BUILD_TYPE}
+	COMMAND cmd /C ${CMAKE_CURRENT_SOURCE_DIR}/combine_mbedtls.bat ${MBEDTLS_LIBDIR}/mbedcrypto.lib obj\\${CMAKE_BUILD_TYPE}
+	COMMAND cmd /C ${CMAKE_CURRENT_SOURCE_DIR}/combine_mbedtls.bat ${MBEDTLS_LIBDIR}/mbedx509.lib   obj\\${CMAKE_BUILD_TYPE}
+	COMMAND cmd /C ${CMAKE_CURRENT_SOURCE_DIR}/combine_mbedtls.bat ${MBEDTLS_LIBDIR}/mbedtls.lib    obj\\${CMAKE_BUILD_TYPE}
 
-	COMMAND LIB /OUT:$<$<CONFIG:Debug>:${CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG}>$<$<CONFIG:Release>:${CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE}>/vdb_mbedtls.lib ${MBEDTLS_LIBDIR}/*.obj
+	COMMAND LIB /VERBOSE /OUT:$<$<CONFIG:Debug>:${CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG}>$<$<CONFIG:Release>:${CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE}>\\vdb_mbedtls.lib obj\\${CMAKE_BUILD_TYPE}\\*.obj
 
 	WORKING_DIRECTORY ${MBEDTLS_LIBDIR}
 	DEPENDS MBEDTLS
