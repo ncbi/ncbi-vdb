@@ -22,8 +22,6 @@
 #
 # ===========================================================================
 
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG})
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE})
 
 #############################
 set( VDB_LIB_RD "" )
@@ -50,13 +48,14 @@ if(_NCBIVDB_CFG_PACKAGING)
 
     install(TARGETS ncbi-vdb ncbi-wvdb)
 else()
-    add_library( ncbi-vdb STATIC "${VDB_LIB_RD}" )
-    MSVS_StaticRuntime( ncbi-vdb )
+    link_libraries( $<$<CONFIG:Debug>:${CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG}>$<$<CONFIG:Release>:${CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE}>/vdb_mbedtls.lib )
+
+    GenerateStaticLibs( ncbi-vdb "${VDB_LIB_RD}" )
     ExportStatic( ncbi-vdb true )
-    ExportShared( ncbi-vdb true "Crypt32;Ws2_32;${MBEDTLS_LIBS}")
+    ExportShared( ncbi-vdb true "Crypt32;Ws2_32")
 
     add_library( ncbi-wvdb STATIC "${VDB_LIB_RDWR}" )
     MSVS_StaticRuntime( ncbi-wvdb )
     ExportStatic( ncbi-wvdb true )
-    ExportShared( ncbi-wvdb true  "Crypt32;Ws2_32;${MBEDTLS_LIBS}")
+    ExportShared( ncbi-wvdb true  "Crypt32;Ws2_32")
 endif()

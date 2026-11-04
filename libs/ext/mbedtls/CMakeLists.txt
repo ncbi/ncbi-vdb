@@ -47,16 +47,22 @@ ExternalProject_Add( MBEDTLS
 	-DENABLE_TESTING=OFF
 	-DENABLE_PROGRAMS=OFF
 	-DCMAKE_INSTALL_LIBDIR:PATH=${MBEDTLS_LIBDIR}
-
 	-DMBEDTLS_FATAL_WARNINGS:STRING=OFF
 
-	# -DCMAKE_BUILD_TYPE:STRING=Release
 	# -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON
-	# -DCMAKE_INSTALL_MESSAGE:STRING=LAZY
+	-DMSVC_STATIC_RUNTIME=ON
+
+	# -DCMAKE_BUILD_TYPE:STRING=Release
+	-DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}
+	#TODO: MULTI_CONFIG
+
+	#-DCMAKE_MSVC_RUNTIME_LIBRARY="MultiThreaded$<$<CONFIG:Debug>:Debug>"
+
 	#INSTALL_COMMAND ""
 )
 
 # collect all object files in one place
+if (NOT WIN32)
 add_custom_target(combine_mbedtls ALL
 
 	# extract object files
@@ -71,5 +77,19 @@ add_custom_target(combine_mbedtls ALL
 	WORKING_DIRECTORY ${MBEDTLS_LIBDIR}
 	DEPENDS MBEDTLS
 )
+else()
+add_custom_target(combine_mbedtls ALL
 
-#TODO: Windows
+	# extract object files
+	COMMAND cmd /C del *.obj
+	COMMAND cmd /C ${CMAKE_CURRENT_SOURCE_DIR}/combine_mbedtls.bat ${MBEDTLS_LIBDIR}/mbedcrypto.lib mbedcrypto.dir\\${CMAKE_BUILD_TYPE}
+	COMMAND cmd /C ${CMAKE_CURRENT_SOURCE_DIR}/combine_mbedtls.bat ${MBEDTLS_LIBDIR}/mbedx509.lib   mbedx509.dir\\${CMAKE_BUILD_TYPE}
+	COMMAND cmd /C ${CMAKE_CURRENT_SOURCE_DIR}/combine_mbedtls.bat ${MBEDTLS_LIBDIR}/mbedtls.lib    mbedtls.dir\\${CMAKE_BUILD_TYPE}
+
+	COMMAND LIB /OUT:$<$<CONFIG:Debug>:${CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG}>$<$<CONFIG:Release>:${CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE}>/vdb_mbedtls.lib ${MBEDTLS_LIBDIR}/*.obj
+
+	WORKING_DIRECTORY ${MBEDTLS_LIBDIR}
+	DEPENDS MBEDTLS
+)
+
+endif()

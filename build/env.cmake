@@ -221,6 +221,7 @@ elseif ( "MSVC" STREQUAL "${CMAKE_C_COMPILER_ID}")
 
     # properly report the C++ version in __cplusplus (by default, always set to "199711L" !)
     add_compile_options("/Zc:__cplusplus")
+    add_compile_options("/Z7")
 endif()
 set( CMAKE_C_FLAGS "-Wall ${CMAKE_C_FLAGS} ${DISABLED_WARNINGS_C}" )
 set( CMAKE_CXX_FLAGS "-Wall ${CMAKE_CXX_FLAGS} ${DISABLED_WARNINGS_C} ${DISABLED_WARNINGS_CXX}" )
