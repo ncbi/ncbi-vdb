@@ -48,7 +48,7 @@ if(_NCBIVDB_CFG_PACKAGING)
 
     install(TARGETS ncbi-vdb ncbi-wvdb)
 else()
-    link_libraries( $<$<CONFIG:Debug>:${CMAKE_ARCHIVE_OUTPUT_DIRECTORY_DEBUG}>$<$<CONFIG:Release>:${CMAKE_ARCHIVE_OUTPUT_DIRECTORY_RELEASE}>/vdb_mbedtls.lib )
+    link_libraries( $<$<CONFIG:Debug>:${CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE}>$<$<CONFIG:Release>:${CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE}>/vdb_mbedtls.lib )
 
     GenerateStaticLibs( ncbi-vdb "${VDB_LIB_RD}" )
     ExportStatic( ncbi-vdb true )
