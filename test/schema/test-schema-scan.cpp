@@ -29,8 +29,9 @@
 * Scans the input file and outputs each token to stdout on a single line
 */
 
+#include <schema/ParseTree.hpp>
+
 #include "../../libs/schema/SchemaScanner.hpp"
-#include "../../libs/schema/ParseTree.hpp"
 
 using namespace std;
 using namespace ncbi::SchemaParser;

@@ -174,7 +174,11 @@ static void withIntersectRangeList_1(  RangeList const volatile *const vol
     if (vol->sync) {
         RangeList const *const list = readerStart(vol);
         Range const *ranges = list->ranges; ///< this pointer will not change while the read lock is held
-        unsigned const count = list->count; ///< this can change, but it can only increase
+
+        unsigned count = 0;
+        atomic32_get_var(&count, &list->count);
+        ///< this can change, but it can only increase
+
         unsigned f = 0;
         unsigned e = count;
 
@@ -269,12 +273,15 @@ static void collapse(RangeList *const list, unsigned const at)
 Range *appendRange(RangeList *list, Range const *newValue)
 {
     if (grow(list) != NULL) {
+        unsigned count = 0;
         Range *nr = &list->ranges[list->count];
 
         if (newValue)
             *nr = *newValue;
-        list->last = list->count;
-        ++list->count;
+        atomic32_get_var(&count, &list->count);
+
+        list->last = count++;
+        atomic32_set_var(&list->count, count); /* ++list->count; */
 
         return nr;
     }

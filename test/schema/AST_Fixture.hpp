@@ -36,7 +36,7 @@
 
 #include <klib/text.h>
 
-#include "../../libs/schema/ParseTree.hpp"
+#include <schema/ParseTree.hpp>
 #include "../../libs/schema/SchemaParser.hpp"
 #include "../../libs/schema/ASTBuilder.hpp"
 
@@ -69,6 +69,7 @@ public:
     void PrintTree ( const ParseTree& p_tree );
 
     AST * MakeAst ( const char* p_source );
+    AST * MakeAst ( const char* p_path, const char * p_includeDirs );
 
     void VerifyErrorMessage ( const char* p_source, const char* p_expectedError, uint32_t p_line = 0, uint32_t p_column = 0 );
 
@@ -133,5 +134,7 @@ public:
 
     const Vector & m_v;
 };
+
+std :: string LocationToString( const Token::Location & loc );
 
 #endif

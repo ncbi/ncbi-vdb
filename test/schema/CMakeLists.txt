@@ -23,6 +23,7 @@
 # ===========================================================================
 
 add_compile_definitions( __mod__="test/schema" )
+
 #set( CMAKE_DISABLE_SOURCE_CHANGES OFF )
 file( MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/actual ) # TODO remove ./actual dir after tests pass (add_test POST?)
 #set( CMAKE_DISABLE_SOURCE_CHANGES ON ) # Cannot use with bison
@@ -36,6 +37,7 @@ AddExecutableTest( Test_SCHEMA_wb-test-schema-func "wb-test-schema-func;AST_Fixt
 AddExecutableTest( Test_SCHEMA_wb-test-schema-table "wb-test-schema-table;AST_Fixture" "${LIBS}" )
 AddExecutableTest( Test_SCHEMA_wb-test-schema-db "wb-test-schema-db;AST_Fixture" "${LIBS}" )
 AddExecutableTest( Test_SCHEMA_wb-test-schema-view "wb-test-schema-view;AST_Fixture" "${LIBS}" )
+AddExecutableTest( Test_SCHEMA_wb-schema-traverse "wb-test-schema-traverse;AST_Fixture" "${LIBS}" )
 
 # TODO the following binaries are not unit tests (INT_TOOLS), they should be started not as ctest
 
@@ -51,6 +53,14 @@ if( SINGLE_CONFIG )
 
     BuildExecutableForTest( Test_SCHEMA_schema-parse-and-dump "parse-and-dump" "${LIBS}" )
 
+    BuildExecutableForTest( col2fns "col2fns;AST_Fixture" "${LIBS}" )
+    add_test( NAME Test_SCHEMA_col2fns COMMAND ${CMAKE_TEST_OUTPUT_DIRECTORY}/col2fns${EXE} )
+    set_property(TEST Test_SCHEMA_col2fns PROPERTY ENVIRONMENT "VDB_SCHEMA_INCLUDES=${CMAKE_SOURCE_DIR}/interfaces" )
+
 endif()
 
 # Test_SCHEMA_454_db and Test_SCHEMA_IonTorrent_db moved to sra-tools/test/schema because of their dependemcy on the SRA schema. VDB-4792
+
+# traversal of the production schema
+AddExecutableTest( Test_SCHEMA_wb-schema-info "wb-test-schema-info;AST_Fixture" "${LIBS}" )
+set_property(TEST Test_SCHEMA_wb-schema-info PROPERTY ENVIRONMENT "VDB_SCHEMA_INCLUDES=${CMAKE_SOURCE_DIR}/interfaces")

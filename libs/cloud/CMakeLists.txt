@@ -33,5 +33,6 @@ set( SRC
 )
 
 GenerateStaticLibs(cloud "${SRC}" )
+add_dependencies( cloud MBEDTLS )
 
 add_compile_definitions( __mod__="libs/cloud" )

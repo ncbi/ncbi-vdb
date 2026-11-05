@@ -152,6 +152,11 @@ TEST_CASE ( ErrorReport_Formatting )
     REQUIRE_EQ ( string ( buf ), string ( "dir/file:1:2 msg: error message, num: 42" ) );
 }
 
+TEST_CASE( TokenToString )
+{
+    REQUIRE_EQ( string( "PT_UINT" ), string( AST::TokenTypeToString( PT_UINT ) ) );
+}
+
 // AST subclasses
 
 TEST_CASE ( AST_FQN_NakedIdent )
@@ -196,6 +201,9 @@ TEST_CASE ( AST_FQN_WithVersionMaj )
     AST_FQN* fqn = AST_Fixture :: MakeFqn ( "a" );
     fqn -> SetVersion ( "#1" );
     REQUIRE_EQ ( 1 << 24, ( int ) fqn -> GetVersion () );
+    char buf [ 10 ];
+    fqn -> GetVersionedName ( buf, sizeof buf );
+    REQUIRE_EQ ( string ("a#1"), string ( buf ) );
     AST_FQN :: Destroy ( fqn );
 }
 TEST_CASE ( AST_FQN_WithVersionMajMin )
@@ -203,6 +211,9 @@ TEST_CASE ( AST_FQN_WithVersionMajMin )
     AST_FQN* fqn = AST_Fixture :: MakeFqn ( "a" );
     fqn -> SetVersion ( "#1.22" );
     REQUIRE_EQ ( ( 1 << 24 ) | ( 22 << 16 ), ( int ) fqn -> GetVersion () );
+    char buf [ 10 ];
+    fqn -> GetVersionedName ( buf, sizeof buf );
+    REQUIRE_EQ ( string ("a#1.22"), string ( buf ) );
     AST_FQN :: Destroy ( fqn );
 }
 TEST_CASE ( AST_FQN_WithVersionMajMinRel )
@@ -210,6 +221,9 @@ TEST_CASE ( AST_FQN_WithVersionMajMinRel )
     AST_FQN* fqn = AST_Fixture :: MakeFqn ( "a" );
     fqn -> SetVersion ( "#1.22.33" );
     REQUIRE_EQ ( ( 1 << 24 ) | ( 22 << 16 ) | 33, ( int ) fqn -> GetVersion () );
+    char buf [ 10 ];
+    fqn -> GetVersionedName ( buf, sizeof buf );
+    REQUIRE_EQ ( string ("a#1.22.33"), string ( buf ) );
     AST_FQN :: Destroy ( fqn );
 }
 
@@ -1104,6 +1118,7 @@ FIXTURE_TEST_CASE(CondExpr, AST_Fixture)
     REQUIRE_EQ ( ( uint32_t ) eConstExpr, expr -> right -> var );
     REQUIRE_EQ ( 3, (int)reinterpret_cast < const SConstExpr * > ( expr -> right ) -> u . u64 [0] );
 }
+
 //TODO: invalid float
 //TODO: nested vector constants - error
 //TODO: negation applied to non-scalar - error

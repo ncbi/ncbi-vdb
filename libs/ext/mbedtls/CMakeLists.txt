@@ -22,91 +22,75 @@
 #
 # ===========================================================================
 
-set(CRYPTO_SRC
-    aes.c
-    aesni.c
-    aria.c
-    asn1parse.c
-    asn1write.c
-    base64.c
-    bignum.c
-    camellia.c
-    ccm.c
-    chacha20.c
-    chachapoly.c
-    cipher.c
-    cipher_wrap.c
-    cmac.c
-    constant_time.c
-    ctr_drbg.c
-    des.c
-    dhm.c
-    ecdh.c
-    ecdsa.c
-    ecjpake.c
-    ecp.c
-    ecp_curves.c
-    entropy.c
-    entropy_poll.c
-    error.c
-    gcm.c
-    hmac_drbg.c
-    md.c
-    md5.c
-    nist_kw.c
-    oid.c
-    padlock.c
-    pem.c
-    pk.c
-    pk_wrap.c
-    pkcs12.c
-    pkcs5.c
-    pkparse.c
-    pkwrite.c
-    platform.c
-    platform_util.c
-    poly1305.c
-    psa_crypto.c
-    psa_crypto_client.c
-    psa_crypto_driver_wrappers.c
-    psa_crypto_slot_management.c
-    psa_crypto_storage.c
-    psa_crypto_client.c
-    psa_its_file.c
-    psa_crypto_rsa.c
-    psa_crypto_mac.c
-    psa_crypto_ecp.c
-    psa_crypto_hash.c
-    psa_crypto_cipher.c
-    psa_crypto_aead.c
-    psa_crypto_se.c
-    ripemd160.c
-    rsa.c
-    rsa_alt_helpers.c
-    sha1.c
-    sha256.c
-    sha512.c
+# if adding mbedtls to our source tree:
+# git clone --branch v4.2.0 --single-branch --depth=1 --recurse-submodules  https://github.com/Mbed-TLS/mbedtls.git
+# 	message( "Building local copy ext/mbedtls..." )
+# 	set(MBEDTLS_CONFIG_FILE "${CMAKE_CURRENT_SOURCE_DIR}/mbedtls/configs/config-thread.h")
+# 	set(TF_PSA_CRYPTO_CONFIG_FILE "${CMAKE_CURRENT_SOURCE_DIR}/mbedtls/configs/crypto-config-thread.h")
+
+# building mbedtls out of our source:
+set( MBEDTLS_URL "https://github.com/Mbed-TLS/mbedtls.git")
+#set( MBEDTLS_TAG "v4.2.0")
+set( MBEDTLS_TAG "v3.2.1")
+
+include (ExternalProject)
+ExternalProject_Add( MBEDTLS
+	PREFIX ${CMAKE_BINARY_DIR}/libs/ext/mbedtls # this is where the sources go
+	GIT_REPOSITORY ${MBEDTLS_URL}
+	GIT_TAG ${MBEDTLS_TAG}
+	UPDATE_COMMAND "" # No update as we use specific tag
+	CMAKE_ARGS
+	-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+	-DCMAKE_INSTALL_PREFIX:PATH=${CMAKE_BINARY_DIR}
+	-DCMAKE_INSTALL_INCLUDEDIR:PATH=include
+	-DCMAKE_POSITION_INDEPENDENT_CODE:BOOL=ON
+	-DENABLE_TESTING=OFF
+	-DENABLE_PROGRAMS=OFF
+	-DCMAKE_INSTALL_LIBDIR:PATH=${MBEDTLS_LIBDIR}
+	-DMBEDTLS_FATAL_WARNINGS:STRING=OFF
+
+	# -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON
+	-DMSVC_STATIC_RUNTIME=ON
+
+	# -DCMAKE_BUILD_TYPE:STRING=Release
+	-DCMAKE_BUILD_TYPE:STRING=${CMAKE_BUILD_TYPE}
+	#TODO: MULTI_CONFIG
+
+	#-DCMAKE_MSVC_RUNTIME_LIBRARY="MultiThreaded$<$<CONFIG:Debug>:Debug>"
+
+	#INSTALL_COMMAND ""
 )
 
-set(X509_SRC
-    x509_crt.c
-    x509.c
+# collect all object files in one place
+if (NOT WIN32)
+add_custom_target(combine_mbedtls ALL
+
+	# extract object files
+	COMMAND ar -x ${MBEDTLS_LIBDIR}/libmbedcrypto.a
+	COMMAND ar -x ${MBEDTLS_LIBDIR}/libmbedx509.a
+	COMMAND ar -x ${MBEDTLS_LIBDIR}/libmbedtls.a
+
+	# avoid name conflicts with our object files
+	COMMAND rm -f mbedtls_*.c.o # remove old object files first
+	COMMAND ls -1 *.c.o | xargs -I{} mv {} mbedtls_{}
+
+	WORKING_DIRECTORY ${MBEDTLS_LIBDIR}
+	DEPENDS MBEDTLS
+)
+else()
+add_custom_target(combine_mbedtls ALL
+
+	# extract object files
+	COMMAND cmd /C if exist obj\\${CMAKE_BUILD_TYPE} rmdir /S /Q obj\\${CMAKE_BUILD_TYPE}
+	COMMAND cmd /C mkdir obj\\${CMAKE_BUILD_TYPE}
+	COMMAND cmd /C ${CMAKE_CURRENT_SOURCE_DIR}/combine_mbedtls.bat ${MBEDTLS_LIBDIR}/mbedcrypto.lib obj\\${CMAKE_BUILD_TYPE}
+	COMMAND cmd /C ${CMAKE_CURRENT_SOURCE_DIR}/combine_mbedtls.bat ${MBEDTLS_LIBDIR}/mbedx509.lib   obj\\${CMAKE_BUILD_TYPE}
+	COMMAND cmd /C ${CMAKE_CURRENT_SOURCE_DIR}/combine_mbedtls.bat ${MBEDTLS_LIBDIR}/mbedtls.lib    obj\\${CMAKE_BUILD_TYPE}
+
+	COMMAND LIB /VERBOSE /OUT:$<$<CONFIG:Debug>:${CMAKE_LIBRARY_OUTPUT_DIRECTORY_DEBUG}>$<$<CONFIG:Release>:${CMAKE_LIBRARY_OUTPUT_DIRECTORY_RELEASE}>\\vdb_mbedtls.lib obj\\${CMAKE_BUILD_TYPE}\\*.obj
+
+	WORKING_DIRECTORY ${MBEDTLS_LIBDIR}
+	DEPENDS MBEDTLS
 )
 
-set(TLS_SRC
-    debug.c
-    ssl_ciphersuites.c
-    ssl_client.c
-    ssl_msg.c
-    ssl_tls.c
-    ssl_tls12_client.c
-    ssl_tls12_server.c
-    ssl_tls13_keys.c
-    ssl_debug_helpers_generated.c
-)
-
-GenerateStaticLibs( mbedcrypto "${CRYPTO_SRC}" )
-GenerateStaticLibs( mbedx509 "${X509_SRC}" )
-GenerateStaticLibs( mbedtls "${TLS_SRC}" )
-
-add_compile_definitions( __mod__="libs/ext/mbedtls" )
+endif()

@@ -23,15 +23,22 @@
 * ===========================================================================
 *
 */
+%code provides {
+    extern const char * AST_symbol_name( enum yytokentype t );
+}
 
-%{
+%code requires {
+
+    #include "ASTBuilder.hpp"
+    #include "AST_Expr.hpp"
+    using namespace ncbi::SchemaParser;
+
+}
+
+%code top {
     #define YYDEBUG 1
 
     #include <stdio.h>
-
-    #include "ASTBuilder.hpp"
-    using namespace ncbi::SchemaParser;
-
     #include "schema-ast.hpp"
 
     #define AST_lex NextToken
@@ -44,8 +51,7 @@
     {
         INTERNAL_ERROR ( xcUnexpected, "%s: %s", p_sb . GetSourceFileName (), p_msg );
     }
-
-%}
+}
 
 %name-prefix "AST_"
 %parse-param { ctx_t ctx }
@@ -231,14 +237,15 @@
 %type <node> col_modifier col_decl col_ident col_body col_stmt typed_col
 %type <node> factory_parms factory_parms_opt schema_parm schema_parms arrayspec
 %type <node> phys_enc_ref col_body_opt database dbdad_opt dbbody db_members
-%type <node> db_member template_opt include func_parms_opt expr_list schema_parts_opt
+%type <node> db_member template_opt include func_parms_opt expr_list schema_parms_opt
 %type <node> physmbr_decl col_schema_parms_opt col_schema_parms
 %type <node> col_schema_value col_schema_parm phys_coldef factory_parms_list
 %type <node> vararg param_sig param_signature fact_sig
 %type <node> view view_parms view_parm view_body_opt view_body view_member
 %type <node> view_parents_opt view_parents view_parent view_parent_parms view_spec
+%type <node> ident
 
-%type <fqn> fqn qualnames fqn_opt_vers ident fqn_vers
+%type <fqn> fqn qualnames fqn_opt_vers fqn_vers
 
 %type <expr> expr cond_expr cond_chain uint_expr func_expr float_expr string_expr const_vect_expr
 %type <expr> bool_expr negate_expr cast_expr member_expr join_expr
@@ -522,7 +529,7 @@ parents_opt
     ;
 
 tbl_parents
-    : fqn_opt_vers                  { $$ = AST :: Make ( ctx ); $$ -> AddNode ( ctx, $1 ); }
+    : fqn_opt_vers                  { $$ = AST :: Make ( ctx, PT_TABLEPARENTS ); $$ -> AddNode ( ctx, $1 ); }
     | tbl_parents ',' fqn_opt_vers  { $$ = $1; $$ -> AddNode ( ctx, $3 ); }
     ;
 
@@ -723,11 +730,11 @@ expr
     ;
 
 func_expr
-    : PT_FUNCEXPR '(' schema_parts_opt fqn_opt_vers factory_parms_opt '(' func_parms_opt ')' ')'
+    : PT_FUNCEXPR '(' schema_parms_opt fqn_opt_vers factory_parms_opt '(' func_parms_opt ')' ')'
         { $$ = AST_Expr :: Make ( ctx, $1 ); $$ -> AddNode ( ctx, $3 ); $$ -> AddNode ( ctx, $4 ); $$ -> AddNode ( ctx, $5 ); $$ -> AddNode ( ctx, $7 ); }
     ;
 
-schema_parts_opt
+schema_parms_opt
     : %empty                                    { $$ = AST :: Make ( ctx, PT_EMPTY ); }
     | '<' PT_ASTLIST '(' schema_parms ')' '>'   { $$ = $4; }
 
@@ -843,7 +850,7 @@ qualnames
     ;
 
 ident
-    : PT_IDENT '(' IDENTIFIER_1_0 ')'   { $$ = AST_FQN :: Make ( ctx, $1 ); $$ -> AddNode ( ctx, $3 ); }
+    : PT_IDENT '(' IDENTIFIER_1_0 ')'   { $$ = AST :: Make ( ctx, $1 ); $$ -> AddNode ( ctx, $3 ); }
     ;
 
 fqn_opt_vers
@@ -906,3 +913,11 @@ view_parent_parms
     : ident                         { $$ = AST :: Make ( ctx ); $$ -> AddNode ( ctx, $1 ); }
     | view_parent_parms ',' ident   { $$ = $1; $$ -> AddNode ( ctx, $3 ); }
     ;
+
+%%
+
+const char * AST_symbol_name( enum yytokentype t )
+{
+    return yytname[ t - 255 ];
+}
+

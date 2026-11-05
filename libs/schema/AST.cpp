@@ -24,7 +24,7 @@
  *
  */
 
-#include "AST.hpp"
+#include <schema/AST.hpp>
 
 #include <strtol.h>
 #include <new>
@@ -40,6 +40,12 @@ using namespace ncbi::SchemaParser;
 using namespace std;
 
 // AST
+
+const char *
+AST :: TokenTypeToString( Token :: TokenType t )
+{
+    return AST_symbol_name( (yytokentype) t );
+}
 
 AST *
 AST :: Make ( ctx_t ctx, const Token* token )
@@ -314,14 +320,30 @@ AST_FQN :: GetPartialName ( char* p_buf, size_t p_bufSize, uint32_t p_lastMember
         rc_t rc = string_printf ( p_buf + offset, p_bufSize - offset - 1, & num_writ, "%s%s",
                                   GetChild ( i ) -> GetTokenValue (),
                                   i == count - 1 ? "" : ":" );
-        offset += num_writ;
         if ( rc != 0 )
         {
             break;
         }
+        offset += num_writ;
     }
 
     p_buf [ p_bufSize - 1 ] = 0;
+}
+
+void
+AST_FQN :: GetVersionedName ( char* p_buf, size_t p_bufSize, bool p_explicit ) const
+{
+    GetFullName ( p_buf, p_bufSize );
+    if ( GetVersion() != 0 )
+    {
+        size_t offset = string_size( p_buf );
+        string_printf ( p_buf + offset, p_bufSize - offset - 1, nullptr, "#%V", GetVersion() );
+    }
+    else if ( p_explicit )
+    {
+        size_t offset = string_size( p_buf );
+        string_printf ( p_buf + offset, p_bufSize - offset - 1, nullptr, "#1" );
+    }
 }
 
 void
@@ -350,20 +372,12 @@ AST_FQN *
 ncbi :: SchemaParser :: ToFQN ( AST * p_ast)
 {
     assert ( p_ast != 0 );
-    if ( p_ast -> GetTokenType () == PT_IDENT )
-    {
-        return static_cast < AST_FQN * > ( p_ast );
-    }
-    return 0;
+    return dynamic_cast<AST_FQN*>(p_ast);
 }
 
 const AST_FQN *
 ncbi :: SchemaParser :: ToFQN ( const AST * p_ast)
 {
     assert ( p_ast != 0 );
-    if ( p_ast -> GetTokenType () == PT_IDENT )
-    {
-        return static_cast < const AST_FQN * > ( p_ast );
-    }
-    return 0;
+    return dynamic_cast<const AST_FQN*>(p_ast);
 }

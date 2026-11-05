@@ -61,12 +61,12 @@ set( LIB_SRC
 
 set( TEST_LIB_SRC
     testcipher
-    
 )
 
 GenerateStaticLibs(krypto "${LIB_SRC}"
     #${OS_SPECIFIC_SRC}
 )
+add_dependencies( krypto MBEDTLS )
 
 GenerateStaticLibs( kryptotest "${TEST_LIB_SRC}" )
 

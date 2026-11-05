@@ -306,8 +306,11 @@ ViewDeclaration :: InitParentInstance( ctx_t ctx, SViewInstance * p_inst, const 
     }
     for ( uint32_t i = 0; i < count; ++i )
     {
-        const AST_FQN & ident = * ToFQN ( p_params . GetChild ( i ) );
-        const KSymbol * sym = m_builder . Resolve ( ctx, ident );
+        auto id_node = p_params . GetChild ( i );
+        assert( id_node -> GetTokenType() == PT_IDENT );
+        assert( id_node -> ChildrenCount() == 1 );
+        auto& ident = *id_node -> GetChild(0);
+        const KSymbol * sym = m_builder . Resolve ( ctx, ident.GetLocation(), ident.GetTokenValue() );
         if ( sym != 0 )
         {
             switch ( sym -> type )

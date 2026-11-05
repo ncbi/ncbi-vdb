@@ -29,8 +29,9 @@
 * Parses the input files and reports errors
 */
 
+#include <schema/ParseTree.hpp>
+
 #include "../../libs/schema/SchemaParser.hpp"
-#include "../../libs/schema/ParseTree.hpp"
 
 using namespace std;
 using namespace ncbi::SchemaParser;

@@ -68,6 +68,7 @@ function( GenerateStaticLibsWithDefs target_name sources compile_defs )
         endif()
         target_compile_options( "${target_name}-asan" PUBLIC ${asan_defs} )
         target_link_options( "${target_name}-asan" PUBLIC ${asan_defs} )
+        add_dependencies( "${target_name}-asan" "${target_name}")
 
         add_library( "${target_name}-tsan" STATIC ${sources} )
         if( NOT "" STREQUAL "${compile_defs}" )
@@ -75,6 +76,7 @@ function( GenerateStaticLibsWithDefs target_name sources compile_defs )
         endif()
         target_compile_options( "${target_name}-tsan" PUBLIC ${tsan_defs} )
         target_link_options( "${target_name}-tsan" PUBLIC ${tsan_defs} )
+        add_dependencies( "${target_name}-tsan" "${target_name}")
     endif()
 endfunction()
 
@@ -188,7 +190,7 @@ function(ExportShared lib install extra_libs)
     endif()
     get_target_property( src ${lib} SOURCES )
     add_library( ${lib}-shared SHARED ${src} )
-    target_link_libraries( ${lib}-shared ${extra_libs} )
+    target_link_libraries( ${lib}-shared PRIVATE ${extra_libs} )
     MakeLinksShared( ${lib}-shared ${lib} ${install} )
 
     if( WIN32 )
@@ -196,7 +198,7 @@ function(ExportShared lib install extra_libs)
 
         # on Windows, add a DLL built with /MD
         add_library( ${lib}-shared-md SHARED ${src} )
-        target_link_libraries( ${lib}-shared-md ${extra_libs})
+        target_link_libraries( ${lib}-shared-md PRIVATE ${extra_libs})
         MSVS_DLLRuntime( ${lib}-shared-md )
         MakeLinksShared( ${lib}-shared-md ${lib}-md ${install} )
     endif()
@@ -247,24 +249,3 @@ function( AddExecutableTest test_name sources libraries )
     endif()
 endfunction()
 
-include(CheckIncludeFileCXX)
-#check_include_file_cxx(mbedtls/md.h HAVE_MBEDTLS_H)
-set(HAVE_MBEDTLS_H 0) # TODO: disabling system mbedtls since it may be outdated
-set( MBEDTLS_LIBS mbedx509 mbedtls mbedcrypto ) # need to link against mbedtls in any case: system or local mbedtls
-set(CMAKE_REQUIRED_LIBRARIES ${MBEDTLS_LIBS})
-if ( HAVE_MBEDTLS_H )
-	include(CheckCXXSourceRuns)
-	check_cxx_source_runs("
-#include <stdio.h>
-#include \"mbedtls/md.h\"
-#include \"mbedtls/sha256.h\"
-int main(int argc, char *argv[]) {
-	mbedtls_md_context_t ctx;
-	mbedtls_md_type_t md_type = MBEDTLS_MD_SHA256;
-	mbedtls_md_init(&ctx);
-	printf(\"test p: %p\", ctx.md_ctx);
-}
-" HAVE_MBEDTLS_F)
-else()
-    set(MBEDTLS_LIBS "")
-endif()
