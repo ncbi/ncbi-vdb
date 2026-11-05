@@ -30,8 +30,8 @@
 
 # building mbedtls out of our source:
 set( MBEDTLS_URL "https://github.com/Mbed-TLS/mbedtls.git")
-#set( MBEDTLS_TAG "v4.2.0")
-set( MBEDTLS_TAG "v3.2.1")
+set( MBEDTLS_TAG "v4.2.0")
+#set( MBEDTLS_TAG "v3.2.1")
 
 include (ExternalProject)
 ExternalProject_Add( MBEDTLS
