@@ -27,13 +27,7 @@ if( "MSVC" STREQUAL "${CMAKE_C_COMPILER_ID}" )
     set( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /W0")
 endif()
 
-if( NOT HAVE_MBEDTLS_F )
-	message( "Building local copy ext/mbedtls..." )
-	add_subdirectory ( mbedtls )
-endif()
-
-if(NOT _NCBIVDB_CFG_PACKAGING)
 add_subdirectory ( bzip2 ) # TODO: RETRIEVE from the Internet
 add_subdirectory ( zlib )
 add_subdirectory ( zstd )
-endif()
+add_subdirectory ( mbedtls )

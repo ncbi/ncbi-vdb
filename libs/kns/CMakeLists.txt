@@ -67,6 +67,7 @@ set( KNS_SRC
 )
 
 GenerateStaticLibs( kns "${KNS_SRC}" )
+add_dependencies( kns MBEDTLS )
 
 add_compile_definitions (__mod__="libs/kns")
 include_directories( BEFORE ${CMAKE_CURRENT_SOURCE_DIR} )

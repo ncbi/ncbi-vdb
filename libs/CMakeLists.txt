@@ -25,12 +25,13 @@
 set( CMAKE_POSITION_INDEPENDENT_CODE True )
 add_compile_definitions( _LIBRARY )
 
+add_subdirectory(ext)
+
 add_subdirectory(ktst)
 add_subdirectory(align)
 add_subdirectory(axf) # sra tools dependency
 add_subdirectory(blast)
 add_subdirectory(cloud)
-add_subdirectory(ext)
 add_subdirectory(kapp)
 add_subdirectory(kdb)
 add_subdirectory(kdbtext)

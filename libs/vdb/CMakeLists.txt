@@ -111,7 +111,9 @@ set( WVDB_SRC
 )
 
 GenerateStaticLibs( vdb "${VDB_SRC}" )
+add_dependencies( vdb MBEDTLS )
 GenerateStaticLibs( wvdb "${WVDB_SRC}" )
+add_dependencies( wvdb MBEDTLS )
 
 # suppress certain compiler warnings
 if ( "GNU" STREQUAL "${CMAKE_C_COMPILER_ID}")

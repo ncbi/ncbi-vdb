@@ -55,6 +55,7 @@ set( SRC
 )
 
 GenerateStaticLibs( vfs "${SRC}" )
+add_dependencies( vfs MBEDTLS )
 
 add_compile_definitions (__mod__="libs/vfs")
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})

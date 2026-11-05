@@ -122,6 +122,7 @@ if( "bsd" STREQUAL ${OS} )
     add_compile_definitions( BSD UNIX )
     set( LMCHECK "" )
     set( EXE "" )
+    set( OBJ ".o" )
 elseif ( "mac" STREQUAL ${OS} )
     add_compile_definitions( MAC BSD UNIX )
     set(CMAKE_C_ARCHIVE_CREATE   "<CMAKE_AR> Scr <TARGET> <LINK_FLAGS> <OBJECTS>")
@@ -129,12 +130,15 @@ elseif ( "mac" STREQUAL ${OS} )
     set(CMAKE_C_ARCHIVE_FINISH   "<CMAKE_RANLIB> -no_warning_for_no_symbols -c <TARGET>")
     set(CMAKE_CXX_ARCHIVE_FINISH "<CMAKE_RANLIB> -no_warning_for_no_symbols -c <TARGET>")
     set( EXE "" )
+    set( OBJ ".o" )
 elseif( "linux" STREQUAL ${OS} )
     add_compile_definitions( LINUX UNIX )
     set( LMCHECK -lmcheck )
     set( EXE "" )
+    set( OBJ ".o" )
 elseif( "windows" STREQUAL ${OS} )
     set( EXE ".exe" )
+    set( OBJ ".obj" )
     add_compile_definitions( WINDOWS _WIN32_WINNT=0x0502 )
 endif()
 
@@ -217,6 +221,7 @@ elseif ( "MSVC" STREQUAL "${CMAKE_C_COMPILER_ID}")
 
     # properly report the C++ version in __cplusplus (by default, always set to "199711L" !)
     add_compile_options("/Zc:__cplusplus")
+    add_compile_options("/Z7")
 endif()
 set( CMAKE_C_FLAGS "-Wall ${CMAKE_C_FLAGS} ${DISABLED_WARNINGS_C}" )
 set( CMAKE_CXX_FLAGS "-Wall ${CMAKE_CXX_FLAGS} ${DISABLED_WARNINGS_C} ${DISABLED_WARNINGS_CXX}" )
@@ -277,13 +282,6 @@ elseif( "windows" STREQUAL ${OS} )
 endif()
 
 if(NOT _NCBIVDB_CFG_PACKAGING)
-if( NGS_INCDIR )
-    include_directories( ${NGS_INCDIR} )
-else ()
-    include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/../ngs/ngs-sdk )
-    #TODO: if not found, checkout and build
-endif ()
-
 # ===========================================================================
 # 3d party packages
 
@@ -447,7 +445,6 @@ message( "RUN_SANITIZER_TESTS: ${RUN_SANITIZER_TESTS}" )
 
 endif(NOT _NCBIVDB_CFG_PACKAGING)
 
-if( NOT HAVE_MBEDTLS_F )
-	message( "Using local mbedtls headers from interfaces/ext/mbedtls" )
-	include_directories( interfaces/ext/mbedtls )
-endif()
+# mbedtls
+include_directories( ${CMAKE_BINARY_DIR}/include )  # this is where we install mbedtls headers
+set( MBEDTLS_LIBDIR ${CMAKE_BINARY_DIR}/lib) # this is where we install mbedtls object files to be included in ncbi-vdb libraries

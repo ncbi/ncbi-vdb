@@ -4296,7 +4296,7 @@ int ZSTD_pthread_cond_destroy(ZSTD_pthread_cond_t* cond)
 /**** skipping file: compiler.h ****/
 #define ZSTD_STATIC_LINKING_ONLY
 /**** *NOT* inlining ../zstd.h ****/
-#include "../zstd.h" /* ZSTD_customMem */
+#include "zstd.h" /* ZSTD_customMem */
 
 #ifndef ZSTD_ALLOCATIONS_H
 #define ZSTD_ALLOCATIONS_H
