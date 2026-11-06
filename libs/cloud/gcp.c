@@ -58,8 +58,8 @@ struct GCP;
 
 #include <mbedtls/md.h> /* mbedtls_md_hmac */
 #include <mbedtls/pk.h>
-#include <mbedtls/ctr_drbg.h>
-#include <mbedtls/entropy.h>
+#include <mbedtls/private/ctr_drbg.h>
+#include <mbedtls/private/entropy.h>
 
 #include <assert.h>
 
@@ -289,10 +289,11 @@ const String ** output)
         ret = mbedtls_pk_parse_key(&pk,
             (unsigned char *)key_PEM,
             string_measure(key_PEM, NULL) + 1,
-            NULL, 0,
-            mbedtls_ctr_drbg_random, &ctr_drbg);
+            NULL, 0);
         if (ret == 0)
         {
+#if 0
+TODO: fix in VDB-6510
             /* 2. generate the checksum */
             const mbedtls_md_info_t * info = mbedtls_md_info_from_type(md_type);
             size_t dsize = mbedtls_md_get_size(info);
@@ -366,6 +367,7 @@ const String ** output)
                 TRACE("mbedtls_md = -%#.4X\n", -ret);
                 rc = RC(rcCloud, rcUri, rcInitializing, rcEncryption, rcFailed);
             }
+#endif
         }
         else
         {

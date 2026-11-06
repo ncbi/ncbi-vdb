@@ -33,10 +33,11 @@
 #include <klib/status.h>
 #include <klib/data-buffer.h>
 
+#define MBEDTLS_DECLARE_PRIVATE_IDENTIFIERS
 #include <mbedtls/pk.h>
-#include <mbedtls/aes.h>
-#include <mbedtls/entropy.h>
-#include <mbedtls/ctr_drbg.h>
+#include <mbedtls/private/aes.h>
+#include <mbedtls/private/entropy.h>
+#include <mbedtls/private/ctr_drbg.h>
 #include <mbedtls/error.h>
 
 #define AES_KEY_BITS 256
@@ -161,7 +162,7 @@ enum
     es_aes_key,
     es_md,
     es_aes,
-    
+
     es_invalid,
     es_last_valid = es_invalid - 1
 };
@@ -243,7 +244,8 @@ rc_t RsaAesHmacEncryptInt ( KDataBuffer * out,
     {
         EncryptStuff s;
         EncryptStuffInit ( & s );
-
+#if 0
+TODO: fix in VDB-6510
         do
         {
             uint32_t i;
@@ -256,7 +258,7 @@ rc_t RsaAesHmacEncryptInt ( KDataBuffer * out,
             /* capture the input as "pt" plaintext region */
             STATUS ( STAT_GEEK, "%s - capturing plaintext region\n", __func__ );
             RgnInit ( & pt, ( void * ) in, in_bytes );
-            
+
             /* initialize entropy and prng */
             STATUS ( STAT_PRG, "%s - initializing entropy\n", __func__ );
             rc = EncryptStuffAdvance ( & s, es_entropy );
@@ -479,16 +481,16 @@ rc_t RsaAesHmacEncryptInt ( KDataBuffer * out,
             /* retrieve the HMAC digest, which is no longer sensitive */
             STATUS ( STAT_GEEK, "%s - capturing HMAC digest into output buffer\n", __func__ );
             rc = CALL_MBEDTLS ( mbedtls_md_hmac_finish, ( & s . md, digest . p ) );
-            
-        } while ( false );
 
+        } while ( false );
+#endif
         EncryptStuffWhack ( & s );
     }
 
     /* ANY sort of an error means whack the output */
     if ( rc != 0 )
         KDataBufferWipeNWhack ( out );
-    
+
     return rc;
 }
 
@@ -515,7 +517,7 @@ enum
     ds_aes_key,
     ds_md,
     ds_aes,
-    
+
     ds_invalid,
     ds_last_valid = ds_invalid - 1
 };
@@ -599,6 +601,8 @@ rc_t RsaAesHmacDecryptInt ( KDataBuffer * out,
         DecryptStuff s;
         DecryptStuffInit ( & s );
 
+#if 0
+TODO: fix in VDB-6511
         do
         {
             uint32_t i;
@@ -610,7 +614,7 @@ rc_t RsaAesHmacDecryptInt ( KDataBuffer * out,
             /* capture input as a Rgn, even casting away const... */
             STATUS ( STAT_GEEK, "%s - capturing input as Rgn\n", __func__ );
             RgnInit ( & ib, ( void * ) in, in_bytes );
-            
+
             /* initialize entropy and prng */
             STATUS ( STAT_PRG, "%s - initializing entropy\n", __func__ );
             rc = DecryptStuffAdvance ( & s, ds_entropy );
@@ -653,7 +657,7 @@ rc_t RsaAesHmacDecryptInt ( KDataBuffer * out,
                 rc = RC ( rcKrypto, rcBlob, rcDecrypting, rcData, rcInsufficient );
                 break;
             }
-            
+
             /* this is a noop - manually initialized next */
             rc = DecryptStuffAdvance ( & s, ds_aes_key );
             if ( rc != 0 )
@@ -726,7 +730,7 @@ rc_t RsaAesHmacDecryptInt ( KDataBuffer * out,
                 rc = RC ( rcKrypto, rcBlob, rcDecrypting, rcData, rcInsufficient );
                 break;
             }
-            
+
             /* adjust output */
             STATUS ( STAT_PRG, "%s - adjusting output buffer to remove padding\n", __func__ );
             pt . s -= iv [ sizeof iv - 1 ] & 0xF;
@@ -812,14 +816,14 @@ rc_t RsaAesHmacDecryptInt ( KDataBuffer * out,
             STATUS ( STAT_GEEK, "%s -   after size = %lu\n", __func__, out -> elem_count );
         }
         while ( false );
-
+#endif
         DecryptStuffWhack ( & s );
     }
 
     /* ANY sort of an error means whack the output */
     if ( rc != 0 )
         KDataBufferWipeNWhack ( out );
-    
+
     return rc;
 }
 
