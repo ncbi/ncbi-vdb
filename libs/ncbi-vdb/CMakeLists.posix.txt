@@ -52,10 +52,13 @@ else()
 link_directories( ${CMAKE_ARCHIVE_OUTPUT_DIRECTORY} )
 
 add_library( ncbi-vdb STATIC "${VDB_LIB_RD}" )
+
 # include object files from mbedtls
+add_dependencies( ncbi-vdb combine_mbedtls ) 
 add_custom_command(TARGET ncbi-vdb POST_BUILD
     COMMAND ar r $<TARGET_FILE:ncbi-vdb> ${MBEDTLS_LIBDIR}/*.o
 )
+
 ExportStatic( ncbi-vdb true )
 ExportShared( ncbi-vdb true "ncbi-vdb-static;m;dl;pthread")
 add_dependencies( ncbi-vdb-shared ncbi-vdb )
@@ -63,10 +66,13 @@ add_dependencies( ncbi-vdb-shared ncbi-vdb )
 ################################
 
 add_library( ncbi-wvdb STATIC "${VDB_LIB_RDWR}" )
+
 # include object files from mbedtls
+add_dependencies( ncbi-wvdb combine_mbedtls )
 add_custom_command(TARGET ncbi-wvdb POST_BUILD
     COMMAND ar r $<TARGET_FILE:ncbi-wvdb> ${MBEDTLS_LIBDIR}/*.o
 )
+
 ExportStatic( ncbi-wvdb true )
 ExportShared( ncbi-wvdb true "ncbi-wvdb-static;m;dl;pthread")
 add_dependencies( ncbi-wvdb-shared ncbi-wvdb )
