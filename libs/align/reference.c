@@ -1025,12 +1025,13 @@ LIB_EXPORT rc_t CC ReferenceObj_Read( const ReferenceObj* cself, INSDC_coord_zer
                         *written += q;
                         offset += q;
                         len -= q;
-                    }
-                    /* SEQ_LEN < MAX_SEQ_LEN is last row unless it is CIRCULAR */
-                    if ( cself->mgr->reader_cols[ ereflst_cn_SEQ_LEN ].base.coord_len[ 0 ] < cself->mgr->max_seq_len )
-                    {
-                        if ( !cself->circular ) { break; }
-                        offset = 0;
+                        /* SEQ_LEN < MAX_SEQ_LEN is last row unless it is CIRCULAR;
+                         * only a row that was read has a SEQ_LEN to look at */
+                        if ( cself->mgr->reader_cols[ ereflst_cn_SEQ_LEN ].base.coord_len[ 0 ] < cself->mgr->max_seq_len )
+                        {
+                            if ( !cself->circular ) { break; }
+                            offset = 0;
+                        }
                     }
                 } while ( rc == 0 && q > 0 && len > 0 );
             }
