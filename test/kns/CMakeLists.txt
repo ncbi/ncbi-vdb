@@ -73,6 +73,7 @@ AddExecutableTest( Test_KNS_aws-proxy "test-aws-proxy" "${LIBS}" )
 
 BuildExecutableForTest( test-kns-mutual-authentication "test-mutual-authentication;gosha" "${LIBS}" )
 # add_test( NAME Test_KNS_mutual-authentication COMMAND test-kns-mutual-authentication WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
+add_test( NAME Test_KNS_mutual-authentication COMMAND test-mutual-auth.sh ${CMAKE_TEST_OUTPUT_DIRECTORY} WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
 
 BuildExecutableForTest( test-kns-proxy-with-env "test-proxy-with-env" "${LIBS}" )
 # add_test( NAME Test_KNS_proxy-with-env COMMAND test-kns-proxy-with-env WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
