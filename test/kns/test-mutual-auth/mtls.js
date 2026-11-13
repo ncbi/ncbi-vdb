@@ -5,9 +5,9 @@ const hostname = 'localhost';
 const port = 3000;
 
 const options = {
-    ca: fs.readFileSync('ca.crt'),
-    cert: fs.readFileSync('server.crt'),
-    key: fs.readFileSync('server.key'),
+    ca: fs.readFileSync('ca/ca.crt'),
+    cert: fs.readFileSync('server/server.crt'),
+    key: fs.readFileSync('server/server.key'),
     rejectUnauthorized: true,
     requestCert: true,
 };

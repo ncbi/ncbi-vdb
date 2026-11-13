@@ -1,57 +1,80 @@
 #!/bin/sh
+# ===========================================================================
+#
+#                            PUBLIC DOMAIN NOTICE
+#               National Center for Biotechnology Information
+#
+#  This software/database is a "United States Government Work" under the
+#  terms of the United States Copyright Act.  It was written as part of
+#  the author's official duties as a United States Government employee and
+#  thus cannot be copyrighted.  This software/database is freely available
+#  to the public for use. The National Library of Medicine and the U.S.
+#  Government have not placed any restriction on its use or reproduction.
+#
+#  Although all reasonable efforts have been taken to ensure the accuracy
+#  and reliability of the software and data, the NLM and the U.S.
+#  Government do not and cannot warrant the performance or results that
+#  may be obtained by using this software or data. The NLM and the U.S.
+#  Government disclaim all warranties, express or implied, including
+#  warranties of performance, merchantability or fitness for any particular
+#  purpose.
+#
+#  Please cite the author in any work or product based on this material.
+#
+# ===========================================================================
 
 # client mutial authentication test
 
+CA=ca
 CLIENT=client
-SSL_LOG=ssl.log
+SERVER=server
+TEST_LOG=test.log
 
 # original instructions are in VDB-4465
-
-#TODO: error checking everywhere
 
 #Prepare keys and certificates
 # Prepare certificate authority, server’s key and certificate, client’s key
 
+mkdir -p ${CA}
 #    create a certificate authority (CA), ca.key and ca.crt:
-openssl req -new -x509 -nodes -days 365 -subj '/CN=my-ca' -keyout ca.key -out ca.crt 2>$SSL_LOG
+openssl req -new -x509 -nodes -days 365 -subj '/CN=my-ca' -keyout ${CA}/ca.key -out ${CA}/ca.crt 2>$TEST_LOG || { echo "****** openssl req ca.crt failed" >&2; exit 1; }
+
+mkdir -p ${SERVER}
 #    create the server’s key server.key:
-openssl genrsa -out server.key 2048 2>>$SSL_LOG
+openssl genrsa -out ${SERVER}/server.key 2048 2>>$TEST_LOG || { echo "****** openssl genrsa failed" >&2; exit 1; }
 #    create a Certificate Signing Request (CSR) with the Common Name (CN) localhost, server.csr:
-openssl req -new -key server.key -subj '/CN=localhost' -out server.csr 2>>$SSL_LOG
+openssl req -new -key ${SERVER}/server.key -subj '/CN=localhost' -out ${SERVER}/server.csr 2>>$TEST_LOG || { echo "****** openssl req server.csr failed" >&2; exit 1; }
 #    create the signed server certificate, server.crt:
-openssl x509 -req -in server.csr -CA ca.crt -CAkey ca.key -CAcreateserial -days 365 -out server.crt 2>>$SSL_LOG
-#    creating the client’s key, client.key:
-openssl genrsa -out client.key 2048 2>>$SSL_LOG
+openssl x509 -req -in ${SERVER}/server.csr -CA ${CA}/ca.crt -CAkey ${CA}/ca.key -CAcreateserial -days 365 -out ${SERVER}/server.crt 2>>$TEST_LOG || { echo "****** openssl req server.crt failed" >&2; exit 1; }
 
-#Create client’s certificate:
+mkdir -p ${CLIENT}
+#    create the client’s key, client.key:
+openssl genrsa -out ${CLIENT}/client.key 2048 2>>$TEST_LOG || { echo "****** openssl genrsa client.key failed" >&2; exit 1; }
 
-mkdir -p $CLIENT
-cd $CLIENT
-ln -f -s ../client.key pk_key
-openssl req -new -key pk_key -subj '/CN=my-client' -out client.csr 2>>$SSL_LOG
-openssl x509 -req -in client.csr -CA ../ca.crt -CAkey ../ca.key -CAcreateserial -days 365 -out own_cert 2>>$SSL_LOG
-cd ..
+# Create client’s certificate:
+openssl req -new -key ${CLIENT}/pk_key -subj '/CN=my-client' -out ${CLIENT}/client.csr 2>>$TEST_LOG || { echo "****** openssl req client.csr failed" >&2; exit 1; }
+openssl x509 -req -in ${CLIENT}/client.csr -CA ${CA}/ca.crt -CAkey ${CA}/ca.key -CAcreateserial -days 365 -out ${CLIENT}/own_cert 2>>$TEST_LOG || { echo "****** openssl req own_cert failed" >&2; exit 1; }
 
 # start the https server
-node mtls.js &
+node mtls.js >>$TEST_LOG 2>&1 &
 SERVER_PID=$!
-sleep 1 # give the server time to initizlize
-echo server startd, PID=$SERVER_PID
+sleep 1 # give the server time to initialize
+echo server startd, PID=${SERVER_PID}
 
 # curl test
-curl -s --cacert ca.crt --key $CLIENT/pk_key --cert $CLIENT/own_cert https://localhost:3000 >/dev/null
-
+#echo "curl -s --cacert ${CA}/ca.crt --key ${CLIENT}/pk_key --cert ${CLIENT}/own_cert https://localhost:3000 >>$TEST_LOG"
+curl -s --cacert ${CA}/ca.crt --key ${CLIENT}/pk_key --cert ${CLIENT}/own_cert https://localhost:3000 >>$TEST_LOG || { echo "****** curl test failed" >&2; kill ${SERVER_PID}; exit 1; }
 
 # add certificate authority's certificate to test konfig as trusted
 echo -n "/tls/ca.crt/test = \"" > test.kfg
 # convert into one-line double quoted string
-cat ca.crt | sed ':a;N;$!ba;s/\n/\\n/g' | sed '$s/$/\"/' >> test.kfg
+cat ${CA}/ca.crt | sed ':a;N;$!ba;s/\n/\\n/g' | sed '$s/$/\"/' >> test.kfg
 
-#echo "$1/test-kns-mutual-authentication $CLIENT https://localhost:3000"
-VDB_CONFIG=. $1/test-kns-mutual-authentication $CLIENT https://localhost:3000 -+KNS -vvvv
+#echo "$1/test-kns-mutual-authentication ${CLIENT} https://localhost:3000"
+VDB_CONFIG=. $1/test-kns-mutual-authentication ${CLIENT} https://localhost:3000 #-+KNS -vvvv
 
 RC=$?
 
-kill $SERVER_PID
+kill ${SERVER_PID}
 
 exit $RC
