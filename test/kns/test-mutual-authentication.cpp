@@ -94,10 +94,10 @@ static bool LoadOwnCert(const char * location,
     rc_t rc = KDirectoryNativeDir(&dir);
 
     if (rc == 0)
-        rc = KDirectory_Load(dir, "%s/own_cert", location, cert);
+        rc = KDirectory_Load(dir, "%s/signed_cert", location, cert);
 
     if (rc == 0)
-        rc = KDirectory_Load(dir, "%s/pk_key", location, key);
+        rc = KDirectory_Load(dir, "%s/client.key", location, key);
 
     KDirectoryRelease(dir);
 

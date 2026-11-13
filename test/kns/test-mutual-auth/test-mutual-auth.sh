@@ -28,7 +28,11 @@
 CA=ca
 CLIENT=client
 SERVER=server
-TEST_LOG=test.log
+TEST_LOG=log.txt
+KFG=cert.kfg
+
+rm -f ${TEST_LOG}
+rm -f ${KFG}
 
 # original instructions are in VDB-4465
 
@@ -52,28 +56,29 @@ mkdir -p ${CLIENT}
 openssl genrsa -out ${CLIENT}/client.key 2048 2>>$TEST_LOG || { echo "****** openssl genrsa client.key failed" >&2; exit 1; }
 
 # Create client’s certificate:
-openssl req -new -key ${CLIENT}/pk_key -subj '/CN=my-client' -out ${CLIENT}/client.csr 2>>$TEST_LOG || { echo "****** openssl req client.csr failed" >&2; exit 1; }
-openssl x509 -req -in ${CLIENT}/client.csr -CA ${CA}/ca.crt -CAkey ${CA}/ca.key -CAcreateserial -days 365 -out ${CLIENT}/own_cert 2>>$TEST_LOG || { echo "****** openssl req own_cert failed" >&2; exit 1; }
+openssl req -new -key ${CLIENT}/client.key -subj '/CN=my-client' -out ${CLIENT}/client.csr 2>>$TEST_LOG || { echo "****** openssl req client.csr failed" >&2; exit 1; }
+openssl x509 -req -in ${CLIENT}/client.csr -CA ${CA}/ca.crt -CAkey ${CA}/ca.key -CAcreateserial -days 365 -out ${CLIENT}/signed_cert 2>>$TEST_LOG || { echo "****** openssl req signed_cert failed" >&2; exit 1; }
 
 # start the https server
 node mtls.js >>$TEST_LOG 2>&1 &
 SERVER_PID=$!
 sleep 1 # give the server time to initialize
-echo server startd, PID=${SERVER_PID}
+#echo server started, PID=${SERVER_PID}
 
 # curl test
-#echo "curl -s --cacert ${CA}/ca.crt --key ${CLIENT}/pk_key --cert ${CLIENT}/own_cert https://localhost:3000 >>$TEST_LOG"
-curl -s --cacert ${CA}/ca.crt --key ${CLIENT}/pk_key --cert ${CLIENT}/own_cert https://localhost:3000 >>$TEST_LOG || { echo "****** curl test failed" >&2; kill ${SERVER_PID}; exit 1; }
+#echo "curl -s --cacert ${CA}/ca.crt --key ${CLIENT}/pk_key --cert ${CLIENT}/signed_cert https://localhost:3000 >>$TEST_LOG"
+curl -s --cacert ${CA}/ca.crt --key ${CLIENT}/client.key --cert ${CLIENT}/signed_cert https://localhost:3000 >>$TEST_LOG || { echo "****** curl test failed" >&2; kill ${SERVER_PID}; exit 1; }
 
 # add certificate authority's certificate to test konfig as trusted
-echo -n "/tls/ca.crt/test = \"" > test.kfg
+echo -n "/tls/ca.crt/test = \"" > ${KFG}
 # convert into one-line double quoted string
-cat ${CA}/ca.crt | sed ':a;N;$!ba;s/\n/\\n/g' | sed '$s/$/\"/' >> test.kfg
+cat ${CA}/ca.crt | sed ':a;N;$!ba;s/\n/\\n/g' | sed '$s/$/\"/' >> ${KFG}
 
 #echo "$1/test-kns-mutual-authentication ${CLIENT} https://localhost:3000"
 VDB_CONFIG=. $1/test-kns-mutual-authentication ${CLIENT} https://localhost:3000 #-+KNS -vvvv
 
 RC=$?
+#echo RC=${RC}
 
 kill ${SERVER_PID}
 
