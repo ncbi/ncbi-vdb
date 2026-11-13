@@ -294,8 +294,12 @@ int main(int argc, char *argv[]) {
                 rc = ArgsParamValue(args, i, (const void **)&v);
                 if (rc == 0) {
                     const KFile * file = NULL;
-                    rc = KNSManagerMakeHttpFile(
-                        mgr, &file, NULL, 0x01010000, "%s", v);
+                    // block waiting for replies
+                    rc = KNSManagerSetConnectionTimeouts ( mgr, 0, 0, 0 );
+                    if ( rc == 0 )
+                    {
+                        rc = KNSManagerMakeHttpFile(mgr, &file, NULL, 0x01010000, "%s", v);
+                    }
                     rc_t r2 = KFileRelease(file);
                     if (r2 != 0 && rc == 0)
                         rc = r2;
