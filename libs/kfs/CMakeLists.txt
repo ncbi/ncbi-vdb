@@ -82,15 +82,11 @@ set( KFS_CMN
     report
     lockfile
     remove-file-task
-    cacheteefile
-    cacheteefile2
     cacheteefile3
-    rrcachedfile
     recorder
     logfile
     callback_file
     poolpages
-    lru_cache
     from_to_namelist
     limitfile
     appendfile

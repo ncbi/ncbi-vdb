@@ -46,7 +46,7 @@
 #include <kfs/file.h>
 #include <kfs/toc.h>
 #include <kfs/sra.h>
-#include <kfs/cacheteefile.h>
+//#include <kfs/cacheteefile.h>
 
 #include <kns/http.h>
 
@@ -4128,8 +4128,7 @@ KFS_EXTERN bool CC KDirectoryIsKArcDir ( const KDirectory * self )
 
 KFS_EXTERN bool CC KArcDirIsFromRemote ( const KArcDir * self )
 {
-    return self != NULL && self -> arctype == tocKFile &&
-            ( KFileIsKCacheTeeFile ( self -> archive . f ) || KFileIsKHttpFile ( self -> archive . f ) );
+    return self != NULL && self -> arctype == tocKFile && KFileIsKHttpFile ( self -> archive . f );
 }
 
 

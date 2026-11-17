@@ -56,10 +56,7 @@
 #include <kfs/nullfile.h>
 #include <kfs/buffile.h>
 #include <kfs/quickmount.h>
-#include <kfs/cacheteefile.h>
-#include <kfs/cachetee2file.h>
 #include <kfs/cachetee3file.h>
-#include <kfs/rrcachedfile.h>
 #include <kfs/recorder.h>
 #include <kfs/lockfile.h>
 #include <kfs/logfile.h>
@@ -541,12 +538,8 @@ LIB_EXPORT rc_t CC VFSManagerRelease ( const VFSManager *self )
     return rc;
 }
 
-enum cache_version
-{ cachetee = 0, cachetee_2 = 1, cachetee_3 = 2, rrcache = 3, logging = 4 };
-
 typedef struct caching_params
 {
-    enum cache_version version;
     size_t cache_page_size;
     uint32_t cache_page_count;
     uint32_t cluster_factor_bits; /* for cachetee_v3 dflt = 5,  1 << 5  = 32 */
@@ -566,7 +559,6 @@ typedef struct caching_params
     bool debug;         /* print cache-debug-messages */
 } caching_params;
 
-#define DEFAULT_CACHETEE_VERSION cachetee_3
 #define DEFAULT_CACHE_PAGE_SIZE ( 32 * 1024 )
 #define DEFAULT_CACHE_PAGE_COUNT ( 10 * 1024 )
 #define DEFAULT_CLUSTER_FACTOR_BITS 5
@@ -582,7 +574,6 @@ static void get_caching_params( caching_params * params,
     rc_t rc = KConfigMake ( &cfg, NULL );
 
     /* set some default values... */
-    params -> version = DEFAULT_CACHETEE_VERSION;
     params -> cache_page_size = dflt_block_size;
     params -> cache_page_count = DEFAULT_CACHE_PAGE_COUNT;
     params -> cluster_factor_bits = DEFAULT_CLUSTER_FACTOR_BITS;
@@ -604,10 +595,6 @@ static void get_caching_params( caching_params * params,
         size_t written;
 
         /* functions in libs/kfg/properties.c */
-        rc = KConfig_Get_CacheTeeVersion( cfg, &( params -> version ), DEFAULT_CACHETEE_VERSION );
-        if ( rc != 0 )
-            params -> version = DEFAULT_CACHETEE_VERSION;
-
         rc = KConfig_Get_CacheBlockSize( cfg, &( params -> cache_page_size ), dflt_block_size );
         if ( rc != 0 )
             params -> cache_page_size = dflt_block_size;
@@ -696,101 +683,6 @@ static rc_t wrap_in_logfile( KDirectory * dir,
     {
         KFileRelease ( * cfp );
         * cfp = temp_file;
-    }
-    return rc;
-}
-
-static rc_t wrap_in_cachetee( KDirectory * dir,
-                              const KFile **cfp,
-                              const char * loc,
-                              const caching_params * cps )
-{
-    rc_t rc = 0;
-    if ( cps -> record_outer )
-        rc = wrap_in_logfile( dir, cfp, loc, "%s.outer.rec", cps );
-    if ( rc == 0 )
-    {
-        const KFile * temp_file;
-        if ( cps -> promote )
-        {
-            rc = KDirectoryMakeCacheTeePromote ( dir,
-                                                 &temp_file,
-                                                 *cfp,
-                                                 cps -> cache_page_size,
-                                                 "%s",
-                                                 loc );
-
-        }
-        else
-        {
-            rc = KDirectoryMakeCacheTee ( dir,
-                                          &temp_file,
-                                          *cfp,
-                                          cps -> cache_page_size,
-                                          "%s",
-                                          loc );
-        }
-        if ( rc == 0 )
-        {
-            KFileRelease ( * cfp );
-            * cfp = temp_file;
-
-            if ( cps -> record_inner )
-                rc = wrap_in_logfile( dir, cfp, loc, "%s.inner.rec", cps );
-        }
-    }
-    return rc;
-}
-
-static rc_t wrap_in_cachetee2( KDirectory * dir,
-                               const KFile **cfp,
-                               const char * loc,
-                               const caching_params * cps )
-{
-    rc_t rc = 0;
-    if ( cps -> record_outer )
-        rc = wrap_in_logfile( dir, cfp, loc, "%s.outer.rec", cps );
-    if ( rc == 0 )
-    {
-        const KFile * temp_file;
-        rc_t rc = KDirectoryMakeCacheTee2 ( dir,
-                                            &temp_file,
-                                            *cfp,
-                                            cps -> cache_page_size,
-                                            "%s",
-                                            loc );
-        if ( rc == 0 )
-        {
-            KFileRelease ( * cfp );
-            * cfp = temp_file;
-
-            if ( cps -> record_inner )
-                rc = wrap_in_logfile( dir, cfp, loc, "%s.inner.rec", cps );
-        }
-    }
-    return rc;
-}
-
-static rc_t wrap_in_rr_cache( KDirectory * dir,
-                              const KFile **cfp,
-                              const char * loc,
-                              const caching_params * cps )
-{
-    rc_t rc = 0;
-    if ( cps -> record_outer )
-        rc = wrap_in_logfile( dir, cfp, loc, "%s.outer.rec", cps );
-    if ( rc == 0 )
-    {
-        const KFile * temp_file;
-        rc_t rc = MakeRRCached ( &temp_file, *cfp, cps -> cache_page_size, cps -> cache_page_count );
-        if ( rc == 0 )
-        {
-            KFileRelease ( * cfp );
-            * cfp = temp_file;
-
-            if ( cps -> record_inner )
-                rc = wrap_in_logfile( dir, cfp, loc, "%s.inner.rec", cps );
-        }
     }
     return rc;
 }
@@ -1059,60 +951,25 @@ rc_t VFSManagerMakeHTTPFile( const VFSManager * self,
             /* let's try to get some details about how to do caching from the configuration */
             caching_params cps;
             get_caching_params( &cps, blocksize, is_refseq, promote );
-            if ( cps . version == cachetee_3 )
-            {
-                int retry = 0;
-                for (retry = 0; retry < 2; ++retry) {
-                    rc = wrap_in_cachetee3( self -> cwd, cfp, cache_location,
-                        &cps, path );
-                    if (rc != SILENT_RC(
-                        rcPS, rcThread, rcCreating, rcThread, rcExhausted))
-                    {
+            int retry = 0;
+            for (retry = 0; retry < 2; ++retry) {
+                rc = wrap_in_cachetee3( self -> cwd, cfp, cache_location,
+                    &cps, path );
+                if (rc != SILENT_RC(
+                    rcPS, rcThread, rcCreating, rcThread, rcExhausted))
+                {
+                    break;
+                }
+                else if (!self->notCleanCacheIfThreadExhausted) {
+                    rc_t r2 = 0;
+                    PLOGERR(klogSys, (klogSys, 0,
+                        "$(func) - failed to start background thread: "
+                        "finishing cached threads...", "func=%s", __func__));
+                    STATUS(STAT_PRG, "%s - failed to start background thread: "
+                        "calling VFSManagerSdlCacheClear()...\n", __func__);
+                    r2 = VFSManagerSdlCacheClear((VFSManager*)self);
+                    if (r2 != 0)
                         break;
-                    }
-                    else if (!self->notCleanCacheIfThreadExhausted) {
-                        rc_t r2 = 0;
-                        PLOGERR(klogSys, (klogSys, 0,
-                            "$(func) - failed to start background thread: "
-                            "finishing cached threads...", "func=%s", __func__));
-                        STATUS(STAT_PRG, "%s - failed to start background thread: "
-                            "calling VFSManagerSdlCacheClear()...\n", __func__);
-                        r2 = VFSManagerSdlCacheClear((VFSManager*)self);
-                        if (r2 != 0)
-                            break;
-                    }
-                }
-            }
-            else
-            {
-                if ( cache_location == NULL )
-                {
-                    const String * id = make_id( path );
-                    if ( id != NULL )
-                    {
-                        /* the user has turned off caching... ( we should not make a cache-tee )*/
-                        switch( cps . version )
-                        {
-                            case cachetee   : ;  /* fall-through into rr-cache !!! */
-                            case cachetee_2 : ;  /* fall-through into rr-cache !!! */
-                            case rrcache    : rc = wrap_in_rr_cache( self -> cwd, cfp, id -> addr, &cps ); break;
-                            case logging    : rc = wrap_in_logfile( self -> cwd, cfp, id -> addr, "%s.rec", &cps ); break;
-                            case cachetee_3 : break; /* in common path above */
-                        }
-                        StringWhack ( id );
-                    }
-                }
-                else
-                {
-                    /* the user has turned on caching... */
-                    switch( cps . version )
-                    {
-                        case cachetee   : rc = wrap_in_cachetee( self -> cwd, cfp, cache_location, &cps ); break;
-                        case cachetee_2 : rc = wrap_in_cachetee2( self -> cwd, cfp, cache_location, &cps ); break;
-                        case rrcache    : rc = wrap_in_rr_cache( self -> cwd, cfp, cache_location, &cps ); break;
-                        case logging    : rc = wrap_in_logfile( self -> cwd, cfp, cache_location, "%s.rec", &cps ); break;
-                        case cachetee_3 : break; /* in common path above */
-                    }
                 }
             }
         }

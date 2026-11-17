@@ -28,13 +28,9 @@
  * Unit tests for cacheteefile3
  */
 
-#include <algorithm>
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
-#include <fstream>
-#include <locale>
-#include <mutex>
 #include <thread>
 #include <chrono>
 #include <atomic>

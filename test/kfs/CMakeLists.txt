@@ -45,14 +45,10 @@ AddExecutableTest( Test_KFS_file_observer-bz "test-read_observer-bz2" "${LIBS}"
 )
 AddExecutableTest( Test_KFS_file_observer-gz "test-read_observer-gz" "${LIBS}" )
 
-AddExecutableTest( Test_KFS_cachetee "cacheteetest" "${LIBS}" )
-
 if( NOT WIN32 ) # TODO: these fail on Windows
-    AddExecutableTest( Test_KFS_cachetee2 "cachetee2test" "${LIBS}" )
     AddExecutableTest( SlowTest_KFS_cachetee3 "cachetee3test" "${LIBS}" )
 endif()
 
-AddExecutableTest( Test_KFS_lru_cache "lru_cache_test" "${LIBS}" )
 AddExecutableTest( Test_KFS_md5 "md5test" "${LIBS}" )
 AddExecutableTest( Test_KFS_appendfile "appendfiletest" "${LIBS}" )
 
