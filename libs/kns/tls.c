@@ -664,6 +664,8 @@ rc_t KTLSGlobalsInit ( KTLSGlobals * tlsg,
     assert ( tlsg != NULL );
     assert ( kfg != NULL );
 
+    psa_crypto_init();
+
     mbedtls_x509_crt_init ( &tlsg -> cacert );
     mbedtls_ctr_drbg_init ( &tlsg -> ctr_drbg );
     mbedtls_entropy_init ( &tlsg -> entropy );
@@ -926,6 +928,7 @@ rc_t CC KTLSStreamRead ( const KTLSStream * cself,
              * mbedtls_ssl_session_reset () before a new connection; current connection
              * must be closed
              */
+        case MBEDTLS_ERR_SSL_RECEIVED_NEW_SESSION_TICKET:
         case MBEDTLS_ERR_SSL_WANT_READ:
         case MBEDTLS_ERR_SSL_WANT_WRITE:
             continue; /* TBD - allow the app to check signals */
