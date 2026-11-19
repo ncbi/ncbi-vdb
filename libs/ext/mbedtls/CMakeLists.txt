@@ -30,15 +30,22 @@
 
 # building mbedtls out of our source:
 set( MBEDTLS_URL "https://github.com/Mbed-TLS/mbedtls.git")
-#set( MBEDTLS_TAG "v4.2.0")
-set( MBEDTLS_TAG "v3.2.1")
+set( MBEDTLS_TAG "v4.2.0")
+#set( MBEDTLS_TAG "v3.2.1")
 
 include (ExternalProject)
 ExternalProject_Add( MBEDTLS
 	PREFIX ${CMAKE_BINARY_DIR}/libs/ext/mbedtls # this is where the sources go
 	GIT_REPOSITORY ${MBEDTLS_URL}
 	GIT_TAG ${MBEDTLS_TAG}
-	UPDATE_COMMAND "" # No update as we use specific tag
+	UPDATE_COMMAND
+		# python3 scripts/config.py unset-all
+#			PSA_WANT_KEY_TYPE_RSA_PUBLIC_KEY
+#			PSA_WANT_KEY_TYPE_RSA_KEY_PAIR
+			# MBEDTLS_KEY_EXCHANGE_ECDHE_RSA_ENABLED
+			# MBEDTLS_X509_RSASSA_PSS_SUPPORT
+			# PSA_WANT_ALG_RSA
+
 	CMAKE_ARGS
 	-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
 	-DCMAKE_INSTALL_PREFIX:PATH=${CMAKE_BINARY_DIR}

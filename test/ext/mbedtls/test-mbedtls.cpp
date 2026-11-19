@@ -42,8 +42,9 @@
 #include <mbedtls/ssl.h>
 #include <mbedtls/error.h>
 #include <mbedtls/net_sockets.h>
-#include <mbedtls/ctr_drbg.h>
-#include <mbedtls/entropy.h>
+#include <psa/crypto.h>
+#include <mbedtls/private/ctr_drbg.h>
+#include <mbedtls/private/entropy.h>
 
 #include <kns/stream.h>
 #include <kns/manager.h>
@@ -147,6 +148,7 @@ class MbedTlsFixture
 public:
     MbedTlsFixture()
     {
+        psa_crypto_init();
         mbedtls_ssl_init( & m_ssl );
 
         mbedtls_x509_crt_init( & m_chain);
@@ -182,7 +184,7 @@ public:
         mbedtls_ssl_conf_authmode( & m_config, allow_all_certs ? MBEDTLS_SSL_VERIFY_OPTIONAL : MBEDTLS_SSL_VERIFY_REQUIRED );
 
         mbedtls_ssl_conf_ca_chain( & m_config, & m_chain, NULL );
-        mbedtls_ssl_conf_rng( & m_config, mbedtls_ctr_drbg_random, & m_ctr_drbg );
+        //mbedtls_ssl_conf_rng( & m_config, mbedtls_ctr_drbg_random, & m_ctr_drbg );
         mbedtls_ssl_set_bio( & m_ssl, & bio, KTLSStreamWrite, KTLSStreamRead, NULL );
         if ( 0 != mbedtls_ssl_setup( & m_ssl, & m_config ) )
         {

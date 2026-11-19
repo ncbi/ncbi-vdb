@@ -1,0 +1,8 @@
+*
+!.gitignore
+<<<<<<< HEAD
+!./*.js
+=======
+!mtls.js
+!*.sh
+>>>>>>> VDB-6500-mbedtls-v3.2.1

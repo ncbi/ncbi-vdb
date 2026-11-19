@@ -39,7 +39,7 @@
 
 #include <mbedtls/base64.h> /* mbedtls_base64_encode */
 #include <mbedtls/md.h> /* mbedtls_md_hmac */
-#include "mbedtls/sha256.h" /* mbedtls_sha256 */
+#include "mbedtls/private/sha256.h" /* mbedtls_sha256 */
 
 #include "aws-priv.h" /* AWSDoAuthentication */
 #include "cloud-priv.h" /* struct AWS */

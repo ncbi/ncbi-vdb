@@ -63,9 +63,9 @@ struct KTLSStream;
 #include <mbedtls/net_sockets.h>
 #include <mbedtls/debug.h>
 #include <mbedtls/ssl.h>
-#include <mbedtls/aes.h>
-#include <mbedtls/entropy.h>
-#include <mbedtls/ctr_drbg.h>
+#include <mbedtls/private/aes.h>
+#include <mbedtls/private/entropy.h>
+#include <mbedtls/private/ctr_drbg.h>
 #include <mbedtls/error.h>
 
 #include "../klib/int_checks-priv.h"
@@ -577,7 +577,8 @@ rc_t tlsg_setup ( KTLSGlobals * self, uint64_t log )
                                 : MBEDTLS_SSL_VERIFY_REQUIRED );
 
     mbedtls_ssl_conf_ca_chain( &self -> config, &self -> cacert, NULL );
-    mbedtls_ssl_conf_rng( &self -> config, mbedtls_ctr_drbg_random, &self -> ctr_drbg );
+    //removed in mbedtls 4:
+    //mbedtls_ssl_conf_rng( &self -> config, mbedtls_ctr_drbg_random, &self -> ctr_drbg );
 
         /*  We need that to be sure that we are free to call
          *  mbedtls_ssl_conf_authmode () next time when
@@ -662,6 +663,8 @@ rc_t KTLSGlobalsInit ( KTLSGlobals * tlsg,
 
     assert ( tlsg != NULL );
     assert ( kfg != NULL );
+
+    psa_crypto_init();
 
     mbedtls_x509_crt_init ( &tlsg -> cacert );
     mbedtls_ctr_drbg_init ( &tlsg -> ctr_drbg );
@@ -925,6 +928,7 @@ rc_t CC KTLSStreamRead ( const KTLSStream * cself,
              * mbedtls_ssl_session_reset () before a new connection; current connection
              * must be closed
              */
+        case MBEDTLS_ERR_SSL_RECEIVED_NEW_SESSION_TICKET:
         case MBEDTLS_ERR_SSL_WANT_READ:
         case MBEDTLS_ERR_SSL_WANT_WRITE:
             continue; /* TBD - allow the app to check signals */
@@ -1175,8 +1179,7 @@ rc_t KTLSGlobalsSetupOwnCert(KTLSGlobals * tlsg,
         ret = mbedtls_pk_parse_key(&tlsg->pkey,
             (const unsigned char *)pk_key,
             string_measure(pk_key, NULL) + 1,
-            NULL, 0,
-            mbedtls_ctr_drbg_random, &tlsg->ctr_drbg);
+            NULL, 0);
         if (ret < 0) {
             rc = RC(rcKrypto, rcToken, rcInitializing, rcEncryption, rcFailed);
             PLOGERR(klogSys, (klogSys, rc
