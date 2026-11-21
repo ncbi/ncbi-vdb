@@ -251,7 +251,10 @@ static unsigned readNormalIncomplete(Object const *self, uint8_t *const dst, uns
             KLockAcquire(async->mutex);
             ++async->hits;
             if (rowIsLoaded(async, row)) {
-                getBases_2na(buf, rowToPosition(async, row), async->max_seq_len, self->bases, &self->Ns);
+                /* the last row can be shorter than max_seq_len; don't read past the end of bases */
+                unsigned const rowStart = rowToPosition(async, row);
+                unsigned const rowLen = length - rowStart < async->max_seq_len ? length - rowStart : async->max_seq_len;
+                getBases_2na(buf, rowStart, rowLen, self->bases, &self->Ns);
             }
             else {
                 ReadStringResult read = { NULL, 0 };
