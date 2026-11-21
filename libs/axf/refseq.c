@@ -202,12 +202,10 @@ static unsigned readNormal(Object const *self, uint8_t *const dst, unsigned cons
     return actlen;
 }
 
+/* the reader after a failed load, which logged why: no bases can be read, so callers see a short read */
 static unsigned readZero(Object const *self, uint8_t *const dst, unsigned const start, unsigned const len)
 {
-    /* this should not be reachable; an rc != 0 should have propagated up the
-     * call stack and ended the program before we could get here */
-    assert(!"reachable");
-    abort();
+    return 0;
 }
 
 static bool rowIsLoaded(RefSeqAsyncLoadInfo const *async, int64_t row)
@@ -421,15 +419,24 @@ char const *RefSeq_Scheme(void) {
     return "NCBI:refseq:tbl:reference";
 }
 
+/* Every reader that waits out the background thread's state change calls
+ * cleanUpAsyncThread, so several can run at once; only the one that takes
+ * the thread may wait for and release it. */
+#if defined(__GNUC__)
+#define TAKE_LOADER_THREAD(SELF) __atomic_exchange_n(&((Object *)(SELF))->th, NULL, __ATOMIC_ACQ_REL)
+#else
+#define TAKE_LOADER_THREAD(SELF) ((struct KThread *)InterlockedExchangePointer((PVOID volatile *)&((Object *)(SELF))->th, NULL))
+#endif
+
 static rc_t cleanUpAsyncThread(Object const *self)
 {
     rc_t rc = 0;
-    if (self->th) {
-        KThreadWait(self->th, &rc);
+    struct KThread *const th = TAKE_LOADER_THREAD(self);
+    if (th) {
+        KThreadWait(th, &rc);
         if (rc)
             LOGERR(klogErr, rc, "asynchronous loader thread failed");
-        KThreadRelease(self->th);
-        ((Object *)self)->th = NULL;
+        KThreadRelease(th);
     }
     return rc;
 }
@@ -460,7 +467,7 @@ unsigned RefSeq_getBases(Object const * self, uint8_t *const dst, unsigned const
     /* the state has been updated; use the new state */
     if (self->async == NULL) {
         rc_t const rc = cleanUpAsyncThread(self);
-        if (rc) return rc;
+        if (rc) return 0; /* the loader failed, and logged why; no bases were read */
     }
     return RefSeq_getBases(self, dst, start, len);
 }
