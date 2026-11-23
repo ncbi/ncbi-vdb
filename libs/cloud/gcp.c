@@ -237,9 +237,7 @@ rc_t GetPID(uint32_t * pid)
     return rc;
 }
 
-/* use mbedtls to sign using RSA SHA-256 algorithm
-(also known as RSASSA-PKCS1-V1_5-SIGN with the SHA-256 hash function)
-*/
+/* Sign using RSASSA-PKCS1-v1_5 with SHA-256 (Mbed TLS 4.x, PSA-based) */
 rc_t
 Sign_RSA_SHA256(
 const char * key_PEM,
@@ -248,103 +246,101 @@ const String ** output)
 {
     rc_t rc = 0;
     int ret;
+    psa_status_t status;
 
-    /* 0. Initialize (TODO: do only once, attach data to the GCP object) */
-    mbedtls_entropy_context ent_ctx;
-    mbedtls_ctr_drbg_context ctr_drbg;
-    const mbedtls_md_type_t md_type = MBEDTLS_MD_SHA256;
-    char pers[4096];
-    int pers_size;
-    size_t num_writ;
-
-    uint32_t pid;
-    rc = GetPID(&pid);
-    if (rc != 0)
+    /* 0. Initialize the PSA crypto subsystem. It is safe to call this
+       more than once. It replaces entropy/CTR_DRBG setup: the RNG is
+       now managed internally by the library. */
+    status = psa_crypto_init();
+    if (status != PSA_SUCCESS)
     {
-        return rc;
+        TRACE("psa_crypto_init = %d\n", (int)status);
+        return RC(rcCloud, rcUri, rcInitializing, rcEncryption, rcFailed);
     }
 
-    pers_size = string_printf(
-        pers, sizeof pers, &num_writ
-        , "%s[%d]"
-        , __func__
-        , pid
-        );
-
-    mbedtls_entropy_init(&ent_ctx);
-
-    mbedtls_ctr_drbg_init(&ctr_drbg);
-    ret = mbedtls_ctr_drbg_seed(
-        &ctr_drbg,
-        mbedtls_entropy_func,
-        &ent_ctx,
-        (const unsigned char *)pers,
-        (size_t)pers_size
-        );
-    if (ret == 0)
     {
-        /* 1. parse key_PEM */
+        /* 1. parse key_PEM (no RNG arguments in 4.x) */
         mbedtls_pk_context pk;
         mbedtls_pk_init(&pk);
         ret = mbedtls_pk_parse_key(&pk,
-            (unsigned char *)key_PEM,
-            string_measure(key_PEM, NULL) + 1,
+            (const unsigned char *)key_PEM,
+            string_measure(key_PEM, NULL) + 1,  /* PEM needs the NUL included */
             NULL, 0);
         if (ret == 0)
         {
-#if 0
-TODO: fix in VDB-6510
             /* 2. generate the checksum */
-            const mbedtls_md_info_t * info = mbedtls_md_info_from_type(md_type);
-            size_t dsize = mbedtls_md_get_size(info);
+            unsigned char checksum[PSA_HASH_LENGTH(PSA_ALG_SHA_256)];
+            size_t dsize = 0;
 
-            unsigned char checksum[512 / 8];
-            assert(sizeof checksum >= dsize);
-            ret = mbedtls_md(info,
+            status = psa_hash_compute(PSA_ALG_SHA_256,
                 (const unsigned char *)input,
                 string_measure(input, NULL),
-                checksum);
-            if (ret == 0)
+                checksum, sizeof checksum, &dsize);
+            if (status == PSA_SUCCESS)
             {
                 /* 3. compute the signature */
                 String * out = NULL;
-                mbedtls_rsa_context * ctx = mbedtls_pk_rsa(pk);
+                /* mbedtls_pk_get_len() is private now; derive the size from bits */
+                size_t sig_size = (mbedtls_pk_get_bitlen(&pk) + 7) / 8;
+                size_t sig_len = 0;
 
-                out = malloc(sizeof(String) + (uint32_t)ctx->MBEDTLS_PRIVATE(len));
+                out = malloc(sizeof(String) + (uint32_t)sig_size);
                 if (out != NULL)
                 {
-                    StringInit( out, (char*)out + sizeof(String), ctx->MBEDTLS_PRIVATE(len), (uint32_t)ctx->MBEDTLS_PRIVATE(len) );
+                    StringInit(out, (char*)out + sizeof(String),
+                        sig_size, (uint32_t)sig_size);
 
-                    ret = mbedtls_rsa_rsassa_pkcs1_v15_sign(
-                        ctx,
-                        mbedtls_ctr_drbg_random,
-                        (void *)& ctr_drbg,
-                        md_type,
-                        (unsigned int)dsize,
-                        checksum,
-                        (unsigned char *)out->addr
-                        );
+                    /* RSA keys default to PKCS#1 v1.5 padding here */
+                    ret = mbedtls_pk_sign(&pk,
+                        MBEDTLS_MD_SHA256,
+                        checksum, dsize,
+                        (unsigned char *)out->addr, sig_size, &sig_len);
                     if (ret == 0)
                     {
 #ifdef _DEBUGGING
-                        /* 4. verify the signature */
-                        ret = mbedtls_rsa_rsassa_pkcs1_v15_verify(
-                            mbedtls_pk_rsa(pk),
-                            md_type,
-                            (unsigned int)dsize,
-                            checksum,
-                            (const unsigned char *)out->addr
-                            );
+                        /* 4. verify the signature.
+                           mbedtls_pk_verify() fails (MBEDTLS_ERR_PK_INVALID_ALG)
+                           for PKCS#8 RSA keys in 4.2.0 because the public part
+                           is not populated; verify through PSA instead. */
+                        {
+                            psa_key_attributes_t attrs = PSA_KEY_ATTRIBUTES_INIT;
+                            mbedtls_svc_key_id_t key_id = MBEDTLS_SVC_KEY_ID_INIT;
+
+                            ret = mbedtls_pk_get_psa_attributes(
+                                &pk, PSA_KEY_USAGE_SIGN_HASH, &attrs);
+                            if (ret == 0)
+                            {
+                                psa_set_key_usage_flags(&attrs,
+                                    PSA_KEY_USAGE_SIGN_HASH | PSA_KEY_USAGE_VERIFY_HASH);
+                                psa_set_key_algorithm(&attrs,
+                                    PSA_ALG_RSA_PKCS1V15_SIGN(PSA_ALG_SHA_256));
+                                ret = mbedtls_pk_import_into_psa(&pk, &attrs, &key_id);
+                            }
+                            if (ret == 0)
+                            {
+                                status = psa_verify_hash(
+                                    key_id,
+                                    PSA_ALG_RSA_PKCS1V15_SIGN(PSA_ALG_SHA_256),
+                                    checksum, dsize,
+                                    (const unsigned char *)out->addr, sig_len);
+                                if (status != PSA_SUCCESS)
+                                {
+                                    ret = (int)status;
+                                }
+                                psa_destroy_key(key_id);
+                            }
+                            psa_reset_key_attributes(&attrs);
+                        }
                         if (ret != 0)
                         {
-                            TRACE("mbedtls_rsa_rsassa_pkcs1_v15_verify = -%#.4X\n", -ret);
+                            TRACE("verify = %d\n", ret);
                             rc = RC(rcCloud, rcUri, rcInitializing, rcEncryption, rcFailed);
                         }
 #endif
                     }
                     else
                     {
-                        TRACE("mbedtls_rsa_rsassa_pkcs1_v15_sign = -%#.4X\n", -ret);
+                        TRACE("mbedtls_pk_sign = -%#.4X\n", -ret);
                         rc = RC(rcCloud, rcUri, rcInitializing, rcEncryption, rcFailed);
                     }
 
@@ -364,10 +360,9 @@ TODO: fix in VDB-6510
             }
             else
             {
-                TRACE("mbedtls_md = -%#.4X\n", -ret);
+                TRACE("psa_hash_compute = %d\n", (int)status);
                 rc = RC(rcCloud, rcUri, rcInitializing, rcEncryption, rcFailed);
             }
-#endif
         }
         else
         {
@@ -377,14 +372,6 @@ TODO: fix in VDB-6510
 
         mbedtls_pk_free(&pk);
     }
-    else
-    {
-        TRACE("mbedtls_ctr_drbg_seed = -%#.4X\n", -ret);
-        rc = RC(rcCloud, rcUri, rcInitializing, rcEncryption, rcFailed);
-    }
-
-    mbedtls_entropy_free(&ent_ctx);
-    mbedtls_ctr_drbg_free(&ctr_drbg);
 
     return rc;
 }
