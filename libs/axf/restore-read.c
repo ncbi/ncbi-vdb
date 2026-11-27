@@ -558,7 +558,12 @@ WGS_FROM_LAST:
         // it is a new seq_id
         rc = openSeqID(self, id_len, wgs_namelen, seq_id, forTable);
         if (rc) {
-            Error_Insert(&self->shared->errors, error_at, id_len, seq_id, rc);
+            /* The error list is shared: change it only under the exclusive lock, and search it
+             * again, since other threads may have changed it since the search above. */
+            RestoreReadSharedWriter(self->shared);
+            if (!Error_Find(&self->shared->errors, &error_at, id_len, seq_id))
+                Error_Insert(&self->shared->errors, error_at, id_len, seq_id, rc);
+            RestoreReadSharedWriterDone(self->shared);
             return rc;
         }
     }
