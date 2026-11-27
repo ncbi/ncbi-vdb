@@ -400,6 +400,7 @@ unsigned RestoreReadShared_getState(unsigned *refSeqs, unsigned *wgs, unsigned *
 struct RestoreRead {
     VDBManager const *mgr;
     RestoreReadShared *shared;
+    WGS_Reader wgsReader;
     struct Last {
         union U {
             RefSeqListEntry *r;
@@ -414,6 +415,7 @@ void RestoreReadFree(void *vp)
 {
     RestoreRead *const self = (RestoreRead *)vp;
 
+    WGS_ReaderClose(&self->wgsReader);
     VDBManagerRelease(self->mgr);
     RestoreReadSharedRelease(self->shared);
 
@@ -519,8 +521,9 @@ REFSEQ_FROM_LAST:
             if (wgs_namelen > 0 && isSameCountWGS(self->shared, self->last.count) && name_cmp(self->last.u.w->name, wgs_namelen, seq_id) == 0) {
                 assert(self->last.u.w->object->curs != NULL);
 WGS_FROM_LAST:
-                *actual = WGS_getBases(self->last.u.w->object, dst, start, length, wgs_row);
-                return 0;
+                return WGS_ReaderGetBases(&self->wgsReader,
+                    self->last.u.w->object, self->mgr, wgs_namelen, seq_id,
+                    dst, start, length, wgs_row, actual);
             }
             break;
         default:

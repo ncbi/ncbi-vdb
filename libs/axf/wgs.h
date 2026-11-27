@@ -59,3 +59,19 @@ unsigned WGS_getBases(WGS *self, uint8_t *dst, unsigned start, unsigned len, int
 void WGS_close(WGS *self);
 rc_t WGS_reopen(WGS *self, VDBManager const *mgr, unsigned seq_id_len, char const *seq_id);
 void WGS_limitOpen(WGS_List *list);
+
+/* One active cursor per RestoreRead consumer. The source pointer identifies
+ * the WGS object; its lifetime is protected by the reader's shared-state ref.
+ * A cursor must never be reused for a different project or assembly version.
+ */
+typedef struct WGS_Reader WGS_Reader;
+struct WGS_Reader {
+    WGS const *source;
+    struct VCursor const *curs;
+    uint32_t colID;
+};
+
+void WGS_ReaderClose(WGS_Reader *self);
+rc_t WGS_ReaderGetBases(WGS_Reader *self, WGS const *source,
+    VDBManager const *mgr, unsigned seq_id_len, char const *seq_id,
+    uint8_t *dst, unsigned start, unsigned len, int64_t row, unsigned *actual);
